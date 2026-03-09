@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Inter } from "next/font/google";
+import { Inter, Geist } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Suspense } from "react";
 
@@ -10,6 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const ThemeProvider = dynamic(
   () =>
@@ -35,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="de" suppressHydrationWarning>
+    <html lang="de" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
