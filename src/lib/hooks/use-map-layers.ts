@@ -1,8 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type {
   FeatureCollection,
-  GeoJsonProperties,
-  Geometry,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -23,19 +21,17 @@ interface UseMapLayersProps {
   map: MapLibreMap | null;
   isMapLoaded: boolean;
   layerId: string;
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
   statesData?: FeatureCollection<
-    Polygon | MultiPolygon,
-    GeoJsonProperties
+    Polygon | MultiPolygon
   > | null;
   hoveredRegionId: string | null;
   getSelectedFeatureCollection: () => FeatureCollection<
-    Polygon | MultiPolygon,
-    GeoJsonProperties
+    Polygon | MultiPolygon
   >;
   getLabelPoints: (
-    data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
-  ) => FeatureCollection<Geometry, GeoJsonProperties>;
+    data: FeatureCollection<Polygon | MultiPolygon>
+  ) => FeatureCollection;
   layers?: Layer[];
   activeLayerId?: number | null;
 }
@@ -460,7 +456,7 @@ export function useMapLayers({
 
   // Cleanup on unmount or dependency change
   useEffect(() => () => {
-      if (!map) return;
+      if (!map) {return;}
 
       // First, remove all layers (order matters: remove layers before sources)
       // Order: top to bottom (reverse of creation order)
@@ -518,7 +514,7 @@ export function useMapLayers({
 
     const cache = new Map<
       number,
-      FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+      FeatureCollection<Polygon | MultiPolygon>
     >();
     layers.forEach((layer) => {
       const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];

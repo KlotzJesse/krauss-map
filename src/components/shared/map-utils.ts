@@ -12,7 +12,6 @@ import booleanIntersects from "@turf/boolean-intersects";
 import type {
   Feature,
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -78,7 +77,7 @@ export function isRegionAdjacent(
 
 // Helper: flood fill from outside to find holes
 export function findHoles(
-  postalCodesData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>,
+  postalCodesData: FeatureCollection<Polygon | MultiPolygon>,
   selectedCodes: Set<string>
 ) {
   // Build adjacency graph
@@ -110,7 +109,7 @@ export function findHoles(
     // Heuristic: if region touches map boundary (min/max lat/lon), treat as outside
     const coords = getPolygons(f).flatMap((poly) =>
       Array.isArray(poly.geometry.coordinates)
-        ? poly.geometry.coordinates.flat(1)
+        ? poly.geometry.coordinates.flat()
         : []
     );
     if (

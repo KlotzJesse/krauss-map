@@ -22,7 +22,7 @@ interface StateRow {
 }
 
 async function _getStatesData(): Promise<
-  FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+  FeatureCollection<Polygon | MultiPolygon>
 > {
   try {
     // Select all columns, but geometry as GeoJSON
@@ -55,8 +55,7 @@ async function _getStatesData(): Promise<
 export const getStatesData = cache(_getStatesData);
 
 export async function getStatesDataServer(): Promise<FeatureCollection<
-  Polygon | MultiPolygon,
-  GeoJsonProperties
+  Polygon | MultiPolygon
 > | null> {
   try {
     return await getStatesData();

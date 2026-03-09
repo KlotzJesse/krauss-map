@@ -1,7 +1,6 @@
 import type {
   Feature,
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -29,7 +28,7 @@ export function usePointInPolygon() {
 
 // Find features whose centroid is inside a polygon
 export function useFindFeaturesInPolygon(
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+  data: FeatureCollection<Polygon | MultiPolygon>
 ) {
   const isPointInPolygon = usePointInPolygon();
   return useStableCallback((polygon: number[][]): string[] => {
@@ -44,7 +43,7 @@ export function useFindFeaturesInPolygon(
       const featureCode = feature.properties?.code;
       if (!featureCode) {return;}
       const centroid = getLargestPolygonCentroid(
-        feature as Feature<Polygon | MultiPolygon, GeoJsonProperties>
+        feature as Feature<Polygon | MultiPolygon>
       );
       if (!centroid) {return;}
       const isInside =
@@ -65,7 +64,7 @@ export function useFindFeaturesInPolygon(
 
 // Find features whose centroid is within a circle
 export function useFindFeaturesInCircle(
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+  data: FeatureCollection<Polygon | MultiPolygon>
 ) {
   return useStableCallback(
     (center: [number, number], radiusDegrees: number): string[] => {
@@ -80,14 +79,14 @@ export function useFindFeaturesInCircle(
         const featureCode = feature.properties?.code;
         if (!featureCode) {return;}
         const centroid = getLargestPolygonCentroid(
-          feature as Feature<Polygon | MultiPolygon, GeoJsonProperties>
+          feature as Feature<Polygon | MultiPolygon>
         );
         if (!centroid) {return;}
         const [lng1, lat1] = center;
         const [lng2, lat2] = centroid;
         const dLat = Math.abs(lat2 - lat1);
         const dLng = Math.abs(lng2 - lng1);
-        const distance = Math.sqrt(dLat * dLat + dLng * dLng);
+        const distance = Math.hypot(dLat, dLng);
         if (distance <= radiusDegrees) {selectedFeatures.push(featureCode);}
       });
       return selectedFeatures;

@@ -214,15 +214,14 @@ export function AddressAutocompleteEnhanced({
 
       switch (granularityLevel) {
         case "1digit": {
-          return cleanCode.substring(0, 1);
+          return cleanCode.slice(0, 1);
         }
         case "2digit": {
-          return cleanCode.substring(0, 2);
+          return cleanCode.slice(0, 2);
         }
         case "3digit": {
-          return cleanCode.substring(0, 3);
+          return cleanCode.slice(0, 3);
         }
-        case "5digit":
         default: {
           return cleanCode;
         }
@@ -390,9 +389,7 @@ export function AddressAutocompleteEnhanced({
             className={`w-full justify-between ${triggerClassName}`}
           >
             <span className="truncate block w-full text-left">
-              {query
-                ? query
-                : "PLZ, Adresse, Stadt oder Region suchen... (DE/EN)"}
+              {query || "PLZ, Adresse, Stadt oder Region suchen... (DE/EN)"}
             </span>
             <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>

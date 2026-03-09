@@ -54,13 +54,11 @@ export function useCursorSelection({
         map.getCanvas().style.cursor = "pointer";
         lastRegionIdRef.current = regionCode;
       }
-    } else {
-      if (lastRegionIdRef.current !== null) {
+    } else if (lastRegionIdRef.current !== null) {
         map.setLayoutProperty(hoverLayerId, "visibility", "none");
         map.getCanvas().style.cursor = "";
         lastRegionIdRef.current = null;
       }
-    }
   });
 
   // Throttle wrapper

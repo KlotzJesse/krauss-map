@@ -26,6 +26,7 @@ function ErrorFallback({
   return (
     <AlertError message={errorMessage}>
       <button
+        type="button"
         onClick={resetErrorBoundary}
         className="mt-2 underline text-primary hover:text-primary/80 transition-colors"
       >

@@ -1,0 +1,158 @@
+$ oxlint --type-aware
+
+  x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
+    ,-[src/app/actions/bulk-import-actions.ts:90:29]
+ 89 |                     await tx.insert(areaLayerPostalCodes).values(
+ 90 | ,->                   batch.map((code) => ({
+ 91 | |                       layerId: txLayerId,
+ 92 | |                       postalCode: code,
+ 93 | `->                   }))
+ 94 |                     );
+    `----
+  help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
+
+  x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
+     ,-[src/app/actions/bulk-import-actions.ts:133:29]
+ 132 |                     await tx.insert(areaLayerPostalCodes).values(
+ 133 | ,->                   batch.map((code) => ({
+ 134 | |                       layerId: txLayerId,
+ 135 | |                       postalCode: code,
+ 136 | `->                   }))
+ 137 |                     );
+     `----
+  help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
+
+  ! eslint(no-unused-vars): Function 'generateLayerColor' is declared but never used.
+     ,-[src/app/actions/bulk-import-actions.ts:209:10]
+ 208 |  */
+ 209 | function generateLayerColor(index: number): string {
+     :          ^^^^^^^^^|^^^^^^^^
+     :                   `-- 'generateLayerColor' is declared here
+ 210 |   const colors = [
+     `----
+  help: Consider removing this declaration.
+
+  x eslint(prefer-const): `createdLayers` is never reassigned.
+    ,-[src/app/actions/bulk-import-actions.ts:34:7]
+ 33 | ): Promise<BulkImportResult> {
+ 34 |   let createdLayers = 0;
+    :       ^^^^^^^^^^^^^
+ 35 |   let updatedLayers = 0;
+    `----
+  help: Use `const` instead.
+
+  x eslint(prefer-const): `updatedLayers` is never reassigned.
+    ,-[src/app/actions/bulk-import-actions.ts:35:7]
+ 34 |   let createdLayers = 0;
+ 35 |   let updatedLayers = 0;
+    :       ^^^^^^^^^^^^^
+ 36 |   let totalPostalCodes = 0;
+    `----
+  help: Use `const` instead.
+
+  x eslint(prefer-const): `f` is never reassigned.
+   ,-[fix-lookup.mjs:2:5]
+ 1 | import fs from 'fs';
+ 2 | let f, c;
+   :     ^
+ 3 | f = "src/lib/hooks/use-postal-code-lookup.ts";
+   `----
+  help: Use `const` instead.
+
+  x eslint(sort-vars): Variable declarations should be sorted
+   ,-[fix-lookup.mjs:2:8]
+ 1 | import fs from 'fs';
+ 2 | let f, c;
+   :        ^
+ 3 | f = "src/lib/hooks/use-postal-code-lookup.ts";
+   `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-lookup.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | let f, c;
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x eslint(prefer-const): `f` is never reassigned.
+   ,-[fix-tx.mjs:2:5]
+ 1 | import fs from 'fs';
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   :     ^
+ 3 | let c = fs.readFileSync(f, 'utf8');
+   `----
+  help: Use `const` instead.
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-tx.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x eslint(sort-vars): Variable declarations should be sorted
+   ,-[fix-final.mjs:3:8]
+ 2 | 
+ 3 | let f, c;
+   :        ^
+ 4 | 
+   `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-final.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | 
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x eslint(prefer-const): `f` is never reassigned.
+   ,-[fix-actions.mjs:2:5]
+ 1 | import fs from 'fs';
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   :     ^
+ 3 | let c = fs.readFileSync(f, 'utf8');
+   `----
+  help: Use `const` instead.
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-actions.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+     ,-[fix-actions.mjs:202:13]
+ 201 | 
+ 202 | oldCode = c.substring(c.indexOf('        let layerId: number;'), c.indexOf('\n        });') + 12);
+     :             ^^^^^^^^^
+ 203 | c = c.replace(oldCode, txCode);
+     `----
+  help: Replace `substring` with `slice`.
+
+  x eslint-plugin-unicorn(prefer-spread): Prefer the spread operator (`...`) over Array.from()
+    ,-[src/lib/hooks/use-file-import.ts:75:26]
+ 74 | 
+ 75 |       for (const file of Array.from(files)) {
+    :                          ^^^^^^^^^^^^^^^^^
+ 76 |         const result = await processFile(file);
+    `----
+  help: The spread operator (`...`) is more concise and readable.
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:24:51]
+ 23 | interface UsePostalCodeLookupOptions {
+ 24 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 25 | 
+    `----
+
+Found 1 warning and 16 errors.
+Finished in 5.6s on 169 files with 255 rules using 20 threads.
+error: script "lint" exited with code 1

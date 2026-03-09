@@ -3,7 +3,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -85,10 +84,10 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
 interface PostalCodesViewClientWithLayersProps {
   postalCodesDataPromise: Promise<
-    FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    FeatureCollection<Polygon | MultiPolygon>
   >;
   statesDataPromise: Promise<
-    FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    FeatureCollection<Polygon | MultiPolygon>
   >;
   defaultGranularity: string;
   areaId: number;
@@ -134,7 +133,7 @@ export function PostalCodesViewClientWithLayers({
   const activeLayerId = mapState.activeLayerId || initialLayers[0]?.id || null;
 
   const [data] =
-    useState<FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>>(
+    useState<FeatureCollection<Polygon | MultiPolygon>>(
       initialData
     );
 

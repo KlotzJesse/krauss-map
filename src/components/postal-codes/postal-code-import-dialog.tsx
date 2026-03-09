@@ -2,7 +2,6 @@
 
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -46,7 +45,7 @@ const BulkImportDialog = dynamic(
 interface PostalCodeImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
   granularity: string;
   onImport: (postalCodes: string[]) => void;
   areaId?: number; // Optional for bulk import

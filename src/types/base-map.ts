@@ -1,7 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -17,14 +16,13 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 };
 
 export interface BaseMapProps {
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
   layerId: string;
   onSearch?: (query: string) => void;
   center?: [number, number];
   zoom?: number;
   statesData: FeatureCollection<
-    Polygon | MultiPolygon,
-    GeoJsonProperties
+    Polygon | MultiPolygon
   > | null;
   granularity?: string;
   onGranularityChange?: (granularity: string) => void;
@@ -74,5 +72,5 @@ export interface MapToolsProps {
   onToggleVisibility: () => void;
   granularity?: string;
   onGranularityChange?: (granularity: string) => void;
-  postalCodesData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  postalCodesData: FeatureCollection<Polygon | MultiPolygon>;
 }

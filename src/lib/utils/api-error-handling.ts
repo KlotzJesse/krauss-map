@@ -9,13 +9,19 @@ export interface ApiErrorResponse {
 }
 
 export class ApiError extends Error {
+  statusCode: number;
+  message: string;
+  error: string;
   constructor(
-    public statusCode: number,
-    public message: string,
-    public error: string = "API Error"
+    statusCode: number,
+    message: string,
+    error: string = "API Error"
   ) {
     super(message);
     this.name = "ApiError";
+    this.statusCode = statusCode;
+    this.message = message;
+    this.error = error;
   }
 }
 

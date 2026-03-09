@@ -1,6 +1,5 @@
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -24,7 +23,7 @@ interface UseMapInteractionsProps {
 
   layerId: string;
 
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
 
   isMapLoaded: boolean;
 

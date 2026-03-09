@@ -21,7 +21,7 @@ interface PostalCodeLookupResult {
 }
 
 interface UsePostalCodeLookupOptions {
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
 
   onPostalCodeFound?: (code: string, geometry: Geometry) => void;
 }
@@ -44,10 +44,10 @@ export function usePostalCodeLookup({
     data.features.forEach((feature) => {
       const geometry = feature.geometry;
 
-      let minLng = Infinity,
+      let maxLat = -Infinity,
         maxLng = -Infinity,
         minLat = Infinity,
-        maxLat = -Infinity;
+        minLng = Infinity;
 
       if (geometry.type === "Polygon") {
         const coords = geometry.coordinates[0];
@@ -235,10 +235,8 @@ export function usePostalCodeLookup({
           }
         } else if (feature.geometry.type === "MultiPolygon") {
           for (const poly of feature.geometry.coordinates) {
-            if (Array.isArray(poly) && Array.isArray(poly[0])) {
-              if (isPointInPolygon([lng, lat], poly[0] as number[][])) {
-                return candidate.code;
-              }
+            if (Array.isArray(poly) && Array.isArray(poly[0]) && isPointInPolygon([lng, lat], poly[0] as number[][])) {
+              return candidate.code;
             }
           }
         }

@@ -1,8 +1,6 @@
 import type {
   Feature,
   FeatureCollection,
-  GeoJsonProperties,
-  Geometry,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -13,10 +11,9 @@ import { makeLabelPoints } from "@/lib/utils/map-data";
 import { useStableCallback } from "./use-stable-callback";
 
 interface UseMapOptimizationsProps {
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
   statesData?: FeatureCollection<
-    Polygon | MultiPolygon,
-    GeoJsonProperties
+    Polygon | MultiPolygon
   > | null;
 }
 
@@ -33,21 +30,15 @@ export function useMapOptimizations({
   // Empty feature collection for compatibility
   const selectedFeatureCollection = useMemo(() => ({
       type: "FeatureCollection" as const,
-      features: [] as Feature<Polygon | MultiPolygon, GeoJsonProperties>[],
+      features: [] as Feature<Polygon | MultiPolygon>[],
     }), []);
 
   // Memoize label points computation (expensive operation)
-  const labelPoints = useMemo(() => makeLabelPoints(data) as FeatureCollection<
-      Geometry,
-      GeoJsonProperties
-    >, [data]);
+  const labelPoints = useMemo(() => makeLabelPoints(data) as FeatureCollection, [data]);
 
   // Memoize states label points if available
   const statesLabelPoints = useMemo(() => statesData
-      ? (makeLabelPoints(statesData) as FeatureCollection<
-          Geometry,
-          GeoJsonProperties
-        >)
+      ? (makeLabelPoints(statesData) as FeatureCollection)
       : null, [statesData]);
 
   // Memoize feature count for performance monitoring
@@ -75,8 +66,8 @@ export function useMapOptimizations({
       if (geometry.type === "Polygon") {
         // Only check outer ring for bounds - much faster
         const coords = geometry.coordinates[0];
-        for (let i = 0; i < coords.length; i++) {
-          const [lng, lat] = coords[i];
+        for (const coord of coords) {
+          const [lng, lat] = coord;
           minLng = Math.min(minLng, lng);
           maxLng = Math.max(maxLng, lng);
           minLat = Math.min(minLat, lat);
@@ -86,8 +77,8 @@ export function useMapOptimizations({
         // Only check first polygon for bounds approximation (90%+ accuracy, much faster)
         const coords = geometry.coordinates[0]?.[0];
         if (coords) {
-          for (let i = 0; i < coords.length; i++) {
-            const [lng, lat] = coords[i];
+          for (const coord of coords) {
+            const [lng, lat] = coord;
             minLng = Math.min(minLng, lng);
             maxLng = Math.max(maxLng, lng);
             minLat = Math.min(minLat, lat);
@@ -108,10 +99,7 @@ export function useMapOptimizations({
     }));
 
   const getLabelPoints = useStableCallback(
-    (d: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>) => makeLabelPoints(d) as FeatureCollection<
-        Geometry,
-        GeoJsonProperties
-      >
+    (d: FeatureCollection<Polygon | MultiPolygon>) => makeLabelPoints(d) as FeatureCollection
   );
 
   return {

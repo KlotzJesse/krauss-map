@@ -1,0 +1,283 @@
+$ oxlint --type-aware
+
+  x eslint(arrow-body-style): Unexpected block statement surrounding arrow body.
+     ,-[src/app/actions/bulk-import-actions.ts:60:10]
+  59 |           currentUpdatedLayers: number
+  60 | ,->     ) => {
+  61 | |           return await db.transaction(async (tx) => {
+  62 | |             let txLayerId: number;
+  63 | |             let addedPostalCodes = 0;
+  64 | |             let isNewLayer = false;
+  65 | |             let newLayerData = null;
+  66 | |   
+  67 | |             if (existingLayer) {
+  68 | |               txLayerId = existingLayer.id;
+  69 | |               const currentCodes = new Set(
+  70 | |                 existingLayer.postalCodes?.map((pc: any) => pc.postalCode) || []
+  71 | |               );
+  72 | |               const newCodes = uniquePostalCodes.filter(
+  73 | |                 (code) => !currentCodes.has(code)
+  74 | |               );
+  75 | |   
+  76 | |               if (newCodes.length > 0) {
+  77 | |                 const codeRows = newCodes.map((code) => ({
+  78 | |                   layerId: txLayerId,
+  79 | |                   postalCode: code,
+  80 | |                 }));
+  81 | |                 for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
+  82 | |                   const batch = codeRows.slice(i, i + BATCH_SIZE);
+  83 | |                   await tx.insert(areaLayerPostalCodes).values(batch);
+  84 | |                 }
+  85 | |                 addedPostalCodes = newCodes.length;
+  86 | |   
+  87 | |                 await recordChangeAction(areaId, {
+  88 | |                   changeType: "add_postal_codes",
+  89 | |                   entityType: "postal_code",
+  90 | |                   entityId: txLayerId,
+  91 | |                   changeData: {
+  92 | |                     postalCodes: newCodes,
+  93 | |                     layerId: txLayerId,
+  94 | |                     source: "bulk_import",
+  95 | |                   },
+  96 | |                   previousData: {
+  97 | |                     postalCodes: [...currentCodes],
+  98 | |                   },
+  99 | |                   createdBy,
+ 100 | |                 });
+ 101 | |               }
+ 102 | |             } else {
+ 103 | |               const [newLayer] = await tx
+ 104 | |                 .insert(areaLayers)
+ 105 | |                 .values({
+ 106 | |                   areaId,
+ 107 | |                   name: layerData.name,
+ 108 | |                   color: generateLayerColor(existingLayers.length + currentCreatedLayers + currentUpdatedLayers),
+ 109 | |                   opacity: 70,
+ 110 | |                   isVisible: "true",
+ 111 | |                   orderIndex: existingLayers.length + currentCreatedLayers,
+ 112 | |                 })
+ 113 | |                 .returning();
+ 114 | |   
+ 115 | |               txLayerId = newLayer.id;
+ 116 | |               isNewLayer = true;
+ 117 | |               newLayerData = newLayer;
+ 118 | |   
+ 119 | |               if (uniquePostalCodes.length > 0) {
+ 120 | |                 const codeRows = uniquePostalCodes.map((code) => ({
+ 121 | |                   layerId: txLayerId,
+ 122 | |                   postalCode: code,
+ 123 | |                 }));
+ 124 | |                 for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
+ 125 | |                   const batch = codeRows.slice(i, i + BATCH_SIZE);
+ 126 | |                   await tx.insert(areaLayerPostalCodes).values(batch);
+ 127 | |                 }
+ 128 | |                 addedPostalCodes = uniquePostalCodes.length;
+ 129 | |               }
+ 130 | |   
+ 131 | |               await recordChangeAction(areaId, {
+ 132 | |                 changeType: "create_layer",
+ 133 | |                 entityType: "layer",
+ 134 | |                 entityId: txLayerId,
+ 135 | |                 changeData: {
+ 136 | |                   layer: {
+ 137 | |                     areaId,
+ 138 | |                     name: layerData.name,
+ 139 | |                     color: newLayer.color,
+ 140 | |                     opacity: newLayer.opacity,
+ 141 | |                     isVisible: newLayer.isVisible,
+ 142 | |                     orderIndex: newLayer.orderIndex,
+ 143 | |                   },
+ 144 | |                   postalCodes: uniquePostalCodes,
+ 145 | |                   source: "bulk_import",
+ 146 | |                 },
+ 147 | |                 createdBy,
+ 148 | |               });
+ 149 | |             }
+ 150 | |   
+ 151 | |             return { txLayerId, addedPostalCodes, isNewLayer, newLayerData };
+ 152 | |           });
+ 153 | `->     };
+ 154 |     
+     `----
+  help: Move the returned value to be immediately after the `=>`.
+
+  x typescript-eslint(no-explicit-any): Unexpected `any`. Specify a different type.
+    ,-[src/app/actions/bulk-import-actions.ts:56:22]
+ 55 |       layerNameLower: string,
+ 56 |       existingLayer: any,
+    :                      ^^^
+ 57 |       uniquePostalCodes: string[],
+    `----
+  help: Use `unknown` instead, this will force you to explicitly, and safely, assert the type is correct.
+
+  x typescript-eslint(no-explicit-any): Unexpected `any`. Specify a different type.
+    ,-[src/app/actions/bulk-import-actions.ts:70:51]
+ 69 |             const currentCodes = new Set(
+ 70 |               existingLayer.postalCodes?.map((pc: any) => pc.postalCode) || []
+    :                                                   ^^^
+ 71 |             );
+    `----
+  help: Use `unknown` instead, this will force you to explicitly, and safely, assert the type is correct.
+
+  x eslint(prefer-const): `f` is never reassigned.
+   ,-[fix-act2.mjs:2:5]
+ 1 | import fs from 'fs';
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   :     ^
+ 3 | let c = fs.readFileSync(f, 'utf8');
+   `----
+  help: Use `const` instead.
+
+  x eslint(prefer-const): `oldCode` is never reassigned.
+     ,-[fix-act2.mjs:146:5]
+ 145 | 
+ 146 | let oldCode = c.substring(c.indexOf('    // Process each layer in its own transaction'), c.indexOf('        layerIds.push(txResult.txLayerId);') + 42);
+     :     ^^^^^^^
+ 147 | c = c.replace(oldCode, txCode);
+     `----
+  help: Use `const` instead.
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-act2.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+     ,-[fix-act2.mjs:146:17]
+ 145 | 
+ 146 | let oldCode = c.substring(c.indexOf('    // Process each layer in its own transaction'), c.indexOf('        layerIds.push(txResult.txLayerId);') + 42);
+     :                 ^^^^^^^^^
+ 147 | c = c.replace(oldCode, txCode);
+     `----
+  help: Replace `substring` with `slice`.
+
+  x eslint(prefer-const): `f` is never reassigned.
+   ,-[fix-actions.mjs:2:5]
+ 1 | import fs from 'fs';
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   :     ^
+ 3 | let c = fs.readFileSync(f, 'utf8');
+   `----
+  help: Use `const` instead.
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-actions.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+     ,-[fix-actions.mjs:132:13]
+ 131 | 
+ 132 | oldCode = c.substring(c.indexOf('    // Process each layer in its own transaction'), c.indexOf('        if (txResult.isNewLayer && txResult.newLayerData) {') + 59);
+     :             ^^^^^^^^^
+ 133 | c = c.replace(oldCode, txCode);
+     `----
+  help: Replace `substring` with `slice`.
+
+  x typescript-eslint(return-await): Returning an awaited promise is not allowed in this context.
+     ,-[src/app/actions/bulk-import-actions.ts:61:16]
+  60 |         ) => {
+  61 | ,->         return await db.transaction(async (tx) => {
+  62 | |             let txLayerId: number;
+  63 | |             let addedPostalCodes = 0;
+  64 | |             let isNewLayer = false;
+  65 | |             let newLayerData = null;
+  66 | |   
+  67 | |             if (existingLayer) {
+  68 | |               txLayerId = existingLayer.id;
+  69 | |               const currentCodes = new Set(
+  70 | |                 existingLayer.postalCodes?.map((pc: any) => pc.postalCode) || []
+  71 | |               );
+  72 | |               const newCodes = uniquePostalCodes.filter(
+  73 | |                 (code) => !currentCodes.has(code)
+  74 | |               );
+  75 | |   
+  76 | |               if (newCodes.length > 0) {
+  77 | |                 const codeRows = newCodes.map((code) => ({
+  78 | |                   layerId: txLayerId,
+  79 | |                   postalCode: code,
+  80 | |                 }));
+  81 | |                 for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
+  82 | |                   const batch = codeRows.slice(i, i + BATCH_SIZE);
+  83 | |                   await tx.insert(areaLayerPostalCodes).values(batch);
+  84 | |                 }
+  85 | |                 addedPostalCodes = newCodes.length;
+  86 | |   
+  87 | |                 await recordChangeAction(areaId, {
+  88 | |                   changeType: "add_postal_codes",
+  89 | |                   entityType: "postal_code",
+  90 | |                   entityId: txLayerId,
+  91 | |                   changeData: {
+  92 | |                     postalCodes: newCodes,
+  93 | |                     layerId: txLayerId,
+  94 | |                     source: "bulk_import",
+  95 | |                   },
+  96 | |                   previousData: {
+  97 | |                     postalCodes: [...currentCodes],
+  98 | |                   },
+  99 | |                   createdBy,
+ 100 | |                 });
+ 101 | |               }
+ 102 | |             } else {
+ 103 | |               const [newLayer] = await tx
+ 104 | |                 .insert(areaLayers)
+ 105 | |                 .values({
+ 106 | |                   areaId,
+ 107 | |                   name: layerData.name,
+ 108 | |                   color: generateLayerColor(existingLayers.length + currentCreatedLayers + currentUpdatedLayers),
+ 109 | |                   opacity: 70,
+ 110 | |                   isVisible: "true",
+ 111 | |                   orderIndex: existingLayers.length + currentCreatedLayers,
+ 112 | |                 })
+ 113 | |                 .returning();
+ 114 | |   
+ 115 | |               txLayerId = newLayer.id;
+ 116 | |               isNewLayer = true;
+ 117 | |               newLayerData = newLayer;
+ 118 | |   
+ 119 | |               if (uniquePostalCodes.length > 0) {
+ 120 | |                 const codeRows = uniquePostalCodes.map((code) => ({
+ 121 | |                   layerId: txLayerId,
+ 122 | |                   postalCode: code,
+ 123 | |                 }));
+ 124 | |                 for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
+ 125 | |                   const batch = codeRows.slice(i, i + BATCH_SIZE);
+ 126 | |                   await tx.insert(areaLayerPostalCodes).values(batch);
+ 127 | |                 }
+ 128 | |                 addedPostalCodes = uniquePostalCodes.length;
+ 129 | |               }
+ 130 | |   
+ 131 | |               await recordChangeAction(areaId, {
+ 132 | |                 changeType: "create_layer",
+ 133 | |                 entityType: "layer",
+ 134 | |                 entityId: txLayerId,
+ 135 | |                 changeData: {
+ 136 | |                   layer: {
+ 137 | |                     areaId,
+ 138 | |                     name: layerData.name,
+ 139 | |                     color: newLayer.color,
+ 140 | |                     opacity: newLayer.opacity,
+ 141 | |                     isVisible: newLayer.isVisible,
+ 142 | |                     orderIndex: newLayer.orderIndex,
+ 143 | |                   },
+ 144 | |                   postalCodes: uniquePostalCodes,
+ 145 | |                   source: "bulk_import",
+ 146 | |                 },
+ 147 | |                 createdBy,
+ 148 | |               });
+ 149 | |             }
+ 150 | |   
+ 151 | |             return { txLayerId, addedPostalCodes, isNewLayer, newLayerData };
+ 152 | `->         });
+ 153 |         };
+     `----
+
+Found 0 warnings and 11 errors.
+Finished in 1.5s on 167 files with 255 rules using 20 threads.
+error: script "lint" exited with code 1

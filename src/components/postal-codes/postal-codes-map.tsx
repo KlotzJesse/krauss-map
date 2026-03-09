@@ -6,7 +6,6 @@ const BaseMap = dynamic(() =>
 import type { InferSelectModel } from "drizzle-orm";
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -23,8 +22,8 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 };
 
 interface PostalCodesMapProps {
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
-  statesData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
+  statesData: FeatureCollection<Polygon | MultiPolygon>;
   onSearch?: (plz: string) => void;
   granularity?: string;
   onGranularityChange?: (granularity: string) => void;

@@ -75,15 +75,14 @@ export function convertPostalCodeToGranularity(
 
   switch (level) {
     case 1: {
-      return cleanCode.substring(0, 1);
+      return cleanCode.slice(0, 1);
     }
     case 2: {
-      return cleanCode.substring(0, 2);
+      return cleanCode.slice(0, 2);
     }
     case 3: {
-      return cleanCode.substring(0, 3);
+      return cleanCode.slice(0, 3);
     }
-    case 5:
     default: {
       return cleanCode;
     }

@@ -49,59 +49,48 @@ export async function bulkImportPostalCodesAndLayers(
       existingLayers.map((l) => [l.name.toLowerCase(), l])
     );
 
-    // Process each layer in its own transaction for fault tolerance
-    for (const layerData of layers) {
-      try {
-        const layerNameLower = layerData.name.toLowerCase();
-        const existingLayer = existingLayerMap.get(layerNameLower);
 
-        // Deduplicate postal codes in the input (per layer)
-        const uniquePostalCodes = [...new Set(layerData.postalCodes)];
+    const processLayerData = async (
+      layerData: BulkImportLayer,
+      layerNameLower: string,
+      existingLayer: ExistingLayer | undefined,
+      uniquePostalCodes: string[],
+      currentCreatedLayers: number,
+      currentUpdatedLayers: number
+    ) =>
+        db.transaction(async (tx) => {
+          let txLayerId: number;
+          let addedPostalCodes = 0;
+          let isNewLayer = false;
+          let newLayerData = null;
 
-        if (uniquePostalCodes.length === 0) {
-          continue; // Skip layers with no postal codes
-        }
-
-        let layerId: number;
-
-        // Process this layer in its own transaction
-        await db.transaction(async (tx) => {
           if (existingLayer) {
-            // Update existing layer
-            layerId = existingLayer.id;
-
-            // Get current postal codes
+            txLayerId = existingLayer.id;
             const currentCodes = new Set(
               existingLayer.postalCodes?.map((pc) => pc.postalCode) || []
             );
-
-            // Find new codes that don't exist in this layer yet
             const newCodes = uniquePostalCodes.filter(
               (code) => !currentCodes.has(code)
             );
 
             if (newCodes.length > 0) {
-              // Insert only the new postal codes in batches
-              for (let i = 0; i < newCodes.length; i += BATCH_SIZE) {
-                const batch = newCodes.slice(i, i + BATCH_SIZE);
-                await tx.insert(areaLayerPostalCodes).values(
-                  batch.map((code) => ({
-                    layerId,
-                    postalCode: code,
-                  }))
-                );
+              const codeRows = newCodes.map((code) => ({
+                layerId: txLayerId,
+                postalCode: code,
+              }));
+              for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
+                const batch = codeRows.slice(i, i + BATCH_SIZE);
+                await tx.insert(areaLayerPostalCodes).values(batch);
               }
+              addedPostalCodes = newCodes.length;
 
-              totalPostalCodes += newCodes.length;
-
-              // Record change
               await recordChangeAction(areaId, {
                 changeType: "add_postal_codes",
                 entityType: "postal_code",
-                entityId: layerId,
+                entityId: txLayerId,
                 changeData: {
                   postalCodes: newCodes,
-                  layerId,
+                  layerId: txLayerId,
                   source: "bulk_import",
                 },
                 previousData: {
@@ -110,42 +99,39 @@ export async function bulkImportPostalCodesAndLayers(
                 createdBy,
               });
             }
-
-            updatedLayers++;
           } else {
-            // Create new layer
             const [newLayer] = await tx
               .insert(areaLayers)
               .values({
                 areaId,
                 name: layerData.name,
-                color: generateLayerColor(createdLayers + updatedLayers),
+                color: generateLayerColor(existingLayers.length + currentCreatedLayers + currentUpdatedLayers),
                 opacity: 70,
                 isVisible: "true",
-                orderIndex: existingLayers.length + createdLayers,
+                orderIndex: existingLayers.length + currentCreatedLayers,
               })
               .returning();
 
-            layerId = newLayer.id;
+            txLayerId = newLayer.id;
+            isNewLayer = true;
+            newLayerData = newLayer;
 
-            // Insert postal codes in batches
-            for (let i = 0; i < uniquePostalCodes.length; i += BATCH_SIZE) {
-              const batch = uniquePostalCodes.slice(i, i + BATCH_SIZE);
-              await tx.insert(areaLayerPostalCodes).values(
-                batch.map((code) => ({
-                  layerId,
-                  postalCode: code,
-                }))
-              );
+            if (uniquePostalCodes.length > 0) {
+              const codeRows = uniquePostalCodes.map((code) => ({
+                layerId: txLayerId,
+                postalCode: code,
+              }));
+              for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
+                const batch = codeRows.slice(i, i + BATCH_SIZE);
+                await tx.insert(areaLayerPostalCodes).values(batch);
+              }
+              addedPostalCodes = uniquePostalCodes.length;
             }
 
-            totalPostalCodes += uniquePostalCodes.length;
-
-            // Record change
             await recordChangeAction(areaId, {
               changeType: "create_layer",
               entityType: "layer",
-              entityId: layerId,
+              entityId: txLayerId,
               changeData: {
                 layer: {
                   areaId,
@@ -160,23 +146,48 @@ export async function bulkImportPostalCodesAndLayers(
               },
               createdBy,
             });
-
-            createdLayers++;
-
-            // Update the map with the new layer
-            existingLayerMap.set(layerNameLower, {
-              ...newLayer,
-              postalCodes: uniquePostalCodes.map((code) => ({
-                id: 0,
-                layerId: newLayer.id,
-                postalCode: code,
-                createdAt: new Date().toISOString(),
-              })),
-            });
           }
+
+          return { txLayerId, addedPostalCodes, isNewLayer, newLayerData };
         });
 
-        layerIds.push(layerId!);
+    // Process each layer in its own transaction for fault tolerance
+    for (const layerData of layers) {
+      try {
+        const layerNameLower = layerData.name.toLowerCase();
+        const existingLayer = existingLayerMap.get(layerNameLower);
+
+        const uniquePostalCodes = [...new Set(layerData.postalCodes)];
+        if (uniquePostalCodes.length === 0) {
+          continue;
+        }
+
+        const txResult = await processLayerData(
+          layerData,
+          layerNameLower,
+          existingLayer,
+          uniquePostalCodes,
+          createdLayers,
+          updatedLayers
+        );
+
+        if (txResult.isNewLayer && txResult.newLayerData) {
+          createdLayers++;
+          existingLayerMap.set(layerNameLower, {
+            ...txResult.newLayerData,
+            postalCodes: uniquePostalCodes.map((code) => ({
+              id: 0,
+              layerId: txResult.txLayerId,
+              postalCode: code,
+              createdAt: new Date().toISOString(),
+            })),
+          });
+        } else {
+          updatedLayers++;
+        }
+
+        totalPostalCodes += txResult.addedPostalCodes;
+        layerIds.push(txResult.txLayerId);
       } catch (error) {
         const errorMsg = `Error processing layer "${layerData.name}": ${
           error instanceof Error ? error.message : "Unknown error"

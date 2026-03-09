@@ -1,6 +1,5 @@
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -11,7 +10,7 @@ import { toast } from "sonner";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 
 interface PostalCodeSearchProps {
-  data: FeatureCollection<MultiPolygon | Polygon, GeoJsonProperties>;
+  data: FeatureCollection<MultiPolygon | Polygon>;
 }
 
 export function usePostalCodeSearch({ data }: PostalCodeSearchProps) {

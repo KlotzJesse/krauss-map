@@ -1,0 +1,171 @@
+$ oxlint --type-aware
+
+  x Unexpected token
+    ,-[src/app/actions/bulk-import-actions.ts:68:27]
+ 67 |         // Process this layer in its own transaction
+ 68 |         const txLayerId = const txLayerId = await db.transaction(async (tx) => {
+    :                           ^^^^^
+ 69 |           let innerLayerId: number;
+    `----
+
+  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
+    ,-[src/lib/hooks/use-map-optimizations.ts:69:14]
+ 68 |         const coords = geometry.coordinates[0];
+ 69 |         for (let i = 0; i < coords.length; i++) {
+    :              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 70 |           const [lng, lat] = coords[i];
+    `----
+  help: Consider using a for-of loop for this simple iteration.
+
+  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
+    ,-[src/lib/hooks/use-map-optimizations.ts:80:16]
+ 79 |         if (coords) {
+ 80 |           for (let i = 0; i < coords.length; i++) {
+    :                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 81 |             const [lng, lat] = coords[i];
+    `----
+  help: Consider using a for-of loop for this simple iteration.
+
+  x eslint(sort-vars): Variable declarations should be sorted
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:48:9]
+ 47 |       let minLng = Infinity,
+ 48 |         maxLng = -Infinity,
+    :         ^^^^^^^^^^^^^^^^^^
+ 49 |         minLat = Infinity,
+    `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint(sort-vars): Variable declarations should be sorted
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:50:9]
+ 49 |         minLat = Infinity,
+ 50 |         maxLat = -Infinity;
+    :         ^^^^^^^^^^^^^^^^^^
+ 51 | 
+    `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint-plugin-unicorn(no-lonely-if): Unexpected `if` as the only statement in a `if` block without `else`.
+     ,-[src/lib/hooks/use-postal-code-lookup.ts:238:13]
+ 237 |           for (const poly of feature.geometry.coordinates) {
+ 238 |             if (Array.isArray(poly) && Array.isArray(poly[0])) {
+     :             ^^
+ 239 |               if (isPointInPolygon([lng, lat], poly[0] as number[][])) {
+     :               ^^
+ 240 |                 return candidate.code;
+     `----
+  help: Move the inner `if` test to the outer `if` test.
+
+  x Expected `,` or `)` but found `;`
+     ,-[src/lib/hooks/use-file-import.ts:104:6]
+  97 | 
+  98 |     reader.addEventListener("load", (event) => {
+     :                            |
+     :                            `-- Opened here
+  99 |       if (event.target?.result) {
+ 100 |         resolve(event.target.result as string);
+ 101 |       } else {
+ 102 |         reject(new Error("Datei konnte nicht gelesen werden"));
+ 103 |       }
+ 104 |     };
+     :      |
+     :      `-- `,` or `)` expected
+ 105 | 
+     `----
+
+  x eslint(prefer-const): `f` is never reassigned.
+   ,-[fix-lookup.mjs:2:5]
+ 1 | import fs from 'fs';
+ 2 | let f, c;
+   :     ^
+ 3 | f = "src/lib/hooks/use-postal-code-lookup.ts";
+   `----
+  help: Use `const` instead.
+
+  x eslint(sort-vars): Variable declarations should be sorted
+   ,-[fix-lookup.mjs:2:8]
+ 1 | import fs from 'fs';
+ 2 | let f, c;
+   :        ^
+ 3 | f = "src/lib/hooks/use-postal-code-lookup.ts";
+   `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-lookup.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | let f, c;
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x eslint(no-regex-spaces): Multiple consecutive spaces are hard to count.
+    ,-[fix-actions.mjs:9:59]
+  8 | c = c.replace(/entityId: layerId,/g, 'entityId: innerLayerId,');
+  9 | c = c.replace(/existingLayerMap\.set\(layerNameLower, \{\n              \.\.\.newLayer,[\s\S]*?\n            \}\);\n          \}\n        \}\);/g, match => match.replace(/\n          \}\n        \}\);/, '\n          }\n          return innerLayerId;\n        });'));
+    :                                                           ^^^^^^^^^^^^^^
+ 10 | c = c.replace(/layerIds\.push\(layerId!\);/g, 'layerIds.push(txLayerId);');
+    `----
+  help: Use a quantifier: ` {14}`
+
+  x eslint(no-regex-spaces): Multiple consecutive spaces are hard to count.
+    ,-[fix-actions.mjs:9:174]
+  8 | c = c.replace(/entityId: layerId,/g, 'entityId: innerLayerId,');
+  9 | c = c.replace(/existingLayerMap\.set\(layerNameLower, \{\n              \.\.\.newLayer,[\s\S]*?\n            \}\);\n          \}\n        \}\);/g, match => match.replace(/\n          \}\n        \}\);/, '\n          }\n          return innerLayerId;\n        });'));
+    :                                                                                                                                                                              ^^^^^^^^^^
+ 10 | c = c.replace(/layerIds\.push\(layerId!\);/g, 'layerIds.push(txLayerId);');
+    `----
+  help: Use a quantifier: ` {10}`
+
+  x eslint(prefer-const): `f` is never reassigned.
+   ,-[fix-actions.mjs:2:5]
+ 1 | import fs from 'fs';
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   :     ^
+ 3 | let c = fs.readFileSync(f, 'utf8');
+   `----
+  help: Use `const` instead.
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-actions.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | let f = "src/app/actions/bulk-import-actions.ts";
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x eslint(sort-vars): Variable declarations should be sorted
+   ,-[fix-final.mjs:3:8]
+ 2 | 
+ 3 | let f, c;
+   :        ^
+ 4 | 
+   `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint-plugin-unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js builtin modules.
+   ,-[fix-final.mjs:1:16]
+ 1 | import fs from 'fs';
+   :                ^^^^
+ 2 | 
+   `----
+  help: Prefer `node:fs` over `fs`.
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:24:51]
+ 23 | interface UsePostalCodeLookupOptions {
+ 24 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 25 | 
+    `----
+
+  x typescript-eslint(prefer-promise-reject-errors): Expected the Promise rejection reason to be an Error.
+     ,-[src/lib/contexts/optimistic-context.tsx:258:13]
+ 257 |           } catch (error) {
+ 258 |             reject(error);
+     :             ^^^^^^^^^^^^^
+ 259 |           }
+     `----
+
+Found 0 warnings and 18 errors.
+Finished in 4.4s on 168 files with 255 rules using 20 threads.
+error: script "lint" exited with code 1

@@ -1,16 +1,12 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
+/* eslint_disable @typescript-eslint/restrict-template-expressions */
+/* eslint_disable @typescript-eslint/no-unsafe-argument */
+/* eslint_disable @typescript-eslint/no-unsafe-assignment */
+/* eslint_disable @typescript-eslint/no-unsafe-member-access */
+/* eslint_disable @typescript-eslint/no-unnecessary-condition */
 "use client";
 
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
-import type {
-  NameType,
-  ValueType,
-} from "recharts/types/component/DefaultTooltipContent";
 
 import { cn } from "@/lib/utils";
 
@@ -136,7 +132,7 @@ function ChartTooltipContent({
     nameKey?: string;
     labelKey?: string;
   } & Omit<
-    RechartsPrimitive.DefaultTooltipContentProps<ValueType, NameType>,
+    RechartsPrimitive.DefaultTooltipContentProps,
     "accessibilityLayer"
   >) {
   const { config } = useChart();

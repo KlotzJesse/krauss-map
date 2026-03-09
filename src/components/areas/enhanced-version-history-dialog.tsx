@@ -139,7 +139,7 @@ export function EnhancedVersionHistoryDialog({
               return `Version ${versionToRestore.versionNumber} wiederhergestellt`;
             }
             throw new Error(
-              data.error ? data.error : "Failed to restore version"
+              data.error || "Failed to restore version"
             );
           },
           error: "Fehler beim Wiederherstellen der Version",

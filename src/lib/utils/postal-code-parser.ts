@@ -1,6 +1,5 @@
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -76,7 +75,7 @@ export function parsePostalCodeInput(input: string): ParsedPostalCode[] {
  */
 export function findPostalCodeMatches(
   parsedCodes: ParsedPostalCode[],
-  availableData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>,
+  availableData: FeatureCollection<Polygon | MultiPolygon>,
   targetGranularity: string
 ): PostalCodeMatch[] {
   const matches: PostalCodeMatch[] = [];
@@ -177,12 +176,12 @@ export function estimateGranularity(code: string): string {
 export function groupMatchesByPattern(
   matches: PostalCodeMatch[]
 ): Record<string, PostalCodeMatch> {
-  return matches.reduce(
+  return matches.reduce< Record<string, PostalCodeMatch>>(
     (acc, match) => {
       acc[match.code] = match;
       return acc;
     },
-    {} as Record<string, PostalCodeMatch>
+    {}
   );
 }
 
@@ -376,7 +375,7 @@ export function buildSearchQuery(input: string): string[] {
  */
 export function findPostalCodesByLocation(
   locationName: string,
-  availableData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+  availableData: FeatureCollection<Polygon | MultiPolygon>
 ): string[] {
   const searchVariants = normalizeCityStateName(locationName);
   const foundCodes: string[] = [];
@@ -421,7 +420,7 @@ export function findPostalCodesByLocation(
  */
 export function findEnhancedPostalCodeMatches(
   input: string,
-  availableData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>,
+  availableData: FeatureCollection<Polygon | MultiPolygon>,
   targetGranularity: string
 ): PostalCodeMatch[] {
   const matches: PostalCodeMatch[] = [];

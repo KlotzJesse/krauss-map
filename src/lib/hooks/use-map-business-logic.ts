@@ -1,13 +1,12 @@
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
 import { useMemo } from "react";
 
 interface UseMapBusinessLogicProps {
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
   selectedRegions: string[];
   layerId: string;
 }

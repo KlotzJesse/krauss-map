@@ -4,7 +4,6 @@ import { point } from "@turf/helpers";
 import type {
   Feature,
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -39,7 +38,7 @@ export function featureCollectionFromIds(
  * Returns the centroid of the largest polygon in a feature - optimized with caching.
  */
 export function getLargestPolygonCentroid(
-  feature: Feature<Polygon | MultiPolygon, GeoJsonProperties>
+  feature: Feature<Polygon | MultiPolygon>
 ) {
   // Use cache for expensive centroid calculations
   if (centroidCache.has(feature)) {
@@ -85,7 +84,7 @@ export function makeLabelPoints(features: FeatureCollection) {
     type: "FeatureCollection",
     features: (features.features as Feature[]).map((f) => {
       const coords = getLargestPolygonCentroid(
-        f as Feature<Polygon | MultiPolygon, GeoJsonProperties>
+        f as Feature<Polygon | MultiPolygon>
       );
       return point(coords, f.properties);
     }),

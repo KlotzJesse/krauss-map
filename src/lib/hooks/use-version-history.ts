@@ -37,7 +37,7 @@ export function useVersionHistory(areaId: number) {
       description?: string;
       changesSummary?: string;
       createdBy?: string;
-    }) => await toast.promise(
+    }) =>  toast.promise(
         (async () => {
           const result = await createVersionAction(areaId, data);
           if (result.success && result.data) {

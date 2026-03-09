@@ -115,8 +115,7 @@ export default async function PostalCodesPage({
           ),
         });
 
-        if (version) {
-          if (version.snapshot) {
+        if (version?.snapshot) {
             const snapshot = version.snapshot as { granularity?: string };
             const snapGranularity = snapshot.granularity;
             if (snapGranularity) {
@@ -124,7 +123,6 @@ export default async function PostalCodesPage({
             } else {
               granularity = "1digit";
             }
-          }
         }
       } else {
         // Get granularity from current area

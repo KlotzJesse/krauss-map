@@ -255,7 +255,7 @@ export function OptimisticProvider({
             const result = await serverAction();
             resolve(result);
           } catch (error) {
-            reject(error);
+            reject(error instanceof Error ? error : new Error(String(error)));
           }
         });
       }),

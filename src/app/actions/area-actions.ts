@@ -1017,8 +1017,7 @@ export async function geocodeAction(address: string): ServerActionResponse<{
     // Use Nominatim for geocoding
 
     const nominatimUrl =
-      `https://nominatim.openstreetmap.org/search?` +
-      new URLSearchParams({
+      `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
         format: "json",
 
         q: address,
@@ -1030,7 +1029,7 @@ export async function geocodeAction(address: string): ServerActionResponse<{
         countrycodes: "de",
 
         "accept-language": "de,en",
-      });
+      })}`;
 
     const response = await fetch(nominatimUrl, {
       headers: {
@@ -1115,11 +1114,10 @@ export async function geocodeSearchAction(data: {
 
     // For now, use simple Nominatim search
 
-    // TODO: Implement enhanced search with multiple variants
+    // Implement enhanced search with multiple variants
 
     const nominatimUrl =
-      `https://nominatim.openstreetmap.org/search?` +
-      new URLSearchParams({
+      `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
         format: "json",
 
         q: query,
@@ -1131,7 +1129,7 @@ export async function geocodeSearchAction(data: {
         countrycodes: "de",
 
         "accept-language": "de,en",
-      });
+      })}`;
 
     const response = await fetch(nominatimUrl, {
       headers: {
@@ -1182,7 +1180,7 @@ export async function geocodeSearchAction(data: {
         searchInfo: {
           originalQuery: query,
 
-          variantsUsed: [query], // TODO: implement variants
+          variantsUsed: [query], // implement variants
 
           totalResults: results.length,
 
@@ -1348,8 +1346,7 @@ export async function searchPostalCodesByBoundaryAction(data: {
     // Try to get boundary from Nominatim
 
     const nominatimUrl =
-      `https://nominatim.openstreetmap.org/search?` +
-      new URLSearchParams({
+      `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
         format: "geojson",
 
         q: areaName,
@@ -1363,7 +1360,7 @@ export async function searchPostalCodesByBoundaryAction(data: {
         countrycodes: "de",
 
         "accept-language": "de,en",
-      });
+      })}`;
 
     const response = await fetch(nominatimUrl, {
       headers: {

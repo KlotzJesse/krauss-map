@@ -1,6 +1,5 @@
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -12,7 +11,7 @@ import { featureCollectionFromIds } from "@/lib/utils/map-data";
 interface UseMapSelectedFeaturesSourceProps {
   map: MapLibreMap | null;
   layerId: string;
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
   selectedRegions: string[];
   layersLoaded: boolean;
 }

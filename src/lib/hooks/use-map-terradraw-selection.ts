@@ -20,7 +20,7 @@ import { useStableCallback } from "./use-stable-callback";
 
 interface UseMapTerraDrawSelectionProps {
   mapRef: RefObject<MapLibreMap | null>;
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
 }
 
 /**

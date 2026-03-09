@@ -48,9 +48,9 @@ export function CreateVersionDialog({
     setIsCreating(true);
 
     const versionData = {
-      name: name ? name : undefined,
-      description: description ? description : undefined,
-      changesSummary: changesSummary ? changesSummary : undefined,
+      name: name || undefined,
+      description: description || undefined,
+      changesSummary: changesSummary || undefined,
     };
 
     startTransition(async () => {

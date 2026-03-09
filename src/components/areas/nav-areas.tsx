@@ -196,6 +196,7 @@ export function NavAreas({
           <div className="flex items-center justify-between w-full">
             <span>Gebiete</span>
             <button
+              type="button"
               onClick={() => setCreateDialogOpen(true)}
               className="hover:bg-sidebar-accent rounded p-0.5"
               title="Neues Gebiet erstellen"

@@ -1,0 +1,136 @@
+
+  x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
+     ,-[src/app/actions/bulk-import-actions.ts:66:47]
+  65 |             // Process this layer in its own transaction
+  66 | ,->         const txResult = await db.transaction(async (tx) => {
+  67 | |             let txLayerId: number;
+  68 | |             let addedPostalCodes = 0;
+  69 | |             let isNewLayer = false;
+  70 | |             let newLayerData = null;
+  71 | |   
+  72 | |             if (existingLayer) {
+  73 | |               // Update existing layer
+  74 | |               txLayerId = existingLayer.id;
+  75 | |   
+  76 | |               // Get current postal codes
+  77 | |               const currentCodes = new Set(
+  78 | |                 existingLayer.postalCodes?.map((pc) => pc.postalCode) || []
+  79 | |               );
+  80 | |   
+  81 | |               // Find new codes that don't exist in this layer yet
+  82 | |               const newCodes = uniquePostalCodes.filter(
+  83 | |                 (code) => !currentCodes.has(code)
+  84 | |               );
+  85 | |   
+  86 | |               if (newCodes.length > 0) {
+  87 | |                 // Insert only the new postal codes in batches
+  88 | |                 for (let i = 0; i < newCodes.length; i += BATCH_SIZE) {
+  89 | |                   const batch = newCodes.slice(i, i + BATCH_SIZE);
+  90 | |                   await tx.insert(areaLayerPostalCodes).values(
+  91 | |                     batch.map((code) => ({
+  92 | |                       layerId: txLayerId,
+  93 | |                       postalCode: code,
+  94 | |                     }))
+  95 | |                   );
+  96 | |                 }
+  97 | |   
+  98 | |                 addedPostalCodes = newCodes.length;
+  99 | |   
+ 100 | |                 // Record change
+ 101 | |                 await recordChangeAction(areaId, {
+ 102 | |                   changeType: "add_postal_codes",
+ 103 | |                   entityType: "postal_code",
+ 104 | |                   entityId: txLayerId,
+ 105 | |                   changeData: {
+ 106 | |                     postalCodes: newCodes,
+ 107 | |                     layerId: txLayerId,
+ 108 | |                     source: "bulk_import",
+ 109 | |                   },
+ 110 | |                   previousData: {
+ 111 | |                     postalCodes: [...currentCodes],
+ 112 | |                   },
+ 113 | |                   createdBy,
+ 114 | |                 });
+ 115 | |               }
+ 116 | |             } else {
+ 117 | |               // Create new layer
+ 118 | |               const [newLayer] = await tx
+ 119 | |                 .insert(areaLayers)
+ 120 | |                 .values({
+ 121 | |                   areaId,
+ 122 | |                   name: layerData.name,
+ 123 | |                   color: generateLayerColor(existingLayers.length + createdLayers + updatedLayers),
+ 124 | |                   opacity: 70,
+ 125 | |                   isVisible: "true",
+ 126 | |                   orderIndex: existingLayers.length + createdLayers,
+ 127 | |                 })
+ 128 | |                 .returning();
+ 129 | |   
+ 130 | |               txLayerId = newLayer.id;
+ 131 | |               isNewLayer = true;
+ 132 | |               newLayerData = newLayer;
+ 133 | |   
+ 134 | |               // Insert postal codes in batches
+ 135 | |               for (let i = 0; i < uniquePostalCodes.length; i += BATCH_SIZE) {
+ 136 | |                 const batch = uniquePostalCodes.slice(i, i + BATCH_SIZE);
+ 137 | |                 await tx.insert(areaLayerPostalCodes).values(
+ 138 | |                   batch.map((code) => ({
+ 139 | |                     layerId: txLayerId,
+ 140 | |                     postalCode: code,
+ 141 | |                   }))
+ 142 | |                 );
+ 143 | |               }
+ 144 | |   
+ 145 | |               addedPostalCodes = uniquePostalCodes.length;
+ 146 | |   
+ 147 | |               // Record change
+ 148 | |               await recordChangeAction(areaId, {
+ 149 | |                 changeType: "create_layer",
+ 150 | |                 entityType: "layer",
+ 151 | |                 entityId: txLayerId,
+ 152 | |                 changeData: {
+ 153 | |                   layer: {
+ 154 | |                     areaId,
+ 155 | |                     name: layerData.name,
+ 156 | |                     color: newLayer.color,
+ 157 | |                     opacity: newLayer.opacity,
+ 158 | |                     isVisible: newLayer.isVisible,
+ 159 | |                     orderIndex: newLayer.orderIndex,
+ 160 | |                   },
+ 161 | |                   postalCodes: uniquePostalCodes,
+ 162 | |                   source: "bulk_import",
+ 163 | |                 },
+ 164 | |                 createdBy,
+ 165 | |               });
+ 166 | |             }
+ 167 | |   
+ 168 | |             return { txLayerId, addedPostalCodes, isNewLayer, newLayerData };
+ 169 | `->         });
+ 170 |     
+     `----
+  help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
+
+  x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
+    ,-[src/app/actions/bulk-import-actions.ts:91:29]
+ 90 |                     await tx.insert(areaLayerPostalCodes).values(
+ 91 | ,->                   batch.map((code) => ({
+ 92 | |                       layerId: txLayerId,
+ 93 | |                       postalCode: code,
+ 94 | `->                   }))
+ 95 |                     );
+    `----
+  help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
+
+  x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
+     ,-[src/app/actions/bulk-import-actions.ts:138:27]
+ 137 |                   await tx.insert(areaLayerPostalCodes).values(
+ 138 | ,->                 batch.map((code) => ({
+ 139 | |                     layerId: txLayerId,
+ 140 | |                     postalCode: code,
+ 141 | `->                 }))
+ 142 |                   );
+     `----
+  help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
+
+Found 0 warnings and 3 errors.
+Finished in 1.7s on 165 files with 255 rules using 20 threads.

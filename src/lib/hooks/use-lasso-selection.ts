@@ -1,6 +1,5 @@
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -11,7 +10,7 @@ import { useEffect, useRef } from "react";
 interface LassoSelectionProps {
   map: MapLibre | null;
   isMapLoaded: boolean;
-  data: FeatureCollection<MultiPolygon | Polygon, GeoJsonProperties>;
+  data: FeatureCollection<MultiPolygon | Polygon>;
   granularity: string;
   enabled: boolean;
   onRegionSelect?: (regionCode: string) => void;

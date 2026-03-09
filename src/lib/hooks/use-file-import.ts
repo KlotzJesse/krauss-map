@@ -72,8 +72,8 @@ export function useFileImport() {
     async (files: FileList): Promise<FileImportResult[]> => {
       const results: FileImportResult[] = [];
 
-      for (let i = 0; i < files.length; i++) {
-        const result = await processFile(files[i]);
+      for (const file of [...files]) {
+        const result = await processFile(file);
         results.push(result);
       }
 
@@ -95,17 +95,17 @@ function readFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (event) => {
+    reader.addEventListener("load", (event) => {
       if (event.target?.result) {
         resolve(event.target.result as string);
       } else {
         reject(new Error("Datei konnte nicht gelesen werden"));
       }
-    };
+    });
 
-    reader.onerror = () => {
+    reader.addEventListener("error", () => {
       reject(new Error("Fehler beim Lesen der Datei"));
-    };
+    });
 
     reader.readAsText(file, "utf8");
   });

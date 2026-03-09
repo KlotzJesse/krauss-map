@@ -12,7 +12,6 @@ import {
 import type { InferSelectModel } from "drizzle-orm";
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -112,8 +111,7 @@ export interface DrawingToolsProps {
   onGranularityChange?: (granularity: string) => void;
 
   postalCodesData?: FeatureCollection<
-    Polygon | MultiPolygon,
-    GeoJsonProperties
+    Polygon | MultiPolygon
   >;
 
   pendingPostalCodes?: string[];
@@ -183,8 +181,7 @@ async function fillRegions(
   mode: "all" | "holes" | "expand",
 
   _postalCodesData: FeatureCollection<
-    Polygon | MultiPolygon,
-    GeoJsonProperties
+    Polygon | MultiPolygon
   >,
 
   activeLayer: Layer,
@@ -347,7 +344,7 @@ function DrawingToolsImpl({
 
   // Collapsible section states
 
-  const [layersOpen, setLayersOpen] = useState(areaId ? true : false);
+  const [layersOpen, setLayersOpen] = useState(!!areaId);
 
   const [regionsOpen, setRegionsOpen] = useState(false);
 
@@ -1090,6 +1087,7 @@ function DrawingToolsImpl({
                                 <div className="grid grid-cols-4 gap-2">
                                   {DEFAULT_COLORS.map((color) => (
                                     <button
+                                      type="button"
                                       key={color}
                                       className="w-8 h-8 rounded-md border-2 hover:scale-110 transition-transform"
                                       style={{

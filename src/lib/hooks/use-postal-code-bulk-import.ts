@@ -1,6 +1,5 @@
 import type {
   FeatureCollection,
-  GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
@@ -13,7 +12,7 @@ import {
 } from "@/lib/utils/postal-code-parser";
 
 interface PostalCodeBulkImportProps {
-  data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+  data: FeatureCollection<Polygon | MultiPolygon>;
   granularity: string;
 }
 

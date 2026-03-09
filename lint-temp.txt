@@ -17,6 +17,73 @@ $ oxlint --type-aware
     `----
   help: Add a `type` attribute to the `button` element.
 
+  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
+    ,-[src/lib/hooks/use-map-optimizations.ts:69:14]
+ 68 |         const coords = geometry.coordinates[0];
+ 69 |         for (let i = 0; i < coords.length; i++) {
+    :              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 70 |           const [lng, lat] = coords[i];
+    `----
+  help: Consider using a for-of loop for this simple iteration.
+
+  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
+    ,-[src/lib/hooks/use-map-optimizations.ts:80:16]
+ 79 |         if (coords) {
+ 80 |           for (let i = 0; i < coords.length; i++) {
+    :                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 81 |             const [lng, lat] = coords[i];
+    `----
+  help: Consider using a for-of loop for this simple iteration.
+
+  x eslint-plugin-unicorn(no-lonely-if): Unexpected `if` as the only statement in a `if` block without `else`.
+     ,-[src/app/(map)/postal-codes/[areaId]/page.tsx:118:9]
+ 117 | 
+ 118 |         if (version) {
+     :         ^^
+ 119 |           if (version.snapshot) {
+     :           ^^
+ 120 |             const snapshot = version.snapshot as { granularity?: string };
+     `----
+  help: Move the inner `if` test to the outer `if` test.
+
+  x eslint(no-lonely-if): Unexpected `if` as the only statement in an `else` block
+    ,-[src/lib/hooks/use-cursor-selection.ts:58:7]
+ 57 |     } else {
+ 58 |       if (lastRegionIdRef.current !== null) {
+    :       ^^
+ 59 |         map.setLayoutProperty(hoverLayerId, "visibility", "none");
+    `----
+  help: Consider using `else if` instead.
+
+  x eslint(sort-vars): Variable declarations should be sorted
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:47:9]
+ 46 |       let minLng = Infinity,
+ 47 |         maxLng = -Infinity,
+    :         ^^^^^^^^^^^^^^^^^^
+ 48 |         minLat = Infinity,
+    `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint(sort-vars): Variable declarations should be sorted
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:49:9]
+ 48 |         minLat = Infinity,
+ 49 |         maxLat = -Infinity;
+    :         ^^^^^^^^^^^^^^^^^^
+ 50 | 
+    `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint-plugin-unicorn(no-lonely-if): Unexpected `if` as the only statement in a `if` block without `else`.
+     ,-[src/lib/hooks/use-postal-code-lookup.ts:237:13]
+ 236 |           for (const poly of feature.geometry.coordinates) {
+ 237 |             if (Array.isArray(poly) && Array.isArray(poly[0])) {
+     :             ^^
+ 238 |               if (isPointInPolygon([lng, lat], poly[0] as number[][])) {
+     :               ^^
+ 239 |                 return candidate.code;
+     `----
+  help: Move the inner `if` test to the outer `if` test.
+
   x typescript-eslint(parameter-properties): Property statusCode should be declared as a class property.
     ,-[src/lib/utils/api-error-handling.ts:13:5]
  12 |   constructor(
@@ -44,43 +111,23 @@ $ oxlint --type-aware
     `----
   help: Remove the parameter modifier and declare this member on the class instead.
 
-  x eslint-plugin-unicorn(no-lonely-if): Unexpected `if` as the only statement in a `if` block without `else`.
-     ,-[src/app/(map)/postal-codes/[areaId]/page.tsx:118:9]
- 117 | 
- 118 |         if (version) {
-     :         ^^
- 119 |           if (version.snapshot) {
-     :           ^^
- 120 |             const snapshot = version.snapshot as { granularity?: string };
+  x eslint-plugin-unicorn(no-useless-switch-case): Useless case in switch statement.
+    ,-[src/lib/utils/granularity-utils.ts:86:5]
+ 85 |     }
+ 86 |     case 5:
+    :     ^^^^^^^
+ 87 |     default: {
+    `----
+  help: Consider removing this case or removing the `default` case.
+
+  x eslint-plugin-unicorn(no-useless-switch-case): Useless case in switch statement.
+     ,-[src/components/postal-codes/address-autocomplete-enhanced.tsx:225:9]
+ 224 |         }
+ 225 |         case "5digit":
+     :         ^^^^^^^^^^^^^^
+ 226 |         default: {
      `----
-  help: Move the inner `if` test to the outer `if` test.
-
-  x eslint(no-lonely-if): Unexpected `if` as the only statement in an `else` block
-    ,-[src/lib/hooks/use-cursor-selection.ts:58:7]
- 57 |     } else {
- 58 |       if (lastRegionIdRef.current !== null) {
-    :       ^^
- 59 |         map.setLayoutProperty(hoverLayerId, "visibility", "none");
-    `----
-  help: Consider using `else if` instead.
-
-  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
-    ,-[src/lib/hooks/use-map-optimizations.ts:69:14]
- 68 |         const coords = geometry.coordinates[0];
- 69 |         for (let i = 0; i < coords.length; i++) {
-    :              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
- 70 |           const [lng, lat] = coords[i];
-    `----
-  help: Consider using a for-of loop for this simple iteration.
-
-  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
-    ,-[src/lib/hooks/use-map-optimizations.ts:80:16]
- 79 |         if (coords) {
- 80 |           for (let i = 0; i < coords.length; i++) {
-    :                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
- 81 |             const [lng, lat] = coords[i];
-    `----
-  help: Consider using a for-of loop for this simple iteration.
+  help: Consider removing this case or removing the `default` case.
 
   x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
      ,-[src/app/actions/bulk-import-actions.ts:68:30]
@@ -221,53 +268,6 @@ $ oxlint --type-aware
      `----
   help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
 
-  x eslint-plugin-unicorn(no-useless-switch-case): Useless case in switch statement.
-    ,-[src/lib/utils/granularity-utils.ts:86:5]
- 85 |     }
- 86 |     case 5:
-    :     ^^^^^^^
- 87 |     default: {
-    `----
-  help: Consider removing this case or removing the `default` case.
-
-  x eslint(sort-vars): Variable declarations should be sorted
-    ,-[src/lib/hooks/use-postal-code-lookup.ts:48:9]
- 47 |       let minLng = Infinity,
- 48 |         maxLng = -Infinity,
-    :         ^^^^^^^^^^^^^^^^^^
- 49 |         minLat = Infinity,
-    `----
-  help: Sort variable declarations in ascending order (case-sensitive by default).
-
-  x eslint(sort-vars): Variable declarations should be sorted
-    ,-[src/lib/hooks/use-postal-code-lookup.ts:50:9]
- 49 |         minLat = Infinity,
- 50 |         maxLat = -Infinity;
-    :         ^^^^^^^^^^^^^^^^^^
- 51 | 
-    `----
-  help: Sort variable declarations in ascending order (case-sensitive by default).
-
-  x eslint-plugin-unicorn(no-lonely-if): Unexpected `if` as the only statement in a `if` block without `else`.
-     ,-[src/lib/hooks/use-postal-code-lookup.ts:238:13]
- 237 |           for (const poly of feature.geometry.coordinates) {
- 238 |             if (Array.isArray(poly) && Array.isArray(poly[0])) {
-     :             ^^
- 239 |               if (isPointInPolygon([lng, lat], poly[0] as number[][])) {
-     :               ^^
- 240 |                 return candidate.code;
-     `----
-  help: Move the inner `if` test to the outer `if` test.
-
-  x eslint-plugin-unicorn(no-useless-switch-case): Useless case in switch statement.
-     ,-[src/components/postal-codes/address-autocomplete-enhanced.tsx:225:9]
- 224 |         }
- 225 |         case "5digit":
-     :         ^^^^^^^^^^^^^^
- 226 |         default: {
-     `----
-  help: Consider removing this case or removing the `default` case.
-
   x eslint-plugin-react(button-has-type): `button` elements must have an explicit `type` attribute.
      ,-[src/components/areas/nav-areas.tsx:198:14]
  197 |             <span>Gebiete</span>
@@ -329,14 +329,6 @@ $ oxlint --type-aware
  107 |       reject(new Error("Fehler beim Lesen der Datei"));
      `----
 
-  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
-    ,-[src/lib/hooks/use-postal-code-lookup.ts:24:51]
- 23 | interface UsePostalCodeLookupOptions {
- 24 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
-    :                                                   ^^^^^^^^^^^^^^^^^
- 25 | 
-    `----
-
   x typescript-eslint(prefer-promise-reject-errors): Expected the Promise rejection reason to be an Error.
      ,-[src/lib/contexts/optimistic-context.tsx:258:13]
  257 |           } catch (error) {
@@ -345,6 +337,6 @@ $ oxlint --type-aware
  259 |           }
      `----
 
-Found 0 warnings and 26 errors.
-Finished in 2.1s on 165 files with 255 rules using 20 threads.
+Found 0 warnings and 25 errors.
+Finished in 1.9s on 165 files with 255 rules using 20 threads.
 error: script "lint" exited with code 1

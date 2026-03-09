@@ -24,7 +24,7 @@ interface PostalCodeRow {
 // Fetch all postal codes for a given granularity from the Neon database as GeoJSON
 async function _getPostalCodesDataForGranularity(
   granularity: string
-): Promise<FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>> {
+): Promise<FeatureCollection<Polygon | MultiPolygon>> {
   try {
     const { rows } = await db.execute(
       sql`SELECT id, code, granularity, ST_AsGeoJSON(geometry) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity}`
@@ -58,8 +58,7 @@ export const getPostalCodesDataForGranularity = cache(
 export async function getPostalCodesDataForGranularityServer(
   granularity: string
 ): Promise<FeatureCollection<
-  Polygon | MultiPolygon,
-  GeoJsonProperties
+  Polygon | MultiPolygon
 > | null> {
   try {
     return await getPostalCodesDataForGranularity(granularity);
