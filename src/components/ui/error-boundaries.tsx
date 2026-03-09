@@ -1,8 +1,9 @@
+import { AlertTriangle, RefreshCw } from "lucide-react";
+
 import { AlertError } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { AlertTriangle, RefreshCw } from "lucide-react";
 
 // Specific error boundaries for different features
 export function MapErrorBoundary({ children }: { children: React.ReactNode }) {

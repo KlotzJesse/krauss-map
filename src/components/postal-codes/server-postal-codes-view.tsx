@@ -1,13 +1,7 @@
-import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
-
-import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
-
-import { getPostalCodesDataForGranularity } from "@/lib/utils/postal-codes-data";
-
-import { getStatesData } from "@/lib/utils/states-data";
-
 import { Suspense } from "react";
 
+import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
+import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import {
   getAreas,
   getAreaById,
@@ -16,6 +10,8 @@ import {
   getChangeHistory,
   getUndoRedoStatus,
 } from "@/lib/db/data-functions";
+import { getPostalCodesDataForGranularity } from "@/lib/utils/postal-codes-data";
+import { getStatesData } from "@/lib/utils/states-data";
 
 import { PostalCodesViewClientWithLayers } from "./postal-codes-view-client-layers";
 
@@ -35,7 +31,8 @@ export default async function ServerPostalCodesView({
   // Server Component: initiate all fetches as promises
   // Pass promises down - let components consume where needed
   // Deduplication ensures efficiency
-  const postalCodesDataPromise = getPostalCodesDataForGranularity(defaultGranularity);
+  const postalCodesDataPromise =
+    getPostalCodesDataForGranularity(defaultGranularity);
   const statesDataPromise = getStatesData();
   const areasPromise = getAreas();
   const areaPromise = getAreaById(areaId);

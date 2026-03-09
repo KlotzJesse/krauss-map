@@ -1,7 +1,8 @@
 "use server";
 
-import { db } from "../../lib/db";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
+import { db } from "../../lib/db";
 import {
   areaChanges,
   areaUndoStacks,
@@ -12,11 +13,9 @@ import {
   type SelectAreaChanges,
 } from "../../lib/schema/schema";
 
-import { eq, and, inArray, sql } from "drizzle-orm";
-
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-import { updateTag, revalidatePath,refresh } from "next/cache";
+import { updateTag, revalidatePath, refresh } from "next/cache";
 
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
@@ -83,7 +82,7 @@ export interface ChangeKey {
 export async function recordChangeAction(
   areaId: number,
 
-  change: ChangeRecord,
+  change: ChangeRecord
 ): ServerActionResponse<ChangeKey> {
   try {
     // Get current active version if exists
@@ -156,8 +155,8 @@ export async function recordChangeAction(
           and(
             eq(areaVersions.areaId, areaId),
 
-            eq(areaVersions.versionNumber, area.currentVersionNumber),
-          ),
+            eq(areaVersions.versionNumber, area.currentVersionNumber)
+          )
         );
     }
 
@@ -181,7 +180,7 @@ export async function recordChangeAction(
 async function updateUndoStackAfterChange(
   areaId: number,
 
-  changeKey: ChangeKey,
+  changeKey: ChangeKey
 ): Promise<void> {
   const stack = await db.query.areaUndoStacks.findFirst({
     where: eq(areaUndoStacks.areaId, areaId),
@@ -229,7 +228,7 @@ async function updateUndoStackAfterChange(
  */
 
 export async function undoChangeAction(
-  areaId: number,
+  areaId: number
 ): ServerActionResponse<ChangeKey | { success: boolean; data: string }> {
   try {
     const result = await db.transaction(async (tx) => {
@@ -268,7 +267,7 @@ export async function undoChangeAction(
 
           eq(areaChanges.versionNumber, changeKey.versionNumber),
 
-          eq(areaChanges.sequenceNumber, changeKey.sequenceNumber),
+          eq(areaChanges.sequenceNumber, changeKey.sequenceNumber)
         ),
       });
 
@@ -296,8 +295,8 @@ export async function undoChangeAction(
 
             eq(areaChanges.versionNumber, changeKey.versionNumber),
 
-            eq(areaChanges.sequenceNumber, changeKey.sequenceNumber),
-          ),
+            eq(areaChanges.sequenceNumber, changeKey.sequenceNumber)
+          )
         );
 
       // Update stacks
@@ -339,7 +338,7 @@ export async function undoChangeAction(
  */
 
 export async function redoChangeAction(
-  areaId: number,
+  areaId: number
 ): ServerActionResponse<ChangeKey | { success: boolean; data: string }> {
   try {
     const result = await db.transaction(async (tx) => {
@@ -378,7 +377,7 @@ export async function redoChangeAction(
 
           eq(areaChanges.versionNumber, changeKey.versionNumber),
 
-          eq(areaChanges.sequenceNumber, changeKey.sequenceNumber),
+          eq(areaChanges.sequenceNumber, changeKey.sequenceNumber)
         ),
       });
 
@@ -406,8 +405,8 @@ export async function redoChangeAction(
 
             eq(areaChanges.versionNumber, changeKey.versionNumber),
 
-            eq(areaChanges.sequenceNumber, changeKey.sequenceNumber),
-          ),
+            eq(areaChanges.sequenceNumber, changeKey.sequenceNumber)
+          )
         );
 
       // Update stacks
@@ -451,7 +450,7 @@ export async function redoChangeAction(
 async function applyUndoOperation(
   tx: Transaction,
 
-  change: SelectAreaChanges,
+  change: SelectAreaChanges
 ): Promise<void> {
   const { changeType, entityId, previousData } = change;
   const typedPreviousData = previousData as PreviousDataWithLayer;
@@ -503,13 +502,16 @@ async function applyUndoOperation(
 
         // Recreate postal codes
 
-        if (typedPreviousData.postalCodes && typedPreviousData.postalCodes.length > 0) {
+        if (
+          typedPreviousData.postalCodes &&
+          typedPreviousData.postalCodes.length > 0
+        ) {
           await tx.insert(areaLayerPostalCodes).values(
             typedPreviousData.postalCodes.map((code: string) => ({
               layerId: layer.id,
 
               postalCode: code,
-            })),
+            }))
           );
         }
       }
@@ -531,9 +533,9 @@ async function applyUndoOperation(
               inArray(
                 areaLayerPostalCodes.postalCode,
 
-                typedChangeData.postalCodes,
-              ),
-            ),
+                typedChangeData.postalCodes
+              )
+            )
           );
       }
 
@@ -548,7 +550,7 @@ async function applyUndoOperation(
             layerId: entityId,
 
             postalCode: code,
-          })),
+          }))
         );
       }
 
@@ -576,7 +578,7 @@ async function applyUndoOperation(
 async function applyRedoOperation(
   tx: Transaction,
 
-  change: SelectAreaChanges,
+  change: SelectAreaChanges
 ): Promise<void> {
   const { changeType, entityId, changeData } = change;
   const typedChangeData = changeData as ChangeDataWithLayer;
@@ -597,13 +599,16 @@ async function applyRedoOperation(
 
         // Recreate postal codes
 
-        if (typedChangeData.postalCodes && typedChangeData.postalCodes.length > 0) {
+        if (
+          typedChangeData.postalCodes &&
+          typedChangeData.postalCodes.length > 0
+        ) {
           await tx.insert(areaLayerPostalCodes).values(
             typedChangeData.postalCodes.map((code: string) => ({
               layerId: layer.id,
 
               postalCode: code,
-            })),
+            }))
           );
         }
       }
@@ -643,7 +648,7 @@ async function applyRedoOperation(
             layerId: entityId,
 
             postalCode: code,
-          })),
+          }))
         );
       }
 
@@ -659,8 +664,11 @@ async function applyRedoOperation(
             and(
               eq(areaLayerPostalCodes.layerId, entityId),
 
-              inArray(areaLayerPostalCodes.postalCode, typedChangeData.postalCodes),
-            ),
+              inArray(
+                areaLayerPostalCodes.postalCode,
+                typedChangeData.postalCodes
+              )
+            )
           );
       }
 
@@ -687,13 +695,12 @@ async function applyRedoOperation(
 
 // ===============================
 
-
 /**
  * Clear undo/redo stacks (useful when creating a new version)
  */
 
 export async function clearUndoRedoStacksAction(
-  areaId: number,
+  areaId: number
 ): ServerActionResponse {
   try {
     const stack = await db.query.areaUndoStacks.findFirst({

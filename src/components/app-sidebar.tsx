@@ -1,10 +1,12 @@
 // Server Component wrapper that fetches data and passes promise to client
 // This prevents server-only imports from leaking into client bundle
 
-import { AppSidebarClient } from "./app-sidebar-client";
-import { getAreas } from "@/lib/db/data-functions";
 import type { ComponentProps } from "react";
+
 import type { Sidebar } from "@/components/ui/sidebar";
+import { getAreas } from "@/lib/db/data-functions";
+
+import { AppSidebarClient } from "./app-sidebar-client";
 
 interface AppSidebarProps extends ComponentProps<typeof Sidebar> {
   currentAreaId?: number | null;

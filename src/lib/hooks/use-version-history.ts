@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
+
 import {
   createVersionAction,
   restoreVersionAction,
@@ -47,14 +48,15 @@ export function useVersionHistory(areaId: number) {
         })(),
         {
           loading: "Erstelle Version...",
-          success: (data) => `Version ${data.versionNumber} erfolgreich erstellt`,
-          error: (err) => `Fehler beim Erstellen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
+          success: (data) =>
+            `Version ${data.versionNumber} erfolgreich erstellt`,
+          error: (err) =>
+            `Fehler beim Erstellen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
         }
       );
     },
     [areaId]
   );
-
 
   const restoreVersion = useCallback(
     (version: AreaVersion) => {

@@ -1,8 +1,9 @@
+import { IconEye, IconHistory } from "@tabler/icons-react";
+import { Activity } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IconEye, IconHistory } from "@tabler/icons-react";
 import { getVersionIndicatorInfo, getAreaById } from "@/lib/db/data-functions";
-import { Activity } from "react";
 
 interface VersionIndicatorProps {
   areaId?: number | null;

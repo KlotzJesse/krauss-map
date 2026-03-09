@@ -1,8 +1,10 @@
 import "server-only";
 // Database functions for data loading - to be used directly in server components
 // These replace the server actions for GET operations
-
+import { eq, and, desc, like } from "drizzle-orm";
 import { cacheTag } from "next/cache";
+
+import { db } from "../db";
 import {
   areas,
   areaLayers,
@@ -11,12 +13,10 @@ import {
   areaUndoStacks,
   postalCodes,
 } from "../schema/schema";
-import { eq, and, desc, like } from "drizzle-orm";
-import { db } from "../db";
 
 export async function getAreas() {
-  'use cache'
-  cacheTag('areas')
+  "use cache";
+  cacheTag("areas");
   try {
     const result = await db.query.areas.findMany({
       orderBy: (areas, { desc }) => [desc(areas.updatedAt)],
@@ -29,8 +29,8 @@ export async function getAreas() {
 }
 
 export async function getAreaById(id: number) {
-  'use cache'
-  cacheTag('areas', `area-${id}`)
+  "use cache";
+  cacheTag("areas", `area-${id}`);
   try {
     const area = await db.query.areas.findFirst({
       where: eq(areas.id, id),
@@ -56,8 +56,8 @@ export async function getAreaById(id: number) {
 }
 
 export async function getLayers(areaId: number) {
-  'use cache'
-  cacheTag('layers', `area-${areaId}-layers`)
+  "use cache";
+  cacheTag("layers", `area-${areaId}-layers`);
   try {
     const result = await db.query.areaLayers.findMany({
       where: eq(areaLayers.areaId, areaId),
@@ -76,8 +76,8 @@ export async function getLayers(areaId: number) {
 
 // Version-related functions
 export async function getVersions(areaId: number) {
-  'use cache'
-  cacheTag('versions', `area-${areaId}-versions`)
+  "use cache";
+  cacheTag("versions", `area-${areaId}-versions`);
   try {
     const versions = await db.query.areaVersions.findMany({
       where: eq(areaVersions.areaId, areaId),
@@ -91,8 +91,8 @@ export async function getVersions(areaId: number) {
 }
 
 export async function getVersion(areaId: number, versionNumber: number) {
-  'use cache'
-  cacheTag('version', `area-${areaId}-version-${versionNumber}`)
+  "use cache";
+  cacheTag("version", `area-${areaId}-version-${versionNumber}`);
   try {
     const version = await db.query.areaVersions.findFirst({
       where: and(
@@ -116,8 +116,8 @@ export async function getVersionIndicatorInfo(
   areaId: number,
   versionId?: number | null
 ) {
-  'use cache'
-  cacheTag('version-info', `area-${areaId}-version-info`)
+  "use cache";
+  cacheTag("version-info", `area-${areaId}-version-info`);
   try {
     const versions = await db.query.areaVersions.findMany({
       where: eq(areaVersions.areaId, areaId),
@@ -169,8 +169,8 @@ export async function getChangeHistory(
     includeUndone?: boolean;
   }
 ) {
-  'use cache'
-  cacheTag('change-history', `area-${areaId}-change-history`)
+  "use cache";
+  cacheTag("change-history", `area-${areaId}-change-history`);
   try {
     let whereConditions = eq(areaChanges.areaId, areaId);
 
@@ -178,7 +178,10 @@ export async function getChangeHistory(
       // For now, we'll need to get the version first to get the composite key
       // This is a limitation of the current design - we might need to change this later
       const version = await db.query.areaVersions.findFirst({
-        where: and(eq(areaVersions.areaId, areaId), eq(areaVersions.versionNumber, options.versionId)),
+        where: and(
+          eq(areaVersions.areaId, areaId),
+          eq(areaVersions.versionNumber, options.versionId)
+        ),
       });
       if (version) {
         whereConditions = and(
@@ -216,8 +219,8 @@ export async function getChangeHistory(
 
 // Undo/redo status function
 export async function getUndoRedoStatus(areaId: number) {
-  'use cache'
-  cacheTag('undo-redo', `area-${areaId}-undo-redo`)
+  "use cache";
+  cacheTag("undo-redo", `area-${areaId}-undo-redo`);
   try {
     const stack = await db.query.areaUndoStacks.findFirst({
       where: eq(areaUndoStacks.areaId, areaId),
@@ -247,8 +250,8 @@ export async function getMatchingPostalCodes(
   prefix: string,
   targetGranularity: string
 ) {
-  'use cache'
-  cacheTag('postal-codes', `postal-codes-${targetGranularity}-${prefix}`)
+  "use cache";
+  cacheTag("postal-codes", `postal-codes-${targetGranularity}-${prefix}`);
   try {
     const matchingCodes = await db
       .select({ code: postalCodes.code })

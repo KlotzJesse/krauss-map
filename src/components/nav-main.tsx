@@ -1,6 +1,7 @@
 "use client";
 
 import { IconCirclePlusFilled, type Icon } from "@tabler/icons-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { memo } from "react";
 
@@ -11,7 +12,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import type { Route } from "next";
 
 // Optimize with memoization
 const MemoizedSidebarMenuButton = memo(SidebarMenuButton);

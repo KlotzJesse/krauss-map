@@ -66,7 +66,8 @@ export function getLargestPolygonCentroid(
       }
     }
 
-    result = centroid({ type: "Polygon", coordinates: bestPolygon }).geometry.coordinates as [number, number];
+    result = centroid({ type: "Polygon", coordinates: bestPolygon }).geometry
+      .coordinates as [number, number];
   } else {
     result = centroid(feature).geometry.coordinates as [number, number];
   }

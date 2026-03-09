@@ -1,30 +1,29 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
-  cacheComponents: true,
-
   typedRoutes: true,
 
+  cacheComponents: true,
+
+  reactCompiler: true,
+
+  // Externalize packages that have issues with Turbopack bundling
+  serverExternalPackages: [
+    "@react-email/components",
+    "@react-email/render",
+    "resend",
+    "jspdf",
+  ],
+
   experimental: {
-
-    useCache: true,
-
-    // Forward browser logs to the terminal for easier debugging
-
     browserDebugInfoInTerminal: true,
-
-    inlineCss: true,
-
     typedEnv: true,
-
-    optimizeCss: true,
-
-    authInterrupts: true,
-
-    clientSegmentCache: true,
-
+    inlineCss: true,
+    webpackMemoryOptimizations: true,
+    useCache: true, // Enable "use cache" directive
+    globalNotFound: true,
     turbopackFileSystemCacheForDev: true,
+    viewTransition: true,
   },
 };
 

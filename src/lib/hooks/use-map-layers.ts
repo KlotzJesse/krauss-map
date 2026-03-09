@@ -1,3 +1,4 @@
+import type { InferSelectModel } from "drizzle-orm";
 import type {
   FeatureCollection,
   GeoJsonProperties,
@@ -11,7 +12,7 @@ import type {
   Map as MapLibreMap,
 } from "maplibre-gl";
 import { useEffect, useLayoutEffect, useMemo } from "react";
-import type { InferSelectModel } from "drizzle-orm";
+
 import type { areaLayers } from "../schema/schema";
 
 type Layer = InferSelectModel<typeof areaLayers> & {
@@ -407,8 +408,8 @@ export function useMapLayers({
         statesData
           ? "state-boundaries-label"
           : statesData
-          ? ids.stateLayerId
-          : ids.hoverLayerId
+            ? ids.stateLayerId
+            : ids.hoverLayerId
       );
     }
   }, [
@@ -525,7 +526,10 @@ export function useMapLayers({
   const layerDataCache = useMemo(() => {
     if (!data.features || !layers) return new Map();
 
-    const cache = new Map<number, FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>>();
+    const cache = new Map<
+      number,
+      FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    >();
     layers.forEach((layer) => {
       const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];
       if (postalCodes.length === 0) {
@@ -534,7 +538,7 @@ export function useMapLayers({
       }
 
       // Create lookup set for O(1) postal code matching
-      const postalCodeSet = new Set(postalCodes.map(code => code.toString()));
+      const postalCodeSet = new Set(postalCodes.map((code) => code.toString()));
 
       // Filter features once per layer change, not per switch
       const layerFeatures = data.features.filter((feature) => {
@@ -555,7 +559,13 @@ export function useMapLayers({
 
   // Initialize area layers once (only when layers change, not on activeLayerId change)
   useEffect(() => {
-    if (!map || !isMapLoaded || !layers || layers.length === 0 || !layerDataCache.size) {
+    if (
+      !map ||
+      !isMapLoaded ||
+      !layers ||
+      layers.length === 0 ||
+      !layerDataCache.size
+    ) {
       return;
     }
 
@@ -565,7 +575,10 @@ export function useMapLayers({
       const layerBorderId = `area-layer-${layer.id}-border`;
 
       const layerFeatureCollection = layerDataCache.get(layer.id);
-      if (!layerFeatureCollection || layerFeatureCollection.features.length === 0) {
+      if (
+        !layerFeatureCollection ||
+        layerFeatureCollection.features.length === 0
+      ) {
         // Remove empty layers
         if (map.getLayer(layerFillId)) map.removeLayer(layerFillId);
         if (map.getLayer(layerBorderId)) map.removeLayer(layerBorderId);
@@ -673,7 +686,14 @@ export function useMapLayers({
         }
       });
     };
-  }, [map, isMapLoaded, layers, layerDataCache, ids.hoverLayerId, activeLayerId]);
+  }, [
+    map,
+    isMapLoaded,
+    layers,
+    layerDataCache,
+    ids.hoverLayerId,
+    activeLayerId,
+  ]);
 
   // Optimized layer switching - only update visibility and active state
   useEffect(() => {
@@ -688,16 +708,25 @@ export function useMapLayers({
 
       // Only update visibility and active state - no expensive operations
       if (map.getLayer(layerFillId)) {
-        map.setLayoutProperty(layerFillId, "visibility",
-          isVisible ? "visible" : "none");
+        map.setLayoutProperty(
+          layerFillId,
+          "visibility",
+          isVisible ? "visible" : "none"
+        );
       }
 
       if (map.getLayer(layerBorderId)) {
         map.setPaintProperty(layerBorderId, "line-width", isActive ? 2.5 : 1.5);
-        map.setPaintProperty(layerBorderId, "line-opacity",
-          isVisible ? (isActive ? 0.9 : 0.7) : 0);
-        map.setLayoutProperty(layerBorderId, "visibility",
-          isVisible ? "visible" : "none");
+        map.setPaintProperty(
+          layerBorderId,
+          "line-opacity",
+          isVisible ? (isActive ? 0.9 : 0.7) : 0
+        );
+        map.setLayoutProperty(
+          layerBorderId,
+          "visibility",
+          isVisible ? "visible" : "none"
+        );
       }
     });
   }, [map, layersLoaded, activeLayerId, layers]);

@@ -1,9 +1,10 @@
 "use server";
 
+import { eq } from "drizzle-orm";
+import { updateTag, revalidatePath, refresh } from "next/cache";
+
 import { db } from "../../lib/db";
 import { areaLayers, areaLayerPostalCodes } from "../../lib/schema/schema";
-import { eq } from "drizzle-orm";
-import { updateTag, revalidatePath,refresh } from "next/cache";
 import { recordChangeAction } from "./change-tracking-actions";
 
 export interface BulkImportLayer {
@@ -43,9 +44,9 @@ export async function bulkImportPostalCodesAndLayers(
       with: { postalCodes: true },
     });
 
-    type ExistingLayer = typeof existingLayers[number];
+    type ExistingLayer = (typeof existingLayers)[number];
     const existingLayerMap = new Map<string, ExistingLayer>(
-      existingLayers.map(l => [l.name.toLowerCase(), l])
+      existingLayers.map((l) => [l.name.toLowerCase(), l])
     );
 
     // Process each layer in its own transaction for fault tolerance
@@ -71,26 +72,24 @@ export async function bulkImportPostalCodesAndLayers(
 
             // Get current postal codes
             const currentCodes = new Set(
-              existingLayer.postalCodes?.map(pc => pc.postalCode) || []
+              existingLayer.postalCodes?.map((pc) => pc.postalCode) || []
             );
 
             // Find new codes that don't exist in this layer yet
             const newCodes = uniquePostalCodes.filter(
-              code => !currentCodes.has(code)
+              (code) => !currentCodes.has(code)
             );
 
             if (newCodes.length > 0) {
               // Insert only the new postal codes in batches
               for (let i = 0; i < newCodes.length; i += BATCH_SIZE) {
                 const batch = newCodes.slice(i, i + BATCH_SIZE);
-                await tx
-                  .insert(areaLayerPostalCodes)
-                  .values(
-                    batch.map(code => ({
-                      layerId,
-                      postalCode: code,
-                    }))
-                  );
+                await tx.insert(areaLayerPostalCodes).values(
+                  batch.map((code) => ({
+                    layerId,
+                    postalCode: code,
+                  }))
+                );
               }
 
               totalPostalCodes += newCodes.length;
@@ -132,14 +131,12 @@ export async function bulkImportPostalCodesAndLayers(
             // Insert postal codes in batches
             for (let i = 0; i < uniquePostalCodes.length; i += BATCH_SIZE) {
               const batch = uniquePostalCodes.slice(i, i + BATCH_SIZE);
-              await tx
-                .insert(areaLayerPostalCodes)
-                .values(
-                  batch.map(code => ({
-                    layerId,
-                    postalCode: code,
-                  }))
-                );
+              await tx.insert(areaLayerPostalCodes).values(
+                batch.map((code) => ({
+                  layerId,
+                  postalCode: code,
+                }))
+              );
             }
 
             totalPostalCodes += uniquePostalCodes.length;
@@ -169,7 +166,7 @@ export async function bulkImportPostalCodesAndLayers(
             // Update the map with the new layer
             existingLayerMap.set(layerNameLower, {
               ...newLayer,
-              postalCodes: uniquePostalCodes.map(code => ({
+              postalCodes: uniquePostalCodes.map((code) => ({
                 id: 0,
                 layerId: newLayer.id,
                 postalCode: code,

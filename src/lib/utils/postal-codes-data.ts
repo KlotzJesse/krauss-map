@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
 import type {
   FeatureCollection,
@@ -7,6 +6,8 @@ import type {
   Polygon,
 } from "geojson";
 import { cache } from "react";
+
+import { db } from "@/lib/db";
 
 // Define the type for a postal code DB row
 interface PostalCodeRow {

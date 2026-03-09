@@ -1,5 +1,6 @@
-import { db } from "../src/lib/db";
 import { sql } from "drizzle-orm";
+
+import { db } from "../src/lib/db";
 
 async function fixSequences() {
   try {

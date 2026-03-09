@@ -1,5 +1,9 @@
 "use client";
 
+import { useState, useTransition, useOptimistic } from "react";
+import { toast } from "sonner";
+
+import { createAreaAction } from "@/app/actions/area-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -19,9 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createAreaAction } from "@/app/actions/area-actions";
-import { useState, useTransition, useOptimistic } from "react";
-import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CreateAreaDialogProps {
   open: boolean;
@@ -53,7 +54,12 @@ export function CreateAreaDialog({
 
         // Server action handles redirect automatically
         await toast.promise(
-          createAreaAction({ name, description, granularity, createdBy: "user" }),
+          createAreaAction({
+            name,
+            description,
+            granularity,
+            createdBy: "user",
+          }),
           {
             loading: `Erstelle Gebiet "${name}"...`,
             success: `Gebiet "${name}" erfolgreich erstellt`,
@@ -68,8 +74,13 @@ export function CreateAreaDialog({
         onOpenChange(false);
       } catch (error) {
         // Only catch real errors, not NEXT_REDIRECT
-        if (error && typeof error === 'object' && 'digest' in error &&
-            typeof error.digest === 'string' && error.digest.startsWith('NEXT_REDIRECT')) {
+        if (
+          error &&
+          typeof error === "object" &&
+          "digest" in error &&
+          typeof error.digest === "string" &&
+          error.digest.startsWith("NEXT_REDIRECT")
+        ) {
           // This is a redirect, not an error - let it propagate
           throw error;
         }
@@ -135,8 +146,11 @@ export function CreateAreaDialog({
             >
               Abbrechen
             </Button>
-            <Button type="submit" disabled={isPending || optimisticCreating || !name}>
-              {(isPending || optimisticCreating) ? "Erstelle..." : "Erstellen"}
+            <Button
+              type="submit"
+              disabled={isPending || optimisticCreating || !name}
+            >
+              {isPending || optimisticCreating ? "Erstelle..." : "Erstellen"}
             </Button>
           </DialogFooter>
         </form>

@@ -1,17 +1,14 @@
-import { useState, useMemo } from "react";
-
-import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-
 import type {
   FeatureCollection,
   GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
-
+import type { Feature } from "maplibre-gl";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 
-import type { Feature } from "maplibre-gl";
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 
 interface PostalCodeSearchProps {
   data: FeatureCollection<MultiPolygon | Polygon, GeoJsonProperties>;

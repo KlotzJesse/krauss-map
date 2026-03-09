@@ -1,7 +1,13 @@
-import { featureCollectionFromIds } from "@/lib/utils/map-data";
-import type { FeatureCollection, GeoJsonProperties, MultiPolygon, Polygon } from "geojson";
+import type {
+  FeatureCollection,
+  GeoJsonProperties,
+  MultiPolygon,
+  Polygon,
+} from "geojson";
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { useEffect } from "react";
+
+import { featureCollectionFromIds } from "@/lib/utils/map-data";
 
 interface UseMapSelectedFeaturesSourceProps {
   map: MapLibreMap | null;

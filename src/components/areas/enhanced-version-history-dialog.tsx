@@ -1,16 +1,20 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import {
+  IconClock,
+  IconRestore,
+  IconGitBranch,
+  IconDelta,
+} from "@tabler/icons-react";
+import { formatDistanceToNow } from "date-fns";
+import { de } from "date-fns/locale";
+import { useState, useTransition, useOptimistic } from "react";
+import { toast } from "sonner";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
+  restoreVersionAction,
+  compareVersionsAction,
+} from "@/app/actions/version-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,33 +25,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-import { ScrollArea } from "@/components/ui/scroll-area";
-
 import { Badge } from "@/components/ui/badge";
-
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-import {
-  IconClock,
-  IconRestore,
-  IconGitBranch,
-  IconDelta,
-} from "@tabler/icons-react";
-
-import { useState, useTransition, useOptimistic } from "react";
-
-import { formatDistanceToNow } from "date-fns";
-
-import { de } from "date-fns/locale";
-
-import {
-  restoreVersionAction,
-  compareVersionsAction,
-} from "@/app/actions/version-actions";
-
-import { toast } from "sonner";
-
 import type {
   SelectAreaVersions,
   SelectAreaChanges,
@@ -140,14 +129,10 @@ export function EnhancedVersionHistoryDialog({
 
       try {
         await toast.promise(
-          restoreVersionAction(
-            areaId,
-            versionToRestore.versionNumber,
-            {
-              createBranch: true,
-              branchName: `Restored from v${versionToRestore.versionNumber}`,
-            },
-          ),
+          restoreVersionAction(areaId, versionToRestore.versionNumber, {
+            createBranch: true,
+            branchName: `Restored from v${versionToRestore.versionNumber}`,
+          }),
           {
             loading: `Stelle Version ${versionToRestore.versionNumber} wieder her...`,
             success: (data) => {
@@ -179,7 +164,7 @@ export function EnhancedVersionHistoryDialog({
         selectedVersion.areaId,
         selectedVersion.versionNumber,
         compareVersion.areaId,
-        compareVersion.versionNumber,
+        compareVersion.versionNumber
       ).then((data) => {
         if (data.success && data.data) {
           setComparison(data.data);
@@ -405,7 +390,7 @@ export function EnhancedVersionHistoryDialog({
                     value={selectedVersion?.versionNumber || ""}
                     onChange={(e) => {
                       const version = versions.find(
-                        (v) => v.versionNumber === Number(e.target.value),
+                        (v) => v.versionNumber === Number(e.target.value)
                       );
 
                       setSelectedVersion(version || null);
@@ -430,7 +415,7 @@ export function EnhancedVersionHistoryDialog({
                     value={compareVersion?.versionNumber || ""}
                     onChange={(e) => {
                       const version = versions.find(
-                        (v) => v.versionNumber === Number(e.target.value),
+                        (v) => v.versionNumber === Number(e.target.value)
                       );
 
                       setCompareVersion(version || null);
@@ -459,57 +444,58 @@ export function EnhancedVersionHistoryDialog({
               {comparison && (
                 <ScrollArea className="h-[400px] border rounded-lg p-4">
                   <div className="space-y-4">
-                    {comparison.layersAdded && comparison.layersAdded.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-green-600 mb-2">
-                          Layer hinzugefügt ({comparison.layersAdded.length})
-                        </h4>
-                        {comparison.layersAdded.map(
-                          (layer, idx: number) => (
+                    {comparison.layersAdded &&
+                      comparison.layersAdded.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-green-600 mb-2">
+                            Layer hinzugefügt ({comparison.layersAdded.length})
+                          </h4>
+                          {comparison.layersAdded.map((layer, idx: number) => (
                             <div
                               key={`added-${layer.name}-${idx}`}
                               className="text-sm pl-4"
                             >
                               + {layer.name}
                             </div>
-                          ),
-                        )}
-                      </div>
-                    )}
-                    {comparison.layersRemoved && comparison.layersRemoved.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-red-600 mb-2">
-                          Layer entfernt ({comparison.layersRemoved.length})
-                        </h4>
-                        {comparison.layersRemoved.map(
-                          (layer, idx: number) => (
-                            <div
-                              key={`removed-${layer.name}-${idx}`}
-                              className="text-sm pl-4"
-                            >
-                              - {layer.name}
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    )}
-                    {comparison.layersModified && comparison.layersModified.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-blue-600 mb-2">
-                          Layer geändert ({comparison.layersModified.length})
-                        </h4>
-                        {comparison.layersModified.map(
-                          (layer, idx: number) => (
-                            <div
-                              key={`modified-${layer.name}-${idx}`}
-                              className="text-sm pl-4"
-                            >
-                              ~ {layer.name}
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    {comparison.layersRemoved &&
+                      comparison.layersRemoved.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-red-600 mb-2">
+                            Layer entfernt ({comparison.layersRemoved.length})
+                          </h4>
+                          {comparison.layersRemoved.map(
+                            (layer, idx: number) => (
+                              <div
+                                key={`removed-${layer.name}-${idx}`}
+                                className="text-sm pl-4"
+                              >
+                                - {layer.name}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    {comparison.layersModified &&
+                      comparison.layersModified.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-blue-600 mb-2">
+                            Layer geändert ({comparison.layersModified.length})
+                          </h4>
+                          {comparison.layersModified.map(
+                            (layer, idx: number) => (
+                              <div
+                                key={`modified-${layer.name}-${idx}`}
+                                className="text-sm pl-4"
+                              >
+                                ~ {layer.name}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
                     <div className="pt-4 border-t">
                       <div className="text-sm space-y-1">
                         <div className="text-green-600">

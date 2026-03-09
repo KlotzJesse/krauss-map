@@ -1,13 +1,14 @@
-import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
-import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
-import { SiteHeaderSkeleton } from "@/components/ui/loading-skeleton";
+import { eq, and } from "drizzle-orm";
 import type { Metadata } from "next";
 import nextDynamic from "next/dynamic";
 import { Suspense } from "react";
+
+import { SiteHeader } from "@/components/site-header";
+import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
+import { SiteHeaderSkeleton } from "@/components/ui/loading-skeleton";
+import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import { db } from "@/lib/db";
 import { areas, areaVersions } from "@/lib/schema/schema";
-import { eq, and } from "drizzle-orm";
-import { SiteHeader } from "@/components/site-header";
 
 const ServerPostalCodesView = nextDynamic(
   () => import("@/components/postal-codes/server-postal-codes-view"),

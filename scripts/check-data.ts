@@ -6,10 +6,10 @@ async function checkData() {
       with: {
         layers: {
           with: {
-            postalCodes: true
-          }
-        }
-      }
+            postalCodes: true,
+          },
+        },
+      },
     });
 
     console.log(`\n📊 Current Database State:\n`);
@@ -21,7 +21,9 @@ async function checkData() {
 
       if (area.layers && area.layers.length > 0) {
         for (const layer of area.layers) {
-          console.log(`    - ${layer.name}: ${layer.postalCodes?.length || 0} postal codes`);
+          console.log(
+            `    - ${layer.name}: ${layer.postalCodes?.length || 0} postal codes`
+          );
         }
       }
     }

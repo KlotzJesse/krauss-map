@@ -1,6 +1,7 @@
+import { useState } from "react";
+
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
-import { useState } from "react";
 
 /**
  * Hook for managing drawing tools state and visibility

@@ -11,7 +11,7 @@ import { useCallback, useRef } from "react";
  * @returns A stable callback reference that won't cause re-renders
  */
 export function useStableCallback<
-  TCallback extends (...args: never[]) => unknown
+  TCallback extends (...args: never[]) => unknown,
 >(callback: TCallback): TCallback {
   const callbackRef = useRef<TCallback>(callback);
   callbackRef.current = callback;

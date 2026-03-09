@@ -1,4 +1,3 @@
-import { Skeleton } from "./skeleton";
 import {
   Sidebar,
   SidebarContent,
@@ -10,6 +9,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "./sidebar";
+import { Skeleton } from "./skeleton";
 
 // Skeleton for entire sidebar
 export function SidebarSkeleton({ className }: { className?: string }) {
@@ -18,7 +18,10 @@ export function SidebarSkeleton({ className }: { className?: string }) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton disabled className="data-[slot=sidebar-menu-button]:!p-1.5">
+            <SidebarMenuButton
+              disabled
+              className="data-[slot=sidebar-menu-button]:!p-1.5"
+            >
               <Skeleton className="w-5 h-5 rounded" />
               <Skeleton className="h-4 w-48" />
             </SidebarMenuButton>

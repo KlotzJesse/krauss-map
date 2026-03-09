@@ -38,7 +38,7 @@ export const performanceMetrics = pgTable(
     index("idx_perf_timestamp"),
 
     index("idx_perf_type"),
-  ],
+  ]
 );
 
 // Note: spatial_ref_sys is a PostGIS system table, not managed by Drizzle
@@ -82,17 +82,17 @@ export const apiCache = pgTable(
     index("idx_api_cache_expires").using(
       "btree",
 
-      table.expiresAt.asc().nullsLast().op("timestamp_ops"),
+      table.expiresAt.asc().nullsLast().op("timestamp_ops")
     ),
 
     index("idx_api_cache_key").using(
       "btree",
 
-      table.cacheKey.asc().nullsLast().op("text_ops"),
+      table.cacheKey.asc().nullsLast().op("text_ops")
     ),
 
     unique("api_cache_cache_key_unique").on(table.cacheKey),
-  ],
+  ]
 );
 
 export const errorLogs = pgTable(
@@ -122,21 +122,21 @@ export const errorLogs = pgTable(
     index("idx_error_code").using(
       "btree",
 
-      table.errorCode.asc().nullsLast().op("text_ops"),
+      table.errorCode.asc().nullsLast().op("text_ops")
     ),
 
     index("idx_error_timestamp").using(
       "btree",
 
-      table.timestamp.asc().nullsLast().op("timestamp_ops"),
+      table.timestamp.asc().nullsLast().op("timestamp_ops")
     ),
 
     index("idx_error_user").using(
       "btree",
 
-      table.userId.asc().nullsLast().op("text_ops"),
+      table.userId.asc().nullsLast().op("text_ops")
     ),
-  ],
+  ]
 );
 
 export const postalCodes = pgTable(
@@ -156,13 +156,11 @@ export const postalCodes = pgTable(
     bbox: jsonb(),
 
     createdAt: timestamp("created_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
 
     updatedAt: timestamp("updated_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
@@ -172,19 +170,19 @@ export const postalCodes = pgTable(
     index("idx_postal_codes_code").using(
       "btree",
 
-      table.code.asc().nullsLast().op("text_ops"),
+      table.code.asc().nullsLast().op("text_ops")
     ),
 
     index("idx_postal_codes_geometry").using(
       "gist",
 
-      table.geometry.asc().nullsLast().op("gist_geometry_ops_2d"),
+      table.geometry.asc().nullsLast().op("gist_geometry_ops_2d")
     ),
 
     index("idx_postal_codes_granularity").using(
       "btree",
 
-      table.granularity.asc().nullsLast().op("text_ops"),
+      table.granularity.asc().nullsLast().op("text_ops")
     ),
 
     index("idx_postal_codes_granularity_code").using(
@@ -192,9 +190,9 @@ export const postalCodes = pgTable(
 
       table.granularity.asc().nullsLast().op("text_ops"),
 
-      table.code.asc().nullsLast().op("text_ops"),
+      table.code.asc().nullsLast().op("text_ops")
     ),
-  ],
+  ]
 );
 
 export const states = pgTable(
@@ -214,13 +212,11 @@ export const states = pgTable(
     bbox: jsonb(),
 
     createdAt: timestamp("created_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
 
     updatedAt: timestamp("updated_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
@@ -230,23 +226,23 @@ export const states = pgTable(
     index("idx_states_code").using(
       "btree",
 
-      table.code.asc().nullsLast().op("text_ops"),
+      table.code.asc().nullsLast().op("text_ops")
     ),
 
     index("idx_states_geometry").using(
       "gist",
 
-      table.geometry.asc().nullsLast().op("gist_geometry_ops_2d"),
+      table.geometry.asc().nullsLast().op("gist_geometry_ops_2d")
     ),
 
     index("idx_states_name").using(
       "btree",
 
-      table.name.asc().nullsLast().op("text_ops"),
+      table.name.asc().nullsLast().op("text_ops")
     ),
 
     unique("states_code_unique").on(table.code),
-  ],
+  ]
 );
 
 // Area management tables for versioning and multi-layer support
@@ -264,7 +260,6 @@ export const areas = pgTable(
     granularity: varchar({ length: 20 }).notNull().default("5digit"),
 
     isArchived: varchar("is_archived", { length: 5 })
-
       .notNull()
 
       .default("false"),
@@ -272,13 +267,11 @@ export const areas = pgTable(
     currentVersionNumber: integer("current_version_number"), // Current active version number for this area
 
     createdAt: timestamp("created_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
 
     updatedAt: timestamp("updated_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
@@ -288,27 +281,27 @@ export const areas = pgTable(
     index("idx_areas_name").using(
       "btree",
 
-      table.name.asc().nullsLast().op("text_ops"),
+      table.name.asc().nullsLast().op("text_ops")
     ),
 
     index("idx_areas_created_at").using(
       "btree",
 
-      table.createdAt.asc().nullsLast().op("timestamp_ops"),
+      table.createdAt.asc().nullsLast().op("timestamp_ops")
     ),
 
     index("idx_areas_is_archived").using(
       "btree",
 
-      table.isArchived.asc().nullsLast().op("text_ops"),
+      table.isArchived.asc().nullsLast().op("text_ops")
     ),
 
     index("idx_areas_current_version").using(
       "btree",
 
-      table.currentVersionNumber.asc().nullsLast().op("int4_ops"),
+      table.currentVersionNumber.asc().nullsLast().op("int4_ops")
     ),
-  ],
+  ]
 );
 
 export const areaVersions = pgTable(
@@ -340,7 +333,6 @@ export const areaVersions = pgTable(
     createdBy: varchar("created_by", { length: 255 }),
 
     createdAt: timestamp("created_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
@@ -350,13 +342,13 @@ export const areaVersions = pgTable(
     index("idx_area_versions_area_id").using(
       "btree",
 
-      table.areaId.asc().nullsLast().op("int4_ops"),
+      table.areaId.asc().nullsLast().op("int4_ops")
     ),
 
     index("idx_area_versions_created_at").using(
       "btree",
 
-      table.createdAt.asc().nullsLast().op("timestamp_ops"),
+      table.createdAt.asc().nullsLast().op("timestamp_ops")
     ),
 
     index("idx_area_versions_parent").using(
@@ -364,7 +356,7 @@ export const areaVersions = pgTable(
 
       table.parentVersionAreaId.asc().nullsLast().op("int4_ops"),
 
-      table.parentVersionNumber.asc().nullsLast().op("int4_ops"),
+      table.parentVersionNumber.asc().nullsLast().op("int4_ops")
     ),
 
     index("idx_area_versions_is_active").using(
@@ -372,11 +364,11 @@ export const areaVersions = pgTable(
 
       table.areaId.asc().nullsLast().op("int4_ops"),
 
-      table.isActive.asc().nullsLast().op("text_ops"),
+      table.isActive.asc().nullsLast().op("text_ops")
     ),
 
     primaryKey(table.areaId, table.versionNumber),
-  ],
+  ]
 );
 
 export const areaLayers = pgTable(
@@ -398,13 +390,11 @@ export const areaLayers = pgTable(
     orderIndex: integer("order_index").notNull().default(0), // For layer ordering
 
     createdAt: timestamp("created_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
 
     updatedAt: timestamp("updated_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
@@ -414,7 +404,7 @@ export const areaLayers = pgTable(
     index("idx_area_layers_area_id").using(
       "btree",
 
-      table.areaId.asc().nullsLast().op("int4_ops"),
+      table.areaId.asc().nullsLast().op("int4_ops")
     ),
 
     index("idx_area_layers_order").using(
@@ -422,9 +412,9 @@ export const areaLayers = pgTable(
 
       table.areaId.asc().nullsLast().op("int4_ops"),
 
-      table.orderIndex.asc().nullsLast().op("int4_ops"),
+      table.orderIndex.asc().nullsLast().op("int4_ops")
     ),
-  ],
+  ]
 );
 
 export const areaLayerPostalCodes = pgTable(
@@ -438,7 +428,6 @@ export const areaLayerPostalCodes = pgTable(
     postalCode: varchar("postal_code", { length: 10 }).notNull(),
 
     createdAt: timestamp("created_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
@@ -448,21 +437,21 @@ export const areaLayerPostalCodes = pgTable(
     index("idx_area_layer_postal_codes_layer_id").using(
       "btree",
 
-      table.layerId.asc().nullsLast().op("int4_ops"),
+      table.layerId.asc().nullsLast().op("int4_ops")
     ),
 
     index("idx_area_layer_postal_codes_postal_code").using(
       "btree",
 
-      table.postalCode.asc().nullsLast().op("text_ops"),
+      table.postalCode.asc().nullsLast().op("text_ops")
     ),
 
     unique("area_layer_postal_codes_layer_id_postal_code_unique").on(
       table.layerId,
 
-      table.postalCode,
+      table.postalCode
     ),
-  ],
+  ]
 );
 
 // Change tracking table for event sourcing and undo/redo
@@ -498,7 +487,6 @@ export const areaChanges = pgTable(
     createdBy: varchar("created_by", { length: 255 }),
 
     createdAt: timestamp("created_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
@@ -514,13 +502,13 @@ export const areaChanges = pgTable(
 
       table.versionNumber,
 
-      table.sequenceNumber,
+      table.sequenceNumber
     ),
 
     index("idx_area_changes_created_at").using(
       "btree",
 
-      table.createdAt.asc().nullsLast().op("timestamp_ops"),
+      table.createdAt.asc().nullsLast().op("timestamp_ops")
     ),
 
     index("idx_area_changes_entity").using(
@@ -528,7 +516,7 @@ export const areaChanges = pgTable(
 
       table.entityType.asc().nullsLast().op("text_ops"),
 
-      table.entityId.asc().nullsLast().op("int4_ops"),
+      table.entityId.asc().nullsLast().op("int4_ops")
     ),
 
     // Foreign key to areas
@@ -550,7 +538,7 @@ export const areaChanges = pgTable(
 
       name: "fk_area_changes_version",
     }),
-  ],
+  ]
 );
 
 // Undo/redo stack tracking per area
@@ -568,7 +556,6 @@ export const areaUndoStacks = pgTable(
     redoStack: jsonb("redo_stack").notNull().default([]), // Array of ChangeKey objects that can be redone
 
     updatedAt: timestamp("updated_at", { mode: "string" })
-
       .defaultNow()
 
       .notNull(),
@@ -578,11 +565,11 @@ export const areaUndoStacks = pgTable(
     index("idx_area_undo_stacks_area_id").using(
       "btree",
 
-      table.areaId.asc().nullsLast().op("int4_ops"),
+      table.areaId.asc().nullsLast().op("int4_ops")
     ),
 
     unique("area_undo_stacks_area_id_unique").on(table.areaId),
-  ],
+  ]
 );
 
 // Type definitions for all tables

@@ -1,20 +1,21 @@
 "use client";
 
 import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  IconFolder,
+  IconPlus,
+  IconDots,
+  IconEdit,
+  IconTrash,
+  IconCheck,
+  IconX,
+} from "@tabler/icons-react";
+import type { Route } from "next";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useState, Activity, useOptimistic, useTransition, use } from "react";
+import { toast } from "sonner";
+
+import { updateAreaAction, deleteAreaAction } from "@/app/actions/area-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,23 +27,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { type Area } from "@/lib/types/area-types";
 import {
-  IconFolder,
-  IconPlus,
-  IconDots,
-  IconEdit,
-  IconTrash,
-  IconCheck,
-  IconX,
-} from "@tabler/icons-react";
-import { useState, Activity, useOptimistic, useTransition, use } from "react";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
+import { type Area } from "@/lib/types/area-types";
+
 import { CreateAreaDialog } from "./create-area-dialog";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import { updateAreaAction, deleteAreaAction } from "@/app/actions/area-actions";
-import { toast } from "sonner";
-import type { Route } from "next";
 
 interface NavAreasProps {
   areasPromise: Promise<Area[]>;
@@ -72,14 +74,17 @@ export function NavAreas({
   // Optimistic state for areas
   const [optimisticAreas, updateOptimisticAreas] = useOptimistic(
     areas,
-    (currentAreas: Area[], update: { type: 'rename' | 'delete'; id: number; name?: string }) => {
-      if (update.type === 'rename' && update.name) {
-        return currentAreas.map(area =>
+    (
+      currentAreas: Area[],
+      update: { type: "rename" | "delete"; id: number; name?: string }
+    ) => {
+      if (update.type === "rename" && update.name) {
+        return currentAreas.map((area) =>
           area.id === update.id ? { ...area, name: update.name! } : area
         );
       }
-      if (update.type === 'delete') {
-        return currentAreas.filter(area => area.id !== update.id);
+      if (update.type === "delete") {
+        return currentAreas.filter((area) => area.id !== update.id);
       }
       return currentAreas;
     }
@@ -131,7 +136,11 @@ export function NavAreas({
 
     // Optimistic update for instant feedback
     startTransition(async () => {
-      updateOptimisticAreas({ type: 'rename', id: areaId, name: editingAreaName.trim() });
+      updateOptimisticAreas({
+        type: "rename",
+        id: areaId,
+        name: editingAreaName.trim(),
+      });
 
       await toast.promise(
         updateAreaAction(areaId, {
@@ -166,19 +175,16 @@ export function NavAreas({
 
     // Optimistic update for instant feedback
     startTransition(async () => {
-      updateOptimisticAreas({ type: 'delete', id: areaToDelete.id });
+      updateOptimisticAreas({ type: "delete", id: areaToDelete.id });
       const areaName = areaToDelete.name;
 
       try {
         // Server action now handles redirect
-        await toast.promise(
-          deleteAreaAction(areaToDelete.id),
-          {
-            loading: `Lösche "${areaName}"...`,
-            success: `"${areaName}" gelöscht`,
-            error: "Löschen fehlgeschlagen",
-          }
-        );
+        await toast.promise(deleteAreaAction(areaToDelete.id), {
+          loading: `Lösche "${areaName}"...`,
+          success: `"${areaName}" gelöscht`,
+          error: "Löschen fehlgeschlagen",
+        });
         // If successful, the server will redirect automatically
         setDeleteDialogOpen(false);
         setAreaToDelete(null);
@@ -210,7 +216,13 @@ export function NavAreas({
                 <SidebarMenuButton disabled>Lade...</SidebarMenuButton>
               </SidebarMenuItem>
             </Activity>
-            <Activity mode={!isLoading && optimisticAreas.length === 0 ? "visible" : "hidden"}>
+            <Activity
+              mode={
+                !isLoading && optimisticAreas.length === 0
+                  ? "visible"
+                  : "hidden"
+              }
+            >
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setCreateDialogOpen(true)}
@@ -246,8 +258,12 @@ export function NavAreas({
                           }}
                           onBlur={(e) => {
                             // Don't blur if clicking on check or X buttons
-                            const relatedTarget = e.relatedTarget as HTMLElement;
-                            if (relatedTarget && relatedTarget.closest('[data-edit-action]')) {
+                            const relatedTarget =
+                              e.relatedTarget as HTMLElement;
+                            if (
+                              relatedTarget &&
+                              relatedTarget.closest("[data-edit-action]")
+                            ) {
                               return;
                             }
                             // Only save if there's a valid name, otherwise cancel

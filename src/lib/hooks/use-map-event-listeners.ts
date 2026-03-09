@@ -1,6 +1,7 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { useEffect, useLayoutEffect } from "react";
 import { flushSync } from "react-dom";
+
 import { useStableCallback } from "./use-stable-callback";
 
 interface UseMapEventListenersProps {

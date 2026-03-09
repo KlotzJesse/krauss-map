@@ -1,29 +1,19 @@
-import { useMapClickInteraction } from "@/lib/hooks/use-map-click-interaction";
-
-import { useMapDrawingTools } from "@/lib/hooks/use-map-drawing-tools";
-
-import { useMapEventListeners } from "@/lib/hooks/use-map-event-listeners";
-
-import { useMapHoverInteraction } from "@/lib/hooks/use-map-hover-interaction";
-
-import { useMapTerraDrawSelection } from "@/lib/hooks/use-map-terradraw-selection";
-
-import { useTerraDraw } from "@/lib/hooks/use-terradraw";
-
 import type {
   FeatureCollection,
   GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
-
 import type { Map as MapLibreMap } from "maplibre-gl";
-
 import type { RefObject } from "react";
 
-import type {
-  SelectAreaLayers,
-} from "@/lib/schema/schema";
+import { useMapClickInteraction } from "@/lib/hooks/use-map-click-interaction";
+import { useMapDrawingTools } from "@/lib/hooks/use-map-drawing-tools";
+import { useMapEventListeners } from "@/lib/hooks/use-map-event-listeners";
+import { useMapHoverInteraction } from "@/lib/hooks/use-map-hover-interaction";
+import { useMapTerraDrawSelection } from "@/lib/hooks/use-map-terradraw-selection";
+import { useTerraDraw } from "@/lib/hooks/use-terradraw";
+import type { SelectAreaLayers } from "@/lib/schema/schema";
 
 type LayerWithPostalCodes = SelectAreaLayers & {
   postalCodes?: { postalCode: string }[];
@@ -51,7 +41,7 @@ interface UseMapInteractionsProps {
   removePostalCodesFromLayer?: (
     layerId: number,
 
-    codes: string[],
+    codes: string[]
   ) => Promise<void>;
 }
 
@@ -159,7 +149,7 @@ export function useMapInteractions({
 
     layersLoaded,
 
-    isCursorMode,
+    isCursorMode
   );
 
   // Click interaction management - now adds to active layer
@@ -179,7 +169,7 @@ export function useMapInteractions({
 
     addPostalCodesToLayer,
 
-    removePostalCodesFromLayer,
+    removePostalCodesFromLayer
   );
 
   // Event listeners management

@@ -1,5 +1,8 @@
 "use client";
 
+import { IconDeviceFloppy } from "@tabler/icons-react";
+import { useState, useOptimistic, useTransition } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,8 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useVersionHistory } from "@/lib/hooks/use-version-history";
-import { IconDeviceFloppy } from "@tabler/icons-react";
-import { useState, useOptimistic, useTransition } from "react";
 
 interface CreateVersionDialogProps {
   open: boolean;
@@ -108,9 +109,7 @@ export function CreateVersionDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="changes-summary">
-                Änderungen (optional)
-              </Label>
+              <Label htmlFor="changes-summary">Änderungen (optional)</Label>
               <Textarea
                 id="changes-summary"
                 value={changesSummary}
@@ -130,8 +129,13 @@ export function CreateVersionDialog({
             >
               Abbrechen
             </Button>
-            <Button type="submit" disabled={isCreating || optimisticCreating || isPending}>
-              {(isCreating || optimisticCreating) ? "Erstelle..." : "Version erstellen"}
+            <Button
+              type="submit"
+              disabled={isCreating || optimisticCreating || isPending}
+            >
+              {isCreating || optimisticCreating
+                ? "Erstelle..."
+                : "Version erstellen"}
             </Button>
           </DialogFooter>
         </form>

@@ -1,10 +1,12 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-
-import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
-
-import { usePostalCodeSearch } from "@/lib/hooks/use-postal-code-search";
+import type { InferSelectModel } from "drizzle-orm";
+import type {
+  FeatureCollection,
+  GeoJsonProperties,
+  MultiPolygon,
+  Polygon,
+} from "geojson";
 
 import {
   addPostalCodesToLayerAction,
@@ -12,22 +14,15 @@ import {
   radiusSearchAction,
   drivingRadiusSearchAction,
 } from "@/app/actions/area-actions";
-
+import { Button } from "@/components/ui/button";
+import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
+import { usePostalCodeSearch } from "@/lib/hooks/use-postal-code-search";
 import type {
   areas,
   areaLayers,
   SelectAreaChanges,
   SelectAreaVersions,
 } from "@/lib/schema/schema";
-
-import type { InferSelectModel } from "drizzle-orm";
-
-import type {
-  FeatureCollection,
-  GeoJsonProperties,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
 
 type Area = InferSelectModel<typeof areas>;
 
@@ -36,18 +31,14 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 };
 
 import { FileUpIcon } from "lucide-react";
-
 import dynamic from "next/dynamic";
-
 import { useState, useTransition, useOptimistic, use } from "react";
-
 import { toast } from "sonner";
 
 import {
   AddressAutocompleteErrorBoundary,
   MapErrorBoundary,
 } from "@/components/ui/error-boundaries";
-
 import {
   AddressAutocompleteSkeleton,
   MapSkeleton,
@@ -56,14 +47,14 @@ import {
 const AddressAutocompleteEnhanced = dynamic(
   () =>
     import("./address-autocomplete-enhanced").then(
-      (m) => m.AddressAutocompleteEnhanced,
+      (m) => m.AddressAutocompleteEnhanced
     ),
 
   {
     ssr: false,
 
     loading: () => <AddressAutocompleteSkeleton />,
-  },
+  }
 );
 
 const PostalCodesMap = dynamic(
@@ -74,7 +65,7 @@ const PostalCodesMap = dynamic(
     ssr: false,
 
     loading: () => <MapSkeleton />,
-  },
+  }
 );
 
 const PostalCodeImportDialog = dynamic(
@@ -85,15 +76,20 @@ const PostalCodeImportDialog = dynamic(
 
   {
     ssr: false,
-  },
+  }
 );
 
-import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { useMapState } from "@/lib/url-state/map-state";
 
+import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+
 interface PostalCodesViewClientWithLayersProps {
-  postalCodesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>>;
-  statesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>>;
+  postalCodesDataPromise: Promise<
+    FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+  >;
+  statesDataPromise: Promise<
+    FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+  >;
   defaultGranularity: string;
   areaId: number;
   areasPromise: Promise<Area[]>;
@@ -139,7 +135,7 @@ export function PostalCodesViewClientWithLayers({
 
   const [data] =
     useState<FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>>(
-      initialData,
+      initialData
     );
 
   // Optimistic state for layers
@@ -156,7 +152,7 @@ export function PostalCodesViewClientWithLayers({
         layerId: number;
 
         postalCodes: string[];
-      },
+      }
     ) => {
       return currentLayers.map((layer) => {
         if (layer.id === update.layerId) {
@@ -169,7 +165,7 @@ export function PostalCodesViewClientWithLayers({
             newCodes = [...new Set([...currentCodes, ...update.postalCodes])];
           } else {
             newCodes = currentCodes.filter(
-              (code) => !update.postalCodes.includes(code),
+              (code) => !update.postalCodes.includes(code)
             );
           }
 
@@ -182,13 +178,13 @@ export function PostalCodesViewClientWithLayers({
 
         return layer;
       });
-    },
+    }
   );
 
   // Optimistic state for undo/redo counts
   const [optimisticUndoRedo, updateOptimisticUndoRedo] = useOptimistic(
     initialUndoRedoStatus,
-    (current, _action: 'increment') => ({
+    (current, _action: "increment") => ({
       ...current,
       undoCount: current.undoCount + 1,
       redoCount: 0, // Clear redo stack on new change
@@ -204,7 +200,7 @@ export function PostalCodesViewClientWithLayers({
   const addPostalCodesToLayer = async (
     layerId: number,
 
-    postalCodes: string[],
+    postalCodes: string[]
   ) => {
     if (!areaId) {
       toast.error("Kein Gebiet ausgewählt");
@@ -216,7 +212,7 @@ export function PostalCodesViewClientWithLayers({
       updateOptimisticLayers({ type: "add", layerId, postalCodes });
 
       // Optimistically increment undo count (new change added)
-      updateOptimisticUndoRedo('increment');
+      updateOptimisticUndoRedo("increment");
 
       try {
         const result = await addPostalCodesToLayerAction(
@@ -224,7 +220,7 @@ export function PostalCodesViewClientWithLayers({
 
           layerId,
 
-          postalCodes,
+          postalCodes
         );
 
         if (!result.success) {
@@ -236,7 +232,7 @@ export function PostalCodesViewClientWithLayers({
         toast.error(
           error instanceof Error
             ? error.message
-            : "Fehler beim Hinzufügen der PLZ",
+            : "Fehler beim Hinzufügen der PLZ"
         );
       }
     });
@@ -245,7 +241,7 @@ export function PostalCodesViewClientWithLayers({
   const removePostalCodesFromLayer = async (
     layerId: number,
 
-    postalCodes: string[],
+    postalCodes: string[]
   ) => {
     if (!areaId) {
       toast.error("Kein Gebiet ausgewählt");
@@ -257,7 +253,7 @@ export function PostalCodesViewClientWithLayers({
       updateOptimisticLayers({ type: "remove", layerId, postalCodes });
 
       // Optimistically increment undo count (new change added)
-      updateOptimisticUndoRedo('increment');
+      updateOptimisticUndoRedo("increment");
 
       try {
         const result = await removePostalCodesFromLayerAction(
@@ -265,7 +261,7 @@ export function PostalCodesViewClientWithLayers({
 
           layerId,
 
-          postalCodes,
+          postalCodes
         );
 
         if (!result.success) {
@@ -277,7 +273,7 @@ export function PostalCodesViewClientWithLayers({
         toast.error(
           error instanceof Error
             ? error.message
-            : "Fehler beim Entfernen der PLZ",
+            : "Fehler beim Entfernen der PLZ"
         );
       }
     });
@@ -296,24 +292,21 @@ export function PostalCodesViewClientWithLayers({
 
     granularity: string;
   }) => {
-    await toast.promise(
-      radiusSearchAction(searchData),
-      {
-        loading: `Suche PLZ im Radius ${searchData.radius}km...`,
-        success: (data) => {
-          if (data.success && data.data) {
-            const postalCodes = data.data.postalCodes;
-            if (activeLayerId && areaId) {
-              addPostalCodesToLayer(activeLayerId, postalCodes);
-              return `${postalCodes.length} PLZ gefunden und hinzugefügt`;
-            }
-            throw new Error("Bitte aktives Gebiet wählen");
+    await toast.promise(radiusSearchAction(searchData), {
+      loading: `Suche PLZ im Radius ${searchData.radius}km...`,
+      success: (data) => {
+        if (data.success && data.data) {
+          const postalCodes = data.data.postalCodes;
+          if (activeLayerId && areaId) {
+            addPostalCodesToLayer(activeLayerId, postalCodes);
+            return `${postalCodes.length} PLZ gefunden und hinzugefügt`;
           }
-          throw new Error("Radiussuche fehlgeschlagen");
-        },
-        error: "Radiussuche fehlgeschlagen",
-      }
-    );
+          throw new Error("Bitte aktives Gebiet wählen");
+        }
+        throw new Error("Radiussuche fehlgeschlagen");
+      },
+      error: "Radiussuche fehlgeschlagen",
+    });
   };
 
   // Wrapper function to match the expected interface for AddressAutocompleteEnhanced
@@ -323,7 +316,7 @@ export function PostalCodesViewClientWithLayers({
 
     radius: number,
 
-    granularity: string,
+    granularity: string
   ) => {
     await toast.promise(
       drivingRadiusSearchAction({
@@ -351,7 +344,9 @@ export function PostalCodesViewClientWithLayers({
   };
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [previewPostalCode, setPreviewPostalCode] = useState<string | null>(null);
+  const [previewPostalCode, setPreviewPostalCode] = useState<string | null>(
+    null
+  );
 
   const handleGranularityChange = (newGranularity: string) => {
     if (newGranularity === defaultGranularity) return;
@@ -374,7 +369,7 @@ export function PostalCodesViewClientWithLayers({
 
     _label: string,
 
-    postalCode?: string,
+    postalCode?: string
   ) => {
     const selectionPromise = async () => {
       const code = postalCode || findPostalCodeByCoords(coords[0], coords[1]);
@@ -411,7 +406,7 @@ export function PostalCodesViewClientWithLayers({
 
     radius: number,
 
-    granularity: string,
+    granularity: string
   ) => {
     await performRadiusSearch({
       latitude: coords[1],
@@ -455,7 +450,9 @@ export function PostalCodesViewClientWithLayers({
               onPreviewSelect={(coords, label, postalCode) => {
                 // Set preview postal code and zoom to it
                 if (postalCode) {
-                  setPreviewPostalCode(previewPostalCode === postalCode ? null : postalCode);
+                  setPreviewPostalCode(
+                    previewPostalCode === postalCode ? null : postalCode
+                  );
                   // Zoom to the postal code
                   searchPostalCodes(postalCode);
                 }

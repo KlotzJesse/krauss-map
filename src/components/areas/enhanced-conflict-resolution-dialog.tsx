@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  IconAlertTriangle,
+  IconArrowRight,
+  IconGitMerge,
+} from "@tabler/icons-react";
+import { useState } from "react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,18 +18,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  IconAlertTriangle,
-  IconArrowRight,
-  IconGitMerge,
-} from "@tabler/icons-react";
-import { useState } from "react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ConflictItem {
   field: string;
@@ -185,10 +186,7 @@ export function EnhancedConflictResolutionDialog({
                     {conflict.type === "postal_code" && (
                       <div className="mt-3">
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value="merge"
-                            id={`merge-${index}`}
-                          />
+                          <RadioGroupItem value="merge" id={`merge-${index}`} />
                           <Label
                             htmlFor={`merge-${index}`}
                             className="font-medium text-purple-600"
@@ -221,7 +219,10 @@ export function EnhancedConflictResolutionDialog({
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2 p-3 border rounded hover:bg-accent">
                     <RadioGroupItem value="local" id="strategy-local" />
-                    <Label htmlFor="strategy-local" className="flex-1 cursor-pointer">
+                    <Label
+                      htmlFor="strategy-local"
+                      className="flex-1 cursor-pointer"
+                    >
                       <div>
                         <div className="font-medium">Keep Your Changes</div>
                         <div className="text-sm text-muted-foreground">
@@ -234,7 +235,10 @@ export function EnhancedConflictResolutionDialog({
 
                   <div className="flex items-center space-x-2 p-3 border rounded hover:bg-accent">
                     <RadioGroupItem value="remote" id="strategy-remote" />
-                    <Label htmlFor="strategy-remote" className="flex-1 cursor-pointer">
+                    <Label
+                      htmlFor="strategy-remote"
+                      className="flex-1 cursor-pointer"
+                    >
                       <div>
                         <div className="font-medium">Accept Their Changes</div>
                         <div className="text-sm text-muted-foreground">
@@ -247,7 +251,10 @@ export function EnhancedConflictResolutionDialog({
 
                   <div className="flex items-center space-x-2 p-3 border rounded hover:bg-accent">
                     <RadioGroupItem value="manual" id="strategy-manual" />
-                    <Label htmlFor="strategy-manual" className="flex-1 cursor-pointer">
+                    <Label
+                      htmlFor="strategy-manual"
+                      className="flex-1 cursor-pointer"
+                    >
                       <div>
                         <div className="font-medium">Manual Resolution</div>
                         <div className="text-sm text-muted-foreground">

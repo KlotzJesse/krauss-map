@@ -1,4 +1,3 @@
-import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { Map as MapLibre } from "maplibre-gl";
 import { useEffect, useRef, type RefObject } from "react";
 import {
@@ -15,6 +14,8 @@ import {
   type GeoJSONStoreFeatures,
 } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
+
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 
 // Define all available drawing modes
 export type TerraDrawMode =

@@ -165,7 +165,10 @@ export function PostalCodesViewSkeleton() {
             <CardContent>
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 border rounded">
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 p-2 border rounded"
+                  >
                     <Skeleton className="w-4 h-4 rounded" />
                     <Skeleton className="h-4 flex-1" />
                     <Skeleton className="w-8 h-8 rounded" />
@@ -199,7 +202,11 @@ export function MapSkeleton() {
         {/* Simulated map tiles */}
         <div className="absolute inset-0 grid grid-cols-4 grid-rows-4 gap-1 p-4">
           {Array.from({ length: 16 }).map((_, i) => (
-            <Skeleton key={i} className="w-full h-full" style={{ animationDelay: `${i * 50}ms` }} />
+            <Skeleton
+              key={i}
+              className="w-full h-full"
+              style={{ animationDelay: `${i * 50}ms` }}
+            />
           ))}
         </div>
       </div>

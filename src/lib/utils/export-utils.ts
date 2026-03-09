@@ -1,5 +1,5 @@
-import { toast } from "sonner";
 import type { Content, PageSize } from "pdfmake/interfaces";
+import { toast } from "sonner";
 
 interface LayerExportData {
   layerName: string;
@@ -96,7 +96,9 @@ export function exportLayersPDF(layers: LayerExportData[], areaName?: string) {
       .toISOString()
       .slice(0, 19)
       .replace(/[:.]/g, "-");
-    const areaPrefix = areaName ? `${areaName.replace(/[^a-zA-Z0-9-_]/g, "_")}_` : "";
+    const areaPrefix = areaName
+      ? `${areaName.replace(/[^a-zA-Z0-9-_]/g, "_")}_`
+      : "";
     const filename = `${areaPrefix}gebiete-export-${timestamp}.pdf`;
 
     // Generate and download PDF
@@ -123,7 +125,10 @@ export function exportLayersPDF(layers: LayerExportData[], areaName?: string) {
  * @param layers Array of layer data with postal codes
  * @param areaName Optional area/project name to include in filename
  */
-export async function exportLayersXLSX(layers: LayerExportData[], areaName?: string) {
+export async function exportLayersXLSX(
+  layers: LayerExportData[],
+  areaName?: string
+) {
   const exportPromise = async () => {
     const XLSX = await import("xlsx");
 
@@ -150,12 +155,12 @@ export async function exportLayersXLSX(layers: LayerExportData[], areaName?: str
       const ws = XLSX.utils.aoa_to_sheet(wsData);
 
       // Set all cells to text format to preserve leading zeros
-      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
       for (let R = range.s.r + 1; R <= range.e.r; ++R) {
         for (let C = range.s.c; C <= range.e.c; ++C) {
           const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
           if (ws[cellAddress]) {
-            ws[cellAddress].t = 's'; // Set cell type to string
+            ws[cellAddress].t = "s"; // Set cell type to string
           }
         }
       }
@@ -168,7 +173,9 @@ export async function exportLayersXLSX(layers: LayerExportData[], areaName?: str
       .toISOString()
       .slice(0, 19)
       .replace(/[:.]/g, "-");
-    const areaPrefix = areaName ? `${areaName.replace(/[^a-zA-Z0-9-_]/g, "_")}_` : "";
+    const areaPrefix = areaName
+      ? `${areaName.replace(/[^a-zA-Z0-9-_]/g, "_")}_`
+      : "";
     const filename = `${areaPrefix}gebiete-export-${timestamp}.xlsx`;
 
     XLSX.writeFile(wb, filename);
@@ -196,17 +203,14 @@ export async function exportPostalCodesXLSX(codes: string[]) {
   const exportPromise = async () => {
     const XLSX = await import("xlsx");
     const formattedCodes = codes.map((code) => [formatPostalCode(code)]);
-    const ws = XLSX.utils.aoa_to_sheet([
-      ["Postleitzahl"],
-      ...formattedCodes,
-    ]);
+    const ws = XLSX.utils.aoa_to_sheet([["Postleitzahl"], ...formattedCodes]);
 
     // Set all data cells to text format to preserve leading zeros
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
     for (let R = range.s.r + 1; R <= range.e.r; ++R) {
       const cellAddress = XLSX.utils.encode_cell({ r: R, c: 0 });
       if (ws[cellAddress]) {
-        ws[cellAddress].t = 's'; // Set cell type to string
+        ws[cellAddress].t = "s"; // Set cell type to string
       }
     }
 

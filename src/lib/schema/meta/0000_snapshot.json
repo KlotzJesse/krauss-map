@@ -238,9 +238,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "api_cache_cache_key_unique": {
-          "columns": [
-            "cache_key"
-          ],
+          "columns": ["cache_key"],
           "nullsNotDistinct": false,
           "name": "api_cache_cache_key_unique"
         }
@@ -610,9 +608,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "states_code_unique": {
-          "columns": [
-            "code"
-          ],
+          "columns": ["code"],
           "nullsNotDistinct": false,
           "name": "states_code_unique"
         }

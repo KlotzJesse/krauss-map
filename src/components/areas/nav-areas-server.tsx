@@ -1,6 +1,5 @@
-import { getAreas } from "@/lib/db/data-functions";
-import { NavAreas } from "./nav-areas";
 import { Suspense } from "react";
+
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -9,6 +8,9 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
+import { getAreas } from "@/lib/db/data-functions";
+
+import { NavAreas } from "./nav-areas";
 
 interface NavAreasServerProps {
   currentAreaId?: number | null;

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary";
+
 import { AlertError } from "./alert";
 
 // --- ErrorBoundary component ---

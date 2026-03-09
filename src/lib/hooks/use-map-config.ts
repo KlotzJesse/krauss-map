@@ -1,5 +1,6 @@
-import type { MapConfig } from "@/types/base-map";
 import { useMemo } from "react";
+
+import type { MapConfig } from "@/types/base-map";
 
 /**
  * Hook for creating stable map configuration object

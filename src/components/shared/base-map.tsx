@@ -1,3 +1,14 @@
+import { PlusIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+import {
+  memo,
+  startTransition,
+  Suspense,
+  useMemo,
+  useRef,
+  Activity,
+} from "react";
+
 import {
   DrawingToolsErrorBoundary,
   MapErrorBoundary,
@@ -16,9 +27,7 @@ import type {
   MapErrorMessageProps,
   ToggleButtonProps,
 } from "@/types/base-map";
-import { PlusIcon } from "lucide-react";
-import dynamic from "next/dynamic";
-import { memo, startTransition, Suspense, useMemo, useRef, Activity } from "react";
+
 import { Button } from "../ui/button";
 
 // Memoized drawing tools component with lazy loading for performance
@@ -184,7 +193,9 @@ const BaseMapComponent = ({
         initialUndoRedoStatus={initialUndoRedoStatus}
       />
 
-      <Activity mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}>
+      <Activity
+        mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
+      >
         <div
           className="absolute top-4 left-4 z-10"
           role="region"
@@ -223,7 +234,9 @@ const BaseMapComponent = ({
         </div>
       </Activity>
 
-      <Activity mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}>
+      <Activity
+        mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}
+      >
         <div
           className="absolute top-4 left-4 z-10"
           role="region"

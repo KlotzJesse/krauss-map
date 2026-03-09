@@ -1,7 +1,9 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { type Layer } from "../types/area-types";
+
 import { updateLayerAction } from "@/app/actions/area-actions";
+
+import { type Layer } from "../types/area-types";
 
 interface LayerMergeProps {
   areaId: number;

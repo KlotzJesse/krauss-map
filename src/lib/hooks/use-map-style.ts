@@ -1,6 +1,5 @@
-import { useEffect, useLayoutEffect } from "react";
-
 import type { Map as MapLibre } from "maplibre-gl";
+import { useEffect, useLayoutEffect } from "react";
 
 interface MapStyleProps {
   map: MapLibre | null;

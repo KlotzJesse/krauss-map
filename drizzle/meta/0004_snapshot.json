@@ -87,9 +87,7 @@
         "api_cache_cache_key_unique": {
           "name": "api_cache_cache_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "cache_key"
-          ]
+          "columns": ["cache_key"]
         }
       },
       "policies": {},
@@ -348,10 +346,7 @@
         "area_layer_postal_codes_layer_id_postal_code_unique": {
           "name": "area_layer_postal_codes_layer_id_postal_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "layer_id",
-            "postal_code"
-          ]
+          "columns": ["layer_id", "postal_code"]
         }
       },
       "policies": {},
@@ -533,9 +528,7 @@
         "area_undo_stacks_area_id_unique": {
           "name": "area_undo_stacks_area_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "area_id"
-          ]
+          "columns": ["area_id"]
         }
       },
       "policies": {},
@@ -699,10 +692,7 @@
       "compositePrimaryKeys": {
         "area_versions_area_id_version_number_pk": {
           "name": "area_versions_area_id_version_number_pk",
-          "columns": [
-            "area_id",
-            "version_number"
-          ]
+          "columns": ["area_id", "version_number"]
         }
       },
       "uniqueConstraints": {},
@@ -1259,9 +1249,7 @@
         "states_code_unique": {
           "name": "states_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},

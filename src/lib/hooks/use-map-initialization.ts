@@ -1,5 +1,3 @@
-
-
 import type { FeatureCollection } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
@@ -9,7 +7,7 @@ export function useMapInitialization({
   data,
   center,
   zoom,
-  style
+  style,
 }: {
   mapContainer: RefObject<HTMLDivElement | null>;
   data: FeatureCollection;
@@ -43,7 +41,7 @@ export function useMapInitialization({
       mapRef.current = map;
 
       // Listen for the load event once to trigger React re-render
-      map.once('load', () => {
+      map.once("load", () => {
         setIsMapLoaded(true);
       });
     })();

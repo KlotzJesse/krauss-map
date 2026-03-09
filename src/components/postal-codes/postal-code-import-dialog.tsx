@@ -1,31 +1,45 @@
 "use client";
 
+import type {
+  FeatureCollection,
+  GeoJsonProperties,
+  MultiPolygon,
+  Polygon,
+} from "geojson";
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileSpreadsheet,
+  FileText,
+} from "lucide-react";
+import dynamic from "next/dynamic";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import {
-    findPostalCodeMatches,
-    groupMatchesByPattern,
-    parsePostalCodeInput,
+  findPostalCodeMatches,
+  groupMatchesByPattern,
+  parsePostalCodeInput,
 } from "@/lib/utils/postal-code-parser";
-import type { FeatureCollection, GeoJsonProperties, MultiPolygon, Polygon } from "geojson";
-import { AlertCircle, CheckCircle2, FileSpreadsheet, FileText } from "lucide-react";
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import dynamic from "next/dynamic";
 
 const BulkImportDialog = dynamic(
-  () => import("./bulk-import-dialog").then(m => ({ default: m.BulkImportDialog })),
+  () =>
+    import("./bulk-import-dialog").then((m) => ({
+      default: m.BulkImportDialog,
+    })),
   { ssr: false }
 );
 
@@ -68,16 +82,19 @@ export function PostalCodeImportDialog({
 
   // Statistics
   const stats = useMemo(() => {
-    const validCodes = parsedCodes.filter(p => p.isValid);
-    const invalidCodes = parsedCodes.filter(p => !p.isValid);
-    const totalMatches = matches.reduce((sum, match) => sum + match.matched.length, 0);
+    const validCodes = parsedCodes.filter((p) => p.isValid);
+    const invalidCodes = parsedCodes.filter((p) => !p.isValid);
+    const totalMatches = matches.reduce(
+      (sum, match) => sum + match.matched.length,
+      0
+    );
 
     return {
       total: parsedCodes.length,
       valid: validCodes.length,
       invalid: invalidCodes.length,
       matches: totalMatches,
-      uniqueMatches: new Set(matches.flatMap(m => m.matched)).size,
+      uniqueMatches: new Set(matches.flatMap((m) => m.matched)).size,
     };
   }, [parsedCodes, matches]);
 
@@ -88,7 +105,7 @@ export function PostalCodeImportDialog({
       return;
     }
 
-    const allMatchedCodes = matches.flatMap(match => match.matched);
+    const allMatchedCodes = matches.flatMap((match) => match.matched);
     const uniqueCodes = [...new Set(allMatchedCodes)];
 
     onImport(uniqueCodes);
@@ -116,7 +133,11 @@ export function PostalCodeImportDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="h-full flex flex-col"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="paste" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
@@ -130,7 +151,10 @@ export function PostalCodeImportDialog({
               )}
             </TabsList>
 
-            <TabsContent value="paste" className="flex-1 mt-4 flex flex-col gap-4">
+            <TabsContent
+              value="paste"
+              className="flex-1 mt-4 flex flex-col gap-4"
+            >
               <div className="space-y-2">
                 <Label htmlFor="postal-input">PLZ</Label>
                 <Textarea
@@ -153,12 +177,18 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
               {parsedCodes.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="flex items-center gap-1">
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1"
+                    >
                       <CheckCircle2 className="h-3 w-3 text-green-600" />
                       {stats.valid} gültig
                     </Badge>
                     {stats.invalid > 0 && (
-                      <Badge variant="destructive" className="flex items-center gap-1">
+                      <Badge
+                        variant="destructive"
+                        className="flex items-center gap-1"
+                      >
                         <AlertCircle className="h-3 w-3" />
                         {stats.invalid} ungültig
                       </Badge>
@@ -174,26 +204,38 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
                       <Label>Gefundene Übereinstimmungen:</Label>
                       <div className="max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
                         <div className="space-y-2 text-sm">
-                          {Object.entries(groupedMatches).map(([pattern, match]) => (
-                            <div key={pattern} className="flex items-start gap-2">
-                              <Badge variant="outline" className="shrink-0">
-                                {pattern}
-                              </Badge>
-                              <span className="text-muted-foreground">→</span>
-                              <div className="flex flex-wrap gap-1">
-                                {match.matched.slice(0, 10).map(code => (
-                                  <Badge key={code} variant="secondary" className="text-xs">
-                                    {code}
-                                  </Badge>
-                                ))}
-                                {match.matched.length > 10 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    +{match.matched.length - 10} weitere
-                                  </Badge>
-                                )}
+                          {Object.entries(groupedMatches).map(
+                            ([pattern, match]) => (
+                              <div
+                                key={pattern}
+                                className="flex items-start gap-2"
+                              >
+                                <Badge variant="outline" className="shrink-0">
+                                  {pattern}
+                                </Badge>
+                                <span className="text-muted-foreground">→</span>
+                                <div className="flex flex-wrap gap-1">
+                                  {match.matched.slice(0, 10).map((code) => (
+                                    <Badge
+                                      key={code}
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {code}
+                                    </Badge>
+                                  ))}
+                                  {match.matched.length > 10 && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      +{match.matched.length - 10} weitere
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            )
+                          )}
                         </div>
                       </div>
                     </div>
@@ -202,13 +244,19 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
                   {/* Show invalid codes */}
                   {stats.invalid > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-destructive">Ungültige Eingaben:</Label>
+                      <Label className="text-destructive">
+                        Ungültige Eingaben:
+                      </Label>
                       <div className="max-h-20 overflow-y-auto">
                         <div className="flex flex-wrap gap-1">
                           {parsedCodes
-                            .filter(p => !p.isValid)
-                            .map(p => (
-                              <Badge key={p.original} variant="destructive" className="text-xs">
+                            .filter((p) => !p.isValid)
+                            .map((p) => (
+                              <Badge
+                                key={p.original}
+                                variant="destructive"
+                                className="text-xs"
+                              >
                                 {p.original}
                               </Badge>
                             ))}
@@ -229,7 +277,8 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
                   <div className="text-center space-y-2">
                     <h3 className="text-lg font-semibold">Excel/CSV-Import</h3>
                     <p className="text-sm text-muted-foreground max-w-md">
-                      Excel (.xlsx, .xls) oder CSV-Dateien mit PLZ und Layer-Zuordnungen hochladen.
+                      Excel (.xlsx, .xls) oder CSV-Dateien mit PLZ und
+                      Layer-Zuordnungen hochladen.
                     </p>
                   </div>
                   <Button
@@ -258,17 +307,18 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
 
         {/* Actions */}
         <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={handleClear} disabled={!textInput.trim()}>
+          <Button
+            variant="outline"
+            onClick={handleClear}
+            disabled={!textInput.trim()}
+          >
             Zurücksetzen
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
-            <Button
-              onClick={handleImport}
-              disabled={stats.uniqueMatches === 0}
-            >
+            <Button onClick={handleImport} disabled={stats.uniqueMatches === 0}>
               {`${stats.uniqueMatches} PLZ importieren`}
             </Button>
           </div>

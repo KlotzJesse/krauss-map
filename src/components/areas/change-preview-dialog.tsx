@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  IconAlertCircle,
+  IconArrowBackUp,
+  IconArrowForwardUp,
+} from "@tabler/icons-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,13 +18,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  IconAlertCircle,
-  IconArrowBackUp,
-  IconArrowForwardUp,
-} from "@tabler/icons-react";
 
 interface LayerData {
   id: number;
@@ -121,11 +122,13 @@ export function ChangePreviewDialog({
               {mode === "undo" ? "Stellt wieder her" : "Löscht"} Layer:{" "}
               <strong>{change.previousData?.layer?.name}</strong>
             </p>
-            {change.previousData?.postalCodes && change.previousData.postalCodes.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                Einschließlich {change.previousData.postalCodes.length} Postleitzahlen
-              </p>
-            )}
+            {change.previousData?.postalCodes &&
+              change.previousData.postalCodes.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Einschließlich {change.previousData.postalCodes.length}{" "}
+                  Postleitzahlen
+                </p>
+              )}
           </div>
         );
 
@@ -136,13 +139,16 @@ export function ChangePreviewDialog({
               {mode === "undo" ? "Entfernt" : "Fügt hinzu"}{" "}
               {change.changeData?.postalCodes?.length || 0} Postleitzahlen
             </p>
-            {change.changeData?.postalCodes && change.changeData.postalCodes.length > 0 && change.changeData.postalCodes.length <= 10 ? (
+            {change.changeData?.postalCodes &&
+            change.changeData.postalCodes.length > 0 &&
+            change.changeData.postalCodes.length <= 10 ? (
               <div className="pl-4 text-sm text-muted-foreground">
                 {change.changeData.postalCodes.map((code: string) => (
                   <div key={code}>{code}</div>
                 ))}
               </div>
-            ) : change.changeData?.postalCodes && change.changeData.postalCodes.length > 10 ? (
+            ) : change.changeData?.postalCodes &&
+              change.changeData.postalCodes.length > 10 ? (
               <p className="text-xs text-muted-foreground">
                 Zu viele zum Anzeigen ({change.changeData.postalCodes.length}{" "}
                 Codes)
@@ -158,13 +164,16 @@ export function ChangePreviewDialog({
               {mode === "undo" ? "Stellt wieder her" : "Entfernt"}{" "}
               {change.previousData?.postalCodes?.length || 0} Postleitzahlen
             </p>
-            {change.previousData?.postalCodes && change.previousData.postalCodes.length > 0 && change.previousData.postalCodes.length <= 10 ? (
+            {change.previousData?.postalCodes &&
+            change.previousData.postalCodes.length > 0 &&
+            change.previousData.postalCodes.length <= 10 ? (
               <div className="pl-4 text-sm text-muted-foreground">
                 {change.previousData.postalCodes.map((code: string) => (
                   <div key={code}>{code}</div>
                 ))}
               </div>
-            ) : change.previousData?.postalCodes && change.previousData.postalCodes.length > 10 ? (
+            ) : change.previousData?.postalCodes &&
+              change.previousData.postalCodes.length > 10 ? (
               <p className="text-xs text-muted-foreground">
                 Zu viele zum Anzeigen ({change.previousData.postalCodes.length}{" "}
                 Codes)
@@ -176,7 +185,9 @@ export function ChangePreviewDialog({
       case "update_area":
         return (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Gebiets-Eigenschaftsänderungen:</p>
+            <p className="text-sm font-medium">
+              Gebiets-Eigenschaftsänderungen:
+            </p>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="font-medium text-muted-foreground">

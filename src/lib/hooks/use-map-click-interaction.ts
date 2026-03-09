@@ -1,8 +1,9 @@
-import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import { isFeatureWithCode } from "@/lib/utils/map-feature-utils";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { toast } from "sonner";
+
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { SelectAreaLayers } from "@/lib/schema/schema";
+import { isFeatureWithCode } from "@/lib/utils/map-feature-utils";
 
 type LayerWithPostalCodes = SelectAreaLayers & {
   postalCodes?: { postalCode: string }[];

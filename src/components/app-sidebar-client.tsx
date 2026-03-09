@@ -1,15 +1,13 @@
 "use client";
 
-import {
-  IconDashboard,
-  IconMapPin2,
-} from "@tabler/icons-react";
+import { IconDashboard, IconMapPin2 } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Suspense } from "react";
 
-import { NavMain } from "@/components/nav-main";
-import { NavAreas } from "@/components/areas/nav-areas";
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
+import { NavAreas } from "@/components/areas/nav-areas";
+import { NavMain } from "@/components/nav-main";
 import {
   Sidebar,
   SidebarContent,
@@ -21,9 +19,8 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar";
-import { useRouter } from "next/navigation";
-import type { Area } from "@/lib/types/area-types";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Area } from "@/lib/types/area-types";
 
 const data = {
   navMain: [

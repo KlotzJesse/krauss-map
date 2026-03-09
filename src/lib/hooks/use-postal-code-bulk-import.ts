@@ -1,8 +1,3 @@
-import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import {
-  findPostalCodeMatches,
-  parsePostalCodeInput,
-} from "@/lib/utils/postal-code-parser";
 import type {
   FeatureCollection,
   GeoJsonProperties,
@@ -10,6 +5,12 @@ import type {
   Polygon,
 } from "geojson";
 import { toast } from "sonner";
+
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
+import {
+  findPostalCodeMatches,
+  parsePostalCodeInput,
+} from "@/lib/utils/postal-code-parser";
 
 interface PostalCodeBulkImportProps {
   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;

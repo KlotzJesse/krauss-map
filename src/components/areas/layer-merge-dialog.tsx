@@ -1,7 +1,12 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { IconGitMerge } from "@tabler/icons-react";
+import { useState, useOptimistic, useTransition } from "react";
+import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
 import { Label } from "@/components/ui/label";
-
 import {
   Select,
   SelectContent,
@@ -20,20 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { useLayerMerge } from "@/lib/hooks/use-layer-merge";
-
 import type { Layer } from "@/lib/types/area-types";
-
-import { IconGitMerge } from "@tabler/icons-react";
-
-import { useState, useOptimistic, useTransition } from "react";
-
-import { toast } from "sonner";
-
-import { Badge } from "@/components/ui/badge";
-
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface LayerMergeDialogProps {
   open: boolean;
@@ -80,9 +71,15 @@ export function LayerMergeDialog({
   // Optimistic merge state
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
     layers,
-    (state, { targetId: _targetId, sourceIds }: { targetId: number; sourceIds: number[] }) => {
+    (
+      state,
+      {
+        targetId: _targetId,
+        sourceIds,
+      }: { targetId: number; sourceIds: number[] }
+    ) => {
       // Remove source layers optimistically
-      return state.filter(layer => !sourceIds.includes(layer.id));
+      return state.filter((layer) => !sourceIds.includes(layer.id));
     }
   );
 
@@ -105,7 +102,7 @@ export function LayerMergeDialog({
 
     const targetId = parseInt(targetLayerId, 10);
     const sourceIds = Array.from(selectedLayers).filter(
-      (id) => id !== targetId,
+      (id) => id !== targetId
     );
 
     startTransition(async () => {
@@ -113,14 +110,11 @@ export function LayerMergeDialog({
       updateOptimisticLayers({ targetId, sourceIds });
 
       try {
-        await toast.promise(
-          mergeLayers(sourceIds, targetId, strategy),
-          {
-            loading: `Führe ${sourceIds.length} Gebiete zusammen...`,
-            success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
-            error: "Fehler beim Zusammenführen der Gebiete",
-          }
-        );
+        await toast.promise(mergeLayers(sourceIds, targetId, strategy), {
+          loading: `Führe ${sourceIds.length} Gebiete zusammen...`,
+          success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
+          error: "Fehler beim Zusammenführen der Gebiete",
+        });
 
         setSelectedLayers(new Set());
         setTargetLayerId("");
@@ -140,19 +134,19 @@ export function LayerMergeDialog({
     const targetLayer = layers.find((l) => l.id === targetId);
 
     const sourceLayers = layers.filter(
-      (l) => selectedLayers.has(l.id) && l.id !== targetId,
+      (l) => selectedLayers.has(l.id) && l.id !== targetId
     );
 
     if (!targetLayer) return null;
 
     const targetCodes = new Set(
-      targetLayer.postalCodes?.map((pc) => pc.postalCode) || [],
+      targetLayer.postalCodes?.map((pc) => pc.postalCode) || []
     );
 
     const sourceCodes = new Set(
       sourceLayers.flatMap(
-        (l) => l.postalCodes?.map((pc) => pc.postalCode) || [],
-      ),
+        (l) => l.postalCodes?.map((pc) => pc.postalCode) || []
+      )
     );
 
     let resultCount = 0;

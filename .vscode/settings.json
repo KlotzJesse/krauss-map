@@ -13,5 +13,6 @@
     "**/*tsconfig.json": true
   },
   "typescript.tsdk": "node_modules/typescript/lib",
-  "oxc.enable": false
+  "oxc.enable": false,
+  "oxc.enable.oxlint": true
 }

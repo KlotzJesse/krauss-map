@@ -1,6 +1,7 @@
+import { useEffect, useLayoutEffect } from "react";
+
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { MapLibreMap } from "@/types/map";
-import { useEffect, useLayoutEffect } from "react";
 
 /**
  * useMapCenterZoomSync
@@ -34,8 +35,8 @@ export function useMapCenterZoomSync({
     if (
       Array.isArray(center) &&
       center.length === 2 &&
-      typeof center[0] === 'number' &&
-      typeof center[1] === 'number' &&
+      typeof center[0] === "number" &&
+      typeof center[1] === "number" &&
       (Math.abs(currentCenter.lng - center[0]) > 1e-6 ||
         Math.abs(currentCenter.lat - center[1]) > 1e-6)
     ) {
@@ -64,12 +65,12 @@ export function useMapCenterZoomSync({
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded) return;
     const map = mapRef.current;
-    mapRef.current.on('moveend', handleMoveOrZoomEnd);
-    mapRef.current.on('zoomend', handleMoveOrZoomEnd);
+    mapRef.current.on("moveend", handleMoveOrZoomEnd);
+    mapRef.current.on("zoomend", handleMoveOrZoomEnd);
     return () => {
       if (map) {
-       map.off('moveend', handleMoveOrZoomEnd);
-        map.off('zoomend', handleMoveOrZoomEnd);
+        map.off("moveend", handleMoveOrZoomEnd);
+        map.off("zoomend", handleMoveOrZoomEnd);
       }
     };
   }, [isMapLoaded, handleMoveOrZoomEnd, mapRef]);

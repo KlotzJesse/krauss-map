@@ -1,8 +1,9 @@
-import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { SidebarSkeleton } from "@/components/ui/loading-skeleton";
-import { FeatureErrorBoundary } from "@/components/ui/error-boundaries";
 import { Suspense } from "react";
+
+import { AppSidebar } from "@/components/app-sidebar";
+import { FeatureErrorBoundary } from "@/components/ui/error-boundaries";
+import { SidebarSkeleton } from "@/components/ui/loading-skeleton";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export default async function MapLayout({
   children,

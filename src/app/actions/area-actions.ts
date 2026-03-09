@@ -1,25 +1,20 @@
 "use server";
 
-import { db } from "../../lib/db";
+import { eq, and, inArray, sql } from "drizzle-orm";
+import type { FeatureCollection, Geometry } from "geojson";
+import type { Route } from "next";
+import { updateTag, revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
+import { db } from "../../lib/db";
 import {
   areas,
   areaLayers,
   areaLayerPostalCodes,
   postalCodes,
 } from "../../lib/schema/schema";
-
-import { eq, and, inArray, sql } from "drizzle-orm";
-
-import { updateTag, revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-
 import { recordChangeAction } from "./change-tracking-actions";
-
 import { createVersionAction } from "./version-actions";
-
-import type { FeatureCollection, Geometry } from "geojson";
-import type { Route } from "next";
 
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
@@ -192,7 +187,6 @@ export async function updateAreaAction(
     updateTag("undo-redo");
 
     updateTag(`area-${id}-undo-redo`);
-
 
     revalidatePath("/postal-codes", "layout");
     return { success: true };
@@ -503,8 +497,6 @@ export async function updateLayerAction(
 
     updateTag(`area-${areaId}-undo-redo`);
 
-
-
     revalidatePath("/postal-codes", "layout");
     return { success: true };
   } catch (error) {
@@ -593,8 +585,6 @@ export async function deleteLayerAction(
     updateTag("undo-redo");
 
     updateTag(`area-${areaId}-undo-redo`);
-
-
 
     revalidatePath("/postal-codes", "layout");
     return { success: true };
@@ -688,8 +678,6 @@ export async function addPostalCodesToLayerAction(
     updateTag("undo-redo");
 
     updateTag(`area-${areaId}-undo-redo`);
-
-
 
     revalidatePath("/postal-codes", "layout");
     return { success: true };
@@ -786,7 +774,6 @@ export async function removePostalCodesFromLayerAction(
 
     updateTag(`area-${areaId}-undo-redo`);
 
-
     revalidatePath("/postal-codes", "layout");
     return { success: true };
   } catch (error) {
@@ -867,8 +854,8 @@ export async function geoprocessAction(data: {
             SELECT ST_ConvexHull(ST_Collect(geometry)) AS geom
             FROM postal_codes
             WHERE granularity = ${granularity} AND code IN (${sql.raw(
-            codeList
-          )})
+              codeList
+            )})
             )
             SELECT code FROM postal_codes, hull
             WHERE granularity = ${granularity}
@@ -962,8 +949,6 @@ export async function radiusSearchAction(data: {
       String((row as { code: string }).code)
     );
 
-
-
     return { success: true, data: { postalCodes } };
   } catch (error) {
     console.error("Error in radius search:", error);
@@ -1012,8 +997,6 @@ export async function drivingRadiusSearchAction(data: {
     const postalCodes = rows.map((row) =>
       String((row as { code: string }).code)
     );
-
-
 
     return { success: true, data: { postalCodes } };
   } catch (error) {
@@ -1066,7 +1049,6 @@ export async function geocodeAction(address: string): ServerActionResponse<{
     }
 
     const result = results[0];
-
 
     revalidatePath("/postal-codes", "layout");
     return {
@@ -1171,7 +1153,7 @@ export async function geocodeSearchAction(data: {
       coordinates: [parseFloat(result.lon), parseFloat(result.lat)] as [
         number,
 
-        number
+        number,
       ],
 
       postal_code: result.address?.postcode,
@@ -1189,8 +1171,6 @@ export async function geocodeSearchAction(data: {
     const filteredResults = includePostalCode
       ? results.filter((result: { postal_code: string }) => result.postal_code)
       : results;
-
-
 
     revalidatePath("/postal-codes", "layout");
     return {
@@ -1301,8 +1281,6 @@ export async function searchPostalCodesByLocationAction(data: {
 
       geometry: JSON.parse(result.geometry) as Geometry,
     }));
-
-
 
     return {
       success: true,
@@ -1522,8 +1500,6 @@ export async function searchPostalCodesByBoundaryAction(data: {
       .limit(limit);
 
     const codes = intersectingCodes.map((row) => row.code).sort();
-
-
 
     return {
       success: true,

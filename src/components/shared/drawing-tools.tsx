@@ -1,41 +1,21 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
-import { Separator } from "@/components/ui/separator";
-
-import { Skeleton } from "@/components/ui/skeleton";
-
-import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
-
-import {
-  copyPostalCodesCSV,
-  exportLayersXLSX,
-  exportLayersPDF,
-} from "@/lib/utils/export-utils";
-
+  IconPlus,
+  IconPalette,
+  IconAlertTriangle,
+  IconClock,
+  IconDeviceFloppy,
+  IconGitMerge,
+  IconHistory,
+} from "@tabler/icons-react";
+import type { InferSelectModel } from "drizzle-orm";
 import type {
   FeatureCollection,
   GeoJsonProperties,
   MultiPolygon,
   Polygon,
 } from "geojson";
-
 import {
   Copy,
   Diamond,
@@ -45,25 +25,26 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-
-import { Suspense, useState, useEffect, Activity, useOptimistic, useTransition } from "react";
-
+import {
+  Suspense,
+  useState,
+  useEffect,
+  Activity,
+  useOptimistic,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 
-import { Input } from "@/components/ui/input";
-
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-
+  createLayerAction,
+  updateLayerAction,
+  deleteLayerAction,
+} from "@/app/actions/area-actions";
+import { ConflictResolutionDialog } from "@/components/areas/conflict-resolution-dialog";
+import { CreateVersionDialog } from "@/components/areas/create-version-dialog";
+import { EnhancedVersionHistoryDialog } from "@/components/areas/enhanced-version-history-dialog";
+import { LayerMergeDialog } from "@/components/areas/layer-merge-dialog";
+import { GranularitySelector } from "@/components/shared/granularity-selector";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,40 +55,44 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  createLayerAction,
-  updateLayerAction,
-  deleteLayerAction,
-} from "@/app/actions/area-actions";
-
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
-  IconPlus,
-  IconPalette,
-  IconAlertTriangle,
-  IconClock,
-  IconDeviceFloppy,
-  IconGitMerge,
-  IconHistory,
-} from "@tabler/icons-react";
-
-import { ConflictResolutionDialog } from "@/components/areas/conflict-resolution-dialog";
-
-import { EnhancedVersionHistoryDialog } from "@/components/areas/enhanced-version-history-dialog";
-
-import { CreateVersionDialog } from "@/components/areas/create-version-dialog";
-
-import { LayerMergeDialog } from "@/components/areas/layer-merge-dialog";
-
-import { GranularitySelector } from "@/components/shared/granularity-selector";
-
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type {
   SelectAreaVersions,
   SelectAreaChanges,
   areaLayers,
 } from "@/lib/schema/schema";
-
-import type { InferSelectModel } from "drizzle-orm";
+import {
+  copyPostalCodesCSV,
+  exportLayersXLSX,
+  exportLayersPDF,
+} from "@/lib/utils/export-utils";
 
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
@@ -158,7 +143,7 @@ export interface DrawingToolsProps {
   removePostalCodesFromLayer?: (
     layerId: number,
 
-    codes: string[],
+    codes: string[]
   ) => Promise<void>;
 
   // Version viewing props
@@ -208,7 +193,7 @@ async function fillRegions(
 
   setIsFilling: (b: boolean) => void,
 
-  granularity?: string,
+  granularity?: string
 ) {
   if (!granularity) {
     toast.error("Granularität ist erforderlich für die Geoverarbeitung");
@@ -240,7 +225,7 @@ async function fillRegions(
 
         "layer codes:",
 
-        layerCodes,
+        layerCodes
       );
 
       // Use server action instead of client-side fetch
@@ -257,7 +242,7 @@ async function fillRegions(
 
       if (!result.success) {
         throw new Error(
-          result.error || "Server-Geoverarbeitung fehlgeschlagen",
+          result.error || "Server-Geoverarbeitung fehlgeschlagen"
         );
       }
 
@@ -335,15 +320,24 @@ function DrawingToolsImpl({
   // Optimistic layer state for instant UI updates
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
     layers,
-    (currentLayers: Layer[], update: { type: 'create' | 'update' | 'delete'; layer?: Partial<Layer>; id?: number }) => {
-      if (update.type === 'create' && update.layer) {
+    (
+      currentLayers: Layer[],
+      update: {
+        type: "create" | "update" | "delete";
+        layer?: Partial<Layer>;
+        id?: number;
+      }
+    ) => {
+      if (update.type === "create" && update.layer) {
         return [...currentLayers, { ...update.layer, id: Date.now() } as Layer];
       }
-      if (update.type === 'update' && update.id && update.layer) {
-        return currentLayers.map(l => l.id === update.id ? { ...l, ...update.layer } : l);
+      if (update.type === "update" && update.id && update.layer) {
+        return currentLayers.map((l) =>
+          l.id === update.id ? { ...l, ...update.layer } : l
+        );
       }
-      if (update.type === 'delete' && update.id) {
-        return currentLayers.filter(l => l.id !== update.id);
+      if (update.type === "delete" && update.id) {
+        return currentLayers.filter((l) => l.id !== update.id);
       }
       return currentLayers;
     }
@@ -450,7 +444,7 @@ function DrawingToolsImpl({
   const updateLayer = async (
     layerId: number,
 
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ) => {
     if (!areaId) return;
 
@@ -517,7 +511,7 @@ function DrawingToolsImpl({
       console.log(
         "[handleAddPendingToLayer] Adding codes:",
 
-        pendingPostalCodes,
+        pendingPostalCodes
       );
 
       await addPostalCodesToLayer(activeLayerId, pendingPostalCodes);
@@ -527,7 +521,7 @@ function DrawingToolsImpl({
           pendingPostalCodes.length === 1 ? "" : "en"
         } zu Gebiet hinzugefügt`,
 
-        { duration: 2000 },
+        { duration: 2000 }
       );
 
       // Call the original onAddPending to clear the pending codes
@@ -574,7 +568,7 @@ function DrawingToolsImpl({
       console.log(
         "[handleRemovePendingFromLayer] Removing codes:",
 
-        pendingPostalCodes,
+        pendingPostalCodes
       );
 
       await removePostalCodesFromLayer(activeLayerId, pendingPostalCodes);
@@ -584,7 +578,7 @@ function DrawingToolsImpl({
           pendingPostalCodes.length === 1 ? "" : "en"
         } aus Gebiet entfernt`,
 
-        { duration: 2000 },
+        { duration: 2000 }
       );
 
       // Call the original onRemovePending to clear the pending codes
@@ -608,7 +602,7 @@ function DrawingToolsImpl({
 
         "- layers provided via props:",
 
-        optimisticLayers.length,
+        optimisticLayers.length
       );
     }
   }, [areaId, optimisticLayers.length]);
@@ -689,12 +683,13 @@ function DrawingToolsImpl({
     setIsCreating(true);
 
     startTransition(async () => {
-      const nextColor = DEFAULT_COLORS[optimisticLayers.length % DEFAULT_COLORS.length];
+      const nextColor =
+        DEFAULT_COLORS[optimisticLayers.length % DEFAULT_COLORS.length];
       const createdLayerName = newLayerName;
 
       // Optimistic update
       updateOptimisticLayers({
-        type: 'create',
+        type: "create",
         layer: {
           name: createdLayerName,
           color: nextColor,
@@ -703,7 +698,7 @@ function DrawingToolsImpl({
           orderIndex: optimisticLayers.length,
           areaId: areaId!,
           postalCodes: [],
-        }
+        },
       });
 
       setNewLayerName("");
@@ -736,7 +731,7 @@ function DrawingToolsImpl({
   const handleColorChange = async (layerId: number, color: string) => {
     startTransition(async () => {
       // Optimistic update
-      updateOptimisticLayers({ type: 'update', id: layerId, layer: { color } });
+      updateOptimisticLayers({ type: "update", id: layerId, layer: { color } });
 
       // Instant visual feedback - no need for toast, color changes are self-evident
 
@@ -761,20 +756,17 @@ function DrawingToolsImpl({
 
     startTransition(async () => {
       // Optimistic update
-      updateOptimisticLayers({ type: 'delete', id: layerToDelete });
+      updateOptimisticLayers({ type: "delete", id: layerToDelete });
 
       setShowDeleteDialog(false);
       const deletedLayerId = layerToDelete;
       setLayerToDelete(null);
 
-      await toast.promise(
-        deleteLayer(deletedLayerId),
-        {
-          loading: "Lösche Gebiet...",
-          success: "Gebiet gelöscht",
-          error: "Fehler beim Löschen - Änderung wird rückgängig gemacht",
-        }
-      );
+      await toast.promise(deleteLayer(deletedLayerId), {
+        loading: "Lösche Gebiet...",
+        success: "Gebiet gelöscht",
+        error: "Fehler beim Löschen - Änderung wird rückgängig gemacht",
+      });
     });
   };
 
@@ -787,19 +779,20 @@ function DrawingToolsImpl({
 
     startTransition(async () => {
       // Optimistic update - instantly rename in UI
-      updateOptimisticLayers({ type: 'update', id: layerId, layer: { name: newName.trim() } });
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { name: newName.trim() },
+      });
 
       setEditingLayerId(null);
       setEditingLayerName("");
 
-      await toast.promise(
-        updateLayer(layerId, { name: newName.trim() }),
-        {
-          loading: "Benenne Gebiet um...",
-          success: "Gebiet umbenannt",
-          error: "Fehler beim Umbenennen - Bitte erneut versuchen",
-        }
-      );
+      await toast.promise(updateLayer(layerId, { name: newName.trim() }), {
+        loading: "Benenne Gebiet um...",
+        success: "Gebiet umbenannt",
+        error: "Fehler beim Umbenennen - Bitte erneut versuchen",
+      });
     });
   };
 
@@ -1027,7 +1020,7 @@ function DrawingToolsImpl({
                                     handleRenameLayer(
                                       layer.id,
 
-                                      editingLayerName,
+                                      editingLayerName
                                     );
                                   } else if (e.key === "Escape") {
                                     setEditingLayerId(null);
@@ -1040,7 +1033,7 @@ function DrawingToolsImpl({
                                     handleRenameLayer(
                                       layer.id,
 
-                                      editingLayerName,
+                                      editingLayerName
                                     );
                                   } else {
                                     setEditingLayerId(null);
@@ -1131,14 +1124,14 @@ function DrawingToolsImpl({
 
                                     const codes =
                                       layer.postalCodes?.map(
-                                        (pc) => `D-${pc.postalCode}`,
+                                        (pc) => `D-${pc.postalCode}`
                                       ) || [];
 
                                     if (codes.length > 0) {
                                       await copyPostalCodesCSV(codes);
                                     } else {
                                       toast.info(
-                                        "Keine Postleitzahlen zum Kopieren",
+                                        "Keine Postleitzahlen zum Kopieren"
                                       );
                                     }
                                   }}
@@ -1205,7 +1198,9 @@ function DrawingToolsImpl({
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-2 pt-2">
             {/* Gefundene Regionen durch Zeichnung */}
-            <Activity mode={pendingPostalCodes.length > 0 ? "visible" : "hidden"}>
+            <Activity
+              mode={pendingPostalCodes.length > 0 ? "visible" : "hidden"}
+            >
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center px-1">
                   <span className="text-xs font-medium">Gefunden</span>
@@ -1222,7 +1217,9 @@ function DrawingToolsImpl({
                       {region}
                     </div>
                   ))}
-                  <Activity mode={pendingPostalCodes.length > 5 ? "visible" : "hidden"}>
+                  <Activity
+                    mode={pendingPostalCodes.length > 5 ? "visible" : "hidden"}
+                  >
                     <div className="text-xs text-muted-foreground text-center py-0.5">
                       +{pendingPostalCodes.length - 5}
                     </div>
@@ -1331,16 +1328,19 @@ function DrawingToolsImpl({
                         Zeichnung löschen
                       </Button>
                     )}
-                  <Activity mode={!!(activeLayerId && areaId) ? "visible" : "hidden"}>
+                  <Activity
+                    mode={!!(activeLayerId && areaId) ? "visible" : "hidden"}
+                  >
                     <Button
                       variant="secondary"
                       size="sm"
                       disabled={
-                        isFilling || !optimisticLayers.find((l) => l.id === activeLayerId)
+                        isFilling ||
+                        !optimisticLayers.find((l) => l.id === activeLayerId)
                       }
                       onClick={() => {
                         const activeLayer = optimisticLayers.find(
-                          (l) => l.id === activeLayerId,
+                          (l) => l.id === activeLayerId
                         );
 
                         if (postalCodesData && activeLayer) {
@@ -1355,7 +1355,7 @@ function DrawingToolsImpl({
 
                             setIsFilling,
 
-                            granularity,
+                            granularity
                           );
                         }
                       }}

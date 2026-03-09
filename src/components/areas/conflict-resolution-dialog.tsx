@@ -1,6 +1,13 @@
 "use client";
 
+import { IconAlertTriangle, IconCheck, IconLoader } from "@tabler/icons-react";
+import { useState, useEffect, Activity } from "react";
+import { toast } from "sonner";
+
+import { updateLayerAction } from "@/app/actions/layer-actions";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useLayerConflicts } from "@/lib/hooks/use-layer-conflicts";
-import type { Layer } from "@/lib/types/area-types";
-import { updateLayerAction } from "@/app/actions/layer-actions";
-import { IconAlertTriangle, IconCheck, IconLoader } from "@tabler/icons-react";
-import { useState, useEffect, Activity } from "react";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -25,6 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLayerConflicts } from "@/lib/hooks/use-layer-conflicts";
+import type { Layer } from "@/lib/types/area-types";
 
 interface ConflictResolutionDialogProps {
   open: boolean;
@@ -143,7 +144,9 @@ export function ConflictResolutionDialog({
               </span>
             </div>
           </Activity>
-          <Activity mode={!isDetecting && conflicts.length === 0 ? "visible" : "hidden"}>
+          <Activity
+            mode={!isDetecting && conflicts.length === 0 ? "visible" : "hidden"}
+          >
             <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950 rounded-lg">
               <IconCheck className="h-5 w-5 text-green-600" />
               <span className="text-sm text-green-700 dark:text-green-300">
@@ -151,7 +154,9 @@ export function ConflictResolutionDialog({
               </span>
             </div>
           </Activity>
-          <Activity mode={!isDetecting && conflicts.length > 0 ? "visible" : "hidden"}>
+          <Activity
+            mode={!isDetecting && conflicts.length > 0 ? "visible" : "hidden"}
+          >
             <>
               <div className="flex items-center gap-2 p-4 bg-amber-50 dark:bg-amber-950 rounded-lg">
                 <IconAlertTriangle className="h-5 w-5 text-amber-600" />
@@ -193,7 +198,9 @@ export function ConflictResolutionDialog({
                 ))}
               </div>
 
-              <Activity mode={selectedConflicts.size > 0 ? "visible" : "hidden"}>
+              <Activity
+                mode={selectedConflicts.size > 0 ? "visible" : "hidden"}
+              >
                 <div className="space-y-2">
                   <Label>Auflösungsstrategie</Label>
                   <Select
@@ -224,7 +231,11 @@ export function ConflictResolutionDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Schließen
           </Button>
-          <Button onClick={handleDetect} variant="secondary" disabled={isDetecting}>
+          <Button
+            onClick={handleDetect}
+            variant="secondary"
+            disabled={isDetecting}
+          >
             {isDetecting ? (
               <>
                 <IconLoader className="h-4 w-4 mr-2 animate-spin" />
@@ -235,7 +246,10 @@ export function ConflictResolutionDialog({
             )}
           </Button>
           <Activity mode={selectedConflicts.size > 0 ? "visible" : "hidden"}>
-            <Button onClick={handleResolve} disabled={!resolutionStrategy || isDetecting}>
+            <Button
+              onClick={handleResolve}
+              disabled={!resolutionStrategy || isDetecting}
+            >
               {selectedConflicts.size} Konflikt
               {selectedConflicts.size !== 1 ? "e" : ""} auflösen
             </Button>

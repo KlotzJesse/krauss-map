@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { PostalCodesOverview } from "@/components/postal-codes/postal-codes-overview";
 
 export async function generateMetadata(): Promise<Metadata> {

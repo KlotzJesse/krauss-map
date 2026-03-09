@@ -1,5 +1,18 @@
 "use client";
 
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  Layers,
+  MapPin,
+} from "lucide-react";
+import { useCallback, useState, useOptimistic, useTransition } from "react";
+import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
+
+import { bulkImportPostalCodesAndLayers } from "@/app/actions/bulk-import-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +23,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -25,21 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
 import { useExcelImport } from "@/lib/hooks/use-excel-import";
-import { bulkImportPostalCodesAndLayers } from "@/app/actions/bulk-import-actions";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Download,
-  FileSpreadsheet,
-  Layers,
-  MapPin,
-} from "lucide-react";
-import { useCallback, useState, useOptimistic, useTransition } from "react";
-import { useDropzone } from "react-dropzone";
-import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface BulkImportDialogProps {
   open: boolean;
@@ -73,7 +74,10 @@ export function BulkImportDialog({
   // Optimistic import status
   const [_optimisticImportStatus, updateOptimisticImportStatus] = useOptimistic(
     { importing: false, progress: 0, completed: false },
-    (_state, update: { importing?: boolean; progress?: number; completed?: boolean }) => ({
+    (
+      _state,
+      update: { importing?: boolean; progress?: number; completed?: boolean }
+    ) => ({
       ..._state,
       ...update,
     })
@@ -88,18 +92,20 @@ export function BulkImportDialog({
 
       // Validate file type
       const validTypes = [
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'text/csv',
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/csv",
       ];
 
-      const validExtensions = ['.xls', '.xlsx', '.csv'];
-      const hasValidExtension = validExtensions.some(ext =>
+      const validExtensions = [".xls", ".xlsx", ".csv"];
+      const hasValidExtension = validExtensions.some((ext) =>
         file.name.toLowerCase().endsWith(ext)
       );
 
       if (!validTypes.includes(file.type) && !hasValidExtension) {
-        toast.error("Ungültiges Format. Bitte Excel (.xlsx, .xls) oder CSV verwenden.");
+        toast.error(
+          "Ungültiges Format. Bitte Excel (.xlsx, .xls) oder CSV verwenden."
+        );
         return;
       }
 
@@ -112,9 +118,11 @@ export function BulkImportDialog({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'text/csv': ['.csv'],
-      'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      "text/csv": [".csv"],
+      "application/vnd.ms-excel": [".xls"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+        ".xlsx",
+      ],
     },
     multiple: false,
     maxFiles: 1,
@@ -132,43 +140,65 @@ export function BulkImportDialog({
 
     startTransition(async () => {
       // Optimistically show import starting
-      updateOptimisticImportStatus({ importing: true, progress: 0, completed: false });
+      updateOptimisticImportStatus({
+        importing: true,
+        progress: 0,
+        completed: false,
+      });
 
       // Prepare layers for bulk import
-      const layers = layerGroups.map(group => ({
+      const layers = layerGroups.map((group) => ({
         name: group.layerName,
         postalCodes: group.postalCodes,
       }));
 
       // Optimistically update progress
-      updateOptimisticImportStatus({ importing: true, progress: 50, completed: false });
+      updateOptimisticImportStatus({
+        importing: true,
+        progress: 50,
+        completed: false,
+      });
 
       try {
-        await toast.promise(
-          bulkImportPostalCodesAndLayers(areaId, layers),
-          {
-            loading: `Importiere ${layers.length} Gebiete...`,
-            success: (data) => {
-              if (data.success) {
-                setImportProgress(100);
-                updateOptimisticImportStatus({ importing: false, progress: 100, completed: true });
-                reset();
-                onOpenChange(false);
-                onImportComplete?.();
-                return `Import erfolgreich! ${data.createdLayers} neue Layer, ${data.updatedLayers} aktualisiert, ${data.totalPostalCodes} PLZ hinzugefügt.`;
-              }
-              throw new Error(data.errors?.join(", ") || "Unbekannter Fehler");
-            },
-            error: (err) => `Import fehlgeschlagen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
-          }
-        );
+        await toast.promise(bulkImportPostalCodesAndLayers(areaId, layers), {
+          loading: `Importiere ${layers.length} Gebiete...`,
+          success: (data) => {
+            if (data.success) {
+              setImportProgress(100);
+              updateOptimisticImportStatus({
+                importing: false,
+                progress: 100,
+                completed: true,
+              });
+              reset();
+              onOpenChange(false);
+              onImportComplete?.();
+              return `Import erfolgreich! ${data.createdLayers} neue Layer, ${data.updatedLayers} aktualisiert, ${data.totalPostalCodes} PLZ hinzugefügt.`;
+            }
+            throw new Error(data.errors?.join(", ") || "Unbekannter Fehler");
+          },
+          error: (err) =>
+            `Import fehlgeschlagen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
+        });
       } finally {
         setIsImporting(false);
         setImportProgress(0);
-        updateOptimisticImportStatus({ importing: false, progress: 0, completed: false });
+        updateOptimisticImportStatus({
+          importing: false,
+          progress: 0,
+          completed: false,
+        });
       }
     });
-  }, [stats, layerGroups, areaId, reset, onOpenChange, onImportComplete, updateOptimisticImportStatus]);
+  }, [
+    stats,
+    layerGroups,
+    areaId,
+    reset,
+    onOpenChange,
+    onImportComplete,
+    updateOptimisticImportStatus,
+  ]);
 
   // Clear and reset
   const handleClear = useCallback(() => {
@@ -191,7 +221,8 @@ export function BulkImportDialog({
             Excel/CSV-Import
           </DialogTitle>
           <DialogDescription>
-            Excel (.xlsx, .xls) oder CSV hochladen. Format: "12345" oder "D-12345".
+            Excel (.xlsx, .xls) oder CSV hochladen. Format: "12345" oder
+            "D-12345".
           </DialogDescription>
         </DialogHeader>
 
@@ -293,7 +324,10 @@ export function BulkImportDialog({
                     {stats.validRows} gültig
                   </Badge>
                   {stats.invalidRows > 0 && (
-                    <Badge variant="destructive" className="flex items-center gap-1">
+                    <Badge
+                      variant="destructive"
+                      className="flex items-center gap-1"
+                    >
                       <AlertCircle className="h-3 w-3" />
                       {stats.invalidRows} ungültig
                     </Badge>
@@ -301,9 +335,7 @@ export function BulkImportDialog({
                   <Badge variant="secondary">
                     {stats.uniquePostalCodes} eindeutige PLZ
                   </Badge>
-                  <Badge variant="secondary">
-                    {stats.uniqueLayers} Layer
-                  </Badge>
+                  <Badge variant="secondary">{stats.uniqueLayers} Layer</Badge>
                 </div>
               )}
 
@@ -349,10 +381,15 @@ export function BulkImportDialog({
                   <ScrollArea className="h-[120px] border rounded-lg p-3 bg-muted/30">
                     <div className="space-y-2">
                       {layerGroups.map((group, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-sm">
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-sm"
+                        >
                           <div className="flex items-center gap-2">
                             <Layers className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{group.layerName}</span>
+                            <span className="font-medium">
+                              {group.layerName}
+                            </span>
                           </div>
                           <div className="flex gap-2">
                             <Badge variant="secondary" className="text-xs">

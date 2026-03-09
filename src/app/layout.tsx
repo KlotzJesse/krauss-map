@@ -1,11 +1,14 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Toaster } from "@/components/ui/sonner";
-import "maplibre-gl/dist/maplibre-gl.css";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+
+import "maplibre-gl/dist/maplibre-gl.css";
 import { Inter } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Suspense } from "react";
+
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toaster } from "@/components/ui/sonner";
+
 import "./globals.css";
 
 const ThemeProvider = dynamic(

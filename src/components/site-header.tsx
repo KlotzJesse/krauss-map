@@ -1,8 +1,9 @@
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { VersionIndicatorSkeleton } from "@/components/ui/loading-skeleton";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
+
+import { VersionIndicatorSkeleton } from "@/components/ui/loading-skeleton";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 const VersionIndicator = dynamic(() =>
   import("./shared/version-indicator").then((m) => ({

@@ -7,6 +7,8 @@ import {
   IconTrash,
   type Icon,
 } from "@tabler/icons-react";
+import type { Route } from "next";
+import Link from "next/link";
 
 import {
   DropdownMenu,
@@ -24,8 +26,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import Link from "next/link";
-import type { Route } from "next";
 
 export function NavDocuments({
   items,

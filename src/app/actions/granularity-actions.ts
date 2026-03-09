@@ -1,19 +1,17 @@
 "use server";
 
-import { db } from "../../lib/db";
+import { eq, and, like } from "drizzle-orm";
+import { revalidatePath, updateTag, refresh } from "next/cache";
 
+import { getGranularityLevel } from "@/lib/utils/granularity-utils";
+
+import { db } from "../../lib/db";
 import {
   areas,
   areaLayers,
   areaLayerPostalCodes,
   postalCodes,
 } from "../../lib/schema/schema";
-
-import { eq, and, like } from "drizzle-orm";
-
-import { getGranularityLevel } from "@/lib/utils/granularity-utils";
-
-import { revalidatePath, updateTag,refresh } from "next/cache";
 
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
@@ -42,7 +40,7 @@ export async function changeAreaGranularityAction(
 
   newGranularity: string,
 
-  currentGranularity: string,
+  currentGranularity: string
 ): ServerActionResponse<GranularityChangeResult> {
   try {
     const currentLevel = getGranularityLevel(currentGranularity);
@@ -95,8 +93,8 @@ export async function changeAreaGranularityAction(
                 and(
                   eq(postalCodes.granularity, newGranularity),
 
-                  like(postalCodes.code, `${code}%`),
-                ),
+                  like(postalCodes.code, `${code}%`)
+                )
               );
 
             matchingCodes.forEach((mc) => expandedCodes.add(mc.code));
@@ -122,7 +120,7 @@ export async function changeAreaGranularityAction(
                 layerId: layer.id,
 
                 postalCode: code,
-              })),
+              }))
             );
 
             addedPostalCodes += expandedCodes.size;
@@ -168,7 +166,7 @@ export async function changeAreaGranularityAction(
     updateTag(`area-${areaId}`);
     updateTag("layers");
     updateTag(`area-${areaId}-layers`);
-    revalidatePath('/postal-codes', 'layout');
+    revalidatePath("/postal-codes", "layout");
     refresh();
     return {
       success: true,
@@ -200,7 +198,7 @@ export async function changeAreaGranularityAction(
 export async function getMatchingPostalCodesAction(
   prefix: string,
 
-  targetGranularity: string,
+  targetGranularity: string
 ): ServerActionResponse<string[]> {
   try {
     const matchingCodes = await db
@@ -213,12 +211,12 @@ export async function getMatchingPostalCodesAction(
         and(
           eq(postalCodes.granularity, targetGranularity),
 
-          like(postalCodes.code, `${prefix}%`),
-        ),
+          like(postalCodes.code, `${prefix}%`)
+        )
       );
 
-    revalidatePath('/postal-codes', 'layout');
-        refresh();
+    revalidatePath("/postal-codes", "layout");
+    refresh();
     return {
       success: true,
 

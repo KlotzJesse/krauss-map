@@ -1,7 +1,15 @@
 "use client";
 
-import React, { createContext, useContext, useOptimistic, useTransition, useCallback, type ReactNode } from "react";
 import type { InferSelectModel } from "drizzle-orm";
+import React, {
+  createContext,
+  useContext,
+  useOptimistic,
+  useTransition,
+  useCallback,
+  type ReactNode,
+} from "react";
+
 import type { areaLayers, areas } from "../schema/schema";
 
 type Layer = InferSelectModel<typeof areaLayers> & {
@@ -54,7 +62,9 @@ interface OptimisticContextValue {
   ) => Promise<T>;
 }
 
-const OptimisticContext = createContext<OptimisticContextValue | undefined>(undefined);
+const OptimisticContext = createContext<OptimisticContextValue | undefined>(
+  undefined
+);
 
 // Reducer for layer updates
 function layersReducer(currentLayers: Layer[], action: LayerAction): Layer[] {
@@ -63,34 +73,36 @@ function layersReducer(currentLayers: Layer[], action: LayerAction): Layer[] {
       return [...currentLayers, { ...action.layer, id: Date.now() } as Layer];
 
     case "update":
-      return currentLayers.map(l =>
+      return currentLayers.map((l) =>
         l.id === action.id ? { ...l, ...action.layer } : l
       );
 
     case "delete":
-      return currentLayers.filter(l => l.id !== action.id);
+      return currentLayers.filter((l) => l.id !== action.id);
 
     case "add_codes":
-      return currentLayers.map(l => {
+      return currentLayers.map((l) => {
         if (l.id === action.layerId) {
-          const currentCodes = l.postalCodes?.map(pc => pc.postalCode) || [];
+          const currentCodes = l.postalCodes?.map((pc) => pc.postalCode) || [];
           const newCodes = [...new Set([...currentCodes, ...action.codes])];
           return {
             ...l,
-            postalCodes: newCodes.map(code => ({ postalCode: code }))
+            postalCodes: newCodes.map((code) => ({ postalCode: code })),
           };
         }
         return l;
       });
 
     case "remove_codes":
-      return currentLayers.map(l => {
+      return currentLayers.map((l) => {
         if (l.id === action.layerId) {
-          const currentCodes = l.postalCodes?.map(pc => pc.postalCode) || [];
-          const newCodes = currentCodes.filter(code => !action.codes.includes(code));
+          const currentCodes = l.postalCodes?.map((pc) => pc.postalCode) || [];
+          const newCodes = currentCodes.filter(
+            (code) => !action.codes.includes(code)
+          );
           return {
             ...l,
-            postalCodes: newCodes.map(code => ({ postalCode: code }))
+            postalCodes: newCodes.map((code) => ({ postalCode: code })),
           };
         }
         return l;
@@ -105,12 +117,12 @@ function layersReducer(currentLayers: Layer[], action: LayerAction): Layer[] {
 function areasReducer(currentAreas: Area[], action: AreaAction): Area[] {
   switch (action.type) {
     case "rename":
-      return currentAreas.map(area =>
+      return currentAreas.map((area) =>
         area.id === action.id ? { ...area, name: action.name } : area
       );
 
     case "delete":
-      return currentAreas.filter(area => area.id !== action.id);
+      return currentAreas.filter((area) => area.id !== action.id);
 
     default:
       return currentAreas;
@@ -118,7 +130,10 @@ function areasReducer(currentAreas: Area[], action: AreaAction): Area[] {
 }
 
 // Reducer for undo/redo updates
-function undoRedoReducer(current: UndoRedoState, action: UndoRedoAction): UndoRedoState {
+function undoRedoReducer(
+  current: UndoRedoState,
+  action: UndoRedoAction
+): UndoRedoState {
   switch (action.type) {
     case "undo":
       const newUndoCount = Math.max(0, current.undoCount - 1);
@@ -173,7 +188,12 @@ export function OptimisticProvider({
   children,
   initialLayers = [],
   initialAreas = [],
-  initialUndoRedo = { undoCount: 0, redoCount: 0, canUndo: false, canRedo: false },
+  initialUndoRedo = {
+    undoCount: 0,
+    redoCount: 0,
+    canUndo: false,
+    canRedo: false,
+  },
 }: OptimisticProviderProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -194,35 +214,47 @@ export function OptimisticProvider({
   );
 
   // Action creators
-  const updateLayers = useCallback((action: LayerAction) => {
-    updateOptimisticLayers(action);
-  }, [updateOptimisticLayers]);
+  const updateLayers = useCallback(
+    (action: LayerAction) => {
+      updateOptimisticLayers(action);
+    },
+    [updateOptimisticLayers]
+  );
 
-  const updateAreas = useCallback((action: AreaAction) => {
-    updateOptimisticAreas(action);
-  }, [updateOptimisticAreas]);
+  const updateAreas = useCallback(
+    (action: AreaAction) => {
+      updateOptimisticAreas(action);
+    },
+    [updateOptimisticAreas]
+  );
 
-  const updateUndoRedo = useCallback((action: UndoRedoAction) => {
-    updateOptimisticUndoRedo(action);
-  }, [updateOptimisticUndoRedo]);
+  const updateUndoRedo = useCallback(
+    (action: UndoRedoAction) => {
+      updateOptimisticUndoRedo(action);
+    },
+    [updateOptimisticUndoRedo]
+  );
 
   // Wrapper for server actions with optimistic updates
-  const withOptimistic = useCallback(<T,>(
-    optimisticUpdate: () => void,
-    serverAction: () => Promise<T>
-  ): Promise<T> => {
-    return new Promise((resolve, reject) => {
-      startTransition(async () => {
-        optimisticUpdate();
-        try {
-          const result = await serverAction();
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
+  const withOptimistic = useCallback(
+    <T,>(
+      optimisticUpdate: () => void,
+      serverAction: () => Promise<T>
+    ): Promise<T> => {
+      return new Promise((resolve, reject) => {
+        startTransition(async () => {
+          optimisticUpdate();
+          try {
+            const result = await serverAction();
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          }
+        });
       });
-    });
-  }, []);
+    },
+    []
+  );
 
   const value: OptimisticContextValue = {
     optimisticLayers,
@@ -245,7 +277,9 @@ export function OptimisticProvider({
 export function useOptimisticContext() {
   const context = useContext(OptimisticContext);
   if (!context) {
-    throw new Error("useOptimisticContext must be used within OptimisticProvider");
+    throw new Error(
+      "useOptimisticContext must be used within OptimisticProvider"
+    );
   }
   return context;
 }
@@ -262,6 +296,7 @@ export function useOptimisticAreas() {
 }
 
 export function useOptimisticUndoRedo() {
-  const { optimisticUndoRedo, updateUndoRedo, isPending } = useOptimisticContext();
+  const { optimisticUndoRedo, updateUndoRedo, isPending } =
+    useOptimisticContext();
   return { undoRedo: optimisticUndoRedo, updateUndoRedo, isPending };
 }

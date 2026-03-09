@@ -5,12 +5,12 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 "use client";
 
+import * as React from "react";
+import * as RechartsPrimitive from "recharts";
 import type {
   NameType,
   ValueType,
 } from "recharts/types/component/DefaultTooltipContent";
-import * as React from "react";
-import * as RechartsPrimitive from "recharts";
 
 import { cn } from "@/lib/utils";
 
@@ -151,7 +151,7 @@ function ChartTooltipContent({
     const itemConfig = getPayloadConfigFromPayload(config, item, key);
     const value =
       !labelKey && typeof label === "string"
-        ? config[label]?.label ?? label
+        ? (config[label]?.label ?? label)
         : itemConfig?.label;
 
     if (labelFormatter) {

@@ -1,12 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import {
   Circle,
   Diamond,
@@ -15,8 +8,16 @@ import {
   Square,
   Triangle,
 } from "lucide-react";
-import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 
 // Floating undo/redo toolbar
 const UndoRedoToolbar = dynamic(

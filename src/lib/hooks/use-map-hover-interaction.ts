@@ -1,8 +1,9 @@
-import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import { isFeatureWithCode } from "@/lib/utils/map-feature-utils";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { useRef } from "react";
 import { flushSync } from "react-dom";
+
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
+import { isFeatureWithCode } from "@/lib/utils/map-feature-utils";
 
 /**
  * Hook for managing hover state and interactions
@@ -18,55 +19,49 @@ export function useMapHoverInteraction(
   const hoveredRegionIdRef = useRef<string | null>(null);
 
   // Core hover processing logic
-  const processHover = useStableCallback(
-    (...args: unknown[]) => {
-      if (!map || !layersLoaded || !isCursorMode) return;
+  const processHover = useStableCallback((...args: unknown[]) => {
+    if (!map || !layersLoaded || !isCursorMode) return;
 
-      const hoverSourceId = `${layerId}-hover-source`;
-      const hoverLayerId = `${layerId}-hover-layer`;
-      const e = args[0] as { features?: unknown[] };
+    const hoverSourceId = `${layerId}-hover-source`;
+    const hoverLayerId = `${layerId}-hover-layer`;
+    const e = args[0] as { features?: unknown[] };
 
-      if (e && Array.isArray(e.features) && e.features.length > 0) {
-        const feature = e.features[0];
-        if (isFeatureWithCode(feature)) {
-          // TypeScript narrowing workaround - explicit type assertion after type guard
-          const typedFeature = feature as { properties?: { code?: string } };
-          const regionCode = typedFeature.properties?.code;
-          if (regionCode && hoveredRegionIdRef.current !== regionCode) {
-            const src = map.getSource(hoverSourceId);
-            if (src && "setData" in src && typeof src.setData === "function") {
-              src.setData({
-                type: "FeatureCollection",
-                features: [typedFeature],
-              });
-            }
-            map.setLayoutProperty(hoverLayerId, "visibility", "visible");
-
-            // Use flushSync for synchronous cursor updates to prevent visual lag
-            flushSync(() => {
-              const canvas = map.getCanvas();
-              if (canvas) canvas.style.cursor = "pointer";
+    if (e && Array.isArray(e.features) && e.features.length > 0) {
+      const feature = e.features[0];
+      if (isFeatureWithCode(feature)) {
+        // TypeScript narrowing workaround - explicit type assertion after type guard
+        const typedFeature = feature as { properties?: { code?: string } };
+        const regionCode = typedFeature.properties?.code;
+        if (regionCode && hoveredRegionIdRef.current !== regionCode) {
+          const src = map.getSource(hoverSourceId);
+          if (src && "setData" in src && typeof src.setData === "function") {
+            src.setData({
+              type: "FeatureCollection",
+              features: [typedFeature],
             });
-            hoveredRegionIdRef.current = regionCode;
           }
+          map.setLayoutProperty(hoverLayerId, "visibility", "visible");
+
+          // Use flushSync for synchronous cursor updates to prevent visual lag
+          flushSync(() => {
+            const canvas = map.getCanvas();
+            if (canvas) canvas.style.cursor = "pointer";
+          });
+          hoveredRegionIdRef.current = regionCode;
         }
       }
     }
-  );
+  });
 
   // Mouse enter handler
-  const handleMouseEnter = useStableCallback(
-    (...args: unknown[]) => {
-      processHover(...args);
-    }
-  );
+  const handleMouseEnter = useStableCallback((...args: unknown[]) => {
+    processHover(...args);
+  });
 
   // Mouse move handler
-  const handleMouseMove = useStableCallback(
-    (...args: unknown[]) => {
-      processHover(...args);
-    }
-  );
+  const handleMouseMove = useStableCallback((...args: unknown[]) => {
+    processHover(...args);
+  });
 
   // Mouse leave handler
   const handleMouseLeave = useStableCallback(() => {

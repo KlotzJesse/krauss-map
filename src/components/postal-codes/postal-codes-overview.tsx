@@ -1,29 +1,29 @@
 "use client";
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   IconFolder,
   IconMapPin,
   IconSearch,
   IconUpload,
 } from "@tabler/icons-react";
 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
 export function PostalCodesOverview() {
   return (
     <div className="h-full p-6 pt-10">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            KRAUSS Gebietsmanagement
-          </h1>
+          <h1 className="text-3xl font-bold mb-2">KRAUSS Gebietsmanagement</h1>
           <p className="text-muted-foreground text-lg">
-            PLZ-Gebiete mit verschiedenen Granularitäten verwalten und Gebietsaufteilungen erstellen.
+            PLZ-Gebiete mit verschiedenen Granularitäten verwalten und
+            Gebietsaufteilungen erstellen.
           </p>
         </div>
 
@@ -35,7 +35,8 @@ export function PostalCodesOverview() {
                 Gebietsverwaltung
               </CardTitle>
               <CardDescription>
-                Gebietsaufteilungen mit mehreren Layern für verschiedene PLZ-Bereiche erstellen.
+                Gebietsaufteilungen mit mehreren Layern für verschiedene
+                PLZ-Bereiche erstellen.
               </CardDescription>
             </CardHeader>
             <CardContent>

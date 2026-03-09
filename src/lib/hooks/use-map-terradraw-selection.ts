@@ -1,8 +1,3 @@
-import {
-  useConvertRadiusToGeographic,
-  useFindFeaturesInCircle,
-  useFindFeaturesInPolygon,
-} from "@/components/shared/hooks/use-feature-selection";
 import type {
   Feature,
   FeatureCollection,
@@ -13,6 +8,13 @@ import type {
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { useRef, useState, type RefObject } from "react";
 import { toast } from "sonner";
+
+import {
+  useConvertRadiusToGeographic,
+  useFindFeaturesInCircle,
+  useFindFeaturesInPolygon,
+} from "@/components/shared/hooks/use-feature-selection";
+
 import { useStableCallback } from "./use-stable-callback";
 
 interface UseMapTerraDrawSelectionProps {
@@ -107,7 +109,7 @@ export function useMapTerraDrawSelection({
 
           const polygon = drawFeature.geometry.coordinates[0] as [
             number,
-            number
+            number,
           ][];
           console.log(
             "[useMapTerraDrawSelection] Polygon coordinates:",

@@ -1,3 +1,17 @@
+import {
+  ChevronsUpDownIcon,
+  MapPinIcon,
+  RadiusIcon,
+  EyeIcon,
+  EyeOffIcon,
+} from "lucide-react";
+import { useRef, useState, useOptimistic } from "react";
+import { toast } from "sonner";
+
+import {
+  geocodeSearchAction,
+  searchPostalCodesByBoundaryAction,
+} from "@/app/actions/area-actions";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -26,13 +40,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import { ChevronsUpDownIcon, MapPinIcon, RadiusIcon, EyeIcon, EyeOffIcon } from "lucide-react";
-import { useRef, useState, useOptimistic } from "react";
-import { toast } from "sonner";
-import {
-  geocodeSearchAction,
-  searchPostalCodesByBoundaryAction,
-} from "@/app/actions/area-actions";
 
 interface GeocodeResult {
   id: number | string;
@@ -636,15 +643,15 @@ export function AddressAutocompleteEnhanced({
                   {searchMode === "straight"
                     ? "Luftlinie"
                     : searchMode === "distance"
-                    ? "Fahrstrecke"
-                    : "Fahrzeit"}
+                      ? "Fahrstrecke"
+                      : "Fahrzeit"}
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   {searchMode === "straight"
                     ? "Direkte Entfernung in km"
                     : searchMode === "distance"
-                    ? "Tatsächliche Straßenentfernung in km"
-                    : "Realistische Fahrtdauer in Minuten"}
+                      ? "Tatsächliche Straßenentfernung in km"
+                      : "Realistische Fahrtdauer in Minuten"}
                 </p>
               </div>
               <div className="grid grid-cols-4 gap-2">
@@ -748,8 +755,8 @@ export function AddressAutocompleteEnhanced({
                 {searchMode === "straight"
                   ? "📏 Luftlinie"
                   : searchMode === "distance"
-                  ? "🛣️ Fahrstrecke"
-                  : "⏱️ Fahrzeit"}
+                    ? "🛣️ Fahrstrecke"
+                    : "⏱️ Fahrzeit"}
               </span>
             </div>
 
@@ -766,8 +773,8 @@ export function AddressAutocompleteEnhanced({
                 {searchMode === "straight"
                   ? "Luftlinie"
                   : searchMode === "distance"
-                  ? "Fahrstrecke"
-                  : "Fahrzeit"}{" "}
+                    ? "Fahrstrecke"
+                    : "Fahrzeit"}{" "}
                 auswählen
               </Button>
             </div>

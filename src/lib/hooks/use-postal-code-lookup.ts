@@ -5,9 +5,7 @@ import type {
   Polygon,
   Geometry,
 } from "geojson";
-
 import { useMemo, useState } from "react";
-
 import { toast } from "sonner";
 
 import { useStableCallback } from "./use-stable-callback";
@@ -149,7 +147,7 @@ export function usePostalCodeLookup({
         setLastLookupResult(result);
 
         throw new Error(
-          `PLZ ${normalizedCode} nicht in aktueller Ansicht gefunden`,
+          `PLZ ${normalizedCode} nicht in aktueller Ansicht gefunden`
         );
       } catch (error) {
         console.error("Postal code lookup error:", error);
@@ -185,7 +183,7 @@ export function usePostalCodeLookup({
       function isPointInPolygon(
         point: [number, number],
 
-        polygon: number[][],
+        polygon: number[][]
       ): boolean {
         let inside = false;
 
@@ -247,7 +245,7 @@ export function usePostalCodeLookup({
       }
 
       return null;
-    },
+    }
   );
 
   return {

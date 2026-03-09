@@ -1,5 +1,6 @@
-import * as XLSX from 'xlsx';
-import { normalizePostalCode } from './postal-code-parser';
+import * as XLSX from "xlsx";
+
+import { normalizePostalCode } from "./postal-code-parser";
 
 export interface ParsedRow {
   [key: string]: string | number | null;
@@ -27,9 +28,11 @@ export interface ProcessedImportRow {
 /**
  * Parse Excel or CSV file and return structured data
  */
-export async function parseSpreadsheetFile(file: File): Promise<ParsedFileData> {
+export async function parseSpreadsheetFile(
+  file: File
+): Promise<ParsedFileData> {
   const arrayBuffer = await file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  const workbook = XLSX.read(arrayBuffer, { type: "array" });
 
   // Get first sheet
   const firstSheetName = workbook.SheetNames[0];
@@ -70,19 +73,20 @@ export async function parseSpreadsheetFile(file: File): Promise<ParsedFileData> 
   }
 
   // Convert rows to objects
-  const rows: ParsedRow[] = dataRows.map(row => {
-    const rowObj: ParsedRow = {};
-    headers.forEach((header, idx) => {
-      const value = (row as unknown[])[idx];
-      rowObj[header] = value === null || value === undefined
-        ? null
-        : String(value).trim();
+  const rows: ParsedRow[] = dataRows
+    .map((row) => {
+      const rowObj: ParsedRow = {};
+      headers.forEach((header, idx) => {
+        const value = (row as unknown[])[idx];
+        rowObj[header] =
+          value === null || value === undefined ? null : String(value).trim();
+      });
+      return rowObj;
+    })
+    .filter((row) => {
+      // Filter out completely empty rows
+      return Object.values(row).some((val) => val !== null && val !== "");
     });
-    return rowObj;
-  }).filter(row => {
-    // Filter out completely empty rows
-    return Object.values(row).some(val => val !== null && val !== '');
-  });
 
   return {
     headers,
@@ -102,12 +106,15 @@ function detectHeaders(data: unknown[][]): boolean {
   const secondRow = data[1] as unknown[];
 
   // Check if first row has string values and second row has different types
-  const firstRowAllStrings = firstRow.every(cell =>
-    typeof cell === 'string' && cell.trim().length > 0 && !/^\d+$/.test(String(cell))
+  const firstRowAllStrings = firstRow.every(
+    (cell) =>
+      typeof cell === "string" &&
+      cell.trim().length > 0 &&
+      !/^\d+$/.test(String(cell))
   );
 
-  const secondRowHasNumbers = secondRow.some(cell =>
-    !isNaN(Number(cell)) && String(cell).trim() !== ''
+  const secondRowHasNumbers = secondRow.some(
+    (cell) => !isNaN(Number(cell)) && String(cell).trim() !== ""
   );
 
   return firstRowAllStrings || (firstRowAllStrings && secondRowHasNumbers);
@@ -116,9 +123,13 @@ function detectHeaders(data: unknown[][]): boolean {
 /**
  * Auto-detect which columns likely contain postal codes and layer names
  */
-export function autoDetectColumns(headers: string[], rows: ParsedRow[]): ColumnMapping {
+export function autoDetectColumns(
+  headers: string[],
+  rows: ParsedRow[]
+): ColumnMapping {
   const postalCodePatterns = /plz|postal|post|zip|code/i;
-  const layerPatterns = /layer|schicht|ebene|kategorie|category|name|gruppe|group/i;
+  const layerPatterns =
+    /layer|schicht|ebene|kategorie|category|name|gruppe|group/i;
 
   let postalCodeColumn: string | null = null;
   let layerColumn: string | null = null;
@@ -136,12 +147,12 @@ export function autoDetectColumns(headers: string[], rows: ParsedRow[]): ColumnM
   // If no postal code column found, analyze data
   if (!postalCodeColumn && rows.length > 0) {
     for (const header of headers) {
-      const values = rows.slice(0, 10).map(row => row[header]);
-      const validPostalCodes = values.filter(val => {
+      const values = rows.slice(0, 10).map((row) => row[header]);
+      const validPostalCodes = values.filter((val) => {
         if (!val) return false;
         const str = String(val).trim();
         // Check if it looks like a German postal code
-        const normalized = str.replace(/^D-?/i, '');
+        const normalized = str.replace(/^D-?/i, "");
         return /^\d{1,5}$/.test(normalized);
       });
 
@@ -182,11 +193,9 @@ export function processImportRows(
     const postalCodeValue = mapping.postalCodeColumn
       ? row[mapping.postalCodeColumn]
       : null;
-    const layerValue = mapping.layerColumn
-      ? row[mapping.layerColumn]
-      : null;
+    const layerValue = mapping.layerColumn ? row[mapping.layerColumn] : null;
 
-    if (!postalCodeValue || String(postalCodeValue).trim() === '') {
+    if (!postalCodeValue || String(postalCodeValue).trim() === "") {
       continue; // Skip rows without postal code
     }
 
@@ -221,7 +230,7 @@ export function groupByLayer(rows: ProcessedImportRow[]): LayerGroup[] {
   const groups = new Map<string, ProcessedImportRow[]>();
 
   for (const row of rows) {
-    const layerName = row.layer || 'Standard-Layer';
+    const layerName = row.layer || "Standard-Layer";
     if (!groups.has(layerName)) {
       groups.set(layerName, []);
     }
@@ -229,12 +238,12 @@ export function groupByLayer(rows: ProcessedImportRow[]): LayerGroup[] {
   }
 
   return Array.from(groups.entries()).map(([layerName, layerRows]) => {
-    const validRows = layerRows.filter(r => r.isValid);
-    const invalidRows = layerRows.filter(r => !r.isValid);
+    const validRows = layerRows.filter((r) => r.isValid);
+    const invalidRows = layerRows.filter((r) => !r.isValid);
 
     return {
       layerName,
-      postalCodes: validRows.map(r => r.postalCode),
+      postalCodes: validRows.map((r) => r.postalCode),
       validCount: validRows.length,
       invalidCount: invalidRows.length,
     };
@@ -253,10 +262,10 @@ export interface ImportStats {
 }
 
 export function getImportStats(rows: ProcessedImportRow[]): ImportStats {
-  const validRows = rows.filter(r => r.isValid);
-  const invalidRows = rows.filter(r => !r.isValid);
-  const uniquePostalCodes = new Set(validRows.map(r => r.postalCode)).size;
-  const uniqueLayers = new Set(rows.map(r => r.layer).filter(Boolean)).size;
+  const validRows = rows.filter((r) => r.isValid);
+  const invalidRows = rows.filter((r) => !r.isValid);
+  const uniquePostalCodes = new Set(validRows.map((r) => r.postalCode)).size;
+  const uniqueLayers = new Set(rows.map((r) => r.layer).filter(Boolean)).size;
 
   return {
     totalRows: rows.length,

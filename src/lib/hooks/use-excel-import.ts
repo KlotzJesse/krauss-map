@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useStableCallback } from "./use-stable-callback";
+
 import {
   parseSpreadsheetFile,
   autoDetectColumns,
@@ -12,6 +12,7 @@ import {
   type LayerGroup,
   type ImportStats,
 } from "../utils/excel-parser";
+import { useStableCallback } from "./use-stable-callback";
 
 export interface ExcelImportState {
   fileData: ParsedFileData | null;
@@ -35,13 +36,13 @@ export function useExcelImport() {
   });
 
   const loadFile = useStableCallback(async (file: File) => {
-    setState(prev => ({ ...prev, isProcessing: true, error: null }));
+    setState((prev) => ({ ...prev, isProcessing: true, error: null }));
 
     try {
       const fileData = await parseSpreadsheetFile(file);
       const columnMapping = autoDetectColumns(fileData.headers, fileData.rows);
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         fileData,
         columnMapping,
@@ -51,7 +52,7 @@ export function useExcelImport() {
       // Automatically process with detected columns
       processData(fileData, columnMapping);
     } catch (error) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isProcessing: false,
         error: error instanceof Error ? error.message : "Failed to parse file",
@@ -66,50 +67,56 @@ export function useExcelImport() {
         const layerGroups = groupByLayer(processedRows);
         const stats = getImportStats(processedRows);
 
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           processedRows,
           layerGroups,
           stats,
         }));
       } catch (error) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
-          error: error instanceof Error ? error.message : "Failed to process data",
+          error:
+            error instanceof Error ? error.message : "Failed to process data",
         }));
       }
     },
     []
   );
 
-  const updateColumnMapping = useStableCallback((mapping: Partial<ColumnMapping>) => {
-    setState(prev => {
-      const newMapping = { ...prev.columnMapping, ...mapping };
+  const updateColumnMapping = useStableCallback(
+    (mapping: Partial<ColumnMapping>) => {
+      setState((prev) => {
+        const newMapping = { ...prev.columnMapping, ...mapping };
 
-      if (prev.fileData) {
-        // Re-process with new mapping
-        const processedRows = processImportRows(prev.fileData.rows, newMapping);
-        const layerGroups = groupByLayer(processedRows);
-        const stats = getImportStats(processedRows);
+        if (prev.fileData) {
+          // Re-process with new mapping
+          const processedRows = processImportRows(
+            prev.fileData.rows,
+            newMapping
+          );
+          const layerGroups = groupByLayer(processedRows);
+          const stats = getImportStats(processedRows);
+
+          return {
+            ...prev,
+            columnMapping: newMapping,
+            processedRows,
+            layerGroups,
+            stats,
+          };
+        }
 
         return {
           ...prev,
           columnMapping: newMapping,
-          processedRows,
-          layerGroups,
-          stats,
         };
-      }
-
-      return {
-        ...prev,
-        columnMapping: newMapping,
-      };
-    });
-  });
+      });
+    }
+  );
 
   const toggleHeaders = useStableCallback(() => {
-    setState(prev => {
+    setState((prev) => {
       if (!prev.fileData) return prev;
 
       // Re-parse with toggled header detection

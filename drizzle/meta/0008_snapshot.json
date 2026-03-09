@@ -87,9 +87,7 @@
         "api_cache_cache_key_unique": {
           "name": "api_cache_cache_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "cache_key"
-          ]
+          "columns": ["cache_key"]
         }
       },
       "policies": {},
@@ -221,12 +219,8 @@
           "name": "fk_area_changes_area_id",
           "tableFrom": "area_changes",
           "tableTo": "areas",
-          "columnsFrom": [
-            "area_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["area_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -234,14 +228,8 @@
           "name": "fk_area_changes_version",
           "tableFrom": "area_changes",
           "tableTo": "area_versions",
-          "columnsFrom": [
-            "version_area_id",
-            "version_number"
-          ],
-          "columnsTo": [
-            "area_id",
-            "version_number"
-          ],
+          "columnsFrom": ["version_area_id", "version_number"],
+          "columnsTo": ["area_id", "version_number"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -332,10 +320,7 @@
         "area_layer_postal_codes_layer_id_postal_code_unique": {
           "name": "area_layer_postal_codes_layer_id_postal_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "layer_id",
-            "postal_code"
-          ]
+          "columns": ["layer_id", "postal_code"]
         }
       },
       "policies": {},
@@ -517,9 +502,7 @@
         "area_undo_stacks_area_id_unique": {
           "name": "area_undo_stacks_area_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "area_id"
-          ]
+          "columns": ["area_id"]
         }
       },
       "policies": {},
@@ -696,10 +679,7 @@
       "compositePrimaryKeys": {
         "area_versions_area_id_version_number_pk": {
           "name": "area_versions_area_id_version_number_pk",
-          "columns": [
-            "area_id",
-            "version_number"
-          ]
+          "columns": ["area_id", "version_number"]
         }
       },
       "uniqueConstraints": {},
@@ -1256,9 +1236,7 @@
         "states_code_unique": {
           "name": "states_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},

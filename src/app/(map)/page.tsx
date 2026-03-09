@@ -1,6 +1,7 @@
+import { Suspense } from "react";
+
 import { PostalCodesOverview } from "@/components/postal-codes/postal-codes-overview";
 import { HomePageSkeleton } from "@/components/ui/loading-skeletons";
-import { Suspense } from "react";
 
 export default async function HomePage() {
   return (

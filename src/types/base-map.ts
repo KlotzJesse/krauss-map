@@ -1,3 +1,4 @@
+import type { InferSelectModel } from "drizzle-orm";
 import type {
   FeatureCollection,
   GeoJsonProperties,
@@ -10,7 +11,6 @@ import type {
   SelectAreaChanges,
   areaLayers,
 } from "@/lib/schema/schema";
-import type { InferSelectModel } from "drizzle-orm";
 
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];

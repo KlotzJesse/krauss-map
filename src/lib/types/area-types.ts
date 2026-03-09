@@ -1,4 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
+
 import type { areas, areaLayers, areaLayerPostalCodes } from "../schema/schema";
 
 export type Area = InferSelectModel<typeof areas>;

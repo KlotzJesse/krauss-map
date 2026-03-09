@@ -1,5 +1,8 @@
 "use client";
 
+import { IconArrowBackUp, IconArrowForwardUp } from "@tabler/icons-react";
+import { useOptimistic } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -7,10 +10,8 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { IconArrowBackUp, IconArrowForwardUp } from "@tabler/icons-react";
 import { useUndoRedo } from "@/lib/hooks/use-undo-redo";
 import { cn } from "@/lib/utils";
-import { useOptimistic } from "react";
 
 interface UndoRedoToolbarProps {
   areaId: number | null;
@@ -34,9 +35,14 @@ export function UndoRedoToolbar({
 }: UndoRedoToolbarProps) {
   // Optimistic state for undo/redo counts
   const [optimisticStatus, updateOptimisticStatus] = useOptimistic(
-    initialStatus || { canUndo: false, canRedo: false, undoCount: 0, redoCount: 0 },
-    (current, action: 'undo' | 'redo') => {
-      if (action === 'undo') {
+    initialStatus || {
+      canUndo: false,
+      canRedo: false,
+      undoCount: 0,
+      redoCount: 0,
+    },
+    (current, action: "undo" | "redo") => {
+      if (action === "undo") {
         return {
           canUndo: current.undoCount > 1,
           canRedo: true,
@@ -58,8 +64,8 @@ export function UndoRedoToolbar({
     optimisticStatus,
     onStatusUpdate,
     {
-      onOptimisticUndo: () => updateOptimisticStatus('undo'),
-      onOptimisticRedo: () => updateOptimisticStatus('redo'),
+      onOptimisticUndo: () => updateOptimisticStatus("undo"),
+      onOptimisticRedo: () => updateOptimisticStatus("redo"),
     }
   );
 

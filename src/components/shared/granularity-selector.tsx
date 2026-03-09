@@ -1,12 +1,16 @@
 "use client";
 
+import { AlertTriangle, Info, Lock } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  useState,
+  useTransition,
+  useOptimistic,
+  Activity,
+  useMemo,
+} from "react";
+import { toast } from "sonner";
+
+import { changeAreaGranularityAction } from "@/app/actions/granularity-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,18 +21,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 import { type Layer } from "@/lib/types/area-types";
-import { AlertTriangle, Info, Lock } from "lucide-react";
-import { useState, useTransition, useOptimistic, Activity, useMemo } from "react";
-import { toast } from "sonner";
-import { changeAreaGranularityAction } from "@/app/actions/granularity-actions";
 import {
   GRANULARITY_OPTIONS,
   getGranularityLabel,
@@ -53,7 +60,7 @@ export function GranularitySelector({
   const { totalPostalCodes, hasPostalCodes } = useMemo(() => {
     const total = layers.reduce(
       (acc, layer) => acc + (layer.postalCodes?.length || 0),
-      0,
+      0
     );
     return {
       totalPostalCodes: total,
@@ -95,7 +102,9 @@ export function GranularitySelector({
                 onGranularityChange(newGranularity);
                 return `Wechsel zu ${newLabel} erfolgreich`;
               }
-              throw new Error(data.error || "Fehler beim Ändern der Granularität");
+              throw new Error(
+                data.error || "Fehler beim Ändern der Granularität"
+              );
             },
             error: "Fehler beim Ändern der Granularität",
           }
@@ -117,7 +126,7 @@ export function GranularitySelector({
       return;
     }
 
-        // If compatible change (upgrade), show info and proceed with migration
+    // If compatible change (upgrade), show info and proceed with migration
     if (isGranularityChangeCompatible(currentGranularity, newGranularity)) {
       startTransition(async () => {
         // Optimistically update granularity
@@ -142,7 +151,9 @@ export function GranularitySelector({
                 const { addedPostalCodes, migratedLayers } = data.data;
                 return `Wechsel zu ${newLabel}: ${migratedLayers} Layer migriert, ${addedPostalCodes} Regionen hinzugefügt`;
               }
-              throw new Error(data.error || "Fehler beim Ändern der Granularität");
+              throw new Error(
+                data.error || "Fehler beim Ändern der Granularität"
+              );
             },
             error: "Fehler beim Ändern der Granularität",
           }
@@ -183,7 +194,9 @@ export function GranularitySelector({
               const { removedPostalCodes } = data.data;
               return `Wechsel zu ${newLabel} erfolgreich: ${removedPostalCodes} Regionen entfernt`;
             }
-            throw new Error(data.error || "Fehler beim Ändern der Granularität");
+            throw new Error(
+              data.error || "Fehler beim Ändern der Granularität"
+            );
           },
           error: "Fehler beim Ändern der Granularität",
         }
@@ -207,8 +220,8 @@ export function GranularitySelector({
     return changeDescription.type === "destructive"
       ? "destructive"
       : changeDescription.type === "compatible"
-      ? "compatible"
-      : "available";
+        ? "compatible"
+        : "available";
   };
 
   const getSelectItemTooltip = (optionValue: string, _status: string) => {
@@ -252,15 +265,25 @@ export function GranularitySelector({
                       <div className="flex items-center justify-between w-full">
                         <span>{option.label}</span>
                         <div className="flex items-center gap-1 ml-2">
-                          <Activity mode={status === "current" ? "visible" : "hidden"}>
+                          <Activity
+                            mode={status === "current" ? "visible" : "hidden"}
+                          >
                             <Badge variant="secondary" className="text-xs px-1">
                               Aktiv
                             </Badge>
                           </Activity>
-                          <Activity mode={status === "destructive" ? "visible" : "hidden"}>
+                          <Activity
+                            mode={
+                              status === "destructive" ? "visible" : "hidden"
+                            }
+                          >
                             <AlertTriangle className="h-3 w-3 text-destructive" />
                           </Activity>
-                          <Activity mode={status === "compatible" ? "visible" : "hidden"}>
+                          <Activity
+                            mode={
+                              status === "compatible" ? "visible" : "hidden"
+                            }
+                          >
                             <Info className="h-3 w-3 text-green-600" />
                           </Activity>
                         </div>

@@ -172,10 +172,13 @@ export function estimateGranularity(code: string): string {
 export function groupMatchesByPattern(
   matches: PostalCodeMatch[]
 ): Record<string, PostalCodeMatch> {
-  return matches.reduce((acc, match) => {
-    acc[match.code] = match;
-    return acc;
-  }, {} as Record<string, PostalCodeMatch>);
+  return matches.reduce(
+    (acc, match) => {
+      acc[match.code] = match;
+      return acc;
+    },
+    {} as Record<string, PostalCodeMatch>
+  );
 }
 
 /**

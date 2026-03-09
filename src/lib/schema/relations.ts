@@ -1,11 +1,12 @@
 import { relations } from "drizzle-orm";
+
 import {
   areas,
   areaVersions,
   areaLayers,
   areaLayerPostalCodes,
   areaChanges,
-  areaUndoStacks
+  areaUndoStacks,
 } from "./schema";
 
 export const areasRelations = relations(areas, ({ many, one }) => ({
@@ -19,21 +20,27 @@ export const areasRelations = relations(areas, ({ many, one }) => ({
   // currentVersion relation removed due to composite primary key
 }));
 
-export const areaVersionsRelations = relations(areaVersions, ({ one, many }) => ({
-  area: one(areas, {
-    fields: [areaVersions.areaId],
-    references: [areas.id],
-  }),
-  parentVersion: one(areaVersions, {
-    fields: [areaVersions.parentVersionAreaId, areaVersions.parentVersionNumber],
-    references: [areaVersions.areaId, areaVersions.versionNumber],
-    relationName: "parentChild",
-  }),
-  childVersions: many(areaVersions, {
-    relationName: "parentChild",
-  }),
-  changes: many(areaChanges),
-}));
+export const areaVersionsRelations = relations(
+  areaVersions,
+  ({ one, many }) => ({
+    area: one(areas, {
+      fields: [areaVersions.areaId],
+      references: [areas.id],
+    }),
+    parentVersion: one(areaVersions, {
+      fields: [
+        areaVersions.parentVersionAreaId,
+        areaVersions.parentVersionNumber,
+      ],
+      references: [areaVersions.areaId, areaVersions.versionNumber],
+      relationName: "parentChild",
+    }),
+    childVersions: many(areaVersions, {
+      relationName: "parentChild",
+    }),
+    changes: many(areaChanges),
+  })
+);
 
 export const areaLayersRelations = relations(areaLayers, ({ one, many }) => ({
   area: one(areas, {

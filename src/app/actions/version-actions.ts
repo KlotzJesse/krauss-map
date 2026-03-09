@@ -1,7 +1,9 @@
 "use server";
 
-import { db } from "../../lib/db";
+import { eq, and, inArray, sql } from "drizzle-orm";
+import { revalidatePath, updateTag } from "next/cache";
 
+import { db } from "../../lib/db";
 import {
   areaVersions,
   areas,
@@ -9,12 +11,7 @@ import {
   areaLayerPostalCodes,
   areaChanges,
 } from "../../lib/schema/schema";
-
-import { eq, and, inArray, sql } from "drizzle-orm";
-
 import { clearUndoRedoStacksAction } from "./change-tracking-actions";
-
-import { revalidatePath, updateTag } from "next/cache";
 
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
@@ -64,7 +61,7 @@ export async function createVersionAction(
     branchName?: string;
 
     fromVersionId?: number; // If branching from a specific version
-  },
+  }
 ): ServerActionResponse<{ areaId: number; versionNumber: number }> {
   try {
     const result = await db.transaction(async (tx) => {
@@ -102,8 +99,8 @@ export async function createVersionAction(
 
             data.fromVersionId
               ? eq(areaChanges.versionAreaId, data.fromVersionId)
-              : eq(areaChanges.versionAreaId, sql`NULL`),
-          ),
+              : eq(areaChanges.versionAreaId, sql`NULL`)
+          )
         );
 
       // Create snapshot
@@ -202,8 +199,8 @@ export async function createVersionAction(
           and(
             eq(areaChanges.areaId, areaId),
 
-            eq(areaChanges.versionAreaId, sql`NULL`),
-          ),
+            eq(areaChanges.versionAreaId, sql`NULL`)
+          )
         );
 
       return { areaId: version.areaId, versionNumber: version.versionNumber };
@@ -217,7 +214,7 @@ export async function createVersionAction(
     updateTag(`area-${areaId}-versions`);
     updateTag(`area-${areaId}`);
     updateTag("undo-redo-status");
-    revalidatePath('/postal-codes', 'layout');
+    revalidatePath("/postal-codes", "layout");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating version:", error);
@@ -238,7 +235,7 @@ export async function createVersionAction(
 export async function autoSaveVersionAction(
   areaId: number,
 
-  createdBy?: string,
+  createdBy?: string
 ): ServerActionResponse<{ areaId: number; versionNumber: number }> {
   try {
     // Check if there are any uncommitted changes
@@ -253,8 +250,8 @@ export async function autoSaveVersionAction(
         and(
           eq(areaChanges.areaId, areaId),
 
-          eq(areaChanges.versionAreaId, sql`NULL`),
-        ),
+          eq(areaChanges.versionAreaId, sql`NULL`)
+        )
       );
 
     if (uncommittedChanges[0]?.count === 0) {
@@ -271,7 +268,7 @@ export async function autoSaveVersionAction(
 
     updateTag("versions");
     updateTag(`area-${areaId}-versions`);
-    revalidatePath('/postal-codes', 'layout');
+    revalidatePath("/postal-codes", "layout");
     return result;
   } catch (error) {
     console.error("Error auto-saving version:", error);
@@ -291,7 +288,7 @@ export async function autoSaveVersionAction(
  */
 
 export async function getVersionsAction(
-  areaId: number,
+  areaId: number
 ): ServerActionResponse<unknown[]> {
   try {
     const versions = await db.query.areaVersions.findMany({
@@ -300,7 +297,7 @@ export async function getVersionsAction(
       orderBy: (versions, { desc }) => [desc(versions.versionNumber)],
     });
 
-    revalidatePath('/postal-codes', 'layout');
+    revalidatePath("/postal-codes", "layout");
     return { success: true, data: versions };
   } catch (error) {
     console.error("Error fetching versions:", error);
@@ -316,14 +313,14 @@ export async function getVersionsAction(
 export async function getVersionAction(
   areaId: number,
 
-  versionNumber: number,
+  versionNumber: number
 ): ServerActionResponse<unknown> {
   try {
     const version = await db.query.areaVersions.findFirst({
       where: and(
         eq(areaVersions.areaId, areaId),
 
-        eq(areaVersions.versionNumber, versionNumber),
+        eq(areaVersions.versionNumber, versionNumber)
       ),
     });
 
@@ -331,7 +328,7 @@ export async function getVersionAction(
       return { success: false, error: "Version not found" };
     }
 
-    revalidatePath('/postal-codes', 'layout');
+    revalidatePath("/postal-codes", "layout");
     return { success: true, data: version };
   } catch (error) {
     console.error("Error fetching version:", error);
@@ -361,7 +358,7 @@ export async function restoreVersionAction(
     branchName?: string;
 
     createdBy?: string;
-  },
+  }
 ): ServerActionResponse<{ newVersionNumber?: number }> {
   try {
     const result = await db.transaction(async (tx) => {
@@ -371,7 +368,7 @@ export async function restoreVersionAction(
         where: and(
           eq(areaVersions.areaId, areaId),
 
-          eq(areaVersions.versionNumber, versionNumber),
+          eq(areaVersions.versionNumber, versionNumber)
         ),
       });
 
@@ -436,7 +433,7 @@ export async function restoreVersionAction(
               layerId: layer.id,
 
               postalCode: code,
-            })),
+            }))
           );
         }
       }
@@ -520,7 +517,7 @@ export async function restoreVersionAction(
     updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag("undo-redo-status");
-    revalidatePath('/postal-codes', 'layout');
+    revalidatePath("/postal-codes", "layout");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error restoring version:", error);
@@ -541,7 +538,7 @@ export async function restoreVersionAction(
 export async function deleteVersionAction(
   areaId: number,
 
-  versionNumber: number,
+  versionNumber: number
 ): ServerActionResponse {
   try {
     await db.transaction(async (tx) => {
@@ -551,7 +548,7 @@ export async function deleteVersionAction(
         where: and(
           eq(areaVersions.areaId, areaId),
 
-          eq(areaVersions.versionNumber, versionNumber),
+          eq(areaVersions.versionNumber, versionNumber)
         ),
       });
 
@@ -573,8 +570,8 @@ export async function deleteVersionAction(
           and(
             eq(areaChanges.versionAreaId, version.areaId),
 
-            eq(areaChanges.versionNumber, version.versionNumber),
-          ),
+            eq(areaChanges.versionNumber, version.versionNumber)
+          )
         );
 
       // Delete the version
@@ -587,14 +584,14 @@ export async function deleteVersionAction(
           and(
             eq(areaVersions.areaId, areaId),
 
-            eq(areaVersions.versionNumber, versionNumber),
-          ),
+            eq(areaVersions.versionNumber, versionNumber)
+          )
         );
     });
 
     updateTag("versions");
     updateTag(`area-${areaId}-versions`);
-    revalidatePath('/postal-codes', 'layout');
+    revalidatePath("/postal-codes", "layout");
     return { success: true };
   } catch (error) {
     console.error("Error deleting version:", error);
@@ -619,13 +616,13 @@ export async function compareVersionsAction(
 
   areaId2: number,
 
-  versionNumber2: number,
+  versionNumber2: number
 ): ServerActionResponse<{
-  layersAdded: VersionSnapshot['layers'];
+  layersAdded: VersionSnapshot["layers"];
 
-  layersRemoved: VersionSnapshot['layers'];
+  layersRemoved: VersionSnapshot["layers"];
 
-  layersModified: VersionSnapshot['layers'];
+  layersModified: VersionSnapshot["layers"];
 
   postalCodesAdded: string[];
 
@@ -637,7 +634,7 @@ export async function compareVersionsAction(
         where: and(
           eq(areaVersions.areaId, areaId1),
 
-          eq(areaVersions.versionNumber, versionNumber1),
+          eq(areaVersions.versionNumber, versionNumber1)
         ),
       }),
 
@@ -645,7 +642,7 @@ export async function compareVersionsAction(
         where: and(
           eq(areaVersions.areaId, areaId2),
 
-          eq(areaVersions.versionNumber, versionNumber2),
+          eq(areaVersions.versionNumber, versionNumber2)
         ),
       }),
     ]);
@@ -664,12 +661,10 @@ export async function compareVersionsAction(
 
     const layers2Map = new Map(snapshot2.layers.map((l) => [l.name, l]));
 
-    const layersAdded = snapshot2.layers.filter(
-      (l) => !layers1Map.has(l.name),
-    );
+    const layersAdded = snapshot2.layers.filter((l) => !layers1Map.has(l.name));
 
     const layersRemoved = snapshot1.layers.filter(
-      (l) => !layers2Map.has(l.name),
+      (l) => !layers2Map.has(l.name)
     );
 
     const layersModified = snapshot2.layers.filter((l2) => {
@@ -687,23 +682,19 @@ export async function compareVersionsAction(
 
     // Compare postal codes
 
-    const allCodes1 = new Set(
-      snapshot1.layers.flatMap((l) => l.postalCodes),
-    );
+    const allCodes1 = new Set(snapshot1.layers.flatMap((l) => l.postalCodes));
 
-    const allCodes2 = new Set(
-      snapshot2.layers.flatMap((l) => l.postalCodes),
-    );
+    const allCodes2 = new Set(snapshot2.layers.flatMap((l) => l.postalCodes));
 
     const postalCodesAdded = Array.from(allCodes2).filter(
-      (c) => !allCodes1.has(c),
+      (c) => !allCodes1.has(c)
     );
 
     const postalCodesRemoved = Array.from(allCodes1).filter(
-      (c) => !allCodes2.has(c),
+      (c) => !allCodes2.has(c)
     );
 
-    revalidatePath('/postal-codes', 'layout');
+    revalidatePath("/postal-codes", "layout");
     return {
       success: true,
 
