@@ -43,7 +43,7 @@ export function isValidGermanPostalCode(code: string): boolean {
  * Parses various input formats for postal codes
  */
 export function parsePostalCodeInput(input: string): ParsedPostalCode[] {
-  if (!input.trim()) return [];
+  if (!input.trim()) {return [];}
 
   const results: ParsedPostalCode[] = [];
 
@@ -88,7 +88,7 @@ export function findPostalCodeMatches(
     .map((code) => normalizePostalCode(code));
 
   for (const parsed of parsedCodes) {
-    if (!parsed.isValid) continue;
+    if (!parsed.isValid) {continue;}
 
     const inputCode = parsed.normalized;
     const matchedCodes: string[] = [];
@@ -153,16 +153,21 @@ export function estimateGranularity(code: string): string {
   const length = normalized.length;
 
   switch (length) {
-    case 1:
+    case 1: {
       return "1digit";
-    case 2:
+    }
+    case 2: {
       return "2digit";
-    case 3:
+    }
+    case 3: {
       return "3digit";
-    case 5:
+    }
+    case 5: {
       return "5digit";
-    default:
+    }
+    default: {
       return "5digit";
+    }
   }
 }
 

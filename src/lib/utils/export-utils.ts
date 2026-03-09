@@ -13,7 +13,7 @@ interface LayerExportData {
  */
 function formatPostalCode(code: string): string {
   // Remove D- prefix if present
-  const cleanCode = code.startsWith("D-") ? code.substring(2) : code;
+  const cleanCode = code.startsWith("D-") ? code.slice(2) : code;
   // Pad with leading zeros to ensure 5 digits
   return cleanCode.padStart(5, "0");
 }
@@ -36,6 +36,7 @@ export function exportLayersPDF(layers: LayerExportData[], areaName?: string) {
     const pdfFonts = await import("pdfmake/build/vfs_fonts");
 
     // Register fonts
+    // @ts-expect-error - Expected according to pdfmake usage but types differ
     pdfMake.default.vfs = pdfFonts.vfs;
 
     // Create document content
@@ -238,7 +239,7 @@ export async function copyPostalCodesCSV(codes: string[]) {
     const formattedCodes = codes.map((code) => {
       // If code already has D- prefix, keep it and format the postal code part
       if (code.startsWith("D-")) {
-        const postalPart = code.substring(2);
+        const postalPart = code.slice(2);
         return `D-${formatPostalCode(postalPart)}`;
       }
       // Otherwise just format the code

@@ -1,14 +1,8 @@
 "use client";
 
 import type { InferSelectModel } from "drizzle-orm";
-import React, {
-  createContext,
-  useContext,
-  useOptimistic,
-  useTransition,
-  useCallback,
-  type ReactNode,
-} from "react";
+import React, { createContext, useContext, useOptimistic, useTransition, useCallback } from 'react';
+import type { ReactNode } from 'react';
 
 import type { areaLayers, areas } from "../schema/schema";
 
@@ -69,18 +63,21 @@ const OptimisticContext = createContext<OptimisticContextValue | undefined>(
 // Reducer for layer updates
 function layersReducer(currentLayers: Layer[], action: LayerAction): Layer[] {
   switch (action.type) {
-    case "create":
+    case "create": {
       return [...currentLayers, { ...action.layer, id: Date.now() } as Layer];
+    }
 
-    case "update":
+    case "update": {
       return currentLayers.map((l) =>
         l.id === action.id ? { ...l, ...action.layer } : l
       );
+    }
 
-    case "delete":
+    case "delete": {
       return currentLayers.filter((l) => l.id !== action.id);
+    }
 
-    case "add_codes":
+    case "add_codes": {
       return currentLayers.map((l) => {
         if (l.id === action.layerId) {
           const currentCodes = l.postalCodes?.map((pc) => pc.postalCode) || [];
@@ -92,8 +89,9 @@ function layersReducer(currentLayers: Layer[], action: LayerAction): Layer[] {
         }
         return l;
       });
+    }
 
-    case "remove_codes":
+    case "remove_codes": {
       return currentLayers.map((l) => {
         if (l.id === action.layerId) {
           const currentCodes = l.postalCodes?.map((pc) => pc.postalCode) || [];
@@ -107,25 +105,30 @@ function layersReducer(currentLayers: Layer[], action: LayerAction): Layer[] {
         }
         return l;
       });
+    }
 
-    default:
+    default: {
       return currentLayers;
+    }
   }
 }
 
 // Reducer for area updates
 function areasReducer(currentAreas: Area[], action: AreaAction): Area[] {
   switch (action.type) {
-    case "rename":
+    case "rename": {
       return currentAreas.map((area) =>
         area.id === action.id ? { ...area, name: action.name } : area
       );
+    }
 
-    case "delete":
+    case "delete": {
       return currentAreas.filter((area) => area.id !== action.id);
+    }
 
-    default:
+    default: {
       return currentAreas;
+    }
   }
 }
 
@@ -135,7 +138,7 @@ function undoRedoReducer(
   action: UndoRedoAction
 ): UndoRedoState {
   switch (action.type) {
-    case "undo":
+    case "undo": {
       const newUndoCount = Math.max(0, current.undoCount - 1);
       const newRedoCount = current.redoCount + 1;
       return {
@@ -144,8 +147,9 @@ function undoRedoReducer(
         canUndo: newUndoCount > 0,
         canRedo: true,
       };
+    }
 
-    case "redo":
+    case "redo": {
       const undoCount = current.undoCount + 1;
       const redoCount = Math.max(0, current.redoCount - 1);
       return {
@@ -154,8 +158,9 @@ function undoRedoReducer(
         canUndo: true,
         canRedo: redoCount > 0,
       };
+    }
 
-    case "add_change":
+    case "add_change": {
       const incrementedUndo = current.undoCount + 1;
       return {
         undoCount: incrementedUndo,
@@ -163,17 +168,20 @@ function undoRedoReducer(
         canUndo: true,
         canRedo: false,
       };
+    }
 
-    case "set":
+    case "set": {
       return {
         undoCount: action.undoCount,
         redoCount: action.redoCount,
         canUndo: action.undoCount > 0,
         canRedo: action.redoCount > 0,
       };
+    }
 
-    default:
+    default: {
       return current;
+    }
   }
 }
 
@@ -240,8 +248,7 @@ export function OptimisticProvider({
     <T,>(
       optimisticUpdate: () => void,
       serverAction: () => Promise<T>
-    ): Promise<T> => {
-      return new Promise((resolve, reject) => {
+    ): Promise<T> => new Promise((resolve, reject) => {
         startTransition(async () => {
           optimisticUpdate();
           try {
@@ -251,8 +258,7 @@ export function OptimisticProvider({
             reject(error);
           }
         });
-      });
-    },
+      }),
     []
   );
 

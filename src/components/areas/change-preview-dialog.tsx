@@ -64,7 +64,7 @@ export function ChangePreviewDialog({
   onConfirm,
   isLoading = false,
 }: ChangePreviewDialogProps) {
-  if (!change) return null;
+  if (!change) {return null;}
 
   const getChangeTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -80,7 +80,7 @@ export function ChangePreviewDialog({
 
   const renderChangeDetails = () => {
     switch (change.changeType) {
-      case "create_layer":
+      case "create_layer": {
         return (
           <div className="space-y-2">
             <p className="text-sm">
@@ -93,8 +93,9 @@ export function ChangePreviewDialog({
             </div>
           </div>
         );
+      }
 
-      case "update_layer":
+      case "update_layer": {
         return (
           <div className="space-y-2">
             <p className="text-sm font-medium">Layer-Eigenschaftsänderungen:</p>
@@ -114,8 +115,9 @@ export function ChangePreviewDialog({
             </div>
           </div>
         );
+      }
 
-      case "delete_layer":
+      case "delete_layer": {
         return (
           <div className="space-y-2">
             <p className="text-sm">
@@ -131,8 +133,9 @@ export function ChangePreviewDialog({
               )}
           </div>
         );
+      }
 
-      case "add_postal_codes":
+      case "add_postal_codes": {
         return (
           <div className="space-y-2">
             <p className="text-sm">
@@ -156,8 +159,9 @@ export function ChangePreviewDialog({
             ) : null}
           </div>
         );
+      }
 
-      case "remove_postal_codes":
+      case "remove_postal_codes": {
         return (
           <div className="space-y-2">
             <p className="text-sm">
@@ -181,8 +185,9 @@ export function ChangePreviewDialog({
             ) : null}
           </div>
         );
+      }
 
-      case "update_area":
+      case "update_area": {
         return (
           <div className="space-y-2">
             <p className="text-sm font-medium">
@@ -204,13 +209,15 @@ export function ChangePreviewDialog({
             </div>
           </div>
         );
+      }
 
-      default:
+      default: {
         return (
           <p className="text-sm text-muted-foreground">
             Keine Vorschau verfügbar für diesen Änderungstyp
           </p>
         );
+      }
     }
   };
 

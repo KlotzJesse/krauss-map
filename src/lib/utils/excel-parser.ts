@@ -2,9 +2,7 @@ import * as XLSX from "xlsx";
 
 import { normalizePostalCode } from "./postal-code-parser";
 
-export interface ParsedRow {
-  [key: string]: string | number | null;
-}
+export type ParsedRow = Record<string, string | number | null>;
 
 export interface ParsedFileData {
   headers: string[];
@@ -83,10 +81,7 @@ export async function parseSpreadsheetFile(
       });
       return rowObj;
     })
-    .filter((row) => {
-      // Filter out completely empty rows
-      return Object.values(row).some((val) => val !== null && val !== "");
-    });
+    .filter((row) => Object.values(row).some((val) => val !== null && val !== ""));
 
   return {
     headers,
@@ -100,7 +95,7 @@ export async function parseSpreadsheetFile(
  * Detect if first row contains headers
  */
 function detectHeaders(data: unknown[][]): boolean {
-  if (data.length < 2) return false;
+  if (data.length < 2) {return false;}
 
   const firstRow = data[0] as unknown[];
   const secondRow = data[1] as unknown[];
@@ -149,7 +144,7 @@ export function autoDetectColumns(
     for (const header of headers) {
       const values = rows.slice(0, 10).map((row) => row[header]);
       const validPostalCodes = values.filter((val) => {
-        if (!val) return false;
+        if (!val) {return false;}
         const str = String(val).trim();
         // Check if it looks like a German postal code
         const normalized = str.replace(/^D-?/i, "");
@@ -237,7 +232,7 @@ export function groupByLayer(rows: ProcessedImportRow[]): LayerGroup[] {
     groups.get(layerName)!.push(row);
   }
 
-  return Array.from(groups.entries()).map(([layerName, layerRows]) => {
+  return [...groups.entries()].map(([layerName, layerRows]) => {
     const validRows = layerRows.filter((r) => r.isValid);
     const invalidRows = layerRows.filter((r) => !r.isValid);
 

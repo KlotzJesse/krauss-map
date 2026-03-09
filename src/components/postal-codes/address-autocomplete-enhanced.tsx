@@ -79,12 +79,12 @@ interface AddressAutocompleteEnhancedProps {
   granularity: string;
   triggerClassName?: string;
   previewPostalCode?: string | null; // Currently previewed postal code
-  layers?: Array<{
+  layers?: {
     id: number;
     name: string;
     color: string;
     postalCodes?: { postalCode: string }[];
-  }>; // Available layers to check postal code membership
+  }[]; // Available layers to check postal code membership
 }
 
 export function AddressAutocompleteEnhanced({
@@ -136,7 +136,7 @@ export function AddressAutocompleteEnhanced({
 
   // Helper function to get layers containing a postal code
   const getLayersForPostalCode = useStableCallback((postalCode: string) => {
-    if (!layers || layers.length === 0) return [];
+    if (!layers || layers.length === 0) {return [];}
     return layers.filter((layer) =>
       layer.postalCodes?.some((pc) => pc.postalCode === postalCode)
     );
@@ -144,7 +144,7 @@ export function AddressAutocompleteEnhanced({
 
   const handleInputChange = useStableCallback((value: string) => {
     setQuery(value);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (timeoutRef.current) {clearTimeout(timeoutRef.current);}
 
     if (value.length < 2) {
       setResults([]);
@@ -171,7 +171,7 @@ export function AddressAutocompleteEnhanced({
             throw new Error(geocodeResult.error || "Geocoding failed");
           }
 
-          let results = geocodeResult.data.results || [];
+          const results = geocodeResult.data.results || [];
 
           setResults(results);
 
@@ -207,21 +207,25 @@ export function AddressAutocompleteEnhanced({
   // Utility function to convert postal code to granularity format
   const convertPostalCodeToGranularity = useStableCallback(
     (postalCode: string, granularityLevel: string): string => {
-      if (!postalCode) return postalCode;
+      if (!postalCode) {return postalCode;}
 
       // Remove any non-digit characters and ensure it's a string
       const cleanCode = postalCode.replace(/\D/g, "");
 
       switch (granularityLevel) {
-        case "1digit":
+        case "1digit": {
           return cleanCode.substring(0, 1);
-        case "2digit":
+        }
+        case "2digit": {
           return cleanCode.substring(0, 2);
-        case "3digit":
+        }
+        case "3digit": {
           return cleanCode.substring(0, 3);
+        }
         case "5digit":
-        default:
+        default: {
           return cleanCode;
+        }
       }
     }
   );
@@ -266,7 +270,7 @@ export function AddressAutocompleteEnhanced({
           throw new Error("Keine PLZ-Regionen in diesem Gebiet gefunden");
         } catch (error) {
           console.error("Boundary search failed:", error);
-          throw new Error("Gebietsauswahl fehlgeschlagen");
+          throw new Error("Gebietsauswahl fehlgeschlagen", { cause: error });
         }
       };
 

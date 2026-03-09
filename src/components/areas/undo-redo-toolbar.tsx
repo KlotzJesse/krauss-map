@@ -69,7 +69,7 @@ export function UndoRedoToolbar({
     }
   );
 
-  if (!areaId) return null;
+  if (!areaId) {return null;}
 
   const isFloating = variant === "floating";
 
@@ -86,7 +86,7 @@ export function UndoRedoToolbar({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={"outline"}
+              variant="outline"
               onClick={undo}
               disabled={!optimisticStatus.canUndo || isLoading}
               className="h-10 p-0 gap-2"
@@ -108,7 +108,7 @@ export function UndoRedoToolbar({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={"outline"}
+              variant="outline"
               onClick={redo}
               disabled={!optimisticStatus.canRedo || isLoading}
               className="h-10 p-0 gap-2"

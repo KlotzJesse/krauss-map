@@ -24,7 +24,7 @@ export async function getAreas() {
     return result;
   } catch (error) {
     console.error("Error fetching areas:", error);
-    throw new Error("Failed to fetch areas");
+    throw new Error("Failed to fetch areas", { cause: error });
   }
 }
 
@@ -51,7 +51,7 @@ export async function getAreaById(id: number) {
     return area;
   } catch (error) {
     console.error("Error fetching area:", error);
-    throw new Error("Failed to fetch area");
+    throw new Error("Failed to fetch area", { cause: error });
   }
 }
 
@@ -70,7 +70,7 @@ export async function getLayers(areaId: number) {
     return result;
   } catch (error) {
     console.error("Error fetching layers:", error);
-    throw new Error("Failed to fetch layers");
+    throw new Error("Failed to fetch layers", { cause: error });
   }
 }
 
@@ -86,7 +86,7 @@ export async function getVersions(areaId: number) {
     return versions;
   } catch (error) {
     console.error("Error fetching versions:", error);
-    throw new Error("Failed to fetch versions");
+    throw new Error("Failed to fetch versions", { cause: error });
   }
 }
 
@@ -108,7 +108,7 @@ export async function getVersion(areaId: number, versionNumber: number) {
     return version;
   } catch (error) {
     console.error("Error fetching version:", error);
-    throw new Error("Failed to fetch version");
+    throw new Error("Failed to fetch version", { cause: error });
   }
 }
 
@@ -156,7 +156,7 @@ export async function getVersionIndicatorInfo(
     };
   } catch (error) {
     console.error("Error fetching version indicator info:", error);
-    throw new Error("Failed to fetch version info");
+    throw new Error("Failed to fetch version info", { cause: error });
   }
 }
 
@@ -213,7 +213,7 @@ export async function getChangeHistory(
     return changes;
   } catch (error) {
     console.error("Error fetching change history:", error);
-    throw new Error("Failed to fetch change history");
+    throw new Error("Failed to fetch change history", { cause: error });
   }
 }
 
@@ -241,7 +241,7 @@ export async function getUndoRedoStatus(areaId: number) {
     };
   } catch (error) {
     console.error("Error getting undo/redo status:", error);
-    throw new Error("Failed to get undo/redo status");
+    throw new Error("Failed to get undo/redo status", { cause: error });
   }
 }
 
@@ -266,6 +266,6 @@ export async function getMatchingPostalCodes(
     return matchingCodes.map((mc) => mc.code);
   } catch (error) {
     console.error("Error fetching matching postal codes:", error);
-    throw new Error("Failed to fetch matching postal codes");
+    throw new Error("Failed to fetch matching postal codes", { cause: error });
   }
 }

@@ -1,21 +1,22 @@
-import { sql, type SQL } from "drizzle-orm";
+import { sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 // filename: db/postgis-types.ts
 import { customType } from "drizzle-orm/pg-core";
 
-export type GeoJSONPolygon = {
+export interface GeoJSONPolygon {
   type: "Polygon";
   coordinates: number[][][];
-};
+}
 
-export type GeoJSONMultiPolygon = {
+export interface GeoJSONMultiPolygon {
   type: "MultiPolygon";
   coordinates: number[][][][];
-};
+}
 
-export type GeoJSONMultiPoint = {
+export interface GeoJSONMultiPoint {
   type: "MultiPoint";
   coordinates: number[][];
-};
+}
 
 const SRID = 4326;
 

@@ -96,20 +96,27 @@ export function FloatingDrawingToolbar({
   // Map drawing mode IDs to TerraDrawModes
   const drawingModeToTerraDrawMode = (modeId: string): TerraDrawMode | null => {
     switch (modeId) {
-      case "cursor":
+      case "cursor": {
         return "cursor";
-      case "freehand":
+      }
+      case "freehand": {
         return "freehand";
-      case "circle":
+      }
+      case "circle": {
         return "circle";
-      case "rectangle":
+      }
+      case "rectangle": {
         return "rectangle";
-      case "angled-rectangle":
-        return "angled-rectangle"; // TerraDraw has a separate angled-rectangle mode
-      case "polygon":
+      }
+      case "angled-rectangle": {
+        return "angled-rectangle";
+      } // TerraDraw has a separate angled-rectangle mode
+      case "polygon": {
         return "polygon";
-      default:
+      }
+      default: {
         return null;
+      }
     }
   };
 
@@ -118,20 +125,27 @@ export function FloatingDrawingToolbar({
     mode: TerraDrawMode | null
   ): string | null => {
     switch (mode) {
-      case "cursor":
+      case "cursor": {
         return "cursor";
-      case "freehand":
+      }
+      case "freehand": {
         return "freehand";
-      case "circle":
+      }
+      case "circle": {
         return "circle";
-      case "rectangle":
+      }
+      case "rectangle": {
         return "rectangle";
-      case "angled-rectangle":
-        return "angled-rectangle"; // Map back to the angled-rectangle UI button
-      case "polygon":
+      }
+      case "angled-rectangle": {
+        return "angled-rectangle";
+      } // Map back to the angled-rectangle UI button
+      case "polygon": {
         return "polygon";
-      default:
+      }
+      default: {
         return null;
+      }
     }
   };
 

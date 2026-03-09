@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 import { updateLayerAction } from "@/app/actions/area-actions";
 
-import { type Layer } from "../types/area-types";
+import type { Layer } from "../types/area-types";
 
 interface LayerMergeProps {
   areaId: number;
@@ -46,20 +46,23 @@ export function useLayerMerge({
         let mergedPostalCodes: string[];
 
         switch (mergeStrategy) {
-          case "union":
+          case "union": {
             // Combine all unique postal codes
             mergedPostalCodes = [
               ...new Set([...targetPostalCodes, ...sourcePostalCodes]),
             ];
             break;
-          case "keep-target":
+          }
+          case "keep-target": {
             // Only keep target postal codes (ignore source)
             mergedPostalCodes = targetPostalCodes;
             break;
-          case "keep-source":
+          }
+          case "keep-source": {
             // Replace target with source postal codes
             mergedPostalCodes = [...new Set(sourcePostalCodes)];
             break;
+          }
         }
 
         // Update target layer with merged postal codes

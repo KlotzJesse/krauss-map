@@ -86,7 +86,7 @@ export function BulkImportDialog({
   // File drop handling
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      if (acceptedFiles.length === 0) return;
+      if (acceptedFiles.length === 0) {return;}
 
       const file = acceptedFiles[0];
 

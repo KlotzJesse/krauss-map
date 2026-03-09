@@ -43,11 +43,11 @@ import type {
 } from "@/lib/schema/schema";
 
 interface VersionSnapshot {
-  layers: Array<{
+  layers: {
     name: string;
 
     postalCodes: string[];
-  }>;
+  }[];
 }
 
 interface ChangeData {
@@ -59,11 +59,11 @@ interface ChangeData {
 }
 
 interface ComparisonResult {
-  layersAdded: Array<{ name: string }>;
+  layersAdded: { name: string }[];
 
-  layersRemoved: Array<{ name: string }>;
+  layersRemoved: { name: string }[];
 
-  layersModified: Array<{ name: string }>;
+  layersModified: { name: string }[];
 
   postalCodesAdded: string[];
 
@@ -121,43 +121,42 @@ export function EnhancedVersionHistoryDialog({
   };
 
   const confirmRestore = () => {
-    if (!versionToRestore) return;
+    if (!versionToRestore) {return;}
 
     startTransition(async () => {
       // Optimistically show restoring state
       updateOptimisticRestoring(true);
 
-      try {
-        await toast.promise(
-          restoreVersionAction(areaId, versionToRestore.versionNumber, {
-            createBranch: true,
-            branchName: `Restored from v${versionToRestore.versionNumber}`,
-          }),
-          {
-            loading: `Stelle Version ${versionToRestore.versionNumber} wieder her...`,
-            success: (data) => {
-              if (data.success) {
-                return `Version ${versionToRestore.versionNumber} wiederhergestellt`;
-              }
-              throw new Error(data.error || "Failed to restore version");
-            },
-            error: "Fehler beim Wiederherstellen der Version",
-          }
-        );
+      await toast.promise(
+        restoreVersionAction(areaId, versionToRestore.versionNumber, {
+          createBranch: true,
+          branchName: `Restored from v${versionToRestore.versionNumber}`,
+        }),
+        {
+          loading: `Stelle Version ${versionToRestore.versionNumber} wieder her...`,
+          success: (data) => {
+            if (data.success) {
+              return `Version ${versionToRestore.versionNumber} wiederhergestellt`;
+            }
+            throw new Error(
+              data.error ? data.error : "Failed to restore version"
+            );
+          },
+          error: "Fehler beim Wiederherstellen der Version",
+        }
+      );
 
-        // If we get here, restoration was successful
-        onOpenChange(false);
-        window.location.reload();
-      } finally {
-        setShowRestoreDialog(false);
-        setVersionToRestore(null);
-        updateOptimisticRestoring(false);
-      }
+      // If we get here, restoration was successful
+      onOpenChange(false);
+      window.location.reload();
+      setShowRestoreDialog(false);
+      setVersionToRestore(null);
+      updateOptimisticRestoring(false);
     });
   };
 
   const handleCompare = async () => {
-    if (!selectedVersion || !compareVersion) return;
+    if (!selectedVersion || !compareVersion) {return;}
 
     await toast.promise(
       compareVersionsAction(

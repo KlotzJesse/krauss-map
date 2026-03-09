@@ -29,7 +29,7 @@ export function useCursorSelection({
 
   // Click handler for selecting/deselecting regions
   const handleClick = useStableCallback((e: MapLayerMouseEvent) => {
-    if (!map || !enabled || !e.features || e.features.length === 0) return;
+    if (!map || !enabled || !e.features || e.features.length === 0) {return;}
     const feature = e.features[0];
     const regionCode = feature.properties?.code;
     if (regionCode) {
@@ -43,7 +43,7 @@ export function useCursorSelection({
 
   // Throttled hover handler
   const processHover = useStableCallback((e: MapLayerMouseEvent) => {
-    if (!map || !enabled) return;
+    if (!map || !enabled) {return;}
     const hoverLayerId = `${layerId}-hover`;
     if (e.features && e.features.length > 0) {
       const feature = e.features[0];
@@ -80,7 +80,7 @@ export function useCursorSelection({
   });
 
   const handleMouseLeave = useStableCallback(() => {
-    if (!map || !enabled) return;
+    if (!map || !enabled) {return;}
     const hoverLayerId = `${layerId}-hover`;
     map.getCanvas().style.cursor = "";
     map.setLayoutProperty(hoverLayerId, "visibility", "none");
@@ -88,7 +88,7 @@ export function useCursorSelection({
   });
 
   useEffect(() => {
-    if (!map || !isMapLoaded || !enabled) return;
+    if (!map || !isMapLoaded || !enabled) {return;}
     const mainLayerId = `${layerId}-layer`;
     map.on("click", mainLayerId, handleClick);
     map.on("mousemove", mainLayerId, handleMouseMove);

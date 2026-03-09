@@ -25,7 +25,7 @@ interface VersionSnapshot {
   areaName: string;
   description: string | null;
   granularity: string;
-  layers: Array<{
+  layers: {
     id: number;
     name: string;
     color: string;
@@ -33,7 +33,7 @@ interface VersionSnapshot {
     isVisible: string;
     orderIndex: number;
     postalCodes: string[];
-  }>;
+  }[];
 }
 
 // ===============================
@@ -670,7 +670,7 @@ export async function compareVersionsAction(
     const layersModified = snapshot2.layers.filter((l2) => {
       const l1 = layers1Map.get(l2.name);
 
-      if (!l1) return false;
+      if (!l1) {return false;}
 
       return (
         l1.color !== l2.color ||
@@ -686,11 +686,11 @@ export async function compareVersionsAction(
 
     const allCodes2 = new Set(snapshot2.layers.flatMap((l) => l.postalCodes));
 
-    const postalCodesAdded = Array.from(allCodes2).filter(
+    const postalCodesAdded = [...allCodes2].filter(
       (c) => !allCodes1.has(c)
     );
 
-    const postalCodesRemoved = Array.from(allCodes1).filter(
+    const postalCodesRemoved = [...allCodes1].filter(
       (c) => !allCodes2.has(c)
     );
 

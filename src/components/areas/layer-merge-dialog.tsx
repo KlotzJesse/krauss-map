@@ -77,10 +77,7 @@ export function LayerMergeDialog({
         targetId: _targetId,
         sourceIds,
       }: { targetId: number; sourceIds: number[] }
-    ) => {
-      // Remove source layers optimistically
-      return state.filter((layer) => !sourceIds.includes(layer.id));
-    }
+    ) => state.filter((layer) => !sourceIds.includes(layer.id))
   );
 
   const toggleLayer = (layerId: number) => {
@@ -96,12 +93,12 @@ export function LayerMergeDialog({
   };
 
   const handleMerge = async () => {
-    if (selectedLayers.size < 2 || !targetLayerId) return;
+    if (selectedLayers.size < 2 || !targetLayerId) {return;}
 
     setIsMerging(true);
 
     const targetId = parseInt(targetLayerId, 10);
-    const sourceIds = Array.from(selectedLayers).filter(
+    const sourceIds = [...selectedLayers].filter(
       (id) => id !== targetId
     );
 
@@ -109,25 +106,24 @@ export function LayerMergeDialog({
       // Optimistically update layers (remove source layers)
       updateOptimisticLayers({ targetId, sourceIds });
 
-      try {
-        await toast.promise(mergeLayers(sourceIds, targetId, strategy), {
-          loading: `Führe ${sourceIds.length} Gebiete zusammen...`,
-          success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
-          error: "Fehler beim Zusammenführen der Gebiete",
-        });
+      await toast.promise(mergeLayers(sourceIds, targetId, strategy), {
+        loading: `Führe ${sourceIds.length} Gebiete zusammen...`,
+        success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
+        error: "Fehler beim Zusammenführen der Gebiete",
+      });
 
-        setSelectedLayers(new Set());
-        setTargetLayerId("");
-        onOpenChange(false);
-        onMergeComplete?.();
-      } finally {
-        setIsMerging(false);
+      setSelectedLayers(new Set());
+      setTargetLayerId("");
+      onOpenChange(false);
+      if (onMergeComplete) {
+        onMergeComplete();
       }
+      setIsMerging(false);
     });
   };
 
   const getPreviewStats = () => {
-    if (!targetLayerId || selectedLayers.size < 2) return null;
+    if (!targetLayerId || selectedLayers.size < 2) {return null;}
 
     const targetId = parseInt(targetLayerId, 10);
 
@@ -137,7 +133,7 @@ export function LayerMergeDialog({
       (l) => selectedLayers.has(l.id) && l.id !== targetId
     );
 
-    if (!targetLayer) return null;
+    if (!targetLayer) {return null;}
 
     const targetCodes = new Set(
       targetLayer.postalCodes?.map((pc) => pc.postalCode) || []
@@ -219,10 +215,10 @@ export function LayerMergeDialog({
                   <SelectValue placeholder="Ziel-Layer wählen..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from(selectedLayers).map((layerId) => {
+                  {[...selectedLayers].map((layerId) => {
                     const layer = layers.find((l) => l.id === layerId);
 
-                    if (!layer) return null;
+                    if (!layer) {return null;}
 
                     return (
                       <SelectItem key={layer.id} value={layer.id.toString()}>

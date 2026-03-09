@@ -9,20 +9,22 @@ import { AlertError } from "./alert";
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   fallback?:
-    | React.ComponentType<{ error: Error; resetErrorBoundary: () => void }>
+    | React.ComponentType<{ error: unknown; resetErrorBoundary: () => void }>
     | React.ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  onError?: (error: unknown, errorInfo: React.ErrorInfo) => void;
 }
 
 function ErrorFallback({
   error,
   resetErrorBoundary,
 }: {
-  error: Error;
+  error: unknown;
   resetErrorBoundary: () => void;
 }) {
+  const errorMessage =
+    error instanceof Error ? error.message : "Ein Fehler ist aufgetreten";
   return (
-    <AlertError message={error?.message}>
+    <AlertError message={errorMessage}>
       <button
         onClick={resetErrorBoundary}
         className="mt-2 underline text-primary hover:text-primary/80 transition-colors"
@@ -59,7 +61,7 @@ export function ErrorBoundary({
       FallbackComponent={
         fallback
           ? (fallback as React.ComponentType<{
-              error: Error;
+              error: unknown;
               resetErrorBoundary: () => void;
             }>)
           : ErrorFallback

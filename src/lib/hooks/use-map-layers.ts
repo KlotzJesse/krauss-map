@@ -57,9 +57,7 @@ export function useMapLayers({
   activeLayerId,
 }: UseMapLayersProps) {
   // Memoize layersLoaded calculation to prevent unnecessary rerenders
-  const layersLoaded = useMemo(() => {
-    return !!(map && isMapLoaded && data);
-  }, [map, isMapLoaded, data]);
+  const layersLoaded = useMemo(() => !!(map && isMapLoaded && data), [map, isMapLoaded, data]);
 
   // Memoize all IDs for stable references
   const ids = useMemo(
@@ -89,18 +87,12 @@ export function useMapLayers({
     }
 
     // Create stable references for functions to avoid dependency issues
-    const selectedFeatureCollection = (() => {
-      return getSelectedFeatureCollection();
-    })();
+    const selectedFeatureCollection = (() => getSelectedFeatureCollection())();
 
-    const labelPoints = (() => {
-      return getLabelPoints(data);
-    })();
+    const labelPoints = (() => getLabelPoints(data))();
 
     const statesLabelPoints = statesData
-      ? (() => {
-          return getLabelPoints(statesData);
-        })()
+      ? (() => getLabelPoints(statesData))()
       : null;
 
     // --- Robust source creation ---
@@ -110,7 +102,7 @@ export function useMapLayers({
       map.addSource(ids.sourceId, { type: "geojson", data });
     } else {
       const src = map.getSource(ids.sourceId) as GeoJSONSource | undefined;
-      if (src && typeof src.setData === "function") src.setData(data);
+      if (src && typeof src.setData === "function") {src.setData(data);}
     }
     // 2. Selected source
     if (!map.getSource(ids.selectedSourceId)) {
@@ -131,7 +123,7 @@ export function useMapLayers({
       map.addSource(ids.labelSourceId, { type: "geojson", data: labelPoints });
     } else {
       const src = map.getSource(ids.labelSourceId) as GeoJSONSource | undefined;
-      if (src && typeof src.setData === "function") src.setData(labelPoints);
+      if (src && typeof src.setData === "function") {src.setData(labelPoints);}
     }
     // 5. State boundaries sources
     if (statesData) {
@@ -141,7 +133,7 @@ export function useMapLayers({
         const src = map.getSource(ids.stateSourceId) as
           | GeoJSONSource
           | undefined;
-        if (src && typeof src.setData === "function") src.setData(statesData);
+        if (src && typeof src.setData === "function") {src.setData(statesData);}
       }
       if (!map.getSource(ids.stateLabelSourceId)) {
         map.addSource(ids.stateLabelSourceId, {
@@ -153,14 +145,14 @@ export function useMapLayers({
           | GeoJSONSource
           | undefined;
         if (src && typeof src.setData === "function")
-          src.setData(statesLabelPoints!);
+          {src.setData(statesLabelPoints!);}
       }
     }
 
     // --- Robust layer creation ---
     // Helper to add a layer with beforeId if it exists
     function safeAddLayer(layer: LayerSpecification, beforeId?: string) {
-      if (!map) return;
+      if (!map) {return;}
       try {
         if (beforeId && map.getLayer(beforeId)) {
           map.addLayer(layer, beforeId);
@@ -428,7 +420,7 @@ export function useMapLayers({
   // Update selected features source when layers change
   // Note: Selections are now managed per-layer in the database
   useEffect(() => {
-    if (!map || !layersLoaded) return;
+    if (!map || !layersLoaded) {return;}
     const src = map.getSource(ids.selectedSourceId) as
       | GeoJSONSource
       | undefined;
@@ -440,7 +432,7 @@ export function useMapLayers({
   // Use useLayoutEffect for hover source updates to prevent visual flicker
   // This ensures hover state changes are applied synchronously
   useLayoutEffect(() => {
-    if (!map || !layersLoaded) return;
+    if (!map || !layersLoaded) {return;}
     const src = map.getSource(ids.hoverSourceId) as GeoJSONSource | undefined;
     if (src && typeof src.setData === "function") {
       if (hoveredRegionId) {
@@ -467,8 +459,7 @@ export function useMapLayers({
   ]);
 
   // Cleanup on unmount or dependency change
-  useEffect(() => {
-    return () => {
+  useEffect(() => () => {
       if (!map) return;
 
       // First, remove all layers (order matters: remove layers before sources)
@@ -519,12 +510,11 @@ export function useMapLayers({
           }
         }
       });
-    };
-  }, [map, layerId, ids]);
+    }, [map, layerId, ids]);
 
   // Pre-compute layer data mapping for O(1) lookups
   const layerDataCache = useMemo(() => {
-    if (!data.features || !layers) return new Map();
+    if (!data.features || !layers) {return new Map();}
 
     const cache = new Map<
       number,
@@ -580,9 +570,9 @@ export function useMapLayers({
         layerFeatureCollection.features.length === 0
       ) {
         // Remove empty layers
-        if (map.getLayer(layerFillId)) map.removeLayer(layerFillId);
-        if (map.getLayer(layerBorderId)) map.removeLayer(layerBorderId);
-        if (map.getSource(layerSourceId)) map.removeSource(layerSourceId);
+        if (map.getLayer(layerFillId)) {map.removeLayer(layerFillId);}
+        if (map.getLayer(layerBorderId)) {map.removeLayer(layerBorderId);}
+        if (map.getSource(layerSourceId)) {map.removeSource(layerSourceId);}
         return;
       }
 
@@ -647,7 +637,7 @@ export function useMapLayers({
 
     // Cleanup: Remove layers/sources for layers that no longer exist
     return () => {
-      if (!map) return;
+      if (!map) {return;}
 
       const currentLayerIds = new Set(layers.map((l) => l.id));
 
@@ -697,7 +687,7 @@ export function useMapLayers({
 
   // Optimized layer switching - only update visibility and active state
   useEffect(() => {
-    if (!map || !layersLoaded || !layers) return;
+    if (!map || !layersLoaded || !layers) {return;}
 
     layers.forEach((layer) => {
       const layerFillId = `area-layer-${layer.id}-fill`;
@@ -733,7 +723,7 @@ export function useMapLayers({
 
   // Update selected regions color when active layer changes
   useEffect(() => {
-    if (!map || !layersLoaded) return;
+    if (!map || !layersLoaded) {return;}
 
     const activeLayer = layers?.find((l) => l.id === activeLayerId);
     const fillColor = activeLayer?.color || "#2563EB";

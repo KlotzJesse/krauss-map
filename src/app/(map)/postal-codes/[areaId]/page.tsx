@@ -20,7 +20,7 @@ const ServerPostalCodesView = nextDynamic(
 
 interface PostalCodesPageProps {
   params: Promise<{ areaId: string }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({
@@ -48,7 +48,7 @@ export async function generateMetadata({
           const version = await db.query.areaVersions.findFirst({
             where: and(
               eq(areaVersions.areaId, areaId),
-              eq(areaVersions.versionNumber, versionId)
+              eq(areaVersions.versionNumber, versionId!)
             ),
           });
 
@@ -102,20 +102,29 @@ export default async function PostalCodesPage({
   // Determine granularity from area or version
   let granularity: string = "1digit";
 
+  const isValidVersion = versionId ? versionId > 0 : false;
+
   if (areaId && areaId > 0) {
     try {
       // Check if viewing a version
-      if (versionId && versionId > 0) {
+      if (isValidVersion) {
         const version = await db.query.areaVersions.findFirst({
           where: and(
             eq(areaVersions.areaId, areaId),
-            eq(areaVersions.versionNumber, versionId)
+            eq(areaVersions.versionNumber, versionId!)
           ),
         });
 
-        if (version && version.snapshot) {
-          const snapshot = version.snapshot as { granularity?: string };
-          granularity = snapshot.granularity || "1digit";
+        if (version) {
+          if (version.snapshot) {
+            const snapshot = version.snapshot as { granularity?: string };
+            const snapGranularity = snapshot.granularity;
+            if (snapGranularity) {
+              granularity = snapGranularity;
+            } else {
+              granularity = "1digit";
+            }
+          }
         }
       } else {
         // Get granularity from current area

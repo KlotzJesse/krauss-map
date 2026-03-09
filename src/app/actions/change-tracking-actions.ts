@@ -3,15 +3,8 @@
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../lib/db";
-import {
-  areaChanges,
-  areaUndoStacks,
-  areaVersions,
-  areas,
-  areaLayers,
-  areaLayerPostalCodes,
-  type SelectAreaChanges,
-} from "../../lib/schema/schema";
+import { areaChanges, areaUndoStacks, areaVersions, areas, areaLayers, areaLayerPostalCodes } from '../../lib/schema/schema';
+import type { SelectAreaChanges } from '../../lib/schema/schema';
 
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -246,7 +239,7 @@ export async function undoChangeAction(
 
       const redoStack = (stack.redoStack as ChangeKey[]) || [];
 
-      const changeKey = undoStack[undoStack.length - 1];
+      const changeKey = undoStack.at(-1);
 
       if (
         !changeKey ||
@@ -356,7 +349,7 @@ export async function redoChangeAction(
 
       const redoStack = stack.redoStack as ChangeKey[];
 
-      const changeKey = redoStack[redoStack.length - 1];
+      const changeKey = redoStack.at(-1);
 
       if (
         !changeKey ||
@@ -457,7 +450,7 @@ async function applyUndoOperation(
   const typedChangeData = change.changeData as ChangeDataWithLayer;
 
   switch (changeType) {
-    case "create_layer":
+    case "create_layer": {
       if (entityId) {
         // Delete the layer
 
@@ -471,8 +464,9 @@ async function applyUndoOperation(
       }
 
       break;
+    }
 
-    case "update_layer":
+    case "update_layer": {
       if (entityId && previousData) {
         // Restore the previous state
 
@@ -486,8 +480,9 @@ async function applyUndoOperation(
       }
 
       break;
+    }
 
-    case "delete_layer":
+    case "delete_layer": {
       if (previousData) {
         // Recreate the layer
         const typedPreviousData = previousData as PreviousDataWithLayer;
@@ -517,8 +512,9 @@ async function applyUndoOperation(
       }
 
       break;
+    }
 
-    case "add_postal_codes":
+    case "add_postal_codes": {
       if (entityId && typedChangeData?.postalCodes) {
         // Remove the postal codes
 
@@ -540,8 +536,9 @@ async function applyUndoOperation(
       }
 
       break;
+    }
 
-    case "remove_postal_codes":
+    case "remove_postal_codes": {
       if (entityId && typedPreviousData?.postalCodes) {
         // Re-add the postal codes
 
@@ -555,8 +552,9 @@ async function applyUndoOperation(
       }
 
       break;
+    }
 
-    case "update_area":
+    case "update_area": {
       if (previousData) {
         await tx
 
@@ -568,6 +566,7 @@ async function applyUndoOperation(
       }
 
       break;
+    }
   }
 }
 
@@ -584,7 +583,7 @@ async function applyRedoOperation(
   const typedChangeData = changeData as ChangeDataWithLayer;
 
   switch (changeType) {
-    case "create_layer":
+    case "create_layer": {
       if (changeData) {
         // Recreate the layer
         const typedChangeData = changeData as ChangeDataWithLayer;
@@ -614,8 +613,9 @@ async function applyRedoOperation(
       }
 
       break;
+    }
 
-    case "update_layer":
+    case "update_layer": {
       if (entityId && changeData) {
         await tx
 
@@ -627,8 +627,9 @@ async function applyRedoOperation(
       }
 
       break;
+    }
 
-    case "delete_layer":
+    case "delete_layer": {
       if (entityId) {
         await tx
 
@@ -640,8 +641,9 @@ async function applyRedoOperation(
       }
 
       break;
+    }
 
-    case "add_postal_codes":
+    case "add_postal_codes": {
       if (entityId && typedChangeData?.postalCodes) {
         await tx.insert(areaLayerPostalCodes).values(
           typedChangeData.postalCodes.map((code: string) => ({
@@ -653,8 +655,9 @@ async function applyRedoOperation(
       }
 
       break;
+    }
 
-    case "remove_postal_codes":
+    case "remove_postal_codes": {
       if (entityId && typedChangeData?.postalCodes) {
         await tx
 
@@ -673,8 +676,9 @@ async function applyRedoOperation(
       }
 
       break;
+    }
 
-    case "update_area":
+    case "update_area": {
       if (changeData) {
         await tx
 
@@ -686,6 +690,7 @@ async function applyRedoOperation(
       }
 
       break;
+    }
   }
 }
 

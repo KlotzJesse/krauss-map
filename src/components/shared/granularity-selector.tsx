@@ -35,7 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { type Layer } from "@/lib/types/area-types";
+import type { Layer } from "@/lib/types/area-types";
 import {
   GRANULARITY_OPTIONS,
   getGranularityLabel,
@@ -81,8 +81,8 @@ export function GranularitySelector({
   );
 
   const handleGranularitySelect = (newGranularity: string) => {
-    if (newGranularity === currentGranularity) return;
-    if (!areaId) return;
+    if (newGranularity === currentGranularity) {return;}
+    if (!areaId) {return;}
 
     // If no postal codes, allow any change
     if (!hasPostalCodes) {
@@ -208,8 +208,8 @@ export function GranularitySelector({
   };
 
   const getSelectItemStatus = (optionValue: string) => {
-    if (optionValue === currentGranularity) return "current";
-    if (!hasPostalCodes) return "available";
+    if (optionValue === currentGranularity) {return "current";}
+    if (!hasPostalCodes) {return "available";}
 
     const changeDescription = getGranularityChangeDescription(
       currentGranularity,

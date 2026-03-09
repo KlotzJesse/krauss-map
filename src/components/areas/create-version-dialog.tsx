@@ -47,22 +47,26 @@ export function CreateVersionDialog({
     e.preventDefault();
     setIsCreating(true);
 
+    const versionData = {
+      name: name ? name : undefined,
+      description: description ? description : undefined,
+      changesSummary: changesSummary ? changesSummary : undefined,
+    };
+
     startTransition(async () => {
       // Optimistically show creating state
       updateOptimisticCreating(true);
 
       try {
-        await createVersion({
-          name: name || undefined,
-          description: description || undefined,
-          changesSummary: changesSummary || undefined,
-        });
+        await createVersion(versionData);
 
         setName("");
         setDescription("");
         setChangesSummary("");
         onOpenChange(false);
-        onVersionCreated?.();
+        if (onVersionCreated) {
+          onVersionCreated();
+        }
       } finally {
         setIsCreating(false);
         updateOptimisticCreating(false);

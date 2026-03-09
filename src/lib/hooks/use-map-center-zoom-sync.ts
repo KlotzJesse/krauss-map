@@ -29,7 +29,7 @@ export function useMapCenterZoomSync({
 }) {
   // Memoized handler to update map center/zoom from props
   const updateMapView = useStableCallback(() => {
-    if (!mapRef.current || !isMapLoaded) return;
+    if (!mapRef.current || !isMapLoaded) {return;}
     const currentCenter = mapRef.current.getCenter();
     const currentZoom = mapRef.current.getZoom();
     if (
@@ -63,7 +63,7 @@ export function useMapCenterZoomSync({
 
   // Use useEffect for event listeners since they don't affect layout immediately
   useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
+    if (!mapRef.current || !isMapLoaded) {return;}
     const map = mapRef.current;
     mapRef.current.on("moveend", handleMoveOrZoomEnd);
     mapRef.current.on("zoomend", handleMoveOrZoomEnd);

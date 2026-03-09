@@ -49,7 +49,7 @@ export function usePostalCodeSearch({ data }: PostalCodeSearchProps) {
         if (word.length > 1) {
           // Skip single characters for performance
 
-          if (!index.has(word)) index.set(word, new Set());
+          if (!index.has(word)) {index.set(word, new Set());}
 
           index.get(word).add(feature);
         }
@@ -83,14 +83,14 @@ export function usePostalCodeSearch({ data }: PostalCodeSearchProps) {
               feature.properties?.PLZ ||
               feature.properties?.plz;
 
-            if (code) results.set(code, feature);
+            if (code) {results.set(code, feature);}
           });
         }
       });
 
       // Convert to array and limit results
 
-      const finalResults = Array.from(results.keys()).slice(0, 10);
+      const finalResults = [...results.keys()].slice(0, 10);
 
       setSearchResults(finalResults);
     } catch (error) {

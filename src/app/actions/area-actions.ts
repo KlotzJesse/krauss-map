@@ -1078,7 +1078,7 @@ export async function geocodeSearchAction(data: {
 
   enhancedSearch?: boolean;
 }): ServerActionResponse<{
-  results: Array<{
+  results: {
     id: number | string;
 
     display_name: string;
@@ -1092,7 +1092,7 @@ export async function geocodeSearchAction(data: {
     state?: string;
 
     country?: string;
-  }>;
+  }[];
 
   searchInfo: {
     originalQuery: string;

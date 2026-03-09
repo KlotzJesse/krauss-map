@@ -1,0 +1,1019 @@
+$ oxlint --type-aware
+
+  x eslint-plugin-unicorn(prefer-modern-math-apis): Prefer `Math.hypot(…)` over alternatives
+    ,-[src/components/shared/hooks/use-feature-selection.ts:90:26]
+ 89 |         const dLng = Math.abs(lng2 - lng1);
+ 90 |         const distance = Math.sqrt(dLat * dLat + dLng * dLng);
+    :                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 91 |         if (distance <= radiusDegrees) {selectedFeatures.push(featureCode);}
+    `----
+
+  x eslint-plugin-unicorn(prefer-logical-operator-over-ternary): Prefer using a logical operator over a ternary.
+    ,-[src/components/areas/create-version-dialog.tsx:51:13]
+ 50 |     const versionData = {
+ 51 |       name: name ? name : undefined,
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 52 |       description: description ? description : undefined,
+    `----
+  help: Switch to "||" or "??" operator
+
+  x eslint-plugin-unicorn(prefer-logical-operator-over-ternary): Prefer using a logical operator over a ternary.
+    ,-[src/components/areas/create-version-dialog.tsx:52:20]
+ 51 |       name: name ? name : undefined,
+ 52 |       description: description ? description : undefined,
+    :                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 53 |       changesSummary: changesSummary ? changesSummary : undefined,
+    `----
+  help: Switch to "||" or "??" operator
+
+  x eslint-plugin-unicorn(prefer-logical-operator-over-ternary): Prefer using a logical operator over a ternary.
+    ,-[src/components/areas/create-version-dialog.tsx:53:23]
+ 52 |       description: description ? description : undefined,
+ 53 |       changesSummary: changesSummary ? changesSummary : undefined,
+    :                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 54 |     };
+    `----
+  help: Switch to "||" or "??" operator
+
+  x eslint-plugin-unicorn(no-lonely-if): Unexpected `if` as the only statement in a `if` block without `else`.
+     ,-[src/app/(map)/postal-codes/[areaId]/page.tsx:118:9]
+ 117 | 
+ 118 |         if (version) {
+     :         ^^
+ 119 |           if (version.snapshot) {
+     :           ^^
+ 120 |             const snapshot = version.snapshot as { granularity?: string };
+     `----
+  help: Move the inner `if` test to the outer `if` test.
+
+  x eslint(no-lonely-if): Unexpected `if` as the only statement in an `else` block
+    ,-[src/lib/hooks/use-cursor-selection.ts:58:7]
+ 57 |     } else {
+ 58 |       if (lastRegionIdRef.current !== null) {
+    :       ^^
+ 59 |         map.setLayoutProperty(hoverLayerId, "visibility", "none");
+    `----
+  help: Consider using `else if` instead.
+
+  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
+    ,-[src/lib/hooks/use-map-optimizations.ts:78:14]
+ 77 |         const coords = geometry.coordinates[0];
+ 78 |         for (let i = 0; i < coords.length; i++) {
+    :              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 79 |           const [lng, lat] = coords[i];
+    `----
+  help: Consider using a for-of loop for this simple iteration.
+
+  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
+    ,-[src/lib/hooks/use-map-optimizations.ts:89:16]
+ 88 |         if (coords) {
+ 89 |           for (let i = 0; i < coords.length; i++) {
+    :                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 90 |             const [lng, lat] = coords[i];
+    `----
+  help: Consider using a for-of loop for this simple iteration.
+
+  x typescript-eslint(parameter-properties): Property statusCode should be declared as a class property.
+    ,-[src/lib/utils/api-error-handling.ts:13:5]
+ 12 |   constructor(
+ 13 |     public statusCode: number,
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^
+ 14 |     public message: string,
+    `----
+  help: Remove the parameter modifier and declare this member on the class instead.
+
+  x typescript-eslint(parameter-properties): Property message should be declared as a class property.
+    ,-[src/lib/utils/api-error-handling.ts:14:5]
+ 13 |     public statusCode: number,
+ 14 |     public message: string,
+    :     ^^^^^^^^^^^^^^^^^^^^^^
+ 15 |     public error: string = "API Error"
+    `----
+  help: Remove the parameter modifier and declare this member on the class instead.
+
+  x typescript-eslint(parameter-properties): Property error should be declared as a class property.
+    ,-[src/lib/utils/api-error-handling.ts:15:5]
+ 14 |     public message: string,
+ 15 |     public error: string = "API Error"
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 16 |   ) {
+    `----
+  help: Remove the parameter modifier and declare this member on the class instead.
+
+  x eslint(sort-vars): Variable declarations should be sorted
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:48:9]
+ 47 |       let minLng = Infinity,
+ 48 |         maxLng = -Infinity,
+    :         ^^^^^^^^^^^^^^^^^^
+ 49 |         minLat = Infinity,
+    `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint(sort-vars): Variable declarations should be sorted
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:50:9]
+ 49 |         minLat = Infinity,
+ 50 |         maxLat = -Infinity;
+    :         ^^^^^^^^^^^^^^^^^^
+ 51 | 
+    `----
+  help: Sort variable declarations in ascending order (case-sensitive by default).
+
+  x eslint-plugin-unicorn(no-lonely-if): Unexpected `if` as the only statement in a `if` block without `else`.
+     ,-[src/lib/hooks/use-postal-code-lookup.ts:238:13]
+ 237 |           for (const poly of feature.geometry.coordinates) {
+ 238 |             if (Array.isArray(poly) && Array.isArray(poly[0])) {
+     :             ^^
+ 239 |               if (isPointInPolygon([lng, lat], poly[0] as number[][])) {
+     :               ^^
+ 240 |                 return candidate.code;
+     `----
+  help: Move the inner `if` test to the outer `if` test.
+
+  x eslint-plugin-unicorn(no-useless-switch-case): Useless case in switch statement.
+    ,-[src/lib/utils/granularity-utils.ts:86:5]
+ 85 |     }
+ 86 |     case 5:
+    :     ^^^^^^^
+ 87 |     default: {
+    `----
+  help: Consider removing this case or removing the `default` case.
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+    ,-[src/lib/utils/granularity-utils.ts:78:24]
+ 77 |     case 1: {
+ 78 |       return cleanCode.substring(0, 1);
+    :                        ^^^^^^^^^
+ 79 |     }
+    `----
+  help: Replace `substring` with `slice`.
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+    ,-[src/lib/utils/granularity-utils.ts:81:24]
+ 80 |     case 2: {
+ 81 |       return cleanCode.substring(0, 2);
+    :                        ^^^^^^^^^
+ 82 |     }
+    `----
+  help: Replace `substring` with `slice`.
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+    ,-[src/lib/utils/granularity-utils.ts:84:24]
+ 83 |     case 3: {
+ 84 |       return cleanCode.substring(0, 3);
+    :                        ^^^^^^^^^
+ 85 |     }
+    `----
+  help: Replace `substring` with `slice`.
+
+  x eslint-plugin-unicorn(no-useless-switch-case): Useless case in switch statement.
+     ,-[src/components/postal-codes/address-autocomplete-enhanced.tsx:225:9]
+ 224 |         }
+ 225 |         case "5digit":
+     :         ^^^^^^^^^^^^^^
+ 226 |         default: {
+     `----
+  help: Consider removing this case or removing the `default` case.
+
+  x eslint-plugin-unicorn(prefer-logical-operator-over-ternary): Prefer using a logical operator over a ternary.
+     ,-[src/components/postal-codes/address-autocomplete-enhanced.tsx:393:16]
+ 392 |                 <span className="truncate block w-full text-left">
+ 393 | ,->               {query
+ 394 | |                   ? query
+ 395 | `->                 : "PLZ, Adresse, Stadt oder Region suchen... (DE/EN)"}
+ 396 |                 </span>
+     `----
+  help: Switch to "||" or "??" operator
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+     ,-[src/components/postal-codes/address-autocomplete-enhanced.tsx:217:28]
+ 216 |         case "1digit": {
+ 217 |           return cleanCode.substring(0, 1);
+     :                            ^^^^^^^^^
+ 218 |         }
+     `----
+  help: Replace `substring` with `slice`.
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+     ,-[src/components/postal-codes/address-autocomplete-enhanced.tsx:220:28]
+ 219 |         case "2digit": {
+ 220 |           return cleanCode.substring(0, 2);
+     :                            ^^^^^^^^^
+ 221 |         }
+     `----
+  help: Replace `substring` with `slice`.
+
+  x eslint-plugin-unicorn(prefer-string-slice): Prefer String#slice() over String#substring()
+     ,-[src/components/postal-codes/address-autocomplete-enhanced.tsx:223:28]
+ 222 |         case "3digit": {
+ 223 |           return cleanCode.substring(0, 3);
+     :                            ^^^^^^^^^
+ 224 |         }
+     `----
+  help: Replace `substring` with `slice`.
+
+  x eslint-plugin-react(button-has-type): `button` elements must have an explicit `type` attribute.
+    ,-[src/components/ui/error-boundary.tsx:28:8]
+ 27 |     <AlertError message={errorMessage}>
+ 28 |       <button
+    :        ^^^^^^
+ 29 |         onClick={resetErrorBoundary}
+    `----
+  help: Add a `type` attribute to the `button` element.
+
+  x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
+     ,-[src/app/actions/bulk-import-actions.ts:68:30]
+  67 |             // Process this layer in its own transaction
+  68 | ,->         await db.transaction(async (tx) => {
+  69 | |             if (existingLayer) {
+  70 | |               // Update existing layer
+  71 | |               layerId = existingLayer.id;
+  72 | |   
+  73 | |               // Get current postal codes
+  74 | |               const currentCodes = new Set(
+  75 | |                 existingLayer.postalCodes?.map((pc) => pc.postalCode) || []
+  76 | |               );
+  77 | |   
+  78 | |               // Find new codes that don't exist in this layer yet
+  79 | |               const newCodes = uniquePostalCodes.filter(
+  80 | |                 (code) => !currentCodes.has(code)
+  81 | |               );
+  82 | |   
+  83 | |               if (newCodes.length > 0) {
+  84 | |                 // Insert only the new postal codes in batches
+  85 | |                 for (let i = 0; i < newCodes.length; i += BATCH_SIZE) {
+  86 | |                   const batch = newCodes.slice(i, i + BATCH_SIZE);
+  87 | |                   await tx.insert(areaLayerPostalCodes).values(
+  88 | |                     batch.map((code) => ({
+  89 | |                       layerId,
+  90 | |                       postalCode: code,
+  91 | |                     }))
+  92 | |                   );
+  93 | |                 }
+  94 | |   
+  95 | |                 totalPostalCodes += newCodes.length;
+  96 | |   
+  97 | |                 // Record change
+  98 | |                 await recordChangeAction(areaId, {
+  99 | |                   changeType: "add_postal_codes",
+ 100 | |                   entityType: "postal_code",
+ 101 | |                   entityId: layerId,
+ 102 | |                   changeData: {
+ 103 | |                     postalCodes: newCodes,
+ 104 | |                     layerId,
+ 105 | |                     source: "bulk_import",
+ 106 | |                   },
+ 107 | |                   previousData: {
+ 108 | |                     postalCodes: [...currentCodes],
+ 109 | |                   },
+ 110 | |                   createdBy,
+ 111 | |                 });
+ 112 | |               }
+ 113 | |   
+ 114 | |               updatedLayers++;
+ 115 | |             } else {
+ 116 | |               // Create new layer
+ 117 | |               const [newLayer] = await tx
+ 118 | |                 .insert(areaLayers)
+ 119 | |                 .values({
+ 120 | |                   areaId,
+ 121 | |                   name: layerData.name,
+ 122 | |                   color: generateLayerColor(createdLayers + updatedLayers),
+ 123 | |                   opacity: 70,
+ 124 | |                   isVisible: "true",
+ 125 | |                   orderIndex: existingLayers.length + createdLayers,
+ 126 | |                 })
+ 127 | |                 .returning();
+ 128 | |   
+ 129 | |               layerId = newLayer.id;
+ 130 | |   
+ 131 | |               // Insert postal codes in batches
+ 132 | |               for (let i = 0; i < uniquePostalCodes.length; i += BATCH_SIZE) {
+ 133 | |                 const batch = uniquePostalCodes.slice(i, i + BATCH_SIZE);
+ 134 | |                 await tx.insert(areaLayerPostalCodes).values(
+ 135 | |                   batch.map((code) => ({
+ 136 | |                     layerId,
+ 137 | |                     postalCode: code,
+ 138 | |                   }))
+ 139 | |                 );
+ 140 | |               }
+ 141 | |   
+ 142 | |               totalPostalCodes += uniquePostalCodes.length;
+ 143 | |   
+ 144 | |               // Record change
+ 145 | |               await recordChangeAction(areaId, {
+ 146 | |                 changeType: "create_layer",
+ 147 | |                 entityType: "layer",
+ 148 | |                 entityId: layerId,
+ 149 | |                 changeData: {
+ 150 | |                   layer: {
+ 151 | |                     areaId,
+ 152 | |                     name: layerData.name,
+ 153 | |                     color: newLayer.color,
+ 154 | |                     opacity: newLayer.opacity,
+ 155 | |                     isVisible: newLayer.isVisible,
+ 156 | |                     orderIndex: newLayer.orderIndex,
+ 157 | |                   },
+ 158 | |                   postalCodes: uniquePostalCodes,
+ 159 | |                   source: "bulk_import",
+ 160 | |                 },
+ 161 | |                 createdBy,
+ 162 | |               });
+ 163 | |   
+ 164 | |               createdLayers++;
+ 165 | |   
+ 166 | |               // Update the map with the new layer
+ 167 | |               existingLayerMap.set(layerNameLower, {
+ 168 | |                 ...newLayer,
+ 169 | |                 postalCodes: uniquePostalCodes.map((code) => ({
+ 170 | |                   id: 0,
+ 171 | |                   layerId: newLayer.id,
+ 172 | |                   postalCode: code,
+ 173 | |                   createdAt: new Date().toISOString(),
+ 174 | |                 })),
+ 175 | |               });
+ 176 | |             }
+ 177 | `->         });
+ 178 |     
+     `----
+  help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
+
+  x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
+    ,-[src/app/actions/bulk-import-actions.ts:88:29]
+ 87 |                     await tx.insert(areaLayerPostalCodes).values(
+ 88 | ,->                   batch.map((code) => ({
+ 89 | |                       layerId,
+ 90 | |                       postalCode: code,
+ 91 | `->                   }))
+ 92 |                     );
+    `----
+  help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
+
+  x eslint(no-loop-func): Function declared in a loop contains unsafe references to variable(s)
+     ,-[src/app/actions/bulk-import-actions.ts:135:27]
+ 134 |                   await tx.insert(areaLayerPostalCodes).values(
+ 135 | ,->                 batch.map((code) => ({
+ 136 | |                     layerId,
+ 137 | |                     postalCode: code,
+ 138 | `->                 }))
+ 139 |                   );
+     `----
+  help: Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.
+
+  x eslint-plugin-unicorn(prefer-logical-operator-over-ternary): Prefer using a logical operator over a ternary.
+     ,-[src/components/areas/enhanced-version-history-dialog.tsx:142:15]
+ 141 |             throw new Error(
+ 142 |               data.error ? data.error : "Failed to restore version"
+     :               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 143 |             );
+     `----
+  help: Switch to "||" or "??" operator
+
+  x eslint-plugin-unicorn(no-unnecessary-array-flat-depth): Passing `1` as the `depth` argument is unnecessary.
+     ,-[src/components/shared/map-utils.ts:113:37]
+ 112 |       Array.isArray(poly.geometry.coordinates)
+ 113 |         ? poly.geometry.coordinates.flat(1)
+     :                                     ^^^^
+ 114 |         : []
+     `----
+  help: Remove the argument
+
+  x eslint-plugin-react(button-has-type): `button` elements must have an explicit `type` attribute.
+     ,-[src/components/areas/nav-areas.tsx:198:14]
+ 197 |             <span>Gebiete</span>
+ 198 |             <button
+     :              ^^^^^^
+ 199 |               onClick={() => setCreateDialogOpen(true)}
+     `----
+  help: Add a `type` attribute to the `button` element.
+
+  x eslint-plugin-react(button-has-type): `button` elements must have an explicit `type` attribute.
+     ,-[src/components/ui/sidebar.tsx:285:6]
+ 284 |   return (
+ 285 |     <button
+     :      ^^^^^^
+ 286 |       data-sidebar="rail"
+     `----
+  help: Add a `type` attribute to the `button` element.
+
+  x eslint(no-unneeded-ternary): Unnecessary use of boolean literals in conditional expression
+     ,-[src/components/shared/drawing-tools.tsx:350:48]
+ 349 | 
+ 350 |   const [layersOpen, setLayersOpen] = useState(areaId ? true : false);
+     :                                                ^^^^^^^^^^^^^^^^^^^^^
+ 351 | 
+     `----
+  help: Remove this ternary operator
+
+  x eslint-plugin-react(button-has-type): `button` elements must have an explicit `type` attribute.
+      ,-[src/components/shared/drawing-tools.tsx:1092:38]
+ 1091 |                                   {DEFAULT_COLORS.map((color) => (
+ 1092 |                                     <button
+      :                                      ^^^^^^
+ 1093 |                                       key={color}
+      `----
+  help: Add a `type` attribute to the `button` element.
+
+  x typescript-eslint(prefer-for-of): Expected a `for-of` loop instead of a `for` loop with this simple iteration.
+    ,-[src/lib/hooks/use-file-import.ts:75:12]
+ 74 | 
+ 75 |       for (let i = 0; i < files.length; i++) {
+    :            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 76 |         const result = await processFile(files[i]);
+    `----
+  help: Consider using a for-of loop for this simple iteration.
+
+  x eslint-plugin-unicorn(prefer-add-event-listener): Prefer `addEventListener()` over their `on`-function counterparts.
+    ,-[src/lib/hooks/use-file-import.ts:98:12]
+ 97 | 
+ 98 |     reader.onload = (event) => {
+    :            ^^^^^^
+ 99 |       if (event.target?.result) {
+    `----
+
+  x eslint-plugin-unicorn(prefer-add-event-listener): Prefer `addEventListener()` over their `on`-function counterparts.
+     ,-[src/lib/hooks/use-file-import.ts:106:12]
+ 105 | 
+ 106 |     reader.onerror = () => {
+     :            ^^^^^^^
+ 107 |       reject(new Error("Fehler beim Lesen der Datei"));
+     `----
+
+  x eslint(curly): Expected { after 'if' condition.
+     ,-[src/lib/hooks/use-map-layers.ts:463:17]
+ 462 |   useEffect(() => () => {
+ 463 |       if (!map) return;
+     :                 ^^^^^^^
+ 464 | 
+     `----
+  help: Replace `return;` with `{return;}`.
+
+  x eslint(no-warning-comments): Unexpected 'todo' comment: TODO: Implement enhanced search with...
+      ,-[src/app/actions/area-actions.ts:1118:5]
+ 1117 | 
+ 1118 |     // TODO: Implement enhanced search with multiple variants
+      :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1119 | 
+      `----
+  help: Remove or rephrase this comment
+
+  x eslint(no-warning-comments): Unexpected 'todo' comment: TODO: implement variants
+      ,-[src/app/actions/area-actions.ts:1185:34]
+ 1184 | 
+ 1185 |           variantsUsed: [query], // TODO: implement variants
+      :                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1186 | 
+      `----
+  help: Remove or rephrase this comment
+
+  x eslint(prefer-template): Unexpected string concatenation.
+      ,-[src/app/actions/area-actions.ts:1020:7]
+ 1019 |         const nominatimUrl =
+ 1020 | ,->       `https://nominatim.openstreetmap.org/search?` +
+ 1021 | |         new URLSearchParams({
+ 1022 | |           format: "json",
+ 1023 | |   
+ 1024 | |           q: address,
+ 1025 | |   
+ 1026 | |           addressdetails: "1",
+ 1027 | |   
+ 1028 | |           limit: "1",
+ 1029 | |   
+ 1030 | |           countrycodes: "de",
+ 1031 | |   
+ 1032 | |           "accept-language": "de,en",
+ 1033 | `->       });
+ 1034 |     
+      `----
+  help: Use template literals instead of string concatenation.
+
+  x eslint(prefer-template): Unexpected string concatenation.
+      ,-[src/app/actions/area-actions.ts:1121:7]
+ 1120 |         const nominatimUrl =
+ 1121 | ,->       `https://nominatim.openstreetmap.org/search?` +
+ 1122 | |         new URLSearchParams({
+ 1123 | |           format: "json",
+ 1124 | |   
+ 1125 | |           q: query,
+ 1126 | |   
+ 1127 | |           addressdetails: "1",
+ 1128 | |   
+ 1129 | |           limit: limit.toString(),
+ 1130 | |   
+ 1131 | |           countrycodes: "de",
+ 1132 | |   
+ 1133 | |           "accept-language": "de,en",
+ 1134 | `->       });
+ 1135 |     
+      `----
+  help: Use template literals instead of string concatenation.
+
+  x eslint(prefer-template): Unexpected string concatenation.
+      ,-[src/app/actions/area-actions.ts:1351:7]
+ 1350 |         const nominatimUrl =
+ 1351 | ,->       `https://nominatim.openstreetmap.org/search?` +
+ 1352 | |         new URLSearchParams({
+ 1353 | |           format: "geojson",
+ 1354 | |   
+ 1355 | |           q: areaName,
+ 1356 | |   
+ 1357 | |           polygon_geojson: "1",
+ 1358 | |   
+ 1359 | |           addressdetails: "1",
+ 1360 | |   
+ 1361 | |           limit: "5",
+ 1362 | |   
+ 1363 | |           countrycodes: "de",
+ 1364 | |   
+ 1365 | |           "accept-language": "de,en",
+ 1366 | `->       });
+ 1367 |     
+      `----
+  help: Use template literals instead of string concatenation.
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/types/base-map.ts:20:51]
+ 19 | export interface BaseMapProps {
+ 20 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 21 |   layerId: string;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/types/base-map.ts:27:5]
+ 26 |     Polygon | MultiPolygon,
+ 27 |     GeoJsonProperties
+    :     ^^^^^^^^^^^^^^^^^
+ 28 |   > | null;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/types/base-map.ts:77:62]
+ 76 |   onGranularityChange?: (granularity: string) => void;
+ 77 |   postalCodesData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                              ^^^^^^^^^^^^^^^^^
+ 78 | }
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/utils/postal-code-parser.ts:79:60]
+ 78 |   parsedCodes: ParsedPostalCode[],
+ 79 |   availableData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>,
+    :                                                            ^^^^^^^^^^^^^^^^^
+ 80 |   targetGranularity: string
+    `----
+
+  x typescript-eslint(prefer-reduce-type-parameter): Unnecessary assertion: Array#reduce accepts a type parameter for the default value.
+     ,-[src/lib/utils/postal-code-parser.ts:185:5]
+ 184 |     },
+ 185 |     {} as Record<string, PostalCodeMatch>
+     :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 186 |   );
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/lib/utils/postal-code-parser.ts:379:60]
+ 378 |   locationName: string,
+ 379 |   availableData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+     :                                                            ^^^^^^^^^^^^^^^^^
+ 380 | ): string[] {
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/lib/utils/postal-code-parser.ts:424:60]
+ 423 |   input: string,
+ 424 |   availableData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>,
+     :                                                            ^^^^^^^^^^^^^^^^^
+ 425 |   targetGranularity: string
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/utils/map-data.ts:42:44]
+ 41 | export function getLargestPolygonCentroid(
+ 42 |   feature: Feature<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                            ^^^^^^^^^^^^^^^^^
+ 43 | ) {
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/utils/map-data.ts:88:46]
+ 87 |       const coords = getLargestPolygonCentroid(
+ 88 |         f as Feature<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                              ^^^^^^^^^^^^^^^^^
+ 89 |       );
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/utils/postal-codes-data.ts:27:54]
+ 26 |   granularity: string
+ 27 | ): Promise<FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>> {
+    :                                                      ^^^^^^^^^^^^^^^^^
+ 28 |   try {
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/utils/states-data.ts:25:45]
+ 24 | async function _getStatesData(): Promise<
+ 25 |   FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                             ^^^^^^^^^^^^^^^^^
+ 26 | > {
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/utils/states-data.ts:59:3]
+ 58 |   Polygon | MultiPolygon,
+ 59 |   GeoJsonProperties
+    :   ^^^^^^^^^^^^^^^^^
+ 60 | > | null> {
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/utils/postal-codes-data.ts:62:3]
+ 61 |   Polygon | MultiPolygon,
+ 62 |   GeoJsonProperties
+    :   ^^^^^^^^^^^^^^^^^
+ 63 | > | null> {
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-postal-code-lookup.ts:24:51]
+ 23 | interface UsePostalCodeLookupOptions {
+ 24 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 25 | 
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-postal-code-search.ts:14:51]
+ 13 | interface PostalCodeSearchProps {
+ 14 |   data: FeatureCollection<MultiPolygon | Polygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 15 | }
+    `----
+
+  x typescript-eslint(restrict-plus-operands): Invalid operand of type 'RegExp' for a '+' operation.
+      ,-[src/app/actions/area-actions.ts:1021:7]
+ 1020 |           `https://nominatim.openstreetmap.org/search?` +
+ 1021 | ,->       new URLSearchParams({
+ 1022 | |           format: "json",
+ 1023 | |   
+ 1024 | |           q: address,
+ 1025 | |   
+ 1026 | |           addressdetails: "1",
+ 1027 | |   
+ 1028 | |           limit: "1",
+ 1029 | |   
+ 1030 | |           countrycodes: "de",
+ 1031 | |   
+ 1032 | |           "accept-language": "de,en",
+ 1033 | `->       });
+ 1034 |     
+      `----
+  help: Operands must each be a number or string, allowing a string + any of: `any`, `boolean`, `null`, `RegExp`, `undefined`.
+
+  x typescript-eslint(restrict-plus-operands): Invalid operand of type 'RegExp' for a '+' operation.
+      ,-[src/app/actions/area-actions.ts:1122:7]
+ 1121 |           `https://nominatim.openstreetmap.org/search?` +
+ 1122 | ,->       new URLSearchParams({
+ 1123 | |           format: "json",
+ 1124 | |   
+ 1125 | |           q: query,
+ 1126 | |   
+ 1127 | |           addressdetails: "1",
+ 1128 | |   
+ 1129 | |           limit: limit.toString(),
+ 1130 | |   
+ 1131 | |           countrycodes: "de",
+ 1132 | |   
+ 1133 | |           "accept-language": "de,en",
+ 1134 | `->       });
+ 1135 |     
+      `----
+  help: Operands must each be a number or string, allowing a string + any of: `any`, `boolean`, `null`, `RegExp`, `undefined`.
+
+  x typescript-eslint(restrict-plus-operands): Invalid operand of type 'RegExp' for a '+' operation.
+      ,-[src/app/actions/area-actions.ts:1352:7]
+ 1351 |           `https://nominatim.openstreetmap.org/search?` +
+ 1352 | ,->       new URLSearchParams({
+ 1353 | |           format: "geojson",
+ 1354 | |   
+ 1355 | |           q: areaName,
+ 1356 | |   
+ 1357 | |           polygon_geojson: "1",
+ 1358 | |   
+ 1359 | |           addressdetails: "1",
+ 1360 | |   
+ 1361 | |           limit: "5",
+ 1362 | |   
+ 1363 | |           countrycodes: "de",
+ 1364 | |   
+ 1365 | |           "accept-language": "de,en",
+ 1366 | `->       });
+ 1367 |     
+      `----
+  help: Operands must each be a number or string, allowing a string + any of: `any`, `boolean`, `null`, `RegExp`, `undefined`.
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/shared/hooks/use-feature-selection.ts:32:51]
+ 31 | export function useFindFeaturesInPolygon(
+ 32 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 33 | ) {
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-terradraw-selection.ts:23:51]
+ 22 |   mapRef: RefObject<MapLibreMap | null>;
+ 23 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 24 | }
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/shared/hooks/use-feature-selection.ts:47:52]
+ 46 |       const centroid = getLargestPolygonCentroid(
+ 47 |         feature as Feature<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                                    ^^^^^^^^^^^^^^^^^
+ 48 |       );
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/shared/hooks/use-feature-selection.ts:68:51]
+ 67 | export function useFindFeaturesInCircle(
+ 68 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 69 | ) {
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/shared/hooks/use-feature-selection.ts:83:54]
+ 82 |         const centroid = getLargestPolygonCentroid(
+ 83 |           feature as Feature<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                                      ^^^^^^^^^^^^^^^^^
+ 84 |         );
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-interactions.ts:27:51]
+ 26 | 
+ 27 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 28 | 
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-layers.ts:26:51]
+ 25 |   layerId: string;
+ 26 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 27 |   statesData?: FeatureCollection<
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-layers.ts:29:5]
+ 28 |     Polygon | MultiPolygon,
+ 29 |     GeoJsonProperties
+    :     ^^^^^^^^^^^^^^^^^
+ 30 |   > | null;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-layers.ts:34:5]
+ 33 |     Polygon | MultiPolygon,
+ 34 |     GeoJsonProperties
+    :     ^^^^^^^^^^^^^^^^^
+ 35 |   >;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-layers.ts:37:53]
+ 36 |   getLabelPoints: (
+ 37 |     data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                                     ^^^^^^^^^^^^^^^^^
+ 38 |   ) => FeatureCollection<Geometry, GeoJsonProperties>;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-layers.ts:38:36]
+ 37 |     data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+ 38 |   ) => FeatureCollection<Geometry, GeoJsonProperties>;
+    :                                    ^^^^^^^^^^^^^^^^^
+ 39 |   layers?: Layer[];
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-optimizations.ts:16:51]
+ 15 | interface UseMapOptimizationsProps {
+ 16 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 17 |   statesData?: FeatureCollection<
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-optimizations.ts:19:5]
+ 18 |     Polygon | MultiPolygon,
+ 19 |     GeoJsonProperties
+    :     ^^^^^^^^^^^^^^^^^
+ 20 |   > | null;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-optimizations.ts:36:55]
+ 35 |       type: "FeatureCollection" as const,
+ 36 |       features: [] as Feature<Polygon | MultiPolygon, GeoJsonProperties>[],
+    :                                                       ^^^^^^^^^^^^^^^^^
+ 37 |     }), []);
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-optimizations.ts:42:7]
+ 41 |       Geometry,
+ 42 |       GeoJsonProperties
+    :       ^^^^^^^^^^^^^^^^^
+ 43 |     >, [data]);
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-optimizations.ts:49:11]
+ 48 |           Geometry,
+ 49 |           GeoJsonProperties
+    :           ^^^^^^^^^^^^^^^^^
+ 50 |         >)
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/lib/hooks/use-map-optimizations.ts:111:51]
+ 110 |   const getLabelPoints = useStableCallback(
+ 111 |     (d: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>) => makeLabelPoints(d) as FeatureCollection<
+     :                                                   ^^^^^^^^^^^^^^^^^
+ 112 |         Geometry,
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/lib/hooks/use-map-optimizations.ts:113:9]
+ 112 |         Geometry,
+ 113 |         GeoJsonProperties
+     :         ^^^^^^^^^^^^^^^^^
+ 114 |       >
+     `----
+
+  x typescript-eslint(return-await): Returning an awaited value that is not a promise is not allowed.
+    ,-[src/lib/hooks/use-version-history.ts:40:11]
+ 39 |           createdBy?: string;
+ 40 | ,->     }) => await toast.promise(
+ 41 | |           (async () => {
+ 42 | |             const result = await createVersionAction(areaId, data);
+ 43 | |             if (result.success && result.data) {
+ 44 | |               return result.data;
+ 45 | |             }
+ 46 | |             throw new Error(result.error || "Failed to create version");
+ 47 | |           })(),
+ 48 | |           {
+ 49 | |             loading: "Erstelle Version...",
+ 50 | |             success: (data) =>
+ 51 | |               `Version ${data.versionNumber} erfolgreich erstellt`,
+ 52 | |             error: (err) =>
+ 53 | |               `Fehler beim Erstellen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
+ 54 | |           }
+ 55 | `->       ),
+ 56 |         [areaId]
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/components/shared/drawing-tools.tsx:116:5]
+ 115 |     Polygon | MultiPolygon,
+ 116 |     GeoJsonProperties
+     :     ^^^^^^^^^^^^^^^^^
+ 117 |   >;
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/components/shared/drawing-tools.tsx:187:5]
+ 186 |     Polygon | MultiPolygon,
+ 187 |     GeoJsonProperties
+     :     ^^^^^^^^^^^^^^^^^
+ 188 |   >,
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/lib/hooks/use-map-layers.ts:521:49]
+ 520 |       number,
+ 521 |       FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+     :                                                 ^^^^^^^^^^^^^^^^^
+ 522 |     >();
+     `----
+
+  x typescript-eslint(switch-exhaustiveness-check): Switch is not exhaustive. Cases not matched: null | "linestring" | "point"
+     ,-[src/components/shared/floating-drawing-toolbar.tsx:127:13]
+ 126 |   ): string | null => {
+ 127 |     switch (mode) {
+     :             ^^^^
+ 128 |       case "cursor": {
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/postal-codes/postal-codes-map.tsx:26:51]
+ 25 | interface PostalCodesMapProps {
+ 26 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 27 |   statesData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/postal-codes/postal-codes-map.tsx:27:57]
+ 26 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+ 27 |   statesData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                         ^^^^^^^^^^^^^^^^^
+ 28 |   onSearch?: (plz: string) => void;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/postal-codes/postal-code-import-dialog.tsx:49:51]
+ 48 |   onOpenChange: (open: boolean) => void;
+ 49 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 50 |   granularity: string;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/postal-codes/postal-codes-view-client-layers.tsx:88:47]
+ 87 |   postalCodesDataPromise: Promise<
+ 88 |     FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                               ^^^^^^^^^^^^^^^^^
+ 89 |   >;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/postal-codes/postal-codes-view-client-layers.tsx:91:47]
+ 90 |   statesDataPromise: Promise<
+ 91 |     FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>
+    :                                               ^^^^^^^^^^^^^^^^^
+ 92 |   >;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/components/postal-codes/postal-codes-view-client-layers.tsx:137:56]
+ 136 |   const [data] =
+ 137 |     useState<FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>>(
+     :                                                        ^^^^^^^^^^^^^^^^^
+ 138 |       initialData
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-lasso-selection.ts:14:51]
+ 13 |   isMapLoaded: boolean;
+ 14 |   data: FeatureCollection<MultiPolygon | Polygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 15 |   granularity: string;
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-business-logic.ts:10:51]
+  9 | interface UseMapBusinessLogicProps {
+ 10 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 11 |   selectedRegions: string[];
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-map-selected-features-source.ts:15:51]
+ 14 |   layerId: string;
+ 15 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 16 |   selectedRegions: string[];
+    `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/lib/hooks/use-postal-code-bulk-import.ts:16:51]
+ 15 | interface PostalCodeBulkImportProps {
+ 16 |   data: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
+    :                                                   ^^^^^^^^^^^^^^^^^
+ 17 |   granularity: string;
+    `----
+
+  x typescript-eslint(prefer-promise-reject-errors): Expected the Promise rejection reason to be an Error.
+     ,-[src/lib/contexts/optimistic-context.tsx:258:13]
+ 257 |           } catch (error) {
+ 258 |             reject(error);
+     :             ^^^^^^^^^^^^^
+ 259 |           }
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+     ,-[src/components/ui/chart.tsx:139:61]
+ 138 |   } & Omit<
+ 139 |     RechartsPrimitive.DefaultTooltipContentProps<ValueType, NameType>,
+     :                                                             ^^^^^^^^
+ 140 |     "accessibilityLayer"
+     `----
+
+  x typescript-eslint(no-unnecessary-type-arguments): This is the default value for this type parameter, so it can be omitted.
+    ,-[src/components/shared/map-utils.ts:81:62]
+ 80 | export function findHoles(
+ 81 |   postalCodesData: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>,
+    :                                                              ^^^^^^^^^^^^^^^^^
+ 82 |   selectedCodes: Set<string>
+    `----
+
+Found 0 warnings and 96 errors.
+Finished in 1.7s on 165 files with 255 rules using 20 threads.
+error: script "lint" exited with code 1

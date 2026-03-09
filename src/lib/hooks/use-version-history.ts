@@ -37,8 +37,7 @@ export function useVersionHistory(areaId: number) {
       description?: string;
       changesSummary?: string;
       createdBy?: string;
-    }) => {
-      return await toast.promise(
+    }) => await toast.promise(
         (async () => {
           const result = await createVersionAction(areaId, data);
           if (result.success && result.data) {
@@ -53,8 +52,7 @@ export function useVersionHistory(areaId: number) {
           error: (err) =>
             `Fehler beim Erstellen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
         }
-      );
-    },
+      ),
     [areaId]
   );
 

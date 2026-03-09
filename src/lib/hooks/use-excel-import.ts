@@ -1,17 +1,7 @@
 import { useState, useCallback } from "react";
 
-import {
-  parseSpreadsheetFile,
-  autoDetectColumns,
-  processImportRows,
-  groupByLayer,
-  getImportStats,
-  type ParsedFileData,
-  type ColumnMapping,
-  type ProcessedImportRow,
-  type LayerGroup,
-  type ImportStats,
-} from "../utils/excel-parser";
+import { parseSpreadsheetFile, autoDetectColumns, processImportRows, groupByLayer, getImportStats } from '../utils/excel-parser';
+import type { ParsedFileData, ColumnMapping, ProcessedImportRow, LayerGroup, ImportStats } from '../utils/excel-parser';
 import { useStableCallback } from "./use-stable-callback";
 
 export interface ExcelImportState {
@@ -117,7 +107,7 @@ export function useExcelImport() {
 
   const toggleHeaders = useStableCallback(() => {
     setState((prev) => {
-      if (!prev.fileData) return prev;
+      if (!prev.fileData) {return prev;}
 
       // Re-parse with toggled header detection
       // This is a simplified version - in production you might want to re-parse the file

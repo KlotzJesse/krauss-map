@@ -88,12 +88,12 @@ export async function updateLayerAction(
     await db.transaction(async (tx) => {
       // Update layer properties
       const updates: Record<string, string | number> = {};
-      if (data.name !== undefined) updates.name = data.name;
-      if (data.color !== undefined) updates.color = data.color;
-      if (data.opacity !== undefined) updates.opacity = data.opacity;
+      if (data.name !== undefined) {updates.name = data.name;}
+      if (data.color !== undefined) {updates.color = data.color;}
+      if (data.opacity !== undefined) {updates.opacity = data.opacity;}
       if (data.isVisible !== undefined)
-        updates.isVisible = String(data.isVisible);
-      if (data.orderIndex !== undefined) updates.orderIndex = data.orderIndex;
+        {updates.isVisible = String(data.isVisible);}
+      if (data.orderIndex !== undefined) {updates.orderIndex = data.orderIndex;}
 
       if (Object.keys(updates).length > 0) {
         await tx
@@ -263,7 +263,7 @@ export async function addPostalCodesToLayerAction(
       return { success: true }; // No new codes to add
     }
 
-    const newCodes = Array.from(new Set([...existingCodes, ...postalCodes]));
+    const newCodes = [...new Set([...existingCodes, ...postalCodes])];
 
     // Update with combined postal codes
     await db.transaction(async (tx) => {

@@ -66,19 +66,17 @@ export function PostalCodeImportDialog({
 
   // Parse and validate input
   const parsedCodes = useMemo(() => {
-    if (!textInput.trim()) return [];
+    if (!textInput.trim()) {return [];}
     return parsePostalCodeInput(textInput);
   }, [textInput]);
 
   // Find matches based on current granularity
   const matches = useMemo(() => {
-    if (parsedCodes.length === 0) return [];
+    if (parsedCodes.length === 0) {return [];}
     return findPostalCodeMatches(parsedCodes, data, granularity);
   }, [parsedCodes, data, granularity]);
 
-  const groupedMatches = useMemo(() => {
-    return groupMatchesByPattern(matches);
-  }, [matches]);
+  const groupedMatches = useMemo(() => groupMatchesByPattern(matches), [matches]);
 
   // Statistics
   const stats = useMemo(() => {

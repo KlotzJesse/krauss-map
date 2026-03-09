@@ -42,7 +42,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { type Area } from "@/lib/types/area-types";
+import type { Area } from "@/lib/types/area-types";
 
 import { CreateAreaDialog } from "./create-area-dialog";
 
@@ -100,9 +100,7 @@ export function NavAreas({
     }
   };
 
-  const getAreaUrl = (area: Area) => {
-    return `/postal-codes/${area.id}`;
-  };
+  const getAreaUrl = (area: Area) => `/postal-codes/${area.id}`;
 
   const _handleAreaDoubleClick = (area: Area, e: React.MouseEvent) => {
     e.preventDefault();
@@ -169,7 +167,7 @@ export function NavAreas({
   };
 
   const handleConfirmDelete = async () => {
-    if (!areaToDelete) return;
+    if (!areaToDelete) {return;}
 
     setIsDeleting(true);
 
@@ -178,19 +176,16 @@ export function NavAreas({
       updateOptimisticAreas({ type: "delete", id: areaToDelete.id });
       const areaName = areaToDelete.name;
 
-      try {
-        // Server action now handles redirect
-        await toast.promise(deleteAreaAction(areaToDelete.id), {
-          loading: `Lösche "${areaName}"...`,
-          success: `"${areaName}" gelöscht`,
-          error: "Löschen fehlgeschlagen",
-        });
-        // If successful, the server will redirect automatically
-        setDeleteDialogOpen(false);
-        setAreaToDelete(null);
-      } finally {
-        setIsDeleting(false);
-      }
+      // Server action now handles redirect
+      await toast.promise(deleteAreaAction(areaToDelete.id), {
+        loading: `Lösche "${areaName}"...`,
+        success: `"${areaName}" gelöscht`,
+        error: "Löschen fehlgeschlagen",
+      });
+      // If successful, the server will redirect automatically
+      setDeleteDialogOpen(false);
+      setAreaToDelete(null);
+      setIsDeleting(false);
     });
   };
 

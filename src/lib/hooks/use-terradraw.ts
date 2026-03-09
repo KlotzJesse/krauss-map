@@ -1,18 +1,8 @@
 import type { Map as MapLibre } from "maplibre-gl";
-import { useEffect, useRef, type RefObject } from "react";
-import {
-  TerraDraw,
-  TerraDrawAngledRectangleMode,
-  TerraDrawCircleMode,
-  TerraDrawFreehandMode,
-  TerraDrawLineStringMode,
-  TerraDrawPointMode,
-  TerraDrawPolygonMode,
-  TerraDrawRectangleMode,
-  TerraDrawSectorMode,
-  TerraDrawSelectMode,
-  type GeoJSONStoreFeatures,
-} from "terra-draw";
+import { useEffect, useRef } from 'react';
+import type { RefObject } from 'react';
+import { TerraDraw, TerraDrawAngledRectangleMode, TerraDrawCircleMode, TerraDrawFreehandMode, TerraDrawLineStringMode, TerraDrawPointMode, TerraDrawPolygonMode, TerraDrawRectangleMode, TerraDrawSectorMode, TerraDrawSelectMode } from 'terra-draw';
+import type { GeoJSONStoreFeatures } from 'terra-draw';
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
@@ -29,7 +19,7 @@ export type TerraDrawMode =
   | "angled-rectangle"; // Angled rectangle
 
 // Props for useTerraDraw hook
-export type UseTerraDrawProps = {
+export interface UseTerraDrawProps {
   mapRef: RefObject<MapLibre | null>; // Changed from map to mapRef
   isMapLoaded: boolean; // Added for better control
   isEnabled: boolean;
@@ -37,7 +27,7 @@ export type UseTerraDrawProps = {
   onSelectionChange?: (features: (string | number)[]) => void;
   onStart?: () => void;
   onStop?: () => void;
-};
+}
 
 // Invariant: All hooks must always be called, and dependency arrays must be stable.
 // This hook must always be called unconditionally in the component tree, even if map is not ready (pass null).
@@ -70,7 +60,7 @@ export function useTerraDraw({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !isMapLoaded || isInitializedRef.current) return;
+    if (!map || !isMapLoaded || isInitializedRef.current) {return;}
 
     try {
       // Create adapter with explicit configuration
@@ -132,7 +122,7 @@ export function useTerraDraw({
   }, [mapRef, isMapLoaded, stableOnSelectionChange]); // Include stableOnSelectionChange since it's used in the effect
 
   const clearAll = useStableCallback(() => {
-    if (!drawRef.current) return;
+    if (!drawRef.current) {return;}
 
     try {
       drawRef.current.clear();
@@ -142,32 +132,32 @@ export function useTerraDraw({
   });
 
   const getSnapshot = useStableCallback(() => {
-    if (!drawRef.current) return [];
+    if (!drawRef.current) {return [];}
     return drawRef.current.getSnapshot();
   });
 
   const addFeatures = useStableCallback((features: GeoJSONStoreFeatures[]) => {
-    if (!drawRef.current) return [];
+    if (!drawRef.current) {return [];}
     return drawRef.current.addFeatures(features);
   });
 
   const removeFeatures = useStableCallback((featureIds: string[]) => {
-    if (!drawRef.current) return;
+    if (!drawRef.current) {return;}
     drawRef.current.removeFeatures(featureIds);
   });
 
   const selectFeature = useStableCallback((featureId: string) => {
-    if (!drawRef.current) return;
+    if (!drawRef.current) {return;}
     drawRef.current.selectFeature(featureId);
   });
 
   const deselectFeature = useStableCallback((featureId: string) => {
-    if (!drawRef.current) return;
+    if (!drawRef.current) {return;}
     drawRef.current.deselectFeature(featureId);
   });
 
   const getModeState = useStableCallback(() => {
-    if (!drawRef.current) return null;
+    if (!drawRef.current) {return null;}
     return drawRef.current.getModeState();
   });
 

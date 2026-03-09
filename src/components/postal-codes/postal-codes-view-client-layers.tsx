@@ -153,8 +153,7 @@ export function PostalCodesViewClientWithLayers({
 
         postalCodes: string[];
       }
-    ) => {
-      return currentLayers.map((layer) => {
+    ) => currentLayers.map((layer) => {
         if (layer.id === update.layerId) {
           const currentCodes =
             layer.postalCodes?.map((pc) => pc.postalCode) || [];
@@ -177,8 +176,7 @@ export function PostalCodesViewClientWithLayers({
         }
 
         return layer;
-      });
-    }
+      })
   );
 
   // Optimistic state for undo/redo counts
@@ -349,7 +347,7 @@ export function PostalCodesViewClientWithLayers({
   );
 
   const handleGranularityChange = (newGranularity: string) => {
-    if (newGranularity === defaultGranularity) return;
+    if (newGranularity === defaultGranularity) {return;}
 
     // Granularity changes are now handled through the GranularitySelector component
 

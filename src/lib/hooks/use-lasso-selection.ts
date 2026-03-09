@@ -8,7 +8,7 @@ import type { GeoJSONFeature, Map as MapLibre } from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 // Fixed: define LassoSelectionProps as a type
-type LassoSelectionProps = {
+interface LassoSelectionProps {
   map: MapLibre | null;
   isMapLoaded: boolean;
   data: FeatureCollection<MultiPolygon | Polygon, GeoJsonProperties>;
@@ -16,7 +16,7 @@ type LassoSelectionProps = {
   enabled: boolean;
   onRegionSelect?: (regionCode: string) => void;
   onRegionDeselect?: (regionCode: string) => void;
-};
+}
 
 export function useLassoSelection({
   map,
@@ -31,12 +31,12 @@ export function useLassoSelection({
   const lassoPoints = useRef<[number, number][]>([]);
 
   useEffect(() => {
-    if (!map || !isMapLoaded) return;
+    if (!map || !isMapLoaded) {return;}
 
     const canvas = map.getCanvas();
     const ctx = canvas.getContext("2d");
 
-    if (!ctx) return;
+    if (!ctx) {return;}
 
     // Disable map interactions when lasso mode is enabled
     if (enabled) {
@@ -56,7 +56,7 @@ export function useLassoSelection({
     }
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (!enabled) return;
+      if (!enabled) {return;}
 
       isDrawing.current = true;
       lassoPoints.current = [];
@@ -76,7 +76,7 @@ export function useLassoSelection({
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDrawing.current || !enabled) return;
+      if (!isDrawing.current || !enabled) {return;}
 
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -90,7 +90,7 @@ export function useLassoSelection({
     };
 
     const handleMouseUp = () => {
-      if (!isDrawing.current || !enabled) return;
+      if (!isDrawing.current || !enabled) {return;}
 
       isDrawing.current = false;
 
@@ -157,7 +157,7 @@ export function useLassoSelection({
 
     const isPointInLasso = (point: [number, number]): boolean => {
       // Simple point-in-polygon test using ray casting
-      if (lassoPoints.current.length < 3) return false;
+      if (lassoPoints.current.length < 3) {return false;}
 
       let inside = false;
       const [x, y] = point;

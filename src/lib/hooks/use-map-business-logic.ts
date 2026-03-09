@@ -74,20 +74,20 @@ export function useMapBusinessLogic({
         properties?: { code?: string };
         geometry: Polygon | MultiPolygon;
       } => {
-        if (typeof feature !== "object" || feature === null) return false;
+        if (typeof feature !== "object" || feature === null) {return false;}
         if (!("properties" in feature) || !("geometry" in feature))
-          return false;
+          {return false;}
 
         const featureObj = feature as Record<string, unknown>;
         if (
           typeof featureObj.properties !== "object" ||
           featureObj.properties === null
         )
-          return false;
+          {return false;}
 
         const properties = featureObj.properties as Record<string, unknown>;
         if (!("code" in properties) || typeof properties.code !== "string")
-          return false;
+          {return false;}
 
         const geometry = featureObj.geometry as Record<string, unknown>;
         return geometry.type === "Polygon" || geometry.type === "MultiPolygon";
@@ -98,8 +98,7 @@ export function useMapBusinessLogic({
   // Business logic: coordinate validation
   const validateCoordinates = useMemo(
     () =>
-      (coords: unknown): coords is [number, number] => {
-        return (
+      (coords: unknown): coords is [number, number] => (
           Array.isArray(coords) &&
           coords.length === 2 &&
           typeof coords[0] === "number" &&
@@ -110,22 +109,19 @@ export function useMapBusinessLogic({
           coords[0] <= 180 &&
           coords[1] >= -90 &&
           coords[1] <= 90
-        );
-      },
+        ),
     []
   );
 
   // Business logic: check if coordinates are geographic (vs screen/pixel)
   const isGeographicCoordinate = useMemo(
     () =>
-      (coord: [number, number]): boolean => {
-        return (
+      (coord: [number, number]): boolean => (
           coord[0] >= -180 &&
           coord[0] <= 180 &&
           coord[1] >= -90 &&
           coord[1] <= 90
-        );
-      },
+        ),
     []
   );
 
@@ -133,7 +129,7 @@ export function useMapBusinessLogic({
   const polygonRequirements = useMemo(
     () => ({
       minPoints: 3,
-      maxPoints: 10000, // Prevent memory issues with overly complex polygons
+      maxPoints: 10_000, // Prevent memory issues with overly complex polygons
       minArea: 0.0001, // Minimum area threshold in degrees
     }),
     []

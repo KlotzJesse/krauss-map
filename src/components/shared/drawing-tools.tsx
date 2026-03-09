@@ -418,7 +418,7 @@ function DrawingToolsImpl({
 
     orderIndex: number;
   }) => {
-    if (!areaId) return;
+    if (!areaId) {return;}
 
     const result = await createLayerAction(areaId, {
       name: data.name,
@@ -446,7 +446,7 @@ function DrawingToolsImpl({
 
     data: Record<string, unknown>
   ) => {
-    if (!areaId) return;
+    if (!areaId) {return;}
 
     const result = await updateLayerAction(areaId, layerId, data);
 
@@ -458,7 +458,7 @@ function DrawingToolsImpl({
   };
 
   const deleteLayer = async (layerId: number) => {
-    if (!areaId) return;
+    if (!areaId) {return;}
 
     const result = await deleteLayerAction(areaId, layerId);
 
@@ -678,7 +678,7 @@ function DrawingToolsImpl({
   const [isFilling, setIsFilling] = useState(false);
 
   const handleCreateLayer = async () => {
-    if (!newLayerName.trim()) return;
+    if (!newLayerName.trim()) {return;}
 
     setIsCreating(true);
 
@@ -703,28 +703,24 @@ function DrawingToolsImpl({
 
       setNewLayerName("");
 
-      try {
-        await toast.promise(
-          createLayer({
-            name: createdLayerName,
-            color: nextColor,
-            orderIndex: optimisticLayers.length,
-          }).then((result) => {
-            // Set the newly created layer as active
-            if (result?.id && onLayerSelect) {
+      await toast.promise(
+        createLayer({
+          name: createdLayerName,
+          color: nextColor,
+          orderIndex: optimisticLayers.length,
+        }),
+        {
+          loading: `Erstelle Gebiet "${createdLayerName}"...`,
+          success: (result) => {
+            if (result && result.id && onLayerSelect) {
               onLayerSelect(result.id);
             }
-            return result;
-          }),
-          {
-            loading: `Erstelle Gebiet "${createdLayerName}"...`,
-            success: `Gebiet "${createdLayerName}" erstellt`,
-            error: "Fehler beim Erstellen - Bitte erneut versuchen",
-          }
-        );
-      } finally {
-        setIsCreating(false);
-      }
+            return `Gebiet "${createdLayerName}" erstellt`;
+          },
+          error: "Fehler beim Erstellen - Bitte erneut versuchen",
+        }
+      );
+      setIsCreating(false);
     });
   };
 
@@ -752,7 +748,7 @@ function DrawingToolsImpl({
   };
 
   const confirmDeleteLayer = async () => {
-    if (!layerToDelete || !deleteLayer) return;
+    if (!layerToDelete || !deleteLayer) {return;}
 
     startTransition(async () => {
       // Optimistic update
@@ -1336,7 +1332,7 @@ function DrawingToolsImpl({
                       size="sm"
                       disabled={
                         isFilling ||
-                        !optimisticLayers.find((l) => l.id === activeLayerId)
+                        !optimisticLayers.some((l) => l.id === activeLayerId)
                       }
                       onClick={() => {
                         const activeLayer = optimisticLayers.find(

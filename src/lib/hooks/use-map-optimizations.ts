@@ -31,30 +31,24 @@ export function useMapOptimizations({
   statesData,
 }: UseMapOptimizationsProps) {
   // Empty feature collection for compatibility
-  const selectedFeatureCollection = useMemo(() => {
-    return {
+  const selectedFeatureCollection = useMemo(() => ({
       type: "FeatureCollection" as const,
       features: [] as Feature<Polygon | MultiPolygon, GeoJsonProperties>[],
-    };
-  }, []);
+    }), []);
 
   // Memoize label points computation (expensive operation)
-  const labelPoints = useMemo(() => {
-    return makeLabelPoints(data) as FeatureCollection<
+  const labelPoints = useMemo(() => makeLabelPoints(data) as FeatureCollection<
       Geometry,
       GeoJsonProperties
-    >;
-  }, [data]);
+    >, [data]);
 
   // Memoize states label points if available
-  const statesLabelPoints = useMemo(() => {
-    return statesData
+  const statesLabelPoints = useMemo(() => statesData
       ? (makeLabelPoints(statesData) as FeatureCollection<
           Geometry,
           GeoJsonProperties
         >)
-      : null;
-  }, [statesData]);
+      : null, [statesData]);
 
   // Memoize feature count for performance monitoring
   const featureCount = useMemo(
@@ -67,7 +61,7 @@ export function useMapOptimizations({
 
   // Memoize data extent for bounds calculations - optimized for performance
   const dataExtent = useMemo(() => {
-    if (!data.features.length) return null;
+    if (!data.features.length) {return null;}
 
     let minLng = Infinity;
     let maxLng = -Infinity;
@@ -108,20 +102,16 @@ export function useMapOptimizations({
 
   // Stable callback functions for layer usage
   // Note: Returns empty collection since selections are now per-layer
-  const getSelectedFeatureCollection = useStableCallback(() => {
-    return {
+  const getSelectedFeatureCollection = useStableCallback(() => ({
       type: "FeatureCollection" as const,
       features: [],
-    } as FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>;
-  });
+    }));
 
   const getLabelPoints = useStableCallback(
-    (d: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>) => {
-      return makeLabelPoints(d) as FeatureCollection<
+    (d: FeatureCollection<Polygon | MultiPolygon, GeoJsonProperties>) => makeLabelPoints(d) as FeatureCollection<
         Geometry,
         GeoJsonProperties
-      >;
-    }
+      >
   );
 
   return {

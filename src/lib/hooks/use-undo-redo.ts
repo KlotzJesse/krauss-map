@@ -30,7 +30,7 @@ export function useUndoRedo(
   const [isPending, startTransition] = useTransition();
 
   const undo = useCallback(async () => {
-    if (!areaId || !initialStatus?.canUndo || isLoading) return;
+    if (!areaId || !initialStatus?.canUndo || isLoading) {return;}
 
     setIsLoading(true);
 
@@ -58,7 +58,7 @@ export function useUndoRedo(
   }, [areaId, initialStatus?.canUndo, isLoading, onStatusUpdate, options]);
 
   const redo = useCallback(async () => {
-    if (!areaId || !initialStatus?.canRedo || isLoading) return;
+    if (!areaId || !initialStatus?.canRedo || isLoading) {return;}
 
     setIsLoading(true);
 

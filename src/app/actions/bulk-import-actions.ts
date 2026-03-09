@@ -105,7 +105,7 @@ export async function bulkImportPostalCodesAndLayers(
                   source: "bulk_import",
                 },
                 previousData: {
-                  postalCodes: Array.from(currentCodes),
+                  postalCodes: [...currentCodes],
                 },
                 createdBy,
               });
