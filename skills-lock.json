@@ -36,6 +36,11 @@
       "sourceType": "github",
       "computedHash": "8c24990b50f431a570f3ad1f60632dee154431861547103047f6ce80092ca734"
     },
+    "shadcn": {
+      "source": "shadcn/ui",
+      "sourceType": "github",
+      "computedHash": "b1cc1defe03f0e8f78652b7d20e4d4e6421babc2b45835d4f361afe684dc47a2"
+    },
     "shadcn-ui": {
       "source": "google-labs-code/stitch-skills",
       "sourceType": "github",
