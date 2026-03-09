@@ -209,7 +209,7 @@ export function ConflictResolutionDialog({
                   <Label>Auflösungsstrategie</Label>
                   <Select
                     value={resolutionStrategy}
-                    onValueChange={setResolutionStrategy}
+                    onValueChange={(val) => val && setResolutionStrategy(val)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Strategie wählen..." />

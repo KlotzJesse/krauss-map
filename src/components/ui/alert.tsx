@@ -1,7 +1,8 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { cva } from 'class-variance-authority';
+import type { VariantProps } from 'class-variance-authority';
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
   "group/alert relative grid w-full gap-0.5 rounded-lg border px-2 py-1.5 text-start text-xs/relaxed has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pe-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-1.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-3.5",
@@ -17,7 +18,7 @@ const alertVariants = cva(
       variant: "default",
     },
   }
-)
+);
 
 function Alert({
   className,
@@ -31,7 +32,7 @@ function Alert({
       className={cn(alertVariants({ variant }), className)}
       {...props}
     />
-  )
+  );
 }
 
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
@@ -44,7 +45,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function AlertDescription({
@@ -60,7 +61,7 @@ function AlertDescription({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function AlertAction({ className, ...props }: React.ComponentProps<"div">) {
@@ -70,7 +71,27 @@ function AlertAction({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("absolute top-1.5 end-2", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Alert, AlertTitle, AlertDescription, AlertAction }
+export { Alert, AlertTitle, AlertDescription, AlertAction };
+import { AlertCircle } from "lucide-react";
+
+export function AlertError({
+  message,
+  children,
+}: {
+  message: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <Alert variant="destructive">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>Fehler</AlertTitle>
+      <AlertDescription>
+        {message}
+        {children && <div className="mt-2">{children}</div>}
+      </AlertDescription>
+    </Alert>
+  );
+}

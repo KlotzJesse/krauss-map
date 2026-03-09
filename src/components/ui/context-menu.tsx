@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu"
+import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
+import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils";
 
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
-  return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />
+  return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
 }
 
 function ContextMenuPortal({ ...props }: ContextMenuPrimitive.Portal.Props) {
   return (
     <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />
-  )
+  );
 }
 
 function ContextMenuTrigger({
@@ -27,7 +27,7 @@ function ContextMenuTrigger({
       className={cn("select-none", className)}
       {...props}
     />
-  )
+  );
 }
 
 function ContextMenuContent({
@@ -53,18 +53,21 @@ function ContextMenuContent({
       >
         <ContextMenuPrimitive.Popup
           data-slot="context-menu-content"
-          className={cn("z-50 max-h-(--available-height) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+          className={cn(
+            "z-50 max-h-(--available-height) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className
+          )}
           {...props}
         />
       </ContextMenuPrimitive.Positioner>
     </ContextMenuPrimitive.Portal>
-  )
+  );
 }
 
 function ContextMenuGroup({ ...props }: ContextMenuPrimitive.Group.Props) {
   return (
     <ContextMenuPrimitive.Group data-slot="context-menu-group" {...props} />
-  )
+  );
 }
 
 function ContextMenuLabel({
@@ -72,7 +75,7 @@ function ContextMenuLabel({
   inset,
   ...props
 }: ContextMenuPrimitive.GroupLabel.Props & {
-  inset?: boolean
+  inset?: boolean;
 }) {
   return (
     <ContextMenuPrimitive.GroupLabel
@@ -84,7 +87,7 @@ function ContextMenuLabel({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function ContextMenuItem({
@@ -93,8 +96,8 @@ function ContextMenuItem({
   variant = "default",
   ...props
 }: ContextMenuPrimitive.Item.Props & {
-  inset?: boolean
-  variant?: "default" | "destructive"
+  inset?: boolean;
+  variant?: "default" | "destructive";
 }) {
   return (
     <ContextMenuPrimitive.Item
@@ -107,13 +110,13 @@ function ContextMenuItem({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function ContextMenuSub({ ...props }: ContextMenuPrimitive.SubmenuRoot.Props) {
   return (
     <ContextMenuPrimitive.SubmenuRoot data-slot="context-menu-sub" {...props} />
-  )
+  );
 }
 
 function ContextMenuSubTrigger({
@@ -122,7 +125,7 @@ function ContextMenuSubTrigger({
   children,
   ...props
 }: ContextMenuPrimitive.SubmenuTrigger.Props & {
-  inset?: boolean
+  inset?: boolean;
 }) {
   return (
     <ContextMenuPrimitive.SubmenuTrigger
@@ -135,9 +138,13 @@ function ContextMenuSubTrigger({
       {...props}
     >
       {children}
-      <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="rtl:rotate-180 ms-auto" />
+      <HugeiconsIcon
+        icon={ArrowRight01Icon}
+        strokeWidth={2}
+        className="rtl:rotate-180 ms-auto"
+      />
     </ContextMenuPrimitive.SubmenuTrigger>
-  )
+  );
 }
 
 function ContextMenuSubContent({
@@ -150,7 +157,7 @@ function ContextMenuSubContent({
       side="inline-end"
       {...props}
     />
-  )
+  );
 }
 
 function ContextMenuCheckboxItem({
@@ -160,7 +167,7 @@ function ContextMenuCheckboxItem({
   inset,
   ...props
 }: ContextMenuPrimitive.CheckboxItem.Props & {
-  inset?: boolean
+  inset?: boolean;
 }) {
   return (
     <ContextMenuPrimitive.CheckboxItem
@@ -180,7 +187,7 @@ function ContextMenuCheckboxItem({
       </span>
       {children}
     </ContextMenuPrimitive.CheckboxItem>
-  )
+  );
 }
 
 function ContextMenuRadioGroup({
@@ -191,7 +198,7 @@ function ContextMenuRadioGroup({
       data-slot="context-menu-radio-group"
       {...props}
     />
-  )
+  );
 }
 
 function ContextMenuRadioItem({
@@ -200,7 +207,7 @@ function ContextMenuRadioItem({
   inset,
   ...props
 }: ContextMenuPrimitive.RadioItem.Props & {
-  inset?: boolean
+  inset?: boolean;
 }) {
   return (
     <ContextMenuPrimitive.RadioItem
@@ -219,7 +226,7 @@ function ContextMenuRadioItem({
       </span>
       {children}
     </ContextMenuPrimitive.RadioItem>
-  )
+  );
 }
 
 function ContextMenuSeparator({
@@ -232,7 +239,7 @@ function ContextMenuSeparator({
       className={cn("-mx-1 my-1 h-px bg-border/50", className)}
       {...props}
     />
-  )
+  );
 }
 
 function ContextMenuShortcut({
@@ -248,7 +255,7 @@ function ContextMenuShortcut({
       )}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -267,4 +274,4 @@ export {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuRadioGroup,
-}
+};

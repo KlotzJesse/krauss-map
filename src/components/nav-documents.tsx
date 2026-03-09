@@ -44,21 +44,21 @@ export function NavDocuments({
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild>
-              <Link href={item.url as Route}>
-                <item.icon />
-                <span>{item.name}</span>
-              </Link>
+            <SidebarMenuButton render={<Link href={item.url as Route} />}>
+              <item.icon />
+              <span>{item.name}</span>
             </SidebarMenuButton>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuAction
-                  showOnHover
-                  className="data-[state=open]:bg-accent rounded-sm"
-                >
-                  <IconDots />
-                  <span className="sr-only">Mehr</span>
-                </SidebarMenuAction>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuAction
+                    showOnHover
+                    className="data-[state=open]:bg-accent rounded-sm"
+                  />
+                }
+              >
+                <IconDots />
+                <span className="sr-only">Mehr</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-24 rounded-lg"

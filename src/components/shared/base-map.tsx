@@ -1,14 +1,7 @@
 "use no memo";
 import { PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
-import {
-  memo,
-  startTransition,
-  Suspense,
-
-  useRef,
-  Activity,
-} from "react";
+import { memo, startTransition, Suspense, useRef, Activity } from "react";
 
 import {
   DrawingToolsErrorBoundary,
@@ -124,7 +117,7 @@ const BaseMapComponent = ({
     layerId,
     data,
     statesData,
-        getSelectedFeatureCollection: optimizations.getSelectedFeatureCollection,
+    getSelectedFeatureCollection: optimizations.getSelectedFeatureCollection,
     getLabelPoints: optimizations.getLabelPoints,
     layers,
     activeLayerId,

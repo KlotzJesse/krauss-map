@@ -385,17 +385,21 @@ export function AddressAutocompleteEnhanced({
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="secondary"
-            role="combobox"
-            aria-expanded={open}            aria-controls="address-search-listbox"            className={`w-full justify-between ${triggerClassName}`}
-          >
-            <span className="truncate block w-full text-left">
-              {query || "PLZ, Adresse, Stadt oder Region suchen... (DE/EN)"}
-            </span>
-            <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="secondary"
+              role="combobox"
+              aria-expanded={open}
+              aria-controls="address-search-listbox"
+              className={`w-full justify-between ${triggerClassName}`}
+            />
+          }
+        >
+          <span className="truncate block w-full text-left">
+            {query || "PLZ, Adresse, Stadt oder Region suchen... (DE/EN)"}
+          </span>
+          <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </PopoverTrigger>
         <PopoverContent className="w-[320px] p-0">
           <Command>
@@ -466,30 +470,32 @@ export function AddressAutocompleteEnhanced({
                       {onPreviewSelect && result.postal_code && (
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant={
-                                  previewPostalCode === result.postal_code
-                                    ? "default"
-                                    : "outline"
-                                }
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onPreviewSelect(
-                                    result.coordinates,
-                                    formatDisplayName(result),
-                                    result.postal_code
-                                  );
-                                }}
-                                className="h-8 px-2"
-                              >
-                                {previewPostalCode === result.postal_code ? (
-                                  <EyeOffIcon className="h-3 w-3" />
-                                ) : (
-                                  <EyeIcon className="h-3 w-3" />
-                                )}
-                              </Button>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  size="sm"
+                                  variant={
+                                    previewPostalCode === result.postal_code
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onPreviewSelect(
+                                      result.coordinates,
+                                      formatDisplayName(result),
+                                      result.postal_code
+                                    );
+                                  }}
+                                  className="h-8 px-2"
+                                />
+                              }
+                            >
+                              {previewPostalCode === result.postal_code ? (
+                                <EyeOffIcon className="h-3 w-3" />
+                              ) : (
+                                <EyeIcon className="h-3 w-3" />
+                              )}
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>
@@ -504,18 +510,20 @@ export function AddressAutocompleteEnhanced({
 
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDirectSelect(result);
-                              }}
-                              className="h-8 px-2"
-                            >
-                              <MapPinIcon className="h-3 w-3" />
-                            </Button>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDirectSelect(result);
+                                }}
+                                className="h-8 px-2"
+                              />
+                            }
+                          >
+                            <MapPinIcon className="h-3 w-3" />
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
@@ -535,18 +543,20 @@ export function AddressAutocompleteEnhanced({
 
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRadiusSelect(result);
-                              }}
-                              className="h-8 px-2"
-                            >
-                              <RadiusIcon className="h-3 w-3" />
-                            </Button>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRadiusSelect(result);
+                                }}
+                                className="h-8 px-2"
+                              />
+                            }
+                          >
+                            <RadiusIcon className="h-3 w-3" />
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Umkreis um Position auswählen</p>

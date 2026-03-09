@@ -1,9 +1,9 @@
-import { NavigationMenu as NavigationMenuPrimitive } from "@base-ui/react/navigation-menu"
-import { cva } from "class-variance-authority"
+import { NavigationMenu as NavigationMenuPrimitive } from "@base-ui/react/navigation-menu";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { cva } from "class-variance-authority";
 
-import { cn } from "@/lib/utils"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils";
 
 function NavigationMenu({
   align = "start",
@@ -24,7 +24,7 @@ function NavigationMenu({
       {children}
       <NavigationMenuPositioner align={align} />
     </NavigationMenuPrimitive.Root>
-  )
+  );
 }
 
 function NavigationMenuList({
@@ -40,7 +40,7 @@ function NavigationMenuList({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function NavigationMenuItem({
@@ -53,12 +53,12 @@ function NavigationMenuItem({
       className={cn("relative", className)}
       {...props}
     />
-  )
+  );
 }
 
 const navigationMenuTriggerStyle = cva(
   "group/navigation-menu-trigger inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-2.5 py-1.5 text-xs/relaxed font-medium transition-all outline-none hover:bg-muted focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-popup-open:bg-muted/50 data-popup-open:hover:bg-muted data-open:bg-muted/50 data-open:hover:bg-muted data-open:focus:bg-muted"
-)
+);
 
 function NavigationMenuTrigger({
   className,
@@ -72,9 +72,14 @@ function NavigationMenuTrigger({
       {...props}
     >
       {children}{" "}
-      <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="relative top-px ms-1 size-3 transition duration-300 group-data-popup-open/navigation-menu-trigger:rotate-180 group-data-open/navigation-menu-trigger:rotate-180" aria-hidden="true" />
+      <HugeiconsIcon
+        icon={ArrowDown01Icon}
+        strokeWidth={2}
+        className="relative top-px ms-1 size-3 transition duration-300 group-data-popup-open/navigation-menu-trigger:rotate-180 group-data-open/navigation-menu-trigger:rotate-180"
+        aria-hidden="true"
+      />
     </NavigationMenuPrimitive.Trigger>
-  )
+  );
 }
 
 function NavigationMenuContent({
@@ -90,7 +95,7 @@ function NavigationMenuContent({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function NavigationMenuPositioner({
@@ -119,7 +124,7 @@ function NavigationMenuPositioner({
         </NavigationMenuPrimitive.Popup>
       </NavigationMenuPrimitive.Positioner>
     </NavigationMenuPrimitive.Portal>
-  )
+  );
 }
 
 function NavigationMenuLink({
@@ -135,7 +140,7 @@ function NavigationMenuLink({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function NavigationMenuIndicator({
@@ -153,7 +158,7 @@ function NavigationMenuIndicator({
     >
       <div className="relative top-[60%] h-2 w-2 rotate-45 rounded-ss-sm bg-border shadow-md" />
     </NavigationMenuPrimitive.Icon>
-  )
+  );
 }
 
 export {
@@ -166,4 +171,4 @@ export {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
   NavigationMenuPositioner,
-}
+};

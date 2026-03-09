@@ -86,21 +86,23 @@ export function UndoRedoToolbar({
         )}
       >
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              onClick={undo}
-              disabled={!optimisticStatus.canUndo || isLoading}
-              className="h-10 p-0 gap-2"
-            >
-              <IconArrowBackUp className="h-4 w-4" />
-              Rückgängig
-              {optimisticStatus.undoCount > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  ({optimisticStatus.undoCount})
-                </span>
-              )}
-            </Button>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                onClick={undo}
+                disabled={!optimisticStatus.canUndo || isLoading}
+                className="h-10 p-0 gap-2"
+              />
+            }
+          >
+            <IconArrowBackUp className="h-4 w-4" />
+            Rückgängig
+            {optimisticStatus.undoCount > 0 && (
+              <span className="text-xs text-muted-foreground">
+                ({optimisticStatus.undoCount})
+              </span>
+            )}
           </TooltipTrigger>
           <TooltipContent>
             <p>Letzte Änderung rückgängig machen (Strg+Z)</p>
@@ -108,21 +110,23 @@ export function UndoRedoToolbar({
         </Tooltip>
 
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              onClick={redo}
-              disabled={!optimisticStatus.canRedo || isLoading}
-              className="h-10 p-0 gap-2"
-            >
-              <IconArrowForwardUp className="h-4 w-4" />
-              Wiederholen
-              {optimisticStatus.redoCount > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  ({optimisticStatus.redoCount})
-                </span>
-              )}
-            </Button>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                onClick={redo}
+                disabled={!optimisticStatus.canRedo || isLoading}
+                className="h-10 p-0 gap-2"
+              />
+            }
+          >
+            <IconArrowForwardUp className="h-4 w-4" />
+            Wiederholen
+            {optimisticStatus.redoCount > 0 && (
+              <span className="text-xs text-muted-foreground">
+                ({optimisticStatus.redoCount})
+              </span>
+            )}
           </TooltipTrigger>
           <TooltipContent>
             <p>

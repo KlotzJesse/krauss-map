@@ -190,15 +190,17 @@ export function FloatingDrawingToolbar({
                 (currentMode === null && mode.id === "cursor");
               return (
                 <Tooltip key={mode.id}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={isActive ? "default" : "outline"}
-                      size="sm"
-                      className="h-10 w-10 p-0 flex flex-col items-center gap-0.5"
-                      onClick={() => handleModeClick(mode.id)}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </Button>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant={isActive ? "default" : "outline"}
+                        size="sm"
+                        className="h-10 w-10 p-0 flex flex-col items-center gap-0.5"
+                        onClick={() => handleModeClick(mode.id)}
+                      />
+                    }
+                  >
+                    <Icon className="h-4 w-4" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{mode.description}</p>

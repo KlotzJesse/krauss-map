@@ -327,16 +327,18 @@ export function NavAreas({
 
                         {/* Dropdown menu for actions - only visible on hover */}
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-5 w-5 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <IconDots className="h-3.5 w-3.5" />
-                              <span className="sr-only">Aktionen</span>
-                            </Button>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            }
+                          >
+                            <IconDots className="h-3.5 w-3.5" />
+                            <span className="sr-only">Aktionen</span>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem

@@ -214,7 +214,10 @@ export function LayerMergeDialog({
           {selectedLayers.size >= 2 && (
             <div className="space-y-2">
               <Label>Ziel-Layer (behält Name und Farbe)</Label>
-              <Select value={targetLayerId} onValueChange={setTargetLayerId}>
+              <Select
+                value={targetLayerId}
+                onValueChange={(val) => val && setTargetLayerId(val)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Ziel-Layer wählen..." />
                 </SelectTrigger>
@@ -249,8 +252,9 @@ export function LayerMergeDialog({
               <Label>Strategie</Label>
               <Select
                 value={strategy}
-                onValueChange={(val: "union" | "keep-target" | "keep-source") =>
-                  setStrategy(val)
+                onValueChange={(val) =>
+                  val &&
+                  setStrategy(val as "union" | "keep-target" | "keep-source")
                 }
               >
                 <SelectTrigger>

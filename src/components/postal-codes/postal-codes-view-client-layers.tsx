@@ -527,16 +527,18 @@ export function PostalCodesViewClientWithLayers({
         {/* Import Button - Opens the import dialog */}
         <div className="shrink-0">
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                onClick={() => setImportDialogOpen(true)}
-                size="default"
-                className="h-10 px-4"
-                title="PLZ importieren"
-              >
-                <FileUpIcon className="h-4 w-4" />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="secondary"
+                  onClick={() => setImportDialogOpen(true)}
+                  size="default"
+                  className="h-10 px-4"
+                  title="PLZ importieren"
+                />
+              }
+            >
+              <FileUpIcon className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
               <p>PLZ importieren</p>

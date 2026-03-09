@@ -839,78 +839,88 @@ function DrawingToolsImpl({
         {areaId && (
           <>
             <Collapsible open={layersOpen} onOpenChange={setLayersOpen}>
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-between h-7 px-2 text-xs font-semibold"
-                >
-                  <span>Gebiete ({optimisticLayers.length})</span>
-                  {layersOpen ? (
-                    <ChevronUp className="h-3 w-3" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3" />
-                  )}
-                </Button>
+              <CollapsibleTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-between h-7 px-2 text-xs font-semibold"
+                  />
+                }
+              >
+                <span>Gebiete ({optimisticLayers.length})</span>
+                {layersOpen ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-2 pt-2">
                 {/* Layer action buttons */}
                 <div className="grid grid-cols-4 gap-1">
                   <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => setShowConflicts(true)}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-1.5"
-                      >
-                        <IconAlertTriangle className="h-3 w-3" />
-                      </Button>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          onClick={() => setShowConflicts(true)}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-1.5"
+                        />
+                      }
+                    >
+                      <IconAlertTriangle className="h-3 w-3" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Konflikte anzeigen und lösen</p>
                     </TooltipContent>
                   </Tooltip>
                   <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => setShowVersionHistory(true)}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-1.5"
-                      >
-                        <IconClock className="h-3 w-3" />
-                      </Button>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          onClick={() => setShowVersionHistory(true)}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-1.5"
+                        />
+                      }
+                    >
+                      <IconClock className="h-3 w-3" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Versionsverlauf anzeigen</p>
                     </TooltipContent>
                   </Tooltip>
                   <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => setShowCreateVersion(true)}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-1.5"
-                      >
-                        <IconDeviceFloppy className="h-3 w-3" />
-                      </Button>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          onClick={() => setShowCreateVersion(true)}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-1.5"
+                        />
+                      }
+                    >
+                      <IconDeviceFloppy className="h-3 w-3" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Neue Version erstellen</p>
                     </TooltipContent>
                   </Tooltip>
                   <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => setShowLayerMerge(true)}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-1.5"
-                      >
-                        <IconGitMerge className="h-3 w-3" />
-                      </Button>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          onClick={() => setShowLayerMerge(true)}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-1.5"
+                        />
+                      }
+                    >
+                      <IconGitMerge className="h-3 w-3" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Gebiete zusammenführen</p>
@@ -936,20 +946,22 @@ function DrawingToolsImpl({
                     }}
                   />
                   <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handleCreateLayer}
-                        disabled={!newLayerName.trim() || isCreating}
-                        size="icon"
-                        className="h-7 w-7"
-                        title={
-                          isViewingVersion
-                            ? "Gebiet wird in neuer Version erstellt"
-                            : "Gebiet erstellen"
-                        }
-                      >
-                        <IconPlus className="h-3 w-3" />
-                      </Button>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          onClick={handleCreateLayer}
+                          disabled={!newLayerName.trim() || isCreating}
+                          size="icon"
+                          className="h-7 w-7"
+                          title={
+                            isViewingVersion
+                              ? "Gebiet wird in neuer Version erstellt"
+                              : "Gebiet erstellen"
+                          }
+                        />
+                      }
+                    >
+                      <IconPlus className="h-3 w-3" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Neues Gebiet erstellen</p>
@@ -1054,23 +1066,27 @@ function DrawingToolsImpl({
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {/* Color picker */}
                             <Popover>
-                              <PopoverTrigger asChild>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-6 w-6"
-                                      onClick={(e) => e.stopPropagation()}
+                              <PopoverTrigger
+                                render={
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      render={
+                                        <Button
+                                          variant="outline"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                      }
                                     >
                                       <IconPalette className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Gebiet-Farbe ändern</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </PopoverTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Gebiet-Farbe ändern</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                }
+                              />
                               <PopoverContent
                                 className="w-auto p-3"
                                 onClick={(e: React.MouseEvent) =>
@@ -1101,30 +1117,32 @@ function DrawingToolsImpl({
                             </Popover>
                             {/* Copy as CSV */}
                             <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
+                              <TooltipTrigger
+                                render={
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
 
-                                    const codes =
-                                      layer.postalCodes?.map(
-                                        (pc) => `D-${pc.postalCode}`
-                                      ) || [];
+                                      const codes =
+                                        layer.postalCodes?.map(
+                                          (pc) => `D-${pc.postalCode}`
+                                        ) || [];
 
-                                    if (codes.length > 0) {
-                                      await copyPostalCodesCSV(codes);
-                                    } else {
-                                      toast.info(
-                                        "Keine Postleitzahlen zum Kopieren"
-                                      );
-                                    }
-                                  }}
-                                >
-                                  <Copy className="h-3.5 w-3.5" />
-                                </Button>
+                                      if (codes.length > 0) {
+                                        await copyPostalCodesCSV(codes);
+                                      } else {
+                                        toast.info(
+                                          "Keine Postleitzahlen zum Kopieren"
+                                        );
+                                      }
+                                    }}
+                                  />
+                                }
+                              >
+                                <Copy className="h-3.5 w-3.5" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Postleitzahlen als CSV kopieren</p>
@@ -1133,19 +1151,21 @@ function DrawingToolsImpl({
 
                             {/* Delete */}
                             <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
+                              <TooltipTrigger
+                                render={
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
 
-                                    handleDeleteLayer(layer.id);
-                                  }}
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </Button>
+                                      handleDeleteLayer(layer.id);
+                                    }}
+                                  />
+                                }
+                              >
+                                <X className="h-3.5 w-3.5" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Gebiet löschen</p>
@@ -1169,19 +1189,21 @@ function DrawingToolsImpl({
           onOpenChange={setRegionsOpen}
           className="space-y-2"
         >
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-between h-7 px-2 text-xs font-semibold"
-            >
-              <span>Regionen ({pendingPostalCodes.length})</span>
-              {regionsOpen ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-            </Button>
+          <CollapsibleTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between h-7 px-2 text-xs font-semibold"
+              />
+            }
+          >
+            <span>Regionen ({pendingPostalCodes.length})</span>
+            {regionsOpen ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-2 pt-2">
             {/* Gefundene Regionen durch Zeichnung */}
@@ -1268,19 +1290,21 @@ function DrawingToolsImpl({
                 onOpenChange={setActionsOpen}
                 className="space-y-2"
               >
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-between h-7 px-2 text-xs font-semibold"
-                  >
-                    <span>Aktionen</span>
-                    {actionsOpen ? (
-                      <ChevronUp className="h-3 w-3" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3" />
-                    )}
-                  </Button>
+                <CollapsibleTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-between h-7 px-2 text-xs font-semibold"
+                    />
+                  }
+                >
+                  <span>Aktionen</span>
+                  {actionsOpen ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-1 pt-2">
                   {currentMode !== null &&
@@ -1368,31 +1392,35 @@ function DrawingToolsImpl({
             <div className="space-y-1">
               <div className="flex gap-1">
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportExcel}
-                      className="flex-1 h-7 text-xs"
-                    >
-                      <FileSpreadsheet className="h-3 w-3 mr-1" />
-                      XLS
-                    </Button>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportExcel}
+                        className="flex-1 h-7 text-xs"
+                      />
+                    }
+                  >
+                    <FileSpreadsheet className="h-3 w-3 mr-1" />
+                    XLS
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Als Excel-Datei exportieren</p>
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportPDF}
-                      className="flex-1 h-7 text-xs"
-                    >
-                      📄 PDF
-                    </Button>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportPDF}
+                        className="flex-1 h-7 text-xs"
+                      />
+                    }
+                  >
+                    📄 PDF
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Als PDF-Datei exportieren</p>

@@ -249,7 +249,7 @@ export function GranularitySelector({
         {/* Granularity Selector */}
         <Select
           value={optimisticGranularity}
-          onValueChange={handleGranularitySelect}
+          onValueChange={(val) => val && handleGranularitySelect(val)}
           disabled={_isPending}
         >
           <SelectTrigger className="w-full h-8 text-xs">
@@ -262,42 +262,40 @@ export function GranularitySelector({
 
               return (
                 <Tooltip key={option.value}>
-                  <TooltipTrigger asChild>
-                    <SelectItem
-                      value={option.value}
-                      className={`
+                  <TooltipTrigger
+                    render={
+                      <SelectItem
+                        value={option.value}
+                        className={`
                         ${status === "current" ? "bg-accent" : ""}
                         ${status === "destructive" ? "text-destructive" : ""}
                         ${status === "compatible" ? "text-green-600" : ""}
                       `}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span>{option.label}</span>
-                        <div className="flex items-center gap-1 ml-2">
-                          <Activity
-                            mode={status === "current" ? "visible" : "hidden"}
-                          >
-                            <Badge variant="secondary" className="text-xs px-1">
-                              Aktiv
-                            </Badge>
-                          </Activity>
-                          <Activity
-                            mode={
-                              status === "destructive" ? "visible" : "hidden"
-                            }
-                          >
-                            <AlertTriangle className="h-3 w-3 text-destructive" />
-                          </Activity>
-                          <Activity
-                            mode={
-                              status === "compatible" ? "visible" : "hidden"
-                            }
-                          >
-                            <Info className="h-3 w-3 text-green-600" />
-                          </Activity>
-                        </div>
+                      />
+                    }
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>{option.label}</span>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Activity
+                          mode={status === "current" ? "visible" : "hidden"}
+                        >
+                          <Badge variant="secondary" className="text-xs px-1">
+                            Aktiv
+                          </Badge>
+                        </Activity>
+                        <Activity
+                          mode={status === "destructive" ? "visible" : "hidden"}
+                        >
+                          <AlertTriangle className="h-3 w-3 text-destructive" />
+                        </Activity>
+                        <Activity
+                          mode={status === "compatible" ? "visible" : "hidden"}
+                        >
+                          <Info className="h-3 w-3 text-green-600" />
+                        </Activity>
                       </div>
-                    </SelectItem>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">
                     <p className="text-xs">{tooltip}</p>

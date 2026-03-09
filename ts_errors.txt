@@ -1,0 +1,100 @@
+src/components/areas/nav-areas.tsx(330,56): error TS2657: JSX expressions must have one parent element.
+src/components/areas/nav-areas.tsx(334,46): error TS1161: Unterminated regular expression literal.
+src/components/areas/nav-areas.tsx(334,70): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/areas/nav-areas.tsx(335,29): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/areas/nav-areas.tsx(338,31): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/areas/nav-areas.tsx(356,25): error TS1005: '}' expected.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(467,53): error TS2657: JSX expressions must have one parent element.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(474,48): error TS1161: Unterminated regular expression literal.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(475,54): error TS1005: '}' expected.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(481,33): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(481,34): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(483,31): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(489,33): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(497,27): error TS1005: '}' expected.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(503,51): error TS2657: JSX expressions must have one parent element.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(506,46): error TS1161: Unterminated regular expression literal.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(507,52): error TS1005: '}' expected.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(509,31): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(509,32): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(511,29): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(513,31): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(527,25): error TS1005: '}' expected.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(532,51): error TS2657: JSX expressions must have one parent element.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(535,46): error TS1161: Unterminated regular expression literal.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(536,52): error TS1005: '}' expected.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(538,31): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(538,32): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(540,29): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/postal-codes/address-autocomplete-enhanced.tsx(542,31): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/postal-codes/address-autocomplete-enhanced.tsx(546,25): error TS1005: '}' expected.
+src/components/postal-codes/postal-codes-view-client-layers.tsx(528,37): error TS2657: JSX expressions must have one parent element.
+src/components/postal-codes/postal-codes-view-client-layers.tsx(530,27): error TS1109: Expression expected.
+src/components/postal-codes/postal-codes-view-client-layers.tsx(530,31): error TS1161: Unterminated regular expression literal.
+src/components/postal-codes/postal-codes-view-client-layers.tsx(530,61): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/postal-codes/postal-codes-view-client-layers.tsx(534,15): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/postal-codes/postal-codes-view-client-layers.tsx(536,17): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/postal-codes/postal-codes-view-client-layers.tsx(540,11): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(858,45): error TS2657: JSX expressions must have one parent element.
+src/components/shared/drawing-tools.tsx(859,35): error TS1109: Expression expected.
+src/components/shared/drawing-tools.tsx(859,39): error TS1161: Unterminated regular expression literal.
+src/components/shared/drawing-tools.tsx(859,66): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(863,23): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(865,25): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/shared/drawing-tools.tsx(869,19): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(871,45): error TS2657: JSX expressions must have one parent element.
+src/components/shared/drawing-tools.tsx(872,35): error TS1109: Expression expected.
+src/components/shared/drawing-tools.tsx(872,39): error TS1161: Unterminated regular expression literal.
+src/components/shared/drawing-tools.tsx(872,71): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(876,23): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(878,25): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/shared/drawing-tools.tsx(882,19): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(884,45): error TS2657: JSX expressions must have one parent element.
+src/components/shared/drawing-tools.tsx(885,35): error TS1109: Expression expected.
+src/components/shared/drawing-tools.tsx(885,39): error TS1161: Unterminated regular expression literal.
+src/components/shared/drawing-tools.tsx(885,70): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(889,23): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(891,25): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/shared/drawing-tools.tsx(895,19): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(897,45): error TS2657: JSX expressions must have one parent element.
+src/components/shared/drawing-tools.tsx(898,35): error TS1109: Expression expected.
+src/components/shared/drawing-tools.tsx(898,39): error TS1161: Unterminated regular expression literal.
+src/components/shared/drawing-tools.tsx(898,67): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(902,23): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(904,25): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/shared/drawing-tools.tsx(908,19): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(1047,59): error TS2657: JSX expressions must have one parent element.
+src/components/shared/drawing-tools.tsx(1051,54): error TS1161: Unterminated regular expression literal.
+src/components/shared/drawing-tools.tsx(1051,78): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(1052,37): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(1054,39): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/shared/drawing-tools.tsx(1058,33): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(1090,55): error TS2657: JSX expressions must have one parent element.
+src/components/shared/drawing-tools.tsx(1094,56): error TS1161: Unterminated regular expression literal.
+src/components/shared/drawing-tools.tsx(1095,56): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(1099,47): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(1102,54): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(1103,70): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(1104,37): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(1107,40): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(1108,37): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(1109,35): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(1109,36): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(1110,33): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(1112,35): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/shared/drawing-tools.tsx(1116,29): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(1120,55): error TS2657: JSX expressions must have one parent element.
+src/components/shared/drawing-tools.tsx(1124,50): error TS1161: Unterminated regular expression literal.
+src/components/shared/drawing-tools.tsx(1125,56): error TS1005: '}' expected.
+src/components/shared/drawing-tools.tsx(1128,35): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(1128,36): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/drawing-tools.tsx(1129,33): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/drawing-tools.tsx(1131,35): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/shared/drawing-tools.tsx(1135,29): error TS1005: '}' expected.
+src/components/shared/floating-drawing-toolbar.tsx(193,43): error TS2657: JSX expressions must have one parent element.
+src/components/shared/floating-drawing-toolbar.tsx(197,33): error TS1109: Expression expected.
+src/components/shared/floating-drawing-toolbar.tsx(197,37): error TS1161: Unterminated regular expression literal.
+src/components/shared/floating-drawing-toolbar.tsx(197,66): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/shared/floating-drawing-toolbar.tsx(198,21): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shared/floating-drawing-toolbar.tsx(200,23): error TS17002: Expected corresponding JSX closing tag for 'Button'.
+src/components/shared/floating-drawing-toolbar.tsx(204,17): error TS1005: '}' expected.

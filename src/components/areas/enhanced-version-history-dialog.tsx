@@ -242,22 +242,22 @@ export function EnhancedVersionHistoryDialog({
                   {versions.map((version) => (
                     <div
                       key={version.versionNumber}
-                        role="button"
-                        tabIndex={0}
-                        className={`p-4 border rounded-lg cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                          selectedVersion?.versionNumber === version.versionNumber
-                            ? "border-primary bg-accent"
-                            : version.isActive === "true"
-                              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/10"
-                              : "hover:border-primary/50"
-                        }`}
-                        onClick={() => setSelectedVersion(version)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setSelectedVersion(version);
-                          }
-                        }}
+                      role="button"
+                      tabIndex={0}
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                        selectedVersion?.versionNumber === version.versionNumber
+                          ? "border-primary bg-accent"
+                          : version.isActive === "true"
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/10"
+                            : "hover:border-primary/50"
+                      }`}
+                      onClick={() => setSelectedVersion(version)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedVersion(version);
+                        }
+                      }}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2 flex-wrap">

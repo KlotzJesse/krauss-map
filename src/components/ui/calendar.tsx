@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
 import {
-  DayPicker,
-  getDefaultClassNames,
-  type DayButton,
-  type Locale,
-} from "react-day-picker"
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowDownIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import * as React from "react";
+import { DayPicker, getDefaultClassNames } from 'react-day-picker';
+import type { DayButton, Locale } from 'react-day-picker';
 
-import { cn } from "@/lib/utils"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeftIcon, ArrowRightIcon, ArrowDownIcon } from "@hugeicons/core-free-icons"
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function Calendar({
   className,
@@ -24,9 +24,9 @@ function Calendar({
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
-  buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+  buttonVariant?: React.ComponentProps<typeof Button>["variant"];
 }) {
-  const defaultClassNames = getDefaultClassNames()
+  const defaultClassNames = getDefaultClassNames();
 
   return (
     <DayPicker
@@ -135,50 +135,61 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return (
+        Root: ({ className, rootRef, ...props }) => (
             <div
               data-slot="calendar"
               ref={rootRef}
               className={cn(className)}
               {...props}
             />
-          )
-        },
+          ),
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
             return (
-              <HugeiconsIcon icon={ArrowLeftIcon} strokeWidth={2} className={cn("rtl:rotate-180 size-4", className)} {...props} />
-            )
+              <HugeiconsIcon
+                icon={ArrowLeftIcon}
+                strokeWidth={2}
+                className={cn("rtl:rotate-180 size-4", className)}
+                {...props}
+              />
+            );
           }
 
           if (orientation === "right") {
             return (
-              <HugeiconsIcon icon={ArrowRightIcon} strokeWidth={2} className={cn("rtl:rotate-180 size-4", className)} {...props} />
-            )
+              <HugeiconsIcon
+                icon={ArrowRightIcon}
+                strokeWidth={2}
+                className={cn("rtl:rotate-180 size-4", className)}
+                {...props}
+              />
+            );
           }
 
           return (
-            <HugeiconsIcon icon={ArrowDownIcon} strokeWidth={2} className={cn("size-4", className)} {...props} />
-          )
+            <HugeiconsIcon
+              icon={ArrowDownIcon}
+              strokeWidth={2}
+              className={cn("size-4", className)}
+              {...props}
+            />
+          );
         },
         DayButton: ({ ...props }) => (
           <CalendarDayButton locale={locale} {...props} />
         ),
-        WeekNumber: ({ children, ...props }) => {
-          return (
+        WeekNumber: ({ children, ...props }) => (
             <td {...props}>
               <div className="flex size-(--cell-size) items-center justify-center text-center">
                 {children}
               </div>
             </td>
-          )
-        },
+          ),
         ...components,
       }}
       {...props}
     />
-  )
+  );
 }
 
 function CalendarDayButton({
@@ -188,12 +199,12 @@ function CalendarDayButton({
   locale,
   ...props
 }: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
-  const defaultClassNames = getDefaultClassNames()
+  const defaultClassNames = getDefaultClassNames();
 
-  const ref = React.useRef<HTMLButtonElement>(null)
+  const ref = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus()
-  }, [modifiers.focused])
+    if (modifiers.focused) {ref.current?.focus();}
+  }, [modifiers.focused]);
 
   return (
     <Button
@@ -216,7 +227,7 @@ function CalendarDayButton({
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Calendar, CalendarDayButton }
+export { Calendar, CalendarDayButton };

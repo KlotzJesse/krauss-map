@@ -364,7 +364,7 @@ export function BulkImportDialog({
                     </TableHeader>
                     <TableBody>
                       {fileData.rows.slice(0, 5).map((row, idx) => (
-                          <TableRow key={`preview-${idx}`}>
+                        <TableRow key={`preview-${idx}`}>
                           {fileData.headers.map((header) => (
                             <TableCell key={header}>
                               {row[header]?.toString() || ""}

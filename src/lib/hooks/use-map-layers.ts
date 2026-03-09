@@ -429,8 +429,12 @@ export function useMapLayers({
     if (src && typeof src.setData === "function") {
       src.setData(getSelectedFeatureCollection());
     }
-  }, [getSelectedFeatureCollection, mapRef, layersLoaded, ids.selectedSourceId]);
-
+  }, [
+    getSelectedFeatureCollection,
+    mapRef,
+    layersLoaded,
+    ids.selectedSourceId,
+  ]);
 
   // Cleanup on unmount or dependency change
   useEffect(

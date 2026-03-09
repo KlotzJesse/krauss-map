@@ -83,15 +83,13 @@ export function AppSidebarClient({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                asChild
-                className="data-[slot=sidebar-menu-button]:!p-1.5"
+                render={<a href="#" />}
+                className="data-[slot=sidebar-menu-button]:p-1.5!"
               >
-                <a href="#">
-                  <IconMapPin2 className="!size-5" />
-                  <span className="text-base font-semibold">
-                    KRAUSS Gebietsmanagement
-                  </span>
-                </a>
+                <IconMapPin2 className="size-5!" />
+                <span className="text-base font-semibold">
+                  KRAUSS Gebietsmanagement
+                </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

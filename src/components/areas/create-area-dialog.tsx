@@ -124,7 +124,10 @@ export function CreateAreaDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="granularity">PLZ-Granularität</Label>
-              <Select value={granularity} onValueChange={setGranularity}>
+              <Select
+                value={granularity}
+                onValueChange={(val) => val && setGranularity(val)}
+              >
                 <SelectTrigger id="granularity">
                   <SelectValue />
                 </SelectTrigger>
