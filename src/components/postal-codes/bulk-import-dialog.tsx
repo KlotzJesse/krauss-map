@@ -184,15 +184,14 @@ export function BulkImportDialog({
         });
       } catch (error) {
         console.error(error);
-      } finally {
-        setIsImporting(false);
-        setImportProgress(0);
-        updateOptimisticImportStatus({
-          importing: false,
-          progress: 0,
-          completed: false,
-        });
       }
+      setIsImporting(false);
+      setImportProgress(0);
+      updateOptimisticImportStatus({
+        importing: false,
+        progress: 0,
+        completed: false,
+      });
     });
   }, [
     stats,
@@ -365,7 +364,7 @@ export function BulkImportDialog({
                     </TableHeader>
                     <TableBody>
                       {fileData.rows.slice(0, 5).map((row, idx) => (
-                        <TableRow key={idx}>
+                          <TableRow key={`preview-${idx}`}>
                           {fileData.headers.map((header) => (
                             <TableCell key={header}>
                               {row[header]?.toString() || ""}

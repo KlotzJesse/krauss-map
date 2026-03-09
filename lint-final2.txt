@@ -1,3 +1,0 @@
-$ oxlint --type-aware
-Found 0 warnings and 0 errors.
-Finished in 1.9s on 164 files with 255 rules using 20 threads.

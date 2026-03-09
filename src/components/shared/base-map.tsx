@@ -5,7 +5,7 @@ import {
   memo,
   startTransition,
   Suspense,
-  useMemo,
+
   useRef,
   Activity,
 } from "react";
@@ -116,20 +116,15 @@ const BaseMapComponent = ({
   // Business logic with stable references (available for future use)
 
   // Memoized hovered region ref to prevent layer re-initialization
-  const hoveredRegionIdRef = useMemo(
-    () => ({ current: null as string | null }),
-    []
-  );
 
   // Map layers management with stable dependencies
   const { layersLoaded } = useMapLayers({
-    map: map.current,
+    mapRef: map,
     isMapLoaded,
     layerId,
     data,
     statesData,
-    hoveredRegionId: hoveredRegionIdRef.current,
-    getSelectedFeatureCollection: optimizations.getSelectedFeatureCollection,
+        getSelectedFeatureCollection: optimizations.getSelectedFeatureCollection,
     getLabelPoints: optimizations.getLabelPoints,
     layers,
     activeLayerId,

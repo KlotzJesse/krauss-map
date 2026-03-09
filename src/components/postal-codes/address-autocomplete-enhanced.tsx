@@ -389,8 +389,7 @@ export function AddressAutocompleteEnhanced({
           <Button
             variant="secondary"
             role="combobox"
-            aria-expanded={open}
-            className={`w-full justify-between ${triggerClassName}`}
+            aria-expanded={open}            aria-controls="address-search-listbox"            className={`w-full justify-between ${triggerClassName}`}
           >
             <span className="truncate block w-full text-left">
               {query || "PLZ, Adresse, Stadt oder Region suchen... (DE/EN)"}
@@ -404,10 +403,9 @@ export function AddressAutocompleteEnhanced({
               placeholder="PLZ, Adresse, Stadt oder Region suchen... (München, Munich, Berlin, Bayern, etc.)"
               value={query}
               onValueChange={handleInputChange}
-              autoFocus
               autoComplete="off"
             />
-            <CommandList>
+            <CommandList id="address-search-listbox">
               {isLoading && (
                 <div className="p-3 text-sm text-muted-foreground">
                   Suche läuft...

@@ -69,10 +69,9 @@ export function CreateVersionDialog({
         }
       } catch (error) {
         console.error(error);
-      } finally {
-        setIsCreating(false);
-        updateOptimisticCreating(false);
       }
+      setIsCreating(false);
+      updateOptimisticCreating(false);
     });
   };
 

@@ -969,8 +969,16 @@ function DrawingToolsImpl({
                       }`}
                     >
                       <div
-                        className="px-3 py-2 cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        className="px-3 py-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-lg"
                         onClick={() => onLayerSelect?.(layer.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onLayerSelect?.(layer.id);
+                          }
+                        }}
                       >
                         <div className="flex items-center justify-between gap-2">
                           {/* Layer info */}

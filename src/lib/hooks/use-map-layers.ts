@@ -14,12 +14,11 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 };
 
 interface UseMapLayersProps {
-  map: MapLibreMap | null;
+  mapRef: React.RefObject<MapLibreMap | null>;
   isMapLoaded: boolean;
   layerId: string;
   data: FeatureCollection<Polygon | MultiPolygon>;
   statesData?: FeatureCollection<Polygon | MultiPolygon> | null;
-  hoveredRegionId: string | null;
   getSelectedFeatureCollection: () => FeatureCollection<Polygon | MultiPolygon>;
   getLabelPoints: (
     data: FeatureCollection<Polygon | MultiPolygon>
@@ -33,12 +32,11 @@ interface UseMapLayersProps {
  * Handles main, selected, hover, label, and state layers, and exposes a stable API for business logic.
  */
 export function useMapLayers({
-  map,
+  mapRef,
   isMapLoaded,
   layerId,
   data,
   statesData,
-  hoveredRegionId,
   getSelectedFeatureCollection,
   getLabelPoints,
   layers,
@@ -46,8 +44,8 @@ export function useMapLayers({
 }: UseMapLayersProps) {
   // Memoize layersLoaded calculation to prevent unnecessary rerenders
   const layersLoaded = useMemo(
-    () => !!(map && isMapLoaded && data),
-    [map, isMapLoaded, data]
+    () => !!(isMapLoaded && data),
+    [isMapLoaded, data]
   );
 
   // Memoize all IDs for stable references
@@ -73,6 +71,7 @@ export function useMapLayers({
   // Use useLayoutEffect for layer initialization to prevent visual flicker
   // This ensures all layers are created synchronously before paint
   useLayoutEffect(() => {
+    const map = mapRef.current;
     if (!map || !isMapLoaded || !data) {
       return;
     }
@@ -405,7 +404,7 @@ export function useMapLayers({
       );
     }
   }, [
-    map,
+    mapRef,
     isMapLoaded,
     data,
     statesData,
@@ -420,6 +419,7 @@ export function useMapLayers({
   // Update selected features source when layers change
   // Note: Selections are now managed per-layer in the database
   useEffect(() => {
+    const map = mapRef.current;
     if (!map || !layersLoaded) {
       return;
     }
@@ -429,42 +429,13 @@ export function useMapLayers({
     if (src && typeof src.setData === "function") {
       src.setData(getSelectedFeatureCollection());
     }
-  }, [getSelectedFeatureCollection, map, layersLoaded, ids.selectedSourceId]);
+  }, [getSelectedFeatureCollection, mapRef, layersLoaded, ids.selectedSourceId]);
 
-  // Use useLayoutEffect for hover source updates to prevent visual flicker
-  // This ensures hover state changes are applied synchronously
-  useLayoutEffect(() => {
-    if (!map || !layersLoaded) {
-      return;
-    }
-    const src = map.getSource(ids.hoverSourceId) as GeoJSONSource | undefined;
-    if (src && typeof src.setData === "function") {
-      if (hoveredRegionId) {
-        // Find the hovered feature in data
-        const feature = data.features.find(
-          (f) => f.properties?.code === hoveredRegionId
-        );
-        if (feature) {
-          src.setData({ type: "FeatureCollection", features: [feature] });
-          map.setLayoutProperty(ids.hoverLayerId, "visibility", "visible");
-        }
-      } else {
-        src.setData({ type: "FeatureCollection", features: [] });
-        map.setLayoutProperty(ids.hoverLayerId, "visibility", "none");
-      }
-    }
-  }, [
-    hoveredRegionId,
-    data,
-    map,
-    layersLoaded,
-    ids.hoverSourceId,
-    ids.hoverLayerId,
-  ]);
 
   // Cleanup on unmount or dependency change
   useEffect(
     () => () => {
+      const map = mapRef.current;
       if (!map) {
         return;
       }
@@ -518,7 +489,7 @@ export function useMapLayers({
         }
       });
     },
-    [map, layerId, ids]
+    [mapRef, layerId, ids]
   );
 
   // Pre-compute layer data mapping for O(1) lookups
@@ -557,6 +528,7 @@ export function useMapLayers({
 
   // Initialize area layers once (only when layers change, not on activeLayerId change)
   useEffect(() => {
+    const map = mapRef.current;
     if (
       !map ||
       !isMapLoaded ||
@@ -693,7 +665,7 @@ export function useMapLayers({
       });
     };
   }, [
-    map,
+    mapRef,
     isMapLoaded,
     layers,
     layerDataCache,
@@ -703,6 +675,7 @@ export function useMapLayers({
 
   // Optimized layer switching - only update visibility and active state
   useEffect(() => {
+    const map = mapRef.current;
     if (!map || !layersLoaded || !layers) {
       return;
     }
@@ -737,10 +710,11 @@ export function useMapLayers({
         );
       }
     });
-  }, [map, layersLoaded, activeLayerId, layers]);
+  }, [mapRef, layersLoaded, activeLayerId, layers]);
 
   // Update selected regions color when active layer changes
   useEffect(() => {
+    const map = mapRef.current;
     if (!map || !layersLoaded) {
       return;
     }
@@ -758,7 +732,7 @@ export function useMapLayers({
         fillColor
       );
     }
-  }, [map, layersLoaded, layers, activeLayerId, ids.selectedLayerId]);
+  }, [mapRef, layersLoaded, layers, activeLayerId, ids.selectedLayerId]);
 
   return { layersLoaded };
 }
