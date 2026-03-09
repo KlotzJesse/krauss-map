@@ -93,14 +93,14 @@ export function LayerMergeDialog({
   };
 
   const handleMerge = async () => {
-    if (selectedLayers.size < 2 || !targetLayerId) {return;}
+    if (selectedLayers.size < 2 || !targetLayerId) {
+      return;
+    }
 
     setIsMerging(true);
 
     const targetId = parseInt(targetLayerId, 10);
-    const sourceIds = [...selectedLayers].filter(
-      (id) => id !== targetId
-    );
+    const sourceIds = [...selectedLayers].filter((id) => id !== targetId);
 
     startTransition(async () => {
       // Optimistically update layers (remove source layers)
@@ -123,7 +123,9 @@ export function LayerMergeDialog({
   };
 
   const getPreviewStats = () => {
-    if (!targetLayerId || selectedLayers.size < 2) {return null;}
+    if (!targetLayerId || selectedLayers.size < 2) {
+      return null;
+    }
 
     const targetId = parseInt(targetLayerId, 10);
 
@@ -133,7 +135,9 @@ export function LayerMergeDialog({
       (l) => selectedLayers.has(l.id) && l.id !== targetId
     );
 
-    if (!targetLayer) {return null;}
+    if (!targetLayer) {
+      return null;
+    }
 
     const targetCodes = new Set(
       targetLayer.postalCodes?.map((pc) => pc.postalCode) || []
@@ -218,7 +222,9 @@ export function LayerMergeDialog({
                   {[...selectedLayers].map((layerId) => {
                     const layer = layers.find((l) => l.id === layerId);
 
-                    if (!layer) {return null;}
+                    if (!layer) {
+                      return null;
+                    }
 
                     return (
                       <SelectItem key={layer.id} value={layer.id.toString()}>

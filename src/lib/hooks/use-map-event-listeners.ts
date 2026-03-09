@@ -32,25 +32,35 @@ export function useMapEventListeners({
 }: UseMapEventListenersProps) {
   // Cursor style handlers with flushSync for synchronous updates
   const handleMouseDown = useStableCallback(() => {
-    if (!map) {return;}
+    if (!map) {
+      return;
+    }
     flushSync(() => {
       const canvas = map.getCanvas();
-      if (canvas) {canvas.style.cursor = "grabbing";}
+      if (canvas) {
+        canvas.style.cursor = "grabbing";
+      }
     });
   });
 
   const handleMouseUp = useStableCallback(() => {
-    if (!map) {return;}
+    if (!map) {
+      return;
+    }
     flushSync(() => {
       const canvas = map.getCanvas();
-      if (canvas) {canvas.style.cursor = "grab";}
+      if (canvas) {
+        canvas.style.cursor = "grab";
+      }
     });
   });
 
   // Use useLayoutEffect for cursor style updates to prevent visual flicker
   // This ensures cursor changes are applied synchronously before paint
   useLayoutEffect(() => {
-    if (!map || !layersLoaded || !isCursorMode) {return;}
+    if (!map || !layersLoaded || !isCursorMode) {
+      return;
+    }
 
     const canvas = map.getCanvas();
     canvas.style.cursor = "grab";
@@ -63,7 +73,9 @@ export function useMapEventListeners({
 
   // Use useEffect for event listeners since they don't affect layout immediately
   useEffect(() => {
-    if (!map || !layersLoaded || !isCursorMode) {return;}
+    if (!map || !layersLoaded || !isCursorMode) {
+      return;
+    }
 
     const canvas = map.getCanvas();
     const targetLayer = `${layerId}-layer`;
@@ -71,7 +83,9 @@ export function useMapEventListeners({
 
     // Handler to attach event listeners when the layer is present
     function attachHandlers() {
-      if (!map || !map.getLayer(targetLayer) || attached) {return;}
+      if (!map || !map.getLayer(targetLayer) || attached) {
+        return;
+      }
 
       map.on("mouseenter", targetLayer, handleMouseEnter);
       map.on("mousemove", targetLayer, handleMouseMove);

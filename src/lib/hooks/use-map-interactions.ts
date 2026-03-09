@@ -1,8 +1,4 @@
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import type { RefObject } from "react";
 

@@ -670,7 +670,9 @@ export async function compareVersionsAction(
     const layersModified = snapshot2.layers.filter((l2) => {
       const l1 = layers1Map.get(l2.name);
 
-      if (!l1) {return false;}
+      if (!l1) {
+        return false;
+      }
 
       return (
         l1.color !== l2.color ||
@@ -686,13 +688,9 @@ export async function compareVersionsAction(
 
     const allCodes2 = new Set(snapshot2.layers.flatMap((l) => l.postalCodes));
 
-    const postalCodesAdded = [...allCodes2].filter(
-      (c) => !allCodes1.has(c)
-    );
+    const postalCodesAdded = [...allCodes2].filter((c) => !allCodes1.has(c));
 
-    const postalCodesRemoved = [...allCodes1].filter(
-      (c) => !allCodes2.has(c)
-    );
+    const postalCodesRemoved = [...allCodes1].filter((c) => !allCodes2.has(c));
 
     revalidatePath("/postal-codes", "layout");
     return {

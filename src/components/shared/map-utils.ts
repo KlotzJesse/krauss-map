@@ -21,8 +21,12 @@ const polygonCache = new WeakMap<object, Feature<Polygon>[]>();
 export function getPolygons(
   feature: Feature<Polygon | MultiPolygon>
 ): Feature<Polygon>[] {
-  if (!feature || !feature.geometry) {return [];}
-  if (polygonCache.has(feature)) {return polygonCache.get(feature)!;}
+  if (!feature || !feature.geometry) {
+    return [];
+  }
+  if (polygonCache.has(feature)) {
+    return polygonCache.get(feature)!;
+  }
   let result: Feature<Polygon>[] = [];
   if (feature.geometry.type === "Polygon") {
     result = [feature as Feature<Polygon>];
@@ -85,19 +89,27 @@ export function findHoles(
   const codeMap = new Map<string, Feature<Polygon | MultiPolygon>>();
   features.forEach((f) => {
     const code = f.properties?.code || f.properties?.PLZ || f.properties?.plz;
-    if (code) {codeMap.set(code, f);}
+    if (code) {
+      codeMap.set(code, f);
+    }
   });
   // Build adjacency list
   const adj = new Map<string, Set<string>>();
   for (const f of features) {
     const code = f.properties?.code || f.properties?.PLZ || f.properties?.plz;
-    if (!code) {continue;}
+    if (!code) {
+      continue;
+    }
     adj.set(code, new Set());
     for (const g of features) {
       const gcode =
         g.properties?.code || g.properties?.PLZ || g.properties?.plz;
-      if (!gcode || gcode === code) {continue;}
-      if (isRegionAdjacent(f, [g])) {adj.get(code)!.add(gcode);}
+      if (!gcode || gcode === code) {
+        continue;
+      }
+      if (isRegionAdjacent(f, [g])) {
+        adj.get(code)!.add(gcode);
+      }
     }
   }
   // Find all regions on the edge (not selected, touching map boundary)
@@ -105,7 +117,9 @@ export function findHoles(
   const outside = new Set<string>();
   for (const f of features) {
     const code = f.properties?.code || f.properties?.PLZ || f.properties?.plz;
-    if (!code || selectedCodes.has(code)) {continue;}
+    if (!code || selectedCodes.has(code)) {
+      continue;
+    }
     // Heuristic: if region touches map boundary (min/max lat/lon), treat as outside
     const coords = getPolygons(f).flatMap((poly) =>
       Array.isArray(poly.geometry.coordinates)
@@ -144,8 +158,12 @@ export function findHoles(
   const holes: string[] = [];
   for (const f of features) {
     const code = f.properties?.code || f.properties?.PLZ || f.properties?.plz;
-    if (!code || selectedCodes.has(code)) {continue;}
-    if (!visited.has(code)) {holes.push(code);}
+    if (!code || selectedCodes.has(code)) {
+      continue;
+    }
+    if (!visited.has(code)) {
+      holes.push(code);
+    }
   }
   return holes;
 }

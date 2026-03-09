@@ -1,8 +1,4 @@
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type { Feature } from "maplibre-gl";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -48,7 +44,9 @@ export function usePostalCodeSearch({ data }: PostalCodeSearchProps) {
         if (word.length > 1) {
           // Skip single characters for performance
 
-          if (!index.has(word)) {index.set(word, new Set());}
+          if (!index.has(word)) {
+            index.set(word, new Set());
+          }
 
           index.get(word).add(feature);
         }
@@ -82,7 +80,9 @@ export function usePostalCodeSearch({ data }: PostalCodeSearchProps) {
               feature.properties?.PLZ ||
               feature.properties?.plz;
 
-            if (code) {results.set(code, feature);}
+            if (code) {
+              results.set(code, feature);
+            }
           });
         }
       });

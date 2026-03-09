@@ -1016,8 +1016,8 @@ export async function geocodeAction(address: string): ServerActionResponse<{
   try {
     // Use Nominatim for geocoding
 
-    const nominatimUrl =
-      `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams(
+      {
         format: "json",
 
         q: address,
@@ -1029,7 +1029,8 @@ export async function geocodeAction(address: string): ServerActionResponse<{
         countrycodes: "de",
 
         "accept-language": "de,en",
-      })}`;
+      }
+    )}`;
 
     const response = await fetch(nominatimUrl, {
       headers: {
@@ -1116,8 +1117,8 @@ export async function geocodeSearchAction(data: {
 
     // Implement enhanced search with multiple variants
 
-    const nominatimUrl =
-      `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams(
+      {
         format: "json",
 
         q: query,
@@ -1129,7 +1130,8 @@ export async function geocodeSearchAction(data: {
         countrycodes: "de",
 
         "accept-language": "de,en",
-      })}`;
+      }
+    )}`;
 
     const response = await fetch(nominatimUrl, {
       headers: {
@@ -1345,8 +1347,8 @@ export async function searchPostalCodesByBoundaryAction(data: {
 
     // Try to get boundary from Nominatim
 
-    const nominatimUrl =
-      `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams(
+      {
         format: "geojson",
 
         q: areaName,
@@ -1360,7 +1362,8 @@ export async function searchPostalCodesByBoundaryAction(data: {
         countrycodes: "de",
 
         "accept-language": "de,en",
-      })}`;
+      }
+    )}`;
 
     const response = await fetch(nominatimUrl, {
       headers: {

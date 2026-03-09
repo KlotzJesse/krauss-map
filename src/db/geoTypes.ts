@@ -1,5 +1,5 @@
-import { sql } from 'drizzle-orm';
-import type { SQL } from 'drizzle-orm';
+import { sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 // filename: db/postgis-types.ts
 import { customType } from "drizzle-orm/pg-core";
 

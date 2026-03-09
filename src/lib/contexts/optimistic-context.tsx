@@ -1,11 +1,18 @@
 "use client";
 
 import type { InferSelectModel } from "drizzle-orm";
-import React, { createContext, useContext, useOptimistic, useTransition, useCallback } from 'react';
-import type { ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useOptimistic,
+  useTransition,
+  useCallback,
+} from "react";
+import type { ReactNode } from "react";
 
 import type { areaLayers, areas } from "../schema/schema";
 
+const EMPTY_ARRAY: never[] = [];
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
@@ -194,8 +201,8 @@ interface OptimisticProviderProps {
 
 export function OptimisticProvider({
   children,
-  initialLayers = [],
-  initialAreas = [],
+  initialLayers = EMPTY_ARRAY,
+  initialAreas = EMPTY_ARRAY,
   initialUndoRedo = {
     undoCount: 0,
     redoCount: 0,
@@ -248,7 +255,8 @@ export function OptimisticProvider({
     <T,>(
       optimisticUpdate: () => void,
       serverAction: () => Promise<T>
-    ): Promise<T> => new Promise((resolve, reject) => {
+    ): Promise<T> =>
+      new Promise((resolve, reject) => {
         startTransition(async () => {
           optimisticUpdate();
           try {

@@ -64,7 +64,9 @@ export function ChangePreviewDialog({
   onConfirm,
   isLoading = false,
 }: ChangePreviewDialogProps) {
-  if (!change) {return null;}
+  if (!change) {
+    return null;
+  }
 
   const getChangeTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -78,7 +80,7 @@ export function ChangePreviewDialog({
     return labels[type] || type;
   };
 
-  const renderChangeDetails = () => {
+  const getChangeDetailsContent = () => {
     switch (change.changeType) {
       case "create_layer": {
         return (
@@ -256,7 +258,7 @@ export function ChangePreviewDialog({
             )}
 
             <div className="border rounded-lg p-4 bg-accent/5">
-              {renderChangeDetails()}
+              {getChangeDetailsContent()}
             </div>
 
             <Alert>

@@ -17,7 +17,9 @@ export function useMapStyle({
   // Use useLayoutEffect for style updates to prevent flash of unstyled content
   // This ensures all style changes are applied synchronously before paint
   useLayoutEffect(() => {
-    if (!map || !isMapLoaded) {return;}
+    if (!map || !isMapLoaded) {
+      return;
+    }
 
     const mainLayerId = `${granularity}-layer`;
     const hoverLayerId = `${granularity}-hover`;
@@ -64,7 +66,9 @@ export function useMapStyle({
 
   // Use useEffect for async layer waiting to avoid blocking the main thread
   useEffect(() => {
-    if (!map || !isMapLoaded) {return;}
+    if (!map || !isMapLoaded) {
+      return;
+    }
 
     const mainLayerId = `${granularity}-layer`;
     const hoverLayerId = `${granularity}-hover`;

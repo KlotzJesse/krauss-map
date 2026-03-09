@@ -3,8 +3,15 @@
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../lib/db";
-import { areaChanges, areaUndoStacks, areaVersions, areas, areaLayers, areaLayerPostalCodes } from '../../lib/schema/schema';
-import type { SelectAreaChanges } from '../../lib/schema/schema';
+import {
+  areaChanges,
+  areaUndoStacks,
+  areaVersions,
+  areas,
+  areaLayers,
+  areaLayerPostalCodes,
+} from "../../lib/schema/schema";
+import type { SelectAreaChanges } from "../../lib/schema/schema";
 
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 

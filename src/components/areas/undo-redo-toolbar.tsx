@@ -69,7 +69,9 @@ export function UndoRedoToolbar({
     }
   );
 
-  if (!areaId) {return null;}
+  if (!areaId) {
+    return null;
+  }
 
   const isFloating = variant === "floating";
 

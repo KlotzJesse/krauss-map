@@ -121,7 +121,9 @@ export function EnhancedVersionHistoryDialog({
   };
 
   const confirmRestore = () => {
-    if (!versionToRestore) {return;}
+    if (!versionToRestore) {
+      return;
+    }
 
     startTransition(async () => {
       // Optimistically show restoring state
@@ -138,9 +140,7 @@ export function EnhancedVersionHistoryDialog({
             if (data.success) {
               return `Version ${versionToRestore.versionNumber} wiederhergestellt`;
             }
-            throw new Error(
-              data.error || "Failed to restore version"
-            );
+            throw new Error(data.error || "Failed to restore version");
           },
           error: "Fehler beim Wiederherstellen der Version",
         }
@@ -156,7 +156,9 @@ export function EnhancedVersionHistoryDialog({
   };
 
   const handleCompare = async () => {
-    if (!selectedVersion || !compareVersion) {return;}
+    if (!selectedVersion || !compareVersion) {
+      return;
+    }
 
     await toast.promise(
       compareVersionsAction(

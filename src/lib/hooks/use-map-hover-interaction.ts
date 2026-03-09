@@ -20,7 +20,9 @@ export function useMapHoverInteraction(
 
   // Core hover processing logic
   const processHover = useStableCallback((...args: unknown[]) => {
-    if (!map || !layersLoaded || !isCursorMode) {return;}
+    if (!map || !layersLoaded || !isCursorMode) {
+      return;
+    }
 
     const hoverSourceId = `${layerId}-hover-source`;
     const hoverLayerId = `${layerId}-hover-layer`;
@@ -45,7 +47,9 @@ export function useMapHoverInteraction(
           // Use flushSync for synchronous cursor updates to prevent visual lag
           flushSync(() => {
             const canvas = map.getCanvas();
-            if (canvas) {canvas.style.cursor = "pointer";}
+            if (canvas) {
+              canvas.style.cursor = "pointer";
+            }
           });
           hoveredRegionIdRef.current = regionCode;
         }
@@ -65,7 +69,9 @@ export function useMapHoverInteraction(
 
   // Mouse leave handler
   const handleMouseLeave = useStableCallback(() => {
-    if (!map || !layersLoaded || !isCursorMode) {return;}
+    if (!map || !layersLoaded || !isCursorMode) {
+      return;
+    }
 
     const hoverSourceId = `${layerId}-hover-source`;
     const hoverLayerId = `${layerId}-hover-layer`;
@@ -83,7 +89,9 @@ export function useMapHoverInteraction(
       // Use flushSync for synchronous cursor updates to prevent visual lag
       flushSync(() => {
         const canvas = map.getCanvas();
-        if (canvas) {canvas.style.cursor = "grab";}
+        if (canvas) {
+          canvas.style.cursor = "grab";
+        }
       });
     }
 

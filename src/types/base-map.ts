@@ -1,9 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import type {
   SelectAreaVersions,
@@ -21,9 +17,7 @@ export interface BaseMapProps {
   onSearch?: (query: string) => void;
   center?: [number, number];
   zoom?: number;
-  statesData: FeatureCollection<
-    Polygon | MultiPolygon
-  > | null;
+  statesData: FeatureCollection<Polygon | MultiPolygon> | null;
   granularity?: string;
   onGranularityChange?: (granularity: string) => void;
   layers: Layer[];

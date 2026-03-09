@@ -1,3 +1,4 @@
+"use no memo";
 import { PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {

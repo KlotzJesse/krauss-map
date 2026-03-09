@@ -67,7 +67,7 @@ export function EnhancedConflictResolutionDialog({
     onResolve(resolutions);
   };
 
-  const renderValue = (value: unknown) => {
+  const formatValue = (value: unknown) => {
     if (typeof value === "object") {
       return JSON.stringify(value, null, 2);
     }
@@ -155,7 +155,7 @@ export function EnhancedConflictResolutionDialog({
                           </div>
                           <div className="pl-6 p-3 bg-blue-50 dark:bg-blue-900/10 rounded border border-blue-200">
                             <pre className="text-xs overflow-auto">
-                              {renderValue(conflict.localValue)}
+                              {formatValue(conflict.localValue)}
                             </pre>
                           </div>
                         </div>
@@ -176,7 +176,7 @@ export function EnhancedConflictResolutionDialog({
                           </div>
                           <div className="pl-6 p-3 bg-green-50 dark:bg-green-900/10 rounded border border-green-200">
                             <pre className="text-xs overflow-auto">
-                              {renderValue(conflict.remoteValue)}
+                              {formatValue(conflict.remoteValue)}
                             </pre>
                           </div>
                         </div>

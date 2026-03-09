@@ -1,8 +1,4 @@
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 export interface ParsedPostalCode {
   original: string;
@@ -42,7 +38,9 @@ export function isValidGermanPostalCode(code: string): boolean {
  * Parses various input formats for postal codes
  */
 export function parsePostalCodeInput(input: string): ParsedPostalCode[] {
-  if (!input.trim()) {return [];}
+  if (!input.trim()) {
+    return [];
+  }
 
   const results: ParsedPostalCode[] = [];
 
@@ -87,7 +85,9 @@ export function findPostalCodeMatches(
     .map((code) => normalizePostalCode(code));
 
   for (const parsed of parsedCodes) {
-    if (!parsed.isValid) {continue;}
+    if (!parsed.isValid) {
+      continue;
+    }
 
     const inputCode = parsed.normalized;
     const matchedCodes: string[] = [];
@@ -176,13 +176,10 @@ export function estimateGranularity(code: string): string {
 export function groupMatchesByPattern(
   matches: PostalCodeMatch[]
 ): Record<string, PostalCodeMatch> {
-  return matches.reduce< Record<string, PostalCodeMatch>>(
-    (acc, match) => {
-      acc[match.code] = match;
-      return acc;
-    },
-    {}
-  );
+  return matches.reduce<Record<string, PostalCodeMatch>>((acc, match) => {
+    acc[match.code] = match;
+    return acc;
+  }, {});
 }
 
 /**

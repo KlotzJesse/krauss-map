@@ -1,8 +1,4 @@
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { toast } from "sonner";
 
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
@@ -71,7 +67,9 @@ export function usePostalCodeBulkImport({
   });
 
   const validateInput = useStableCallback((input: string) => {
-    if (!input.trim()) {return { valid: 0, invalid: 0, total: 0 };}
+    if (!input.trim()) {
+      return { valid: 0, invalid: 0, total: 0 };
+    }
 
     const parsed = parsePostalCodeInput(input);
     const valid = parsed.filter((p) => p.isValid).length;
@@ -86,7 +84,9 @@ export function usePostalCodeBulkImport({
   });
 
   const previewMatches = useStableCallback((input: string) => {
-    if (!input.trim()) {return [];}
+    if (!input.trim()) {
+      return [];
+    }
 
     const parsed = parsePostalCodeInput(input);
     const matches = findPostalCodeMatches(parsed, data, granularity);

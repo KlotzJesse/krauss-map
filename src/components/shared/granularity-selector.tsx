@@ -44,6 +44,7 @@ import {
   getGranularityChangeDescription,
 } from "@/lib/utils/granularity-utils";
 
+const EMPTY_ARRAY: never[] = [];
 interface GranularitySelectorProps {
   currentGranularity: string;
   onGranularityChange: (granularity: string) => void;
@@ -55,7 +56,7 @@ export function GranularitySelector({
   currentGranularity,
   onGranularityChange,
   areaId,
-  layers = [],
+  layers = EMPTY_ARRAY,
 }: GranularitySelectorProps) {
   const { totalPostalCodes, hasPostalCodes } = useMemo(() => {
     const total = layers.reduce(
@@ -81,8 +82,12 @@ export function GranularitySelector({
   );
 
   const handleGranularitySelect = (newGranularity: string) => {
-    if (newGranularity === currentGranularity) {return;}
-    if (!areaId) {return;}
+    if (newGranularity === currentGranularity) {
+      return;
+    }
+    if (!areaId) {
+      return;
+    }
 
     // If no postal codes, allow any change
     if (!hasPostalCodes) {
@@ -208,8 +213,12 @@ export function GranularitySelector({
   };
 
   const getSelectItemStatus = (optionValue: string) => {
-    if (optionValue === currentGranularity) {return "current";}
-    if (!hasPostalCodes) {return "available";}
+    if (optionValue === currentGranularity) {
+      return "current";
+    }
+    if (!hasPostalCodes) {
+      return "available";
+    }
 
     const changeDescription = getGranularityChangeDescription(
       currentGranularity,

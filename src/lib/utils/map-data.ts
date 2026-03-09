@@ -25,7 +25,9 @@ export function featureCollectionFromIds(
   data: FeatureCollection,
   codes: string[]
 ): FeatureCollection {
-  if (!data || !Array.isArray(data.features)) {return emptyFeatureCollection();}
+  if (!data || !Array.isArray(data.features)) {
+    return emptyFeatureCollection();
+  }
   return {
     type: "FeatureCollection",
     features: (data.features as Feature[])

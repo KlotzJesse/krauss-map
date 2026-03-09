@@ -1,30 +1,319 @@
-{ "diagnostics": [{"message": "Prefer `Math.hypot(…)` over alternatives","code": "eslint-plugin-unicorn(prefer-modern-math-apis)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-modern-math-apis.html","filename": "src/components/shared/hooks/use-feature-selection.ts","labels": [{"span": {"offset": 2889,"length": 36,"line": 89,"column": 26}}],"related": []},
-{"message": "Unexpected `if` as the only statement in a `if` block without `else`.","code": "eslint-plugin-unicorn(no-lonely-if)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-lonely-if.html","help": "Move the inner `if` test to the outer `if` test.","filename": "src/app/(map)/postal-codes/[areaId]/page.tsx","labels": [{"span": {"offset": 3702,"length": 2,"line": 119,"column": 11}},{"span": {"offset": 3677,"length": 2,"line": 118,"column": 9}}],"related": []},
-{"message": "Unexpected `if` as the only statement in an `else` block","code": "eslint(no-lonely-if)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-lonely-if.html","help": "Consider using `else if` instead.","filename": "src/lib/hooks/use-cursor-selection.ts","labels": [{"span": {"offset": 1957,"length": 2,"line": 58,"column": 7}}],"related": []},
-{"message": "Expected a `for-of` loop instead of a `for` loop with this simple iteration.","code": "typescript-eslint(prefer-for-of)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-for-of.html","help": "Consider using a for-of loop for this simple iteration.","filename": "src/lib/hooks/use-map-optimizations.ts","labels": [{"span": {"offset": 2069,"length": 33,"line": 69,"column": 14}}],"related": []},
-{"message": "Expected a `for-of` loop instead of a `for` loop with this simple iteration.","code": "typescript-eslint(prefer-for-of)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-for-of.html","help": "Consider using a for-of loop for this simple iteration.","filename": "src/lib/hooks/use-map-optimizations.ts","labels": [{"span": {"offset": 2557,"length": 33,"line": 80,"column": 16}}],"related": []},
-{"message": "`button` elements must have an explicit `type` attribute.","code": "eslint-plugin-react(button-has-type)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/react/button-has-type.html","help": "Add a `type` attribute to the `button` element.","filename": "src/components/ui/error-boundary.tsx","labels": [{"span": {"offset": 715,"length": 6,"line": 28,"column": 8}}],"related": []},
-{"message": "Property statusCode should be declared as a class property.","code": "typescript-eslint(parameter-properties)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/parameter-properties.html","help": "Remove the parameter modifier and declare this member on the class instead.","filename": "src/lib/utils/api-error-handling.ts","labels": [{"span": {"offset": 252,"length": 25,"line": 13,"column": 5}}],"related": []},
-{"message": "Property message should be declared as a class property.","code": "typescript-eslint(parameter-properties)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/parameter-properties.html","help": "Remove the parameter modifier and declare this member on the class instead.","filename": "src/lib/utils/api-error-handling.ts","labels": [{"span": {"offset": 283,"length": 22,"line": 14,"column": 5}}],"related": []},
-{"message": "Property error should be declared as a class property.","code": "typescript-eslint(parameter-properties)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/parameter-properties.html","help": "Remove the parameter modifier and declare this member on the class instead.","filename": "src/lib/utils/api-error-handling.ts","labels": [{"span": {"offset": 311,"length": 34,"line": 15,"column": 5}}],"related": []},
-{"message": "Useless case in switch statement.","code": "eslint-plugin-unicorn(no-useless-switch-case)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-useless-switch-case.html","help": "Consider removing this case or removing the `default` case.","filename": "src/lib/utils/granularity-utils.ts","labels": [{"span": {"offset": 2228,"length": 7,"line": 86,"column": 5}}],"related": []},
-{"message": "Variable declarations should be sorted","code": "eslint(sort-vars)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/sort-vars.html","help": "Sort variable declarations in ascending order (case-sensitive by default).","filename": "src/lib/hooks/use-postal-code-lookup.ts","labels": [{"span": {"offset": 1110,"length": 18,"line": 48,"column": 9}}],"related": []},
-{"message": "Variable declarations should be sorted","code": "eslint(sort-vars)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/sort-vars.html","help": "Sort variable declarations in ascending order (case-sensitive by default).","filename": "src/lib/hooks/use-postal-code-lookup.ts","labels": [{"span": {"offset": 1167,"length": 18,"line": 50,"column": 9}}],"related": []},
-{"message": "Unexpected `if` as the only statement in a `if` block without `else`.","code": "eslint-plugin-unicorn(no-lonely-if)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-lonely-if.html","help": "Move the inner `if` test to the outer `if` test.","filename": "src/lib/hooks/use-postal-code-lookup.ts","labels": [{"span": {"offset": 6232,"length": 2,"line": 239,"column": 15}},{"span": {"offset": 6164,"length": 2,"line": 238,"column": 13}}],"related": []},
-{"message": "Function declared in a loop contains unsafe references to variable(s)","code": "eslint(no-loop-func)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-loop-func.html","help": "Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.","filename": "src/app/actions/bulk-import-actions.ts","labels": [{"span": {"offset": 1999,"length": 3595,"line": 68,"column": 30}}],"related": []},
-{"message": "Function declared in a loop contains unsafe references to variable(s)","code": "eslint(no-loop-func)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-loop-func.html","help": "Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.","filename": "src/app/actions/bulk-import-actions.ts","labels": [{"span": {"offset": 2805,"length": 100,"line": 88,"column": 29}}],"related": []},
-{"message": "Function declared in a loop contains unsafe references to variable(s)","code": "eslint(no-loop-func)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-loop-func.html","help": "Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.","filename": "src/app/actions/bulk-import-actions.ts","labels": [{"span": {"offset": 4328,"length": 94,"line": 135,"column": 27}}],"related": []},
-{"message": "`button` elements must have an explicit `type` attribute.","code": "eslint-plugin-react(button-has-type)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/react/button-has-type.html","help": "Add a `type` attribute to the `button` element.","filename": "src/components/areas/nav-areas.tsx","labels": [{"span": {"offset": 5518,"length": 6,"line": 198,"column": 14}}],"related": []},
-{"message": "`button` elements must have an explicit `type` attribute.","code": "eslint-plugin-react(button-has-type)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/react/button-has-type.html","help": "Add a `type` attribute to the `button` element.","filename": "src/components/ui/sidebar.tsx","labels": [{"span": {"offset": 8545,"length": 6,"line": 285,"column": 6}}],"related": []},
-{"message": "Useless case in switch statement.","code": "eslint-plugin-unicorn(no-useless-switch-case)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-useless-switch-case.html","help": "Consider removing this case or removing the `default` case.","filename": "src/components/postal-codes/address-autocomplete-enhanced.tsx","labels": [{"span": {"offset": 6943,"length": 14,"line": 225,"column": 9}}],"related": []},
-{"message": "Unnecessary use of boolean literals in conditional expression","code": "eslint(no-unneeded-ternary)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-unneeded-ternary.html","help": "Remove this ternary operator","filename": "src/components/shared/drawing-tools.tsx","labels": [{"span": {"offset": 7061,"length": 21,"line": 347,"column": 48}}],"related": []},
-{"message": "`button` elements must have an explicit `type` attribute.","code": "eslint-plugin-react(button-has-type)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/react/button-has-type.html","help": "Add a `type` attribute to the `button` element.","filename": "src/components/shared/drawing-tools.tsx","labels": [{"span": {"offset": 30432,"length": 6,"line": 1089,"column": 38}}],"related": []},
-{"message": "Expected a `for-of` loop instead of a `for` loop with this simple iteration.","code": "typescript-eslint(prefer-for-of)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-for-of.html","help": "Consider using a for-of loop for this simple iteration.","filename": "src/lib/hooks/use-file-import.ts","labels": [{"span": {"offset": 2294,"length": 32,"line": 75,"column": 12}}],"related": []},
-{"message": "Prefer `addEventListener()` over their `on`-function counterparts.","code": "eslint-plugin-unicorn(prefer-add-event-listener)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-add-event-listener.html","filename": "src/lib/hooks/use-file-import.ts","labels": [{"span": {"offset": 2739,"length": 6,"line": 98,"column": 12}}],"related": []},
-{"message": "Prefer `addEventListener()` over their `on`-function counterparts.","code": "eslint-plugin-unicorn(prefer-add-event-listener)","severity": "error","causes": [],"url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-add-event-listener.html","filename": "src/lib/hooks/use-file-import.ts","labels": [{"span": {"offset": 2949,"length": 7,"line": 106,"column": 12}}],"related": []}],
-              "number_of_files": 165,
-              "number_of_rules": 241,
-              "threads_count": 20,
-              "start_time": 0.4706361
-            }
-            
+{
+  "diagnostics": [
+    {
+      "message": "Prefer `Math.hypot(…)` over alternatives",
+      "code": "eslint-plugin-unicorn(prefer-modern-math-apis)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-modern-math-apis.html",
+      "filename": "src/components/shared/hooks/use-feature-selection.ts",
+      "labels": [
+        { "span": { "offset": 2889, "length": 36, "line": 89, "column": 26 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Unexpected `if` as the only statement in a `if` block without `else`.",
+      "code": "eslint-plugin-unicorn(no-lonely-if)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-lonely-if.html",
+      "help": "Move the inner `if` test to the outer `if` test.",
+      "filename": "src/app/(map)/postal-codes/[areaId]/page.tsx",
+      "labels": [
+        { "span": { "offset": 3702, "length": 2, "line": 119, "column": 11 } },
+        { "span": { "offset": 3677, "length": 2, "line": 118, "column": 9 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Unexpected `if` as the only statement in an `else` block",
+      "code": "eslint(no-lonely-if)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-lonely-if.html",
+      "help": "Consider using `else if` instead.",
+      "filename": "src/lib/hooks/use-cursor-selection.ts",
+      "labels": [
+        { "span": { "offset": 1957, "length": 2, "line": 58, "column": 7 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Expected a `for-of` loop instead of a `for` loop with this simple iteration.",
+      "code": "typescript-eslint(prefer-for-of)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-for-of.html",
+      "help": "Consider using a for-of loop for this simple iteration.",
+      "filename": "src/lib/hooks/use-map-optimizations.ts",
+      "labels": [
+        { "span": { "offset": 2069, "length": 33, "line": 69, "column": 14 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Expected a `for-of` loop instead of a `for` loop with this simple iteration.",
+      "code": "typescript-eslint(prefer-for-of)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-for-of.html",
+      "help": "Consider using a for-of loop for this simple iteration.",
+      "filename": "src/lib/hooks/use-map-optimizations.ts",
+      "labels": [
+        { "span": { "offset": 2557, "length": 33, "line": 80, "column": 16 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "`button` elements must have an explicit `type` attribute.",
+      "code": "eslint-plugin-react(button-has-type)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/react/button-has-type.html",
+      "help": "Add a `type` attribute to the `button` element.",
+      "filename": "src/components/ui/error-boundary.tsx",
+      "labels": [
+        { "span": { "offset": 715, "length": 6, "line": 28, "column": 8 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Property statusCode should be declared as a class property.",
+      "code": "typescript-eslint(parameter-properties)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/parameter-properties.html",
+      "help": "Remove the parameter modifier and declare this member on the class instead.",
+      "filename": "src/lib/utils/api-error-handling.ts",
+      "labels": [
+        { "span": { "offset": 252, "length": 25, "line": 13, "column": 5 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Property message should be declared as a class property.",
+      "code": "typescript-eslint(parameter-properties)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/parameter-properties.html",
+      "help": "Remove the parameter modifier and declare this member on the class instead.",
+      "filename": "src/lib/utils/api-error-handling.ts",
+      "labels": [
+        { "span": { "offset": 283, "length": 22, "line": 14, "column": 5 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Property error should be declared as a class property.",
+      "code": "typescript-eslint(parameter-properties)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/parameter-properties.html",
+      "help": "Remove the parameter modifier and declare this member on the class instead.",
+      "filename": "src/lib/utils/api-error-handling.ts",
+      "labels": [
+        { "span": { "offset": 311, "length": 34, "line": 15, "column": 5 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Useless case in switch statement.",
+      "code": "eslint-plugin-unicorn(no-useless-switch-case)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-useless-switch-case.html",
+      "help": "Consider removing this case or removing the `default` case.",
+      "filename": "src/lib/utils/granularity-utils.ts",
+      "labels": [
+        { "span": { "offset": 2228, "length": 7, "line": 86, "column": 5 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Variable declarations should be sorted",
+      "code": "eslint(sort-vars)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/sort-vars.html",
+      "help": "Sort variable declarations in ascending order (case-sensitive by default).",
+      "filename": "src/lib/hooks/use-postal-code-lookup.ts",
+      "labels": [
+        { "span": { "offset": 1110, "length": 18, "line": 48, "column": 9 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Variable declarations should be sorted",
+      "code": "eslint(sort-vars)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/sort-vars.html",
+      "help": "Sort variable declarations in ascending order (case-sensitive by default).",
+      "filename": "src/lib/hooks/use-postal-code-lookup.ts",
+      "labels": [
+        { "span": { "offset": 1167, "length": 18, "line": 50, "column": 9 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Unexpected `if` as the only statement in a `if` block without `else`.",
+      "code": "eslint-plugin-unicorn(no-lonely-if)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-lonely-if.html",
+      "help": "Move the inner `if` test to the outer `if` test.",
+      "filename": "src/lib/hooks/use-postal-code-lookup.ts",
+      "labels": [
+        { "span": { "offset": 6232, "length": 2, "line": 239, "column": 15 } },
+        { "span": { "offset": 6164, "length": 2, "line": 238, "column": 13 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Function declared in a loop contains unsafe references to variable(s)",
+      "code": "eslint(no-loop-func)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-loop-func.html",
+      "help": "Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.",
+      "filename": "src/app/actions/bulk-import-actions.ts",
+      "labels": [
+        { "span": { "offset": 1999, "length": 3595, "line": 68, "column": 30 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Function declared in a loop contains unsafe references to variable(s)",
+      "code": "eslint(no-loop-func)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-loop-func.html",
+      "help": "Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.",
+      "filename": "src/app/actions/bulk-import-actions.ts",
+      "labels": [
+        { "span": { "offset": 2805, "length": 100, "line": 88, "column": 29 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Function declared in a loop contains unsafe references to variable(s)",
+      "code": "eslint(no-loop-func)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-loop-func.html",
+      "help": "Variables declared with 'var' are function-scoped, not block-scoped. Consider using 'let' or 'const' for block-scoped variables, or move the function outside the loop.",
+      "filename": "src/app/actions/bulk-import-actions.ts",
+      "labels": [
+        { "span": { "offset": 4328, "length": 94, "line": 135, "column": 27 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "`button` elements must have an explicit `type` attribute.",
+      "code": "eslint-plugin-react(button-has-type)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/react/button-has-type.html",
+      "help": "Add a `type` attribute to the `button` element.",
+      "filename": "src/components/areas/nav-areas.tsx",
+      "labels": [
+        { "span": { "offset": 5518, "length": 6, "line": 198, "column": 14 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "`button` elements must have an explicit `type` attribute.",
+      "code": "eslint-plugin-react(button-has-type)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/react/button-has-type.html",
+      "help": "Add a `type` attribute to the `button` element.",
+      "filename": "src/components/ui/sidebar.tsx",
+      "labels": [
+        { "span": { "offset": 8545, "length": 6, "line": 285, "column": 6 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Useless case in switch statement.",
+      "code": "eslint-plugin-unicorn(no-useless-switch-case)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-useless-switch-case.html",
+      "help": "Consider removing this case or removing the `default` case.",
+      "filename": "src/components/postal-codes/address-autocomplete-enhanced.tsx",
+      "labels": [
+        { "span": { "offset": 6943, "length": 14, "line": 225, "column": 9 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Unnecessary use of boolean literals in conditional expression",
+      "code": "eslint(no-unneeded-ternary)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-unneeded-ternary.html",
+      "help": "Remove this ternary operator",
+      "filename": "src/components/shared/drawing-tools.tsx",
+      "labels": [
+        { "span": { "offset": 7061, "length": 21, "line": 347, "column": 48 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "`button` elements must have an explicit `type` attribute.",
+      "code": "eslint-plugin-react(button-has-type)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/react/button-has-type.html",
+      "help": "Add a `type` attribute to the `button` element.",
+      "filename": "src/components/shared/drawing-tools.tsx",
+      "labels": [
+        { "span": { "offset": 30432, "length": 6, "line": 1089, "column": 38 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Expected a `for-of` loop instead of a `for` loop with this simple iteration.",
+      "code": "typescript-eslint(prefer-for-of)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-for-of.html",
+      "help": "Consider using a for-of loop for this simple iteration.",
+      "filename": "src/lib/hooks/use-file-import.ts",
+      "labels": [
+        { "span": { "offset": 2294, "length": 32, "line": 75, "column": 12 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Prefer `addEventListener()` over their `on`-function counterparts.",
+      "code": "eslint-plugin-unicorn(prefer-add-event-listener)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-add-event-listener.html",
+      "filename": "src/lib/hooks/use-file-import.ts",
+      "labels": [
+        { "span": { "offset": 2739, "length": 6, "line": 98, "column": 12 } }
+      ],
+      "related": []
+    },
+    {
+      "message": "Prefer `addEventListener()` over their `on`-function counterparts.",
+      "code": "eslint-plugin-unicorn(prefer-add-event-listener)",
+      "severity": "error",
+      "causes": [],
+      "url": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-add-event-listener.html",
+      "filename": "src/lib/hooks/use-file-import.ts",
+      "labels": [
+        { "span": { "offset": 2949, "length": 7, "line": 106, "column": 12 } }
+      ],
+      "related": []
+    }
+  ],
+  "number_of_files": 165,
+  "number_of_rules": 241,
+  "threads_count": 20,
+  "start_time": 0.4706361
+}

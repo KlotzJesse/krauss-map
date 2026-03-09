@@ -235,7 +235,11 @@ export function usePostalCodeLookup({
           }
         } else if (feature.geometry.type === "MultiPolygon") {
           for (const poly of feature.geometry.coordinates) {
-            if (Array.isArray(poly) && Array.isArray(poly[0]) && isPointInPolygon([lng, lat], poly[0] as number[][])) {
+            if (
+              Array.isArray(poly) &&
+              Array.isArray(poly[0]) &&
+              isPointInPolygon([lng, lat], poly[0] as number[][])
+            ) {
               return candidate.code;
             }
           }

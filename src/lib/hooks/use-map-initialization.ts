@@ -1,7 +1,7 @@
 import type { FeatureCollection } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { useLayoutEffect, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import { useLayoutEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 
 export function useMapInitialization({
   mapContainer,
@@ -24,9 +24,15 @@ export function useMapInitialization({
   // Use useLayoutEffect for DOM container setup to ensure synchronous initialization
   // This prevents potential race conditions and ensures the map container is ready
   useLayoutEffect(() => {
-    if (!mapContainer.current) {return;}
-    if (!data || !data.features || data.features.length === 0) {return;}
-    if (mapRef.current) {return;}
+    if (!mapContainer.current) {
+      return;
+    }
+    if (!data || !data.features || data.features.length === 0) {
+      return;
+    }
+    if (mapRef.current) {
+      return;
+    }
 
     (async () => {
       const maplibre = await import("maplibre-gl");

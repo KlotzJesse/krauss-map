@@ -116,13 +116,13 @@ export default async function PostalCodesPage({
         });
 
         if (version?.snapshot) {
-            const snapshot = version.snapshot as { granularity?: string };
-            const snapGranularity = snapshot.granularity;
-            if (snapGranularity) {
-              granularity = snapGranularity;
-            } else {
-              granularity = "1digit";
-            }
+          const snapshot = version.snapshot as { granularity?: string };
+          const snapGranularity = snapshot.granularity;
+          if (snapGranularity) {
+            granularity = snapGranularity;
+          } else {
+            granularity = "1digit";
+          }
         }
       } else {
         // Get granularity from current area

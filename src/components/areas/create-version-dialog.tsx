@@ -67,6 +67,8 @@ export function CreateVersionDialog({
         if (onVersionCreated) {
           onVersionCreated();
         }
+      } catch (error) {
+        console.error(error);
       } finally {
         setIsCreating(false);
         updateOptimisticCreating(false);

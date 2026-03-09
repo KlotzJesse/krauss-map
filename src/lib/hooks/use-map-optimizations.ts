@@ -12,9 +12,7 @@ import { useStableCallback } from "./use-stable-callback";
 
 interface UseMapOptimizationsProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
-  statesData?: FeatureCollection<
-    Polygon | MultiPolygon
-  > | null;
+  statesData?: FeatureCollection<Polygon | MultiPolygon> | null;
 }
 
 /**
@@ -28,18 +26,26 @@ export function useMapOptimizations({
   statesData,
 }: UseMapOptimizationsProps) {
   // Empty feature collection for compatibility
-  const selectedFeatureCollection = useMemo(() => ({
+  const selectedFeatureCollection = useMemo(
+    () => ({
       type: "FeatureCollection" as const,
       features: [] as Feature<Polygon | MultiPolygon>[],
-    }), []);
+    }),
+    []
+  );
 
   // Memoize label points computation (expensive operation)
-  const labelPoints = useMemo(() => makeLabelPoints(data) as FeatureCollection, [data]);
+  const labelPoints = useMemo(
+    () => makeLabelPoints(data) as FeatureCollection,
+    [data]
+  );
 
   // Memoize states label points if available
-  const statesLabelPoints = useMemo(() => statesData
-      ? (makeLabelPoints(statesData) as FeatureCollection)
-      : null, [statesData]);
+  const statesLabelPoints = useMemo(
+    () =>
+      statesData ? (makeLabelPoints(statesData) as FeatureCollection) : null,
+    [statesData]
+  );
 
   // Memoize feature count for performance monitoring
   const featureCount = useMemo(
@@ -52,7 +58,9 @@ export function useMapOptimizations({
 
   // Memoize data extent for bounds calculations - optimized for performance
   const dataExtent = useMemo(() => {
-    if (!data.features.length) {return null;}
+    if (!data.features.length) {
+      return null;
+    }
 
     let minLng = Infinity;
     let maxLng = -Infinity;
@@ -94,12 +102,13 @@ export function useMapOptimizations({
   // Stable callback functions for layer usage
   // Note: Returns empty collection since selections are now per-layer
   const getSelectedFeatureCollection = useStableCallback(() => ({
-      type: "FeatureCollection" as const,
-      features: [],
-    }));
+    type: "FeatureCollection" as const,
+    features: [],
+  }));
 
   const getLabelPoints = useStableCallback(
-    (d: FeatureCollection<Polygon | MultiPolygon>) => makeLabelPoints(d) as FeatureCollection
+    (d: FeatureCollection<Polygon | MultiPolygon>) =>
+      makeLabelPoints(d) as FeatureCollection
   );
 
   return {

@@ -56,7 +56,9 @@ export function wouldGranularityChangeCauseDataLoss(
   newGranularity: string,
   hasPostalCodes: boolean = false
 ): boolean {
-  if (!hasPostalCodes) {return false;}
+  if (!hasPostalCodes) {
+    return false;
+  }
   return !isGranularityChangeCompatible(currentGranularity, newGranularity);
 }
 
@@ -68,7 +70,9 @@ export function convertPostalCodeToGranularity(
   postalCode: string,
   granularity: string
 ): string {
-  if (!postalCode) {return postalCode;}
+  if (!postalCode) {
+    return postalCode;
+  }
 
   const cleanCode = postalCode.replace(/\D/g, "");
   const level = getGranularityLevel(granularity);

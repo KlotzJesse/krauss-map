@@ -1,8 +1,4 @@
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { useEffect } from "react";
 
@@ -28,7 +24,9 @@ export function useMapSelectedFeaturesSource({
   layersLoaded,
 }: UseMapSelectedFeaturesSourceProps) {
   useEffect(() => {
-    if (!map || !layersLoaded) {return;}
+    if (!map || !layersLoaded) {
+      return;
+    }
 
     const selectedSourceId = `${layerId}-selected-source`;
     const src = map.getSource(selectedSourceId) as GeoJSONSource | undefined;

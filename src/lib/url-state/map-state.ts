@@ -32,9 +32,15 @@ export function useMapState() {
   const [versionId, setVersionId] = useQueryState("versionId");
 
   // Parse layer IDs
-  const parsedActiveLayerId = useMemo(() => activeLayerId ? parseInt(activeLayerId, 10) : null, [activeLayerId]);
+  const parsedActiveLayerId = useMemo(
+    () => (activeLayerId ? parseInt(activeLayerId, 10) : null),
+    [activeLayerId]
+  );
 
-  const parsedVersionId = useMemo(() => versionId ? parseInt(versionId, 10) : null, [versionId]);
+  const parsedVersionId = useMemo(
+    () => (versionId ? parseInt(versionId, 10) : null),
+    [versionId]
+  );
 
   // --- Atomic map view helpers ---
   const setMapCenterZoom = useStableCallback(

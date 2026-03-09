@@ -57,9 +57,7 @@ export const getPostalCodesDataForGranularity = cache(
 
 export async function getPostalCodesDataForGranularityServer(
   granularity: string
-): Promise<FeatureCollection<
-  Polygon | MultiPolygon
-> | null> {
+): Promise<FeatureCollection<Polygon | MultiPolygon> | null> {
   try {
     return await getPostalCodesDataForGranularity(granularity);
   } catch (error) {

@@ -41,6 +41,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 
+const EMPTY_ARRAY: never[] = [];
+
 interface GeocodeResult {
   id: number | string;
   display_name: string;
@@ -96,7 +98,7 @@ export function AddressAutocompleteEnhanced({
   granularity,
   triggerClassName = "",
   previewPostalCode,
-  layers = [],
+  layers = EMPTY_ARRAY,
 }: AddressAutocompleteEnhancedProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -136,7 +138,9 @@ export function AddressAutocompleteEnhanced({
 
   // Helper function to get layers containing a postal code
   const getLayersForPostalCode = useStableCallback((postalCode: string) => {
-    if (!layers || layers.length === 0) {return [];}
+    if (!layers || layers.length === 0) {
+      return [];
+    }
     return layers.filter((layer) =>
       layer.postalCodes?.some((pc) => pc.postalCode === postalCode)
     );
@@ -144,7 +148,9 @@ export function AddressAutocompleteEnhanced({
 
   const handleInputChange = useStableCallback((value: string) => {
     setQuery(value);
-    if (timeoutRef.current) {clearTimeout(timeoutRef.current);}
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
     if (value.length < 2) {
       setResults([]);
@@ -185,10 +191,6 @@ export function AddressAutocompleteEnhanced({
           return `${results.length} ${resultType}${
             results.length > 1 ? "" : ""
           } gefunden`;
-        } catch (error) {
-          console.error("Geocoding error:", error);
-          setResults([]);
-          throw error;
         } finally {
           setIsLoading(false);
         }
@@ -207,7 +209,9 @@ export function AddressAutocompleteEnhanced({
   // Utility function to convert postal code to granularity format
   const convertPostalCodeToGranularity = useStableCallback(
     (postalCode: string, granularityLevel: string): string => {
-      if (!postalCode) {return postalCode;}
+      if (!postalCode) {
+        return postalCode;
+      }
 
       // Remove any non-digit characters and ensure it's a string
       const cleanCode = postalCode.replace(/\D/g, "");

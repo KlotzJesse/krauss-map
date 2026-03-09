@@ -143,9 +143,15 @@ export function FloatingDrawingToolbar({
       case "polygon": {
         return "polygon";
       }
-      case null: { throw new Error('Not implemented yet: null case') }
-      case "linestring": { throw new Error('Not implemented yet: "linestring" case') }
-      case "point": { throw new Error('Not implemented yet: "point" case') }
+      case null: {
+        throw new Error("Not implemented yet: null case");
+      }
+      case "linestring": {
+        throw new Error('Not implemented yet: "linestring" case');
+      }
+      case "point": {
+        throw new Error('Not implemented yet: "point" case');
+      }
       default: {
         return null;
       }

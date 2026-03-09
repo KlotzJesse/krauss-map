@@ -49,7 +49,6 @@ export async function bulkImportPostalCodesAndLayers(
       existingLayers.map((l) => [l.name.toLowerCase(), l])
     );
 
-
     const processLayerData = async (
       layerData: BulkImportLayer,
       layerNameLower: string,
@@ -58,98 +57,102 @@ export async function bulkImportPostalCodesAndLayers(
       currentCreatedLayers: number,
       currentUpdatedLayers: number
     ) =>
-        db.transaction(async (tx) => {
-          let txLayerId: number;
-          let addedPostalCodes = 0;
-          let isNewLayer = false;
-          let newLayerData = null;
+      db.transaction(async (tx) => {
+        let txLayerId: number;
+        let addedPostalCodes = 0;
+        let isNewLayer = false;
+        let newLayerData = null;
 
-          if (existingLayer) {
-            txLayerId = existingLayer.id;
-            const currentCodes = new Set(
-              existingLayer.postalCodes?.map((pc) => pc.postalCode) || []
-            );
-            const newCodes = uniquePostalCodes.filter(
-              (code) => !currentCodes.has(code)
-            );
+        if (existingLayer) {
+          txLayerId = existingLayer.id;
+          const currentCodes = new Set(
+            existingLayer.postalCodes?.map((pc) => pc.postalCode) || []
+          );
+          const newCodes = uniquePostalCodes.filter(
+            (code) => !currentCodes.has(code)
+          );
 
-            if (newCodes.length > 0) {
-              const codeRows = newCodes.map((code) => ({
-                layerId: txLayerId,
-                postalCode: code,
-              }));
-              for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
-                const batch = codeRows.slice(i, i + BATCH_SIZE);
-                await tx.insert(areaLayerPostalCodes).values(batch);
-              }
-              addedPostalCodes = newCodes.length;
-
-              await recordChangeAction(areaId, {
-                changeType: "add_postal_codes",
-                entityType: "postal_code",
-                entityId: txLayerId,
-                changeData: {
-                  postalCodes: newCodes,
-                  layerId: txLayerId,
-                  source: "bulk_import",
-                },
-                previousData: {
-                  postalCodes: [...currentCodes],
-                },
-                createdBy,
-              });
+          if (newCodes.length > 0) {
+            const codeRows = newCodes.map((code) => ({
+              layerId: txLayerId,
+              postalCode: code,
+            }));
+            for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
+              const batch = codeRows.slice(i, i + BATCH_SIZE);
+              await tx.insert(areaLayerPostalCodes).values(batch);
             }
-          } else {
-            const [newLayer] = await tx
-              .insert(areaLayers)
-              .values({
-                areaId,
-                name: layerData.name,
-                color: generateLayerColor(existingLayers.length + currentCreatedLayers + currentUpdatedLayers),
-                opacity: 70,
-                isVisible: "true",
-                orderIndex: existingLayers.length + currentCreatedLayers,
-              })
-              .returning();
-
-            txLayerId = newLayer.id;
-            isNewLayer = true;
-            newLayerData = newLayer;
-
-            if (uniquePostalCodes.length > 0) {
-              const codeRows = uniquePostalCodes.map((code) => ({
-                layerId: txLayerId,
-                postalCode: code,
-              }));
-              for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
-                const batch = codeRows.slice(i, i + BATCH_SIZE);
-                await tx.insert(areaLayerPostalCodes).values(batch);
-              }
-              addedPostalCodes = uniquePostalCodes.length;
-            }
+            addedPostalCodes = newCodes.length;
 
             await recordChangeAction(areaId, {
-              changeType: "create_layer",
-              entityType: "layer",
+              changeType: "add_postal_codes",
+              entityType: "postal_code",
               entityId: txLayerId,
               changeData: {
-                layer: {
-                  areaId,
-                  name: layerData.name,
-                  color: newLayer.color,
-                  opacity: newLayer.opacity,
-                  isVisible: newLayer.isVisible,
-                  orderIndex: newLayer.orderIndex,
-                },
-                postalCodes: uniquePostalCodes,
+                postalCodes: newCodes,
+                layerId: txLayerId,
                 source: "bulk_import",
+              },
+              previousData: {
+                postalCodes: [...currentCodes],
               },
               createdBy,
             });
           }
+        } else {
+          const [newLayer] = await tx
+            .insert(areaLayers)
+            .values({
+              areaId,
+              name: layerData.name,
+              color: generateLayerColor(
+                existingLayers.length +
+                  currentCreatedLayers +
+                  currentUpdatedLayers
+              ),
+              opacity: 70,
+              isVisible: "true",
+              orderIndex: existingLayers.length + currentCreatedLayers,
+            })
+            .returning();
 
-          return { txLayerId, addedPostalCodes, isNewLayer, newLayerData };
-        });
+          txLayerId = newLayer.id;
+          isNewLayer = true;
+          newLayerData = newLayer;
+
+          if (uniquePostalCodes.length > 0) {
+            const codeRows = uniquePostalCodes.map((code) => ({
+              layerId: txLayerId,
+              postalCode: code,
+            }));
+            for (let i = 0; i < codeRows.length; i += BATCH_SIZE) {
+              const batch = codeRows.slice(i, i + BATCH_SIZE);
+              await tx.insert(areaLayerPostalCodes).values(batch);
+            }
+            addedPostalCodes = uniquePostalCodes.length;
+          }
+
+          await recordChangeAction(areaId, {
+            changeType: "create_layer",
+            entityType: "layer",
+            entityId: txLayerId,
+            changeData: {
+              layer: {
+                areaId,
+                name: layerData.name,
+                color: newLayer.color,
+                opacity: newLayer.opacity,
+                isVisible: newLayer.isVisible,
+                orderIndex: newLayer.orderIndex,
+              },
+              postalCodes: uniquePostalCodes,
+              source: "bulk_import",
+            },
+            createdBy,
+          });
+        }
+
+        return { txLayerId, addedPostalCodes, isNewLayer, newLayerData };
+      });
 
     // Process each layer in its own transaction for fault tolerance
     for (const layerData of layers) {

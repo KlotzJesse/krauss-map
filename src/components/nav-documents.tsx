@@ -1,7 +1,12 @@
 "use client";
 
-import { IconDots, IconFolder, IconShare3, IconTrash } from '@tabler/icons-react';
-import type { Icon } from '@tabler/icons-react';
+import {
+  IconDots,
+  IconFolder,
+  IconShare3,
+  IconTrash,
+} from "@tabler/icons-react";
+import type { Icon } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "next/link";
 

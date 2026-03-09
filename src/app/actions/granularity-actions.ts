@@ -72,7 +72,9 @@ export async function changeAreaGranularityAction(
         // UPGRADE: Expand postal codes to higher granularity
 
         for (const layer of layers) {
-          if (!layer.postalCodes || layer.postalCodes.length === 0) {continue;}
+          if (!layer.postalCodes || layer.postalCodes.length === 0) {
+            continue;
+          }
 
           const currentCodes = layer.postalCodes.map((pc) => pc.postalCode);
 
@@ -134,7 +136,9 @@ export async function changeAreaGranularityAction(
         // This should only happen after user confirmation
 
         for (const layer of layers) {
-          if (!layer.postalCodes || layer.postalCodes.length === 0) {continue;}
+          if (!layer.postalCodes || layer.postalCodes.length === 0) {
+            continue;
+          }
 
           removedPostalCodes += layer.postalCodes.length;
 

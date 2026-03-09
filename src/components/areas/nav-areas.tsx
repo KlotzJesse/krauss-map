@@ -167,7 +167,9 @@ export function NavAreas({
   };
 
   const handleConfirmDelete = async () => {
-    if (!areaToDelete) {return;}
+    if (!areaToDelete) {
+      return;
+    }
 
     setIsDeleting(true);
 

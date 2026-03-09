@@ -4,11 +4,7 @@ const BaseMap = dynamic(() =>
 );
 
 import type { InferSelectModel } from "drizzle-orm";
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import type {
   SelectAreaChanges,
@@ -17,6 +13,7 @@ import type {
 } from "@/lib/schema/schema";
 import { useMapState } from "@/lib/url-state/map-state";
 
+const EMPTY_ARRAY: never[] = [];
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
@@ -54,7 +51,7 @@ export function PostalCodesMap({
   onSearch,
   granularity,
   onGranularityChange,
-  layers = [],
+  layers = EMPTY_ARRAY,
   activeLayerId = null,
   initialUndoRedoStatus,
   areaId = null,

@@ -32,20 +32,27 @@ export function useFindFeaturesInPolygon(
 ) {
   const isPointInPolygon = usePointInPolygon();
   return useStableCallback((polygon: number[][]): string[] => {
-    if (!data || polygon.length < 3) {return [];}
+    if (!data || polygon.length < 3) {
+      return [];
+    }
     const selectedFeatures: string[] = [];
     data.features.forEach((feature) => {
       if (
         feature.geometry.type !== "Polygon" &&
         feature.geometry.type !== "MultiPolygon"
-      )
-        {return;}
+      ) {
+        return;
+      }
       const featureCode = feature.properties?.code;
-      if (!featureCode) {return;}
+      if (!featureCode) {
+        return;
+      }
       const centroid = getLargestPolygonCentroid(
         feature as Feature<Polygon | MultiPolygon>
       );
-      if (!centroid) {return;}
+      if (!centroid) {
+        return;
+      }
       const isInside =
         Array.isArray(centroid) &&
         centroid.length === 2 &&
@@ -56,7 +63,9 @@ export function useFindFeaturesInPolygon(
               polygon as [number, number][]
             )
           : false;
-      if (isInside) {selectedFeatures.push(featureCode);}
+      if (isInside) {
+        selectedFeatures.push(featureCode);
+      }
     });
     return selectedFeatures;
   });
@@ -68,26 +77,35 @@ export function useFindFeaturesInCircle(
 ) {
   return useStableCallback(
     (center: [number, number], radiusDegrees: number): string[] => {
-      if (!data) {return [];}
+      if (!data) {
+        return [];
+      }
       const selectedFeatures: string[] = [];
       data.features.forEach((feature) => {
         if (
           feature.geometry.type !== "Polygon" &&
           feature.geometry.type !== "MultiPolygon"
-        )
-          {return;}
+        ) {
+          return;
+        }
         const featureCode = feature.properties?.code;
-        if (!featureCode) {return;}
+        if (!featureCode) {
+          return;
+        }
         const centroid = getLargestPolygonCentroid(
           feature as Feature<Polygon | MultiPolygon>
         );
-        if (!centroid) {return;}
+        if (!centroid) {
+          return;
+        }
         const [lng1, lat1] = center;
         const [lng2, lat2] = centroid;
         const dLat = Math.abs(lat2 - lat1);
         const dLng = Math.abs(lng2 - lng1);
         const distance = Math.hypot(dLat, dLng);
-        if (distance <= radiusDegrees) {selectedFeatures.push(featureCode);}
+        if (distance <= radiusDegrees) {
+          selectedFeatures.push(featureCode);
+        }
       });
       return selectedFeatures;
     }
@@ -102,12 +120,13 @@ export function useConvertRadiusToGeographic(
 ) {
   return useStableCallback(
     (pixelRadius: number, center: [number, number]): number => {
-      if (!mapRef.current) {return pixelRadius;}
+      if (!mapRef.current) {
+        return pixelRadius;
+      }
       try {
         const zoom = mapRef.current.getZoom();
         const metersPerPixel =
-          (156_543.033_92 * Math.cos((center[1] * Math.PI) / 180)) /
-          2 ** zoom;
+          (156_543.033_92 * Math.cos((center[1] * Math.PI) / 180)) / 2 ** zoom;
         const geographicRadiusMeters = pixelRadius * metersPerPixel;
         const geographicRadiusDegrees = geographicRadiusMeters / 111_320;
         return geographicRadiusDegrees;

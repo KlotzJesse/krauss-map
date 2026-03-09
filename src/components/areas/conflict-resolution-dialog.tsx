@@ -59,13 +59,17 @@ export function ConflictResolutionDialog({
   };
 
   const handleResolve = async () => {
-    if (!resolutionStrategy) {return;}
+    if (!resolutionStrategy) {
+      return;
+    }
 
     const [action, targetLayerIdStr] = resolutionStrategy.split(":");
     const targetLayerId = parseInt(targetLayerIdStr, 10);
 
     for (const conflict of conflicts) {
-      if (!selectedConflicts.has(conflict.postalCode)) {continue;}
+      if (!selectedConflicts.has(conflict.postalCode)) {
+        continue;
+      }
 
       if (action === "keep") {
         // Remove postal code from all layers except target

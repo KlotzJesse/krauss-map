@@ -29,10 +29,14 @@ export function useMapClickInteraction(
 ) {
   // Click handler for feature selection - adds to active layer
   const handleClick = useStableCallback(async (...args: unknown[]) => {
-    if (!map || !layersLoaded || !isCursorMode) {return;}
+    if (!map || !layersLoaded || !isCursorMode) {
+      return;
+    }
 
     const e = args[0] as { features?: unknown[] };
-    if (!e.features || e.features.length === 0) {return;}
+    if (!e.features || e.features.length === 0) {
+      return;
+    }
 
     const feature = e.features[0];
     if (isFeatureWithCode(feature)) {

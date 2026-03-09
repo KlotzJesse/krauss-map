@@ -86,7 +86,9 @@ export function BulkImportDialog({
   // File drop handling
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      if (acceptedFiles.length === 0) {return;}
+      if (acceptedFiles.length === 0) {
+        return;
+      }
 
       const file = acceptedFiles[0];
 
@@ -180,6 +182,8 @@ export function BulkImportDialog({
           error: (err) =>
             `Import fehlgeschlagen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
         });
+      } catch (error) {
+        console.error(error);
       } finally {
         setIsImporting(false);
         setImportProgress(0);

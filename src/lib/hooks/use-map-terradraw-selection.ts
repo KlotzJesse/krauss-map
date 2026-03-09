@@ -6,8 +6,8 @@ import type {
   Polygon,
 } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import { useRef, useState } from "react";
+import type { RefObject } from "react";
 import { toast } from "sonner";
 
 import {
@@ -80,12 +80,11 @@ export function useMapTerraDrawSelection({
             id: string | number;
             geometry?: Feature["geometry"];
             properties?: GeoJsonProperties & { radius?: number };
-          } => (
-              typeof f === "object" &&
-              f !== null &&
-              "id" in f &&
-              (f as { id?: string | number }).id === featureId
-            )
+          } =>
+            typeof f === "object" &&
+            f !== null &&
+            "id" in f &&
+            (f as { id?: string | number }).id === featureId
         );
 
         if (!drawFeature) {

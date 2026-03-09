@@ -15,7 +15,10 @@ export function HomePageSkeleton() {
         {/* Three Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="hover:shadow-lg transition-shadow">
+            <Card
+              key={`card-${i}`}
+              className="hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-center gap-2 mb-2">
                   <Skeleton className="w-5 h-5 rounded" />

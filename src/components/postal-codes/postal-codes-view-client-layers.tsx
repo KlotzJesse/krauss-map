@@ -1,11 +1,7 @@
 "use client";
 
 import type { InferSelectModel } from "drizzle-orm";
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import {
   addPostalCodesToLayerAction,
@@ -83,12 +79,8 @@ import { useMapState } from "@/lib/url-state/map-state";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
 interface PostalCodesViewClientWithLayersProps {
-  postalCodesDataPromise: Promise<
-    FeatureCollection<Polygon | MultiPolygon>
-  >;
-  statesDataPromise: Promise<
-    FeatureCollection<Polygon | MultiPolygon>
-  >;
+  postalCodesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon>>;
+  statesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon>>;
   defaultGranularity: string;
   areaId: number;
   areasPromise: Promise<Area[]>;
@@ -133,9 +125,7 @@ export function PostalCodesViewClientWithLayers({
   const activeLayerId = mapState.activeLayerId || initialLayers[0]?.id || null;
 
   const [data] =
-    useState<FeatureCollection<Polygon | MultiPolygon>>(
-      initialData
-    );
+    useState<FeatureCollection<Polygon | MultiPolygon>>(initialData);
 
   // Optimistic state for layers
 
@@ -152,7 +142,8 @@ export function PostalCodesViewClientWithLayers({
 
         postalCodes: string[];
       }
-    ) => currentLayers.map((layer) => {
+    ) =>
+      currentLayers.map((layer) => {
         if (layer.id === update.layerId) {
           const currentCodes =
             layer.postalCodes?.map((pc) => pc.postalCode) || [];
@@ -346,7 +337,9 @@ export function PostalCodesViewClientWithLayers({
   );
 
   const handleGranularityChange = (newGranularity: string) => {
-    if (newGranularity === defaultGranularity) {return;}
+    if (newGranularity === defaultGranularity) {
+      return;
+    }
 
     // Granularity changes are now handled through the GranularitySelector component
 

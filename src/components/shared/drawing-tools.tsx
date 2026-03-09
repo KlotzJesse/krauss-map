@@ -10,11 +10,7 @@ import {
   IconHistory,
 } from "@tabler/icons-react";
 import type { InferSelectModel } from "drizzle-orm";
-import type {
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import {
   Copy,
   Diamond,
@@ -27,7 +23,6 @@ import {
 import {
   Suspense,
   useState,
-  useEffect,
   Activity,
   useOptimistic,
   useTransition,
@@ -93,6 +88,8 @@ import {
   exportLayersPDF,
 } from "@/lib/utils/export-utils";
 
+const EMPTY_ARRAY: never[] = [];
+
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
@@ -110,9 +107,7 @@ export interface DrawingToolsProps {
 
   onGranularityChange?: (granularity: string) => void;
 
-  postalCodesData?: FeatureCollection<
-    Polygon | MultiPolygon
-  >;
+  postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
 
   pendingPostalCodes?: string[];
 
@@ -180,9 +175,7 @@ const DEFAULT_COLORS = [
 async function fillRegions(
   mode: "all" | "holes" | "expand",
 
-  _postalCodesData: FeatureCollection<
-    Polygon | MultiPolygon
-  >,
+  _postalCodesData: FeatureCollection<Polygon | MultiPolygon>,
 
   activeLayer: Layer,
 
@@ -259,6 +252,8 @@ async function fillRegions(
             : "eine Ebene";
 
       return `${count} Region${count === 1 ? "" : "en"} gefüllt (${modeText})`;
+    } catch (error) {
+      console.error(error);
     } finally {
       setIsFilling(false);
     }
@@ -286,7 +281,7 @@ function DrawingToolsImpl({
 
   postalCodesData,
 
-  pendingPostalCodes = [],
+  pendingPostalCodes = EMPTY_ARRAY,
 
   onAddPending,
 
@@ -300,7 +295,7 @@ function DrawingToolsImpl({
 
   onLayerSelect,
 
-  layers = [],
+  layers = EMPTY_ARRAY,
 
   onLayerUpdate,
 
@@ -310,9 +305,9 @@ function DrawingToolsImpl({
 
   isViewingVersion = false,
 
-  versions = [],
+  versions = EMPTY_ARRAY,
 
-  changes = [],
+  changes = EMPTY_ARRAY,
 }: DrawingToolsProps) {
   // Optimistic layer state for instant UI updates
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
@@ -350,39 +345,35 @@ function DrawingToolsImpl({
 
   const [actionsOpen, setActionsOpen] = useState(false);
 
-  // Auto-expand regions section when there are pending postal codes
+  const [prevPendingLength, setPrevPendingLength] = useState(
+    pendingPostalCodes.length
+  );
+  if (
+    pendingPostalCodes.length > 0 &&
+    pendingPostalCodes.length !== prevPendingLength
+  ) {
+    setPrevPendingLength(pendingPostalCodes.length);
+    setRegionsOpen(true);
+  }
 
-  useEffect(() => {
-    if (pendingPostalCodes.length > 0) {
-      setRegionsOpen(true);
-    }
-  }, [pendingPostalCodes.length]);
-
-  // Auto-expand actions section when in drawing mode
-
-  useEffect(() => {
+  const [prevCurrentMode, setPrevCurrentMode] = useState(currentMode);
+  if (currentMode !== prevCurrentMode) {
+    setPrevCurrentMode(currentMode);
     const isDrawingMode =
       currentMode !== null &&
       [
         "freehand",
-
         "circle",
-
         "rectangle",
-
         "polygon",
-
         "point",
-
         "linestring",
-
         "angled-rectangle",
       ].includes(currentMode);
-
     if (isDrawingMode) {
       setActionsOpen(true);
     }
-  }, [currentMode]);
+  }
 
   // Layer management state
 
@@ -415,7 +406,9 @@ function DrawingToolsImpl({
 
     orderIndex: number;
   }) => {
-    if (!areaId) {return;}
+    if (!areaId) {
+      return;
+    }
 
     const result = await createLayerAction(areaId, {
       name: data.name,
@@ -443,7 +436,9 @@ function DrawingToolsImpl({
 
     data: Record<string, unknown>
   ) => {
-    if (!areaId) {return;}
+    if (!areaId) {
+      return;
+    }
 
     const result = await updateLayerAction(areaId, layerId, data);
 
@@ -455,7 +450,9 @@ function DrawingToolsImpl({
   };
 
   const deleteLayer = async (layerId: number) => {
-    if (!areaId) {return;}
+    if (!areaId) {
+      return;
+    }
 
     const result = await deleteLayerAction(areaId, layerId);
 
@@ -588,22 +585,6 @@ function DrawingToolsImpl({
     }
   };
 
-  useEffect(() => {
-    // Layer data now comes from props passed by server component
-
-    if (areaId) {
-      console.log(
-        "Drawing tools area changed to:",
-
-        areaId,
-
-        "- layers provided via props:",
-
-        optimisticLayers.length
-      );
-    }
-  }, [areaId, optimisticLayers.length]);
-
   // Export as Excel with multiple sheets per layer
 
   const handleExportExcel = async () => {
@@ -675,7 +656,9 @@ function DrawingToolsImpl({
   const [isFilling, setIsFilling] = useState(false);
 
   const handleCreateLayer = async () => {
-    if (!newLayerName.trim()) {return;}
+    if (!newLayerName.trim()) {
+      return;
+    }
 
     setIsCreating(true);
 
@@ -745,7 +728,9 @@ function DrawingToolsImpl({
   };
 
   const confirmDeleteLayer = async () => {
-    if (!layerToDelete || !deleteLayer) {return;}
+    if (!layerToDelete || !deleteLayer) {
+      return;
+    }
 
     startTransition(async () => {
       // Optimistic update
