@@ -11,8 +11,6 @@ import {
 import { toast } from "sonner";
 
 import { changeAreaGranularityAction } from "@/app/actions/granularity-actions";
-import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
-import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +36,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Layer } from "@/lib/types/area-types";
+import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
+import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import {
   GRANULARITY_OPTIONS,
   getGranularityLabel,
@@ -97,7 +97,12 @@ export function GranularitySelector({
         const newLabel = getGranularityLabel(newGranularity);
 
         const action = withCallbacks(
-          () => changeAreaGranularityAction(areaId, newGranularity, currentGranularity),
+          () =>
+            changeAreaGranularityAction(
+              areaId,
+              newGranularity,
+              currentGranularity
+            ),
           createToastCallbacks({
             loadingMessage: `Wechsle zu ${newLabel}...`,
             successMessage: `Wechsel zu ${newLabel} erfolgreich`,
@@ -134,7 +139,12 @@ export function GranularitySelector({
         const newLabel = getGranularityLabel(newGranularity);
 
         const action = withCallbacks(
-          () => changeAreaGranularityAction(areaId, newGranularity, currentGranularity),
+          () =>
+            changeAreaGranularityAction(
+              areaId,
+              newGranularity,
+              currentGranularity
+            ),
           createToastCallbacks({
             loadingMessage: `Wechsle zu ${newLabel} PLZ-Ansicht...`,
             successMessage: (data: any) => {
@@ -171,7 +181,12 @@ export function GranularitySelector({
 
     startTransition(async () => {
       const action = withCallbacks(
-        () => changeAreaGranularityAction(areaId, pendingGranularity, currentGranularity),
+        () =>
+          changeAreaGranularityAction(
+            areaId,
+            pendingGranularity,
+            currentGranularity
+          ),
         createToastCallbacks({
           loadingMessage: `Wechsle zu ${newLabel}...`,
           successMessage: (data: any) => {
@@ -234,7 +249,9 @@ export function GranularitySelector({
           value={optimisticGranularity}
           onValueChange={(val) => val && handleGranularitySelect(val)}
           disabled={_isPending}
-          items={Object.fromEntries(GRANULARITY_OPTIONS.map(opt => [opt.value, opt.label]))}
+          items={Object.fromEntries(
+            GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
+          )}
         >
           <SelectTrigger className="w-full h-8 text-xs">
             <SelectValue placeholder="Granularität wählen" />

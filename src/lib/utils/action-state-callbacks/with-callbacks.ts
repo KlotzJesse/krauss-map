@@ -21,7 +21,11 @@ export interface Callbacks<T, R = unknown> {
 }
 
 export const withCallbacks =
-  <Args extends unknown[], T extends GenericActionState | undefined | void, R = unknown>(
+  <
+    Args extends unknown[],
+    T extends GenericActionState | undefined | void,
+    R = unknown,
+  >(
     fn: (...args: Args) => Promise<T>,
     callbacks: Callbacks<T, R>
   ): ((...args: Args) => Promise<T>) =>

@@ -3,7 +3,7 @@
 import { eq, and, inArray, sql } from "drizzle-orm";
 import type { FeatureCollection, Geometry } from "geojson";
 import type { Route } from "next";
-import { updateTag, revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "../../lib/db";
@@ -107,9 +107,6 @@ export async function createAreaAction(data: {
 
     updateTag(`area-${area.id}-undo-redo`);
 
-    revalidatePath("/postal-codes", "layout");
-    revalidatePath(`/postal-codes/${area.id}`, "page");
-
     // Set redirect path for finally block
     redirectPath = `/postal-codes/${area.id}`;
   } catch (error) {
@@ -188,7 +185,6 @@ export async function updateAreaAction(
 
     updateTag(`area-${id}-undo-redo`);
 
-    revalidatePath("/postal-codes", "layout");
     return { success: true };
   } catch (error) {
     console.error("Error updating area:", error);
@@ -234,8 +230,6 @@ export async function deleteAreaAction(id: number) {
     });
 
     updateTag("areas");
-
-    revalidatePath("/postal-codes", "layout");
 
     // Set redirect path for finally block
     redirectPath = "/postal-codes";
@@ -333,7 +327,6 @@ export async function createLayerAction(
 
     updateTag(`area-${areaId}-undo-redo`);
 
-    revalidatePath("/postal-codes", "layout");
     return { success: true, data: { id: layer.id } };
   } catch (error) {
     console.error("Error creating layer:", error);
@@ -497,7 +490,6 @@ export async function updateLayerAction(
 
     updateTag(`area-${areaId}-undo-redo`);
 
-    revalidatePath("/postal-codes", "layout");
     return { success: true };
   } catch (error) {
     console.error("Error updating layer:", error);
@@ -586,7 +578,6 @@ export async function deleteLayerAction(
 
     updateTag(`area-${areaId}-undo-redo`);
 
-    revalidatePath("/postal-codes", "layout");
     return { success: true };
   } catch (error) {
     console.error("Error deleting layer:", error);
@@ -679,7 +670,6 @@ export async function addPostalCodesToLayerAction(
 
     updateTag(`area-${areaId}-undo-redo`);
 
-    revalidatePath("/postal-codes", "layout");
     return { success: true };
   } catch (error) {
     console.error("Error adding postal codes to layer:", error);
@@ -774,7 +764,6 @@ export async function removePostalCodesFromLayerAction(
 
     updateTag(`area-${areaId}-undo-redo`);
 
-    revalidatePath("/postal-codes", "layout");
     return { success: true };
   } catch (error) {
     console.error("Error removing postal codes from layer:", error);
@@ -895,7 +884,6 @@ export async function geoprocessAction(data: {
       );
     }
 
-    revalidatePath("/postal-codes", "layout");
     return { success: true, data: { resultCodes } };
   } catch (error) {
     console.error("Error in geoprocessing:", error);
@@ -1050,7 +1038,6 @@ export async function geocodeAction(address: string): ServerActionResponse<{
 
     const result = results[0];
 
-    revalidatePath("/postal-codes", "layout");
     return {
       success: true,
 
@@ -1172,7 +1159,6 @@ export async function geocodeSearchAction(data: {
       ? results.filter((result: { postal_code: string }) => result.postal_code)
       : results;
 
-    revalidatePath("/postal-codes", "layout");
     return {
       success: true,
 

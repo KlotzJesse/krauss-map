@@ -1,7 +1,7 @@
 "use server";
 
 import { eq } from "drizzle-orm";
-import { updateTag, revalidatePath, refresh } from "next/cache";
+import { updateTag, refresh } from "next/cache";
 
 import { db } from "../../lib/db";
 import { areaLayers, areaLayerPostalCodes } from "../../lib/schema/schema";
@@ -207,7 +207,6 @@ export async function bulkImportPostalCodesAndLayers(
     updateTag(`area-${areaId}`);
     updateTag("undo-redo-status");
     refresh();
-    revalidatePath("/postal-codes", "layout");
 
     return {
       success: errors.length === 0,

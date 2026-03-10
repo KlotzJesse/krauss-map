@@ -212,7 +212,19 @@ export function ConflictResolutionDialog({
               >
                 <div className="space-y-2">
                   <Label>Auflösungsstrategie</Label>
-                  <Select value={resolutionStrategy} onValueChange={(val) => val && setResolutionStrategy(val)} items={{ ...Object.fromEntries(layers.map(l => [`keep:${l.id}`, `Behalten in: ${l.name}`])), "remove-all:0": "Aus allen Layern entfernen" }}>
+                  <Select
+                    value={resolutionStrategy}
+                    onValueChange={(val) => val && setResolutionStrategy(val)}
+                    items={{
+                      ...Object.fromEntries(
+                        layers.map((l) => [
+                          `keep:${l.id}`,
+                          `Behalten in: ${l.name}`,
+                        ])
+                      ),
+                      "remove-all:0": "Aus allen Layern entfernen",
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Strategie wählen..." />
                     </SelectTrigger>

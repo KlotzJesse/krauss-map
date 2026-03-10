@@ -11,7 +11,6 @@ import {
 import { useCallback, useState, useOptimistic, useTransition } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
-import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { bulkImportPostalCodesAndLayers } from "@/app/actions/bulk-import-actions";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useExcelImport } from "@/lib/hooks/use-excel-import";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 interface BulkImportDialogProps {
   open: boolean;
@@ -297,7 +297,20 @@ export function BulkImportDialog({
                     <Layers className="h-4 w-4" />
                     Layer (optional)
                   </Label>
-                  <Select value={columnMapping.layerColumn || "none"} onValueChange={(value) => updateColumnMapping({ layerColumn: value === "none" ? null : value }) } items={{ "none": "Keine (Standard)", ...Object.fromEntries(fileData.headers.map(h => [h, h])) }}>
+                  <Select
+                    value={columnMapping.layerColumn || "none"}
+                    onValueChange={(value) =>
+                      updateColumnMapping({
+                        layerColumn: value === "none" ? null : value,
+                      })
+                    }
+                    items={{
+                      none: "Keine (Standard)",
+                      ...Object.fromEntries(
+                        fileData.headers.map((h) => [h, h])
+                      ),
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Keine (Standard)" />
                     </SelectTrigger>

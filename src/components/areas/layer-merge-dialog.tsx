@@ -3,7 +3,6 @@
 import { IconGitMerge } from "@tabler/icons-react";
 import { useState, useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
-import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { useLayerMerge } from "@/lib/hooks/use-layer-merge";
 import type { Layer } from "@/lib/types/area-types";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 interface LayerMergeDialogProps {
   open: boolean;
@@ -107,19 +107,19 @@ export function LayerMergeDialog({
       // Optimistically update layers (remove source layers)
       updateOptimisticLayers({ targetId, sourceIds });
 
-        try {
-          await executeAction(mergeLayers(sourceIds, targetId, strategy), {
-            loading: `Führe ${sourceIds.length} Gebiete zusammen...`,
-            success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
-            error: "Fehler beim Zusammenführen der Gebiete",
-          });
+      try {
+        await executeAction(mergeLayers(sourceIds, targetId, strategy), {
+          loading: `Führe ${sourceIds.length} Gebiete zusammen...`,
+          success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
+          error: "Fehler beim Zusammenführen der Gebiete",
+        });
 
-          setSelectedLayers(new Set());
-          setTargetLayerId("");
-          onOpenChange(false);
-          if (onMergeComplete) {
-            onMergeComplete();
-          }
+        setSelectedLayers(new Set());
+        setTargetLayerId("");
+        onOpenChange(false);
+        if (onMergeComplete) {
+          onMergeComplete();
+        }
       } catch (error) {
         // err handled by executeAction
       } finally {
@@ -219,7 +219,17 @@ export function LayerMergeDialog({
           {selectedLayers.size >= 2 && (
             <div className="space-y-2">
               <Label>Ziel-Layer (behält Name und Farbe)</Label>
-              <Select value={targetLayerId} onValueChange={(val) => val && setTargetLayerId(val)} items={Object.fromEntries([...selectedLayers].map(id => [id, layers.find(l => l.id.toString() === id.toString())?.name || id]))}>
+              <Select
+                value={targetLayerId}
+                onValueChange={(val) => val && setTargetLayerId(val)}
+                items={Object.fromEntries(
+                  [...selectedLayers].map((id) => [
+                    id,
+                    layers.find((l) => l.id.toString() === id.toString())
+                      ?.name || id,
+                  ])
+                )}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Ziel-Layer wählen..." />
                 </SelectTrigger>
@@ -252,7 +262,15 @@ export function LayerMergeDialog({
           {selectedLayers.size >= 2 && targetLayerId && (
             <div className="space-y-2">
               <Label>Strategie</Label>
-              <Select value={strategy} onValueChange={(val) => val && setStrategy(val as any)} items={{ union: "Vereinigung (Union)", "keep-target": "Ziel behalten", "keep-source": "Beide behalten" }}>
+              <Select
+                value={strategy}
+                onValueChange={(val) => val && setStrategy(val as any)}
+                items={{
+                  union: "Vereinigung (Union)",
+                  "keep-target": "Ziel behalten",
+                  "keep-source": "Beide behalten",
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

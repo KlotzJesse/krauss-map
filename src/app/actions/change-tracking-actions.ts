@@ -15,7 +15,7 @@ import type { SelectAreaChanges } from "../../lib/schema/schema";
 
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-import { updateTag, revalidatePath, refresh } from "next/cache";
+import { updateTag, refresh } from "next/cache";
 
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
@@ -161,8 +161,6 @@ export async function recordChangeAction(
     }
 
     updateTag("undo-redo-status");
-
-    revalidatePath("/postal-codes", "layout");
 
     refresh();
     return { success: true, data: changeKey };
@@ -319,7 +317,7 @@ export async function undoChangeAction(
     });
 
     updateTag("undo-redo-status");
-    revalidatePath("/postal-codes", "layout");
+
     refresh();
     return { success: true, data: result };
   } catch (error) {
@@ -429,7 +427,7 @@ export async function redoChangeAction(
     });
 
     updateTag("undo-redo-status");
-    revalidatePath("/postal-codes", "layout");
+
     refresh();
     return { success: true, data: result };
   } catch (error) {
@@ -736,7 +734,7 @@ export async function clearUndoRedoStacksAction(
     }
 
     updateTag("undo-redo-status");
-    revalidatePath("/postal-codes", "layout");
+
     refresh();
     return { success: true };
   } catch (error) {

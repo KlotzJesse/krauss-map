@@ -5,6 +5,7 @@ const BaseMap = dynamic(() =>
 
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import { memo } from "react";
 
 import type {
   SelectAreaChanges,
@@ -45,7 +46,7 @@ interface PostalCodesMapProps {
   changes: SelectAreaChanges[];
 }
 
-export function PostalCodesMap({
+export const PostalCodesMap = memo(function PostalCodesMap({
   data,
   statesData,
   onSearch,
@@ -88,4 +89,4 @@ export function PostalCodesMap({
       initialUndoRedoStatus={initialUndoRedoStatus}
     />
   );
-}
+});

@@ -1,5 +1,5 @@
-const fs = require('fs');
-let code = fs.readFileSync('src/lib/hooks/use-map-layers.ts', 'utf8');
+const fs = require("fs");
+let code = fs.readFileSync("src/lib/hooks/use-map-layers.ts", "utf8");
 
 const replacement = `      if (postalCodes.length > 0) {
         // Critical: Only proceed if the source actually exists in MapLibre
@@ -7,6 +7,9 @@ const replacement = `      if (postalCodes.length > 0) {
         
         layerIdsToKeep.add(layerFillId);`;
 
-code = code.replace(/      if \(postalCodes\.length > 0\) \{\n        layerIdsToKeep\.add\(layerFillId\);/g, replacement);
+code = code.replace(
+  /      if \(postalCodes\.length > 0\) \{\n        layerIdsToKeep\.add\(layerFillId\);/g,
+  replacement
+);
 
-fs.writeFileSync('src/lib/hooks/use-map-layers.ts', code);
+fs.writeFileSync("src/lib/hooks/use-map-layers.ts", code);

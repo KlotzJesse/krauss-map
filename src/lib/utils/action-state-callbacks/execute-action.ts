@@ -1,5 +1,5 @@
-import { toast } from "sonner";
 import { unstable_rethrow } from "next/navigation";
+import { toast } from "sonner";
 
 interface ActionMessages<T> {
   loading?: string;
@@ -24,14 +24,26 @@ export async function executeAction<T>(
     if (result && typeof result === "object") {
       if ("success" in result && result.success === false) {
         toast.error(
-          typeof messages.error === "function" ? (messages.error(result) as string) : ((Reflect.get(result, 'error') as string) || (messages.error as string) || "Aktion fehlgeschlagen"),
+          typeof messages.error === "function"
+            ? (messages.error(result) as string)
+            : (Reflect.get(result, "error") as string) ||
+                (messages.error as string) ||
+                "Aktion fehlgeschlagen",
           { id: toastId }
         );
         return result;
       }
-      if ("error" in result && typeof Reflect.get(result, "error") === "string" && !("success" in result)) {
+      if (
+        "error" in result &&
+        typeof Reflect.get(result, "error") === "string" &&
+        !("success" in result)
+      ) {
         toast.error(
-          typeof messages.error === "function" ? (messages.error(result) as string) : ((Reflect.get(result, 'error') as string) || (messages.error as string) || "Aktion fehlgeschlagen"),
+          typeof messages.error === "function"
+            ? (messages.error(result) as string)
+            : (Reflect.get(result, "error") as string) ||
+                (messages.error as string) ||
+                "Aktion fehlgeschlagen",
           { id: toastId }
         );
         return result;
@@ -41,7 +53,7 @@ export async function executeAction<T>(
     toast.success(
       typeof messages.success === "function"
         ? messages.success(result)
-        : (messages.success || "Erfolgreich"),
+        : messages.success || "Erfolgreich",
       { id: toastId }
     );
 
@@ -50,12 +62,17 @@ export async function executeAction<T>(
     // If it's a Next.js framework error containing NEXT_REDIRECT or NEXT_NOT_FOUND,
     // unstable_rethrow prevents it from being swallowed by our try/catch
     // and correctly propagates it to Next.js internals framework catchers.
-    if (error && typeof error === "object" && typeof error.digest === "string" && error.digest.startsWith("NEXT_REDIRECT")) {
+    if (
+      error &&
+      typeof error === "object" &&
+      typeof error.digest === "string" &&
+      error.digest.startsWith("NEXT_REDIRECT")
+    ) {
       // It's a redirect, meaning the action completed and ordered navigation.
       toast.success(
         typeof messages.success === "function"
           ? messages.success({} as T)
-          : (messages.success || "Erfolgreich"),
+          : messages.success || "Erfolgreich",
         { id: toastId }
       );
     }
@@ -66,7 +83,11 @@ export async function executeAction<T>(
     if (typeof messages.error === "function") {
       errorMsg = messages.error(error);
     } else {
-      errorMsg = messages.error || (error instanceof Error ? error.message : "Ein unerwarteter Fehler ist aufgetreten");
+      errorMsg =
+        messages.error ||
+        (error instanceof Error
+          ? error.message
+          : "Ein unerwarteter Fehler ist aufgetreten");
     }
 
     toast.error(errorMsg, { id: toastId });

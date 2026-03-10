@@ -1,4 +1,3 @@
-import { eq, and } from "drizzle-orm";
 import type { Metadata } from "next";
 import nextDynamic from "next/dynamic";
 import { Suspense } from "react";
@@ -7,8 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { SiteHeaderSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
-import { db } from "@/lib/db";
-import { areas, areaVersions } from "@/lib/schema/schema";
+import { getAreaById, getVersion } from "@/lib/db/data-functions";
 
 const ServerPostalCodesView = nextDynamic(
   () => import("@/components/postal-codes/server-postal-codes-view"),
@@ -45,12 +43,7 @@ export async function generateMetadata({
         const versionId = parseInt(versionIdValue, 10);
 
         if (!isNaN(versionId)) {
-          const version = await db.query.areaVersions.findFirst({
-            where: and(
-              eq(areaVersions.areaId, areaId),
-              eq(areaVersions.versionNumber, versionId!)
-            ),
-          });
+          const version = await getVersion(areaId, versionId!);
 
           if (version && version.snapshot) {
             const snapshot = version.snapshot as { granularity?: string };
@@ -59,9 +52,7 @@ export async function generateMetadata({
         }
       } else {
         // Get granularity from area
-        const area = await db.query.areas.findFirst({
-          where: eq(areas.id, areaId),
-        });
+        const area = await getAreaById(areaId);
 
         if (area && area.granularity) {
           granularity = area.granularity;
@@ -108,12 +99,7 @@ export default async function PostalCodesPage({
     try {
       // Check if viewing a version
       if (isValidVersion) {
-        const version = await db.query.areaVersions.findFirst({
-          where: and(
-            eq(areaVersions.areaId, areaId),
-            eq(areaVersions.versionNumber, versionId!)
-          ),
-        });
+        const version = await getVersion(areaId, versionId!);
 
         if (version?.snapshot) {
           const snapshot = version.snapshot as { granularity?: string };
@@ -126,9 +112,7 @@ export default async function PostalCodesPage({
         }
       } else {
         // Get granularity from current area
-        const area = await db.query.areas.findFirst({
-          where: eq(areas.id, areaId),
-        });
+        const area = await getAreaById(areaId);
 
         if (area && area.granularity) {
           granularity = area.granularity;

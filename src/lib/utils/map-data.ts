@@ -87,7 +87,9 @@ export function getLargestPolygonCentroid(
  */
 export function makeLabelPoints(features: FeatureCollection) {
   // Filter out features with no geometry
-  const validFeatures = (features.features as Feature[]).filter((f) => f.geometry);
+  const validFeatures = (features.features as Feature[]).filter(
+    (f) => f.geometry
+  );
 
   return {
     type: "FeatureCollection",

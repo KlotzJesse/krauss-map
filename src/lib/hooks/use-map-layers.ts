@@ -147,14 +147,46 @@ export function useMapLayers({
     }
 
     // --- Robust layer creation ---
+    // Helper to find the first symbol layer from the base map to draw polygons underneath
+    // This dramatically improves label visibility since city labels will render ON TOP of our postal code shapes
+    const getFirstSymbolLayerId = () => {
+      if (!map) return undefined;
+      const mapLayers = map.getStyle()?.layers;
+      if (!mapLayers) return undefined;
+      for (const mapLayer of mapLayers) {
+        if (
+          mapLayer.type === "symbol" &&
+          !mapLayer.id.includes("state-boundaries") &&
+          mapLayer.id !== ids.labelLayerId
+        ) {
+          return mapLayer.id;
+        }
+      }
+      return undefined;
+    };
+
+    const topSymbolLayerId = getFirstSymbolLayerId();
+
     // Helper to add a layer with beforeId if it exists
-    function safeAddLayer(layer: LayerSpecification, beforeId?: string) {
+    function safeAddLayer(
+      layer: LayerSpecification,
+      beforeId?: string,
+      autoUnderLabels: boolean = true
+    ) {
       if (!map) {
         return;
       }
       try {
-        if (beforeId && map.getLayer(beforeId)) {
-          map.addLayer(layer, beforeId);
+        let targetBeforeId = beforeId;
+
+        // Automatically push non-label custom geometries behind base map labels for better clarity
+        // unless they are explicitly placed relative to another custom layer.
+        if (!targetBeforeId && autoUnderLabels && layer.type !== "symbol") {
+          targetBeforeId = topSymbolLayerId;
+        }
+
+        if (targetBeforeId && map.getLayer(targetBeforeId)) {
+          map.addLayer(layer, targetBeforeId);
         } else {
           map.addLayer(layer);
         }
@@ -177,7 +209,7 @@ export function useMapLayers({
     }
     // 2. Postal code border (above fill)
     if (!map.getLayer(`${layerId}-border`)) {
-      map.addLayer({
+      safeAddLayer({
         id: `${layerId}-border`,
         type: "line",
         source: ids.sourceId,
@@ -192,7 +224,7 @@ export function useMapLayers({
           "line-join": "round",
           visibility: "visible",
         },
-      } as LayerSpecification);
+      });
     }
     // 3. Selected postal code fill (above postal code border)
     // This shows a preview of what will be added to the active layer
@@ -357,14 +389,15 @@ export function useMapLayers({
           layout: {
             "text-field": ["coalesce", ["get", "name"], ["get", "code"], ""],
             "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-            "text-size": 9,
+            "text-size": 11,
             "text-anchor": "center",
-            "text-allow-overlap": false,
+            "text-allow-overlap": true,
+            "text-ignore-placement": true,
           },
           paint: {
             "text-color": "#222",
             "text-halo-color": "#fff",
-            "text-halo-width": 2.5,
+            "text-halo-width": 3,
           },
         },
         statesData ? ids.stateLayerId : ids.hoverLayerId
@@ -388,11 +421,12 @@ export function useMapLayers({
             "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
             "text-size": 9,
             "text-anchor": "center",
-            "text-allow-overlap": false,
+            "text-allow-overlap": true,
+            "text-ignore-placement": true,
           },
           paint: {
             "text-color": "#222",
-            "text-halo-color": "#fff",
+            "text-halo-color": "#ffffff",
             "text-halo-width": 2,
           },
         },
@@ -486,7 +520,7 @@ export function useMapLayers({
             // First carefully find & remove ANY dynamic layers still attached to this source
             const allMapLayers = map.getStyle()?.layers || [];
             allMapLayers.forEach((layer: any) => {
-              if ('source' in layer && layer.source === id) {
+              if ("source" in layer && layer.source === id) {
                 try {
                   if (map.getLayer(layer.id)) map.removeLayer(layer.id);
                 } catch (e) {}
@@ -529,10 +563,16 @@ export function useMapLayers({
 
         const matchFilter = [
           "match",
-          ["coalesce", ["get", "code"], ["get", "plz"], ["get", "postalCode"], ""],
+          [
+            "coalesce",
+            ["get", "code"],
+            ["get", "plz"],
+            ["get", "postalCode"],
+            "",
+          ],
           postalCodes,
           true,
-          false
+          false,
         ];
 
         const opacity = layer.opacity / 100;
@@ -560,8 +600,16 @@ export function useMapLayers({
           // Update existing layer properties
           map.setFilter(layerFillId, matchFilter as any);
           map.setPaintProperty(layerFillId, "fill-color", layer.color);
-          map.setPaintProperty(layerFillId, "fill-opacity", isVisible ? opacity * 0.6 : 0);
-          map.setLayoutProperty(layerFillId, "visibility", isVisible ? "visible" : "none");
+          map.setPaintProperty(
+            layerFillId,
+            "fill-opacity",
+            isVisible ? opacity * 0.6 : 0
+          );
+          map.setLayoutProperty(
+            layerFillId,
+            "visibility",
+            isVisible ? "visible" : "none"
+          );
         }
 
         if (!map.getLayer(layerBorderId)) {
@@ -588,9 +636,21 @@ export function useMapLayers({
           // Update existing layer properties
           map.setFilter(layerBorderId, matchFilter as any);
           map.setPaintProperty(layerBorderId, "line-color", layer.color);
-          map.setPaintProperty(layerBorderId, "line-width", isActive ? 2.5 : 1.5);
-          map.setPaintProperty(layerBorderId, "line-opacity", isVisible ? (isActive ? 0.9 : 0.7) : 0);
-          map.setLayoutProperty(layerBorderId, "visibility", isVisible ? "visible" : "none");
+          map.setPaintProperty(
+            layerBorderId,
+            "line-width",
+            isActive ? 2.5 : 1.5
+          );
+          map.setPaintProperty(
+            layerBorderId,
+            "line-opacity",
+            isVisible ? (isActive ? 0.9 : 0.7) : 0
+          );
+          map.setLayoutProperty(
+            layerBorderId,
+            "visibility",
+            isVisible ? "visible" : "none"
+          );
         }
       }
     });
@@ -600,19 +660,15 @@ export function useMapLayers({
     allLayers.forEach((layer: any) => {
       if (layer.id && layer.id.startsWith("area-layer-")) {
         if (!layerIdsToKeep.has(layer.id)) {
-          try { map.removeLayer(layer.id); } catch (e) {}
+          try {
+            map.removeLayer(layer.id);
+          } catch (e) {}
         }
       }
     });
 
     // We do NOT return a cleanup function here. The previous effect cleans up the main sources which in turn cleans up the bound layers.
-  }, [
-    mapRef,
-    isMapLoaded,
-    layers,
-    ids.hoverLayerId,
-    activeLayerId,
-  ]);
+  }, [mapRef, isMapLoaded, layers, ids.hoverLayerId, activeLayerId]);
 
   // Optimized layer switching - only update visibility and active state
   useEffect(() => {

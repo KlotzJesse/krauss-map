@@ -1,7 +1,7 @@
 "use server";
 
 import { eq } from "drizzle-orm";
-import { revalidatePath, updateTag } from "next/cache";
+import { updateTag } from "next/cache";
 
 import { db } from "../../lib/db";
 import { areaLayers, areaLayerPostalCodes } from "../../lib/schema/schema";
@@ -57,7 +57,7 @@ export async function createLayerAction(
     updateTag(`area-${areaId}`);
     updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
-    revalidatePath("/postal-codes", "layout");
+
     return { success: true, data: { id: layer.id } };
   } catch (error) {
     console.error("Error creating layer:", error);
@@ -169,7 +169,6 @@ export async function updateLayerAction(
       createdBy,
     });
 
-    revalidatePath("/postal-codes", "layout");
     updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
@@ -231,7 +230,6 @@ export async function deleteLayerAction(
       createdBy,
     });
 
-    revalidatePath("/postal-codes", "layout");
     updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
@@ -307,7 +305,6 @@ export async function addPostalCodesToLayerAction(
       createdBy,
     });
 
-    revalidatePath("/postal-codes", "layout");
     updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
@@ -385,7 +382,6 @@ export async function removePostalCodesFromLayerAction(
       createdBy,
     });
 
-    revalidatePath("/postal-codes", "layout");
     updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);

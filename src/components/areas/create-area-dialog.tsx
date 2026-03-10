@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useOptimistic } from "react";
 import { toast } from "sonner";
-import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { createAreaAction } from "@/app/actions/area-actions";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 interface CreateAreaDialogProps {
   open: boolean;
@@ -54,19 +54,19 @@ export function CreateAreaDialog({
         updateOptimisticCreating(true);
 
         // Server action handles redirect automatically
-          await executeAction(
-            createAreaAction({
-              name,
-              description,
-              granularity,
-              createdBy: "user",
-            }),
-            {
-              loading: `Erstelle Gebiet "${name}"...`,
-              success: `Gebiet "${name}" erfolgreich erstellt`,
-              error: "Fehler beim Erstellen des Gebiets",
-            }
-          );
+        await executeAction(
+          createAreaAction({
+            name,
+            description,
+            granularity,
+            createdBy: "user",
+          }),
+          {
+            loading: `Erstelle Gebiet "${name}"...`,
+            success: `Gebiet "${name}" erfolgreich erstellt`,
+            error: "Fehler beim Erstellen des Gebiets",
+          }
+        );
 
         // These lines won't execute if redirect happens (which is expected)
         setName("");
@@ -128,7 +128,12 @@ export function CreateAreaDialog({
               <Select
                 value={granularity}
                 onValueChange={(val) => val && setGranularity(val)}
-                items={{ "1digit": "1-stellig", "2digit": "2-stellig", "3digit": "3-stellig", "5digit": "5-stellig" }}
+                items={{
+                  "1digit": "1-stellig",
+                  "2digit": "2-stellig",
+                  "3digit": "3-stellig",
+                  "5digit": "5-stellig",
+                }}
               >
                 <SelectTrigger id="granularity">
                   <SelectValue />

@@ -1,5 +1,5 @@
-const fs = require('fs');
-let code = fs.readFileSync('src/lib/hooks/use-map-layers.ts', 'utf8');
+const fs = require("fs");
+let code = fs.readFileSync("src/lib/hooks/use-map-layers.ts", "utf8");
 
 code = code.replace(
   /      sourceIds.forEach\(\(id\) => \{\n        try {\n          if \(map\.getSource\(id\)\) \{\n            map\.removeSource\(id\);\n          \}\n        \} catch \(error\) \{/g,
@@ -20,4 +20,4 @@ code = code.replace(
         } catch (error) {`
 );
 
-fs.writeFileSync('src/lib/hooks/use-map-layers.ts', code);
+fs.writeFileSync("src/lib/hooks/use-map-layers.ts", code);

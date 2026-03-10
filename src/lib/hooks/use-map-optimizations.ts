@@ -70,7 +70,7 @@ export function useMapOptimizations({
     // Single optimized pass through features
     for (const feature of data.features) {
       const geometry = feature.geometry;
-        if (!geometry) continue;
+      if (!geometry) continue;
       if (geometry.type === "Polygon") {
         // Only check outer ring for bounds - much faster
         const coords = geometry.coordinates[0];

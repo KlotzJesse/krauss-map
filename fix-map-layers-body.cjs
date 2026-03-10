@@ -1,7 +1,8 @@
-const fs = require('fs');
-let code = fs.readFileSync('src/lib/hooks/use-map-layers.ts', 'utf8');
+const fs = require("fs");
+let code = fs.readFileSync("src/lib/hooks/use-map-layers.ts", "utf8");
 
-const regex = /\/\/ Initialize area layers using MapLibre filters[\s\S]*?(?:isMapLoaded,\n\s*layers,\n\s*ids\.hoverLayerId,\n\s*activeLayerId,\n\s*\]\);)/m;
+const regex =
+  /\/\/ Initialize area layers using MapLibre filters[\s\S]*?(?:isMapLoaded,\n\s*layers,\n\s*ids\.hoverLayerId,\n\s*activeLayerId,\n\s*\]\);)/m;
 
 const replacement = `// Initialize area layers using MapLibre filters (highly optimized)
   useEffect(() => {
@@ -112,7 +113,7 @@ const replacement = `// Initialize area layers using MapLibre filters (highly op
 
 if (regex.test(code)) {
   code = code.replace(regex, replacement);
-  fs.writeFileSync('src/lib/hooks/use-map-layers.ts', code);
+  fs.writeFileSync("src/lib/hooks/use-map-layers.ts", code);
   console.log("REPLACED SUCCESS");
 } else {
   console.log("REGEX FAILED");

@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useTransition } from "react";
 import { toast } from "sonner";
-import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import {
   undoChangeAction,
   redoChangeAction,
 } from "@/app/actions/change-tracking-actions";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 interface UndoRedoStatus {
   canUndo: boolean;
@@ -45,12 +45,15 @@ export function useUndoRedo(
         await executeAction(undoChangeAction(areaId), {
           loading: "Mache Änderung rückgängig...",
           success: (data) => {
-            if (data && 'success' in data && data.success) {
+            if (data && "success" in data && data.success) {
               // Trigger revalidation to update status
               onStatusUpdate?.();
               return "Änderung rückgängig gemacht";
             }
-            throw new Error((data && 'error' in data && data.error as string) || "Fehler beim Rückgängigmachen");
+            throw new Error(
+              (data && "error" in data && (data.error as string)) ||
+                "Fehler beim Rückgängigmachen"
+            );
           },
           error: "Fehler beim Rückgängigmachen",
         });
@@ -75,12 +78,15 @@ export function useUndoRedo(
         await executeAction(redoChangeAction(areaId), {
           loading: "Stelle Änderung wieder her...",
           success: (data) => {
-            if (data && 'success' in data && data.success) {
+            if (data && "success" in data && data.success) {
               // Trigger revalidation to update status
               onStatusUpdate?.();
               return "Änderung wiederhergestellt";
             }
-            throw new Error((data && 'error' in data && data.error as string) || "Fehler beim Wiederherstellen");
+            throw new Error(
+              (data && "error" in data && (data.error as string)) ||
+                "Fehler beim Wiederherstellen"
+            );
           },
           error: "Fehler beim Wiederherstellen",
         });

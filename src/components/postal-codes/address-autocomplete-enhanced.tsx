@@ -6,7 +6,6 @@ import {
   EyeOffIcon,
 } from "lucide-react";
 import { useRef, useState, useOptimistic } from "react";
-import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import { toast } from "sonner";
 
 import {
@@ -41,6 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 const EMPTY_ARRAY: never[] = [];
 
@@ -281,7 +281,8 @@ export function AddressAutocompleteEnhanced({
       executeAction(boundarySearchPromise(), {
         loading: `Suche PLZ-Regionen in ${result.display_name}...`,
         success: (message: string) => message,
-        error: (error: unknown) => (error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"),
+        error: (error: unknown) =>
+          error instanceof Error ? error.message : "Ein Fehler ist aufgetreten",
       });
 
       return;
@@ -586,10 +587,14 @@ export function AddressAutocompleteEnhanced({
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3">
                 <Button
-                  variant={searchMode === "straight" ? "default" : "outline"}
+                  variant="outline"
                   size="default"
                   onClick={() => setSearchMode("straight")}
-                  className="h-auto p-4 text-left flex flex-col items-start gap-1"
+                  className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
+                    searchMode === "straight"
+                      ? "border-primary ring-1 ring-primary bg-primary/5"
+                      : "hover:bg-muted"
+                  }`}
                   role="radio"
                   aria-checked={searchMode === "straight"}
                   tabIndex={0}
@@ -600,15 +605,21 @@ export function AddressAutocompleteEnhanced({
                       Schnell
                     </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span
+                    className={`text-xs ${searchMode === "straight" ? "text-primary" : "text-muted-foreground"}`}
+                  >
                     Direkte Entfernung (wie der Vogel fliegt)
                   </span>
                 </Button>
                 <Button
-                  variant={searchMode === "distance" ? "default" : "outline"}
+                  variant="outline"
                   size="default"
                   onClick={() => setSearchMode("distance")}
-                  className="h-auto p-4 text-left flex flex-col items-start gap-1"
+                  className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
+                    searchMode === "distance"
+                      ? "border-primary ring-1 ring-primary bg-primary/5"
+                      : "hover:bg-muted"
+                  }`}
                   role="radio"
                   aria-checked={searchMode === "distance"}
                   tabIndex={0}
@@ -621,28 +632,34 @@ export function AddressAutocompleteEnhanced({
                       Präzise
                     </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span
+                    className={`text-xs ${searchMode === "distance" ? "text-primary" : "text-muted-foreground"}`}
+                  >
                     Tatsächliche Straßenentfernung
                   </span>
                 </Button>
                 <Button
-                  variant={searchMode === "time" ? "default" : "outline"}
+                  variant="outline"
                   size="default"
                   onClick={() => setSearchMode("time")}
-                  className="h-auto p-4 text-left flex flex-col items-start gap-1"
+                  className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
+                    searchMode === "time"
+                      ? "border-primary ring-1 ring-primary bg-primary/5"
+                      : "hover:bg-muted"
+                  }`}
                   role="radio"
                   aria-checked={searchMode === "time"}
                   tabIndex={0}
                 >
                   <div className="flex items-center gap-2 w-full">
-                    <span className="text-sm font-medium">
-                      Fahrzeit (min)
-                    </span>
+                    <span className="text-sm font-medium">Fahrzeit (min)</span>
                     <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full ml-auto">
                       Realistisch
                     </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span
+                    className={`text-xs ${searchMode === "time" ? "text-primary" : "text-muted-foreground"}`}
+                  >
                     Geschätzte Fahrtdauer
                   </span>
                 </Button>

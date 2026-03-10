@@ -28,7 +28,6 @@ import {
   useTransition,
 } from "react";
 import { toast } from "sonner";
-import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import {
   createLayerAction,
@@ -83,6 +82,7 @@ import type {
   SelectAreaChanges,
   areaLayers,
 } from "@/lib/schema/schema";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import {
   copyPostalCodesCSV,
   exportLayersXLSX,
@@ -983,211 +983,211 @@ function DrawingToolsImpl({
                   {optimisticLayers.map((layer) => {
                     const isOptimistic = layer.id > 1000000000;
                     return (
-                    <div
-                      key={layer.id}
-                      className={`group relative rounded-lg border transition-all ${
-                        activeLayerId === layer.id
-                          ? "border-primary bg-accent shadow-sm"
-                          : "border-border hover:border-primary/50 hover:bg-accent/50"
-                      } ${isOptimistic ? "opacity-60 pointer-events-none" : ""}`}
-                    >
                       <div
-                        role="button"
-                        tabIndex={0}
-                        className="px-3 py-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-lg"
-                        onClick={() => {
-                          if (!isOptimistic) onLayerSelect?.(layer.id);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            if (!isOptimistic) onLayerSelect?.(layer.id);
-                          }
-                        }}
+                        key={layer.id}
+                        className={`group relative rounded-lg border transition-all ${
+                          activeLayerId === layer.id
+                            ? "border-primary bg-accent shadow-sm"
+                            : "border-border hover:border-primary/50 hover:bg-accent/50"
+                        } ${isOptimistic ? "opacity-60 pointer-events-none" : ""}`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          {/* Layer info */}
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {/* Color indicator */}
-                            <div
-                              className="w-3 h-3 rounded-sm flex-shrink-0 border border-border"
-                              style={{ backgroundColor: layer.color }}
-                            />
-
-                            {/* Name - editable on double-click */}
-                            {editingLayerId === layer.id ? (
-                              <Input
-                                value={editingLayerName}
-                                onChange={(e) =>
-                                  setEditingLayerName(e.target.value)
-                                }
-                                className="h-6 text-sm flex-1"
-                                autoFocus
-                                onClick={(e) => e.stopPropagation()}
-                                onKeyDown={(e) => {
-                                  e.stopPropagation();
-
-                                  if (e.key === "Enter") {
-                                    handleRenameLayer(
-                                      layer.id,
-
-                                      editingLayerName
-                                    );
-                                  } else if (e.key === "Escape") {
-                                    setEditingLayerId(null);
-
-                                    setEditingLayerName("");
-                                  }
-                                }}
-                                onBlur={() => {
-                                  if (editingLayerName.trim()) {
-                                    handleRenameLayer(
-                                      layer.id,
-
-                                      editingLayerName
-                                    );
-                                  } else {
-                                    setEditingLayerId(null);
-
-                                    setEditingLayerName("");
-                                  }
-                                }}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="px-3 py-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-lg"
+                          onClick={() => {
+                            if (!isOptimistic) onLayerSelect?.(layer.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              if (!isOptimistic) onLayerSelect?.(layer.id);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            {/* Layer info */}
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {/* Color indicator */}
+                              <div
+                                className="w-3 h-3 rounded-sm flex-shrink-0 border border-border"
+                                style={{ backgroundColor: layer.color }}
                               />
-                            ) : (
-                              <span
-                                className="font-medium text-sm truncate"
-                                onDoubleClick={(e) => {
-                                  e.stopPropagation();
 
-                                  setEditingLayerId(layer.id);
+                              {/* Name - editable on double-click */}
+                              {editingLayerId === layer.id ? (
+                                <Input
+                                  value={editingLayerName}
+                                  onChange={(e) =>
+                                    setEditingLayerName(e.target.value)
+                                  }
+                                  className="h-6 text-sm flex-1"
+                                  autoFocus
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => {
+                                    e.stopPropagation();
 
-                                  setEditingLayerName(layer.name);
-                                }}
-                                title="Doppelklick zum Umbenennen"
-                              >
-                                {layer.name}
-                              </span>
-                            )}
+                                    if (e.key === "Enter") {
+                                      handleRenameLayer(
+                                        layer.id,
 
-                            {/* Postal code count */}
-                            <Badge variant="secondary" className="text-xs">
-                              {layer.postalCodes?.length || 0}
-                            </Badge>
-                          </div>
+                                        editingLayerName
+                                      );
+                                    } else if (e.key === "Escape") {
+                                      setEditingLayerId(null);
 
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {/* Color picker */}
-                            <Popover>
-                              <PopoverTrigger
-                                render={
-                                  <Tooltip>
-                                    <TooltipTrigger
-                                      render={
-                                        <Button
-                                          variant="outline"
-                                          size="icon"
-                                          className="h-6 w-6"
-                                          onClick={(e) => e.stopPropagation()}
-                                        />
-                                      }
-                                    >
-                                      <IconPalette className="h-3.5 w-3.5" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Gebiet-Farbe ändern</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                }
-                              />
-                              <PopoverContent
-                                className="w-auto p-3"
-                                onClick={(e: React.MouseEvent) =>
-                                  e.stopPropagation()
-                                }
-                              >
-                                <div className="grid grid-cols-4 gap-2">
-                                  {DEFAULT_COLORS.map((color) => (
-                                    <button
-                                      type="button"
-                                      key={color}
-                                      className="w-8 h-8 rounded-md border-2 hover:scale-110 transition-transform"
-                                      style={{
-                                        backgroundColor: color,
+                                      setEditingLayerName("");
+                                    }
+                                  }}
+                                  onBlur={() => {
+                                    if (editingLayerName.trim()) {
+                                      handleRenameLayer(
+                                        layer.id,
 
-                                        borderColor:
-                                          layer.color === color
-                                            ? "currentColor"
-                                            : "transparent",
+                                        editingLayerName
+                                      );
+                                    } else {
+                                      setEditingLayerId(null);
+
+                                      setEditingLayerName("");
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <span
+                                  className="font-medium text-sm truncate"
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+
+                                    setEditingLayerId(layer.id);
+
+                                    setEditingLayerName(layer.name);
+                                  }}
+                                  title="Doppelklick zum Umbenennen"
+                                >
+                                  {layer.name}
+                                </span>
+                              )}
+
+                              {/* Postal code count */}
+                              <Badge variant="secondary" className="text-xs">
+                                {layer.postalCodes?.length || 0}
+                              </Badge>
+                            </div>
+
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {/* Color picker */}
+                              <Popover>
+                                <PopoverTrigger
+                                  render={
+                                    <Tooltip>
+                                      <TooltipTrigger
+                                        render={
+                                          <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-6 w-6"
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                        }
+                                      >
+                                        <IconPalette className="h-3.5 w-3.5" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Gebiet-Farbe ändern</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  }
+                                />
+                                <PopoverContent
+                                  className="w-auto p-3"
+                                  onClick={(e: React.MouseEvent) =>
+                                    e.stopPropagation()
+                                  }
+                                >
+                                  <div className="grid grid-cols-4 gap-2">
+                                    {DEFAULT_COLORS.map((color) => (
+                                      <button
+                                        type="button"
+                                        key={color}
+                                        className="w-8 h-8 rounded-md border-2 hover:scale-110 transition-transform"
+                                        style={{
+                                          backgroundColor: color,
+
+                                          borderColor:
+                                            layer.color === color
+                                              ? "currentColor"
+                                              : "transparent",
+                                        }}
+                                        onClick={() =>
+                                          handleColorChange(layer.id, color)
+                                        }
+                                      />
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                              {/* Copy as CSV */}
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+
+                                        const codes =
+                                          layer.postalCodes?.map(
+                                            (pc) => `D-${pc.postalCode}`
+                                          ) || [];
+
+                                        if (codes.length > 0) {
+                                          await copyPostalCodesCSV(codes);
+                                        } else {
+                                          toast.info(
+                                            "Keine Postleitzahlen zum Kopieren"
+                                          );
+                                        }
                                       }}
-                                      onClick={() =>
-                                        handleColorChange(layer.id, color)
-                                      }
                                     />
-                                  ))}
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            {/* Copy as CSV */}
-                            <Tooltip>
-                              <TooltipTrigger
-                                render={
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
+                                  }
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Postleitzahlen als CSV kopieren</p>
+                                </TooltipContent>
+                              </Tooltip>
 
-                                      const codes =
-                                        layer.postalCodes?.map(
-                                          (pc) => `D-${pc.postalCode}`
-                                        ) || [];
+                              {/* Delete */}
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
 
-                                      if (codes.length > 0) {
-                                        await copyPostalCodesCSV(codes);
-                                      } else {
-                                        toast.info(
-                                          "Keine Postleitzahlen zum Kopieren"
-                                        );
-                                      }
-                                    }}
-                                  />
-                                }
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Postleitzahlen als CSV kopieren</p>
-                              </TooltipContent>
-                            </Tooltip>
-
-                            {/* Delete */}
-                            <Tooltip>
-                              <TooltipTrigger
-                                render={
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-
-                                      handleDeleteLayer(layer.id);
-                                    }}
-                                  />
-                                }
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Gebiet löschen</p>
-                              </TooltipContent>
-                            </Tooltip>
+                                        handleDeleteLayer(layer.id);
+                                      }}
+                                    />
+                                  }
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Gebiet löschen</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
                     );
                   })}
                 </div>
