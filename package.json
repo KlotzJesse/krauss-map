@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "next build --turbopack",
-    "build:analyze": "ANALYZE=true next build",
+    "build:analyze": "next experimental-analyze",
     "db:check": "drizzle-kit check",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "ts-node ./database/migrate.ts",
@@ -35,7 +35,6 @@
     "@hugeicons/core-free-icons": "^4.0.0",
     "@hugeicons/react": "^1.1.6",
     "@neondatabase/serverless": "^1.0.2",
-    "@next/bundle-analyzer": "^16.1.6",
     "@next/eslint-plugin-next": "^16.1.6",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
