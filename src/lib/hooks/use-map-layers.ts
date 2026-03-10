@@ -521,9 +521,12 @@ export function useMapLayers({
       const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];
 
       if (postalCodes.length > 0) {
+        // Critical: Only proceed if the source actually exists in MapLibre
+        if (!map.getSource(ids.sourceId)) return;
+
         layerIdsToKeep.add(layerFillId);
         layerIdsToKeep.add(layerBorderId);
-      
+
         const matchFilter = [
           "match",
           ["coalesce", ["get", "code"], ["get", "plz"], ["get", "postalCode"], ""],
@@ -608,7 +611,6 @@ export function useMapLayers({
     isMapLoaded,
     layers,
     ids.hoverLayerId,
-    ids.sourceId,
     activeLayerId,
   ]);
 
