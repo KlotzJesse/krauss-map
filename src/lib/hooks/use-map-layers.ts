@@ -483,6 +483,15 @@ export function useMapLayers({
       sourceIds.forEach((id) => {
         try {
           if (map.getSource(id)) {
+            // First carefully find & remove ANY dynamic layers still attached to this source
+            const allMapLayers = map.getStyle()?.layers || [];
+            allMapLayers.forEach((layer: any) => {
+              if ('source' in layer && layer.source === id) {
+                try {
+                  if (map.getLayer(layer.id)) map.removeLayer(layer.id);
+                } catch (e) {}
+              }
+            });
             map.removeSource(id);
           }
         } catch (error) {
@@ -496,184 +505,110 @@ export function useMapLayers({
     [mapRef, layerId, ids]
   );
 
-  // Pre-compute layer data mapping for O(1) lookups
-  const layerDataCache = useMemo(() => {
-    if (!data.features || !layers) {
-      return new Map();
-    }
-
-    const cache = new Map<number, FeatureCollection<Polygon | MultiPolygon>>();
-    layers.forEach((layer) => {
-      const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];
-      if (postalCodes.length === 0) {
-        cache.set(layer.id, { type: "FeatureCollection", features: [] });
-        return;
-      }
-
-      // Create lookup set for O(1) postal code matching
-      const postalCodeSet = new Set(postalCodes.map((code) => code.toString()));
-
-      // Filter features once per layer change, not per switch
-      const layerFeatures = data.features.filter((feature) => {
-        const code =
-          feature.properties?.code ||
-          feature.properties?.plz ||
-          feature.properties?.postalCode;
-        return code && postalCodeSet.has(code.toString());
-      });
-
-      cache.set(layer.id, {
-        type: "FeatureCollection",
-        features: layerFeatures,
-      });
-    });
-    return cache;
-  }, [data.features, layers]);
-
-  // Initialize area layers once (only when layers change, not on activeLayerId change)
+  // Initialize area layers using MapLibre filters (highly optimized)
   useEffect(() => {
     const map = mapRef.current;
-    if (
-      !map ||
-      !isMapLoaded ||
-      !layers ||
-      layers.length === 0 ||
-      !layerDataCache.size
-    ) {
+    if (!map || !isMapLoaded || !layers) {
       return;
     }
 
+    const layerIdsToKeep = new Set();
+
     layers.forEach((layer) => {
-      const layerSourceId = `area-layer-${layer.id}-source`;
       const layerFillId = `area-layer-${layer.id}-fill`;
       const layerBorderId = `area-layer-${layer.id}-border`;
 
-      const layerFeatureCollection = layerDataCache.get(layer.id);
-      if (
-        !layerFeatureCollection ||
-        layerFeatureCollection.features.length === 0
-      ) {
-        // Remove empty layers
-        if (map.getLayer(layerFillId)) {
-          map.removeLayer(layerFillId);
-        }
-        if (map.getLayer(layerBorderId)) {
-          map.removeLayer(layerBorderId);
-        }
-        if (map.getSource(layerSourceId)) {
-          map.removeSource(layerSourceId);
-        }
-        return;
-      }
+      const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];
 
-      // Add or update source once
-      if (!map.getSource(layerSourceId)) {
-        map.addSource(layerSourceId, {
-          type: "geojson",
-          data: layerFeatureCollection,
-        });
-      } else {
-        const src = map.getSource(layerSourceId) as GeoJSONSource | undefined;
-        if (src && typeof src.setData === "function") {
-          src.setData(layerFeatureCollection);
+      if (postalCodes.length > 0) {
+        layerIdsToKeep.add(layerFillId);
+        layerIdsToKeep.add(layerBorderId);
+      
+        const matchFilter = [
+          "match",
+          ["coalesce", ["get", "code"], ["get", "plz"], ["get", "postalCode"], ""],
+          postalCodes,
+          true,
+          false
+        ];
+
+        const opacity = layer.opacity / 100;
+        const isVisible = layer.isVisible === "true";
+        const isActive = activeLayerId === layer.id;
+
+        if (!map.getLayer(layerFillId)) {
+          map.addLayer(
+            {
+              id: layerFillId,
+              type: "fill",
+              source: ids.sourceId,
+              filter: matchFilter as any,
+              paint: {
+                "fill-color": layer.color,
+                "fill-opacity": isVisible ? opacity * 0.6 : 0,
+              },
+              layout: {
+                visibility: isVisible ? "visible" : "none",
+              },
+            } as any,
+            ids.hoverLayerId
+          );
+        } else {
+          // Update existing layer properties
+          map.setFilter(layerFillId, matchFilter as any);
+          map.setPaintProperty(layerFillId, "fill-color", layer.color);
+          map.setPaintProperty(layerFillId, "fill-opacity", isVisible ? opacity * 0.6 : 0);
+          map.setLayoutProperty(layerFillId, "visibility", isVisible ? "visible" : "none");
         }
-      }
 
-      const opacity = layer.opacity / 100;
-      const isVisible = layer.isVisible === "true";
-      const isActive = activeLayerId === layer.id;
-
-      // Add fill layer
-      if (!map.getLayer(layerFillId)) {
-        map.addLayer(
-          {
-            id: layerFillId,
-            type: "fill",
-            source: layerSourceId,
-            paint: {
-              "fill-color": layer.color,
-              "fill-opacity": isVisible ? opacity * 0.6 : 0,
-            },
-            layout: {
-              visibility: isVisible ? "visible" : "none",
-            },
-          } as LayerSpecification,
-          ids.hoverLayerId
-        );
-      }
-
-      // Add border layer with highlight for active layer
-      if (!map.getLayer(layerBorderId)) {
-        map.addLayer(
-          {
-            id: layerBorderId,
-            type: "line",
-            source: layerSourceId,
-            paint: {
-              "line-color": layer.color,
-              "line-width": isActive ? 2.5 : 1.5,
-              "line-opacity": isVisible ? (isActive ? 0.9 : 0.7) : 0,
-            },
-            layout: {
-              "line-cap": "round",
-              "line-join": "round",
-              visibility: isVisible ? "visible" : "none",
-            },
-          } as LayerSpecification,
-          ids.hoverLayerId
-        );
+        if (!map.getLayer(layerBorderId)) {
+          map.addLayer(
+            {
+              id: layerBorderId,
+              type: "line",
+              source: ids.sourceId,
+              filter: matchFilter as any,
+              paint: {
+                "line-color": layer.color,
+                "line-width": isActive ? 2.5 : 1.5,
+                "line-opacity": isVisible ? (isActive ? 0.9 : 0.7) : 0,
+              },
+              layout: {
+                "line-cap": "round",
+                "line-join": "round",
+                visibility: isVisible ? "visible" : "none",
+              },
+            } as any,
+            ids.hoverLayerId
+          );
+        } else {
+          // Update existing layer properties
+          map.setFilter(layerBorderId, matchFilter as any);
+          map.setPaintProperty(layerBorderId, "line-color", layer.color);
+          map.setPaintProperty(layerBorderId, "line-width", isActive ? 2.5 : 1.5);
+          map.setPaintProperty(layerBorderId, "line-opacity", isVisible ? (isActive ? 0.9 : 0.7) : 0);
+          map.setLayoutProperty(layerBorderId, "visibility", isVisible ? "visible" : "none");
+        }
       }
     });
 
-    // Cleanup: Remove layers/sources for layers that no longer exist
-    return () => {
-      if (!map) {
-        return;
+    // Cleanup phase: Remove any dynamically created layers that no longer exist in the standard set
+    const allLayers = map.getStyle()?.layers || [];
+    allLayers.forEach((layer: any) => {
+      if (layer.id && layer.id.startsWith("area-layer-")) {
+        if (!layerIdsToKeep.has(layer.id)) {
+          try { map.removeLayer(layer.id); } catch (e) {}
+        }
       }
+    });
 
-      const currentLayerIds = new Set(layers.map((l) => l.id));
-
-      // Find and remove orphaned area layers
-      const allLayers = map.getStyle().layers || [];
-      allLayers.forEach((layer: any) => {
-        if (layer.id.startsWith("area-layer-")) {
-          const match = layer.id.match(/area-layer-(\d+)-(fill|border)/);
-          if (match) {
-            const layerIdNum = parseInt(match[1], 10);
-            if (!currentLayerIds.has(layerIdNum)) {
-              try {
-                map.removeLayer(layer.id);
-              } catch {
-                // Layer might already be removed
-              }
-            }
-          }
-        }
-      });
-
-      // Remove orphaned sources
-      Object.keys(map.getStyle().sources || {}).forEach((sourceId) => {
-        if (sourceId.startsWith("area-layer-")) {
-          const match = sourceId.match(/area-layer-(\d+)-source/);
-          if (match) {
-            const layerIdNum = parseInt(match[1], 10);
-            if (!currentLayerIds.has(layerIdNum)) {
-              try {
-                map.removeSource(sourceId);
-              } catch {
-                // Source might already be removed
-              }
-            }
-          }
-        }
-      });
-    };
+    // We do NOT return a cleanup function here. The previous effect cleans up the main sources which in turn cleans up the bound layers.
   }, [
     mapRef,
     isMapLoaded,
     layers,
-    layerDataCache,
     ids.hoverLayerId,
+    ids.sourceId,
     activeLayerId,
   ]);
 

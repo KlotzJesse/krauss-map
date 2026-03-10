@@ -451,7 +451,7 @@ export function PostalCodesViewClientWithLayers({
               }}
               performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}
               granularity={defaultGranularity}
-              triggerClassName="truncate"
+              triggerClassName="truncate h-10"
               previewPostalCode={previewPostalCode}
               layers={optimisticLayers}
             />

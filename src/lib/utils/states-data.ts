@@ -24,10 +24,11 @@ interface StateRow {
 async function _getStatesData(): Promise<
   FeatureCollection<Polygon | MultiPolygon>
 > {
+  "use cache";
   try {
     // Select all columns, but geometry as GeoJSON
     const { rows } = await db.execute(
-      sql`SELECT id, name, code, ST_AsGeoJSON(geometry) as geometry, properties, bbox, "created_at", "updated_at" FROM states`
+      sql`SELECT id, name, code, ST_AsGeoJSON(ST_Simplify(geometry, 0.005)) as geometry, properties, bbox, "created_at", "updated_at" FROM states`
     );
     const features = rows.map((row) => {
       const typedRow = row as unknown as StateRow;

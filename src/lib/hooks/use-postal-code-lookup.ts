@@ -45,6 +45,8 @@ export function usePostalCodeLookup({
     data.features.forEach((feature) => {
       const geometry = feature.geometry;
 
+      if (!geometry) return;
+
       let maxLat = -Infinity,
         maxLng = -Infinity,
         minLat = Infinity,

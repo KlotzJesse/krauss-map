@@ -25,9 +25,10 @@ interface PostalCodeRow {
 async function _getPostalCodesDataForGranularity(
   granularity: string
 ): Promise<FeatureCollection<Polygon | MultiPolygon>> {
+  "use cache";
   try {
     const { rows } = await db.execute(
-      sql`SELECT id, code, granularity, ST_AsGeoJSON(geometry) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity}`
+      sql`SELECT id, code, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity}`
     );
     const features = rows.map((row) => {
       const typedRow = row as unknown as PostalCodeRow;

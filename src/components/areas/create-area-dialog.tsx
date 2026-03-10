@@ -128,6 +128,7 @@ export function CreateAreaDialog({
               <Select
                 value={granularity}
                 onValueChange={(val) => val && setGranularity(val)}
+                items={{ "1digit": "1-stellig", "2digit": "2-stellig", "3digit": "3-stellig", "5digit": "5-stellig" }}
               >
                 <SelectTrigger id="granularity">
                   <SelectValue />

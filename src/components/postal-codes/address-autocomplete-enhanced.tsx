@@ -199,7 +199,7 @@ export function AddressAutocompleteEnhanced({
 
       // Use promise-based toast for geocoding feedback
       executeAction(geocodePromise(), {
-        loading: `🔍 Suche nach "${value}"... (DE/EN unterstützt)`,
+        loading: `Suche nach "${value}"... (DE/EN unterstützt)`,
         success: (message) => message as string,
         error: (error) =>
           error instanceof Error ? error.message : "Adresssuche fehlgeschlagen",
@@ -279,7 +279,7 @@ export function AddressAutocompleteEnhanced({
       };
 
       executeAction(boundarySearchPromise(), {
-        loading: `🗺️ Suche PLZ-Regionen in ${result.display_name}...`,
+        loading: `Suche PLZ-Regionen in ${result.display_name}...`,
         success: (message: string) => message,
         error: (error: unknown) => (error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"),
       });
@@ -323,7 +323,7 @@ export function AddressAutocompleteEnhanced({
         if (searchMode === "straight") {
           // Use traditional straight-line radius search - it handles its own toast
           await onRadiusSelect(selectedCoords, finalRadius, granularity);
-          return `✅ ${finalRadius}km Luftlinie erfolgreich ausgewählt`;
+          return `${finalRadius}km Luftlinie erfolgreich ausgewählt`;
         }
         // Use driving radius search - it handles its own toast
         const mode = searchMode === "distance" ? "distance" : "time";
@@ -345,7 +345,7 @@ export function AddressAutocompleteEnhanced({
 
         const unit = mode === "time" ? "min" : "km";
         const modeText = mode === "time" ? "Fahrzeit" : "Fahrstrecke";
-        return `✅ ${finalRadius}${unit} ${modeText} erfolgreich ausgewählt`;
+        return `${finalRadius}${unit} ${modeText} erfolgreich ausgewählt`;
       };
 
       // Since the individual search functions handle their own toasts,
@@ -372,7 +372,7 @@ export function AddressAutocompleteEnhanced({
         ));
 
     if (isAdministrativeArea && onBoundarySelect) {
-      return `🗺️ ${
+      return `${
         result.city || result.state || result.display_name.split(",")[0]
       } (Gebiet)`;
     }
@@ -595,7 +595,7 @@ export function AddressAutocompleteEnhanced({
                   tabIndex={0}
                 >
                   <div className="flex items-center gap-2 w-full">
-                    <span className="text-sm font-medium">📏 Luftlinie</span>
+                    <span className="text-sm font-medium">Luftlinie</span>
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-auto">
                       Schnell
                     </span>
@@ -615,7 +615,7 @@ export function AddressAutocompleteEnhanced({
                 >
                   <div className="flex items-center gap-2 w-full">
                     <span className="text-sm font-medium">
-                      🛣️ Fahrstrecke (km)
+                      Fahrstrecke (km)
                     </span>
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-auto">
                       Präzise
@@ -636,7 +636,7 @@ export function AddressAutocompleteEnhanced({
                 >
                   <div className="flex items-center gap-2 w-full">
                     <span className="text-sm font-medium">
-                      ⏱️ Fahrzeit (min)
+                      Fahrzeit (min)
                     </span>
                     <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full ml-auto">
                       Realistisch
@@ -767,10 +767,10 @@ export function AddressAutocompleteEnhanced({
               <span className="text-muted-foreground">Suchmethode:</span>
               <span className="font-medium text-foreground">
                 {searchMode === "straight"
-                  ? "📏 Luftlinie"
+                  ? "Luftlinie"
                   : searchMode === "distance"
-                    ? "🛣️ Fahrstrecke"
-                    : "⏱️ Fahrzeit"}
+                    ? "Fahrstrecke"
+                    : "Fahrzeit"}
               </span>
             </div>
 

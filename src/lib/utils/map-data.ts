@@ -42,6 +42,10 @@ export function featureCollectionFromIds(
 export function getLargestPolygonCentroid(
   feature: Feature<Polygon | MultiPolygon>
 ) {
+  if (!feature.geometry) {
+    return [0, 0] as [number, number];
+  }
+
   // Use cache for expensive centroid calculations
   if (centroidCache.has(feature)) {
     return centroidCache.get(feature);
@@ -82,9 +86,12 @@ export function getLargestPolygonCentroid(
  * Creates a FeatureCollection of label points from a polygon FeatureCollection.
  */
 export function makeLabelPoints(features: FeatureCollection) {
+  // Filter out features with no geometry
+  const validFeatures = (features.features as Feature[]).filter((f) => f.geometry);
+
   return {
     type: "FeatureCollection",
-    features: (features.features as Feature[]).map((f) => {
+    features: validFeatures.map((f) => {
       const coords = getLargestPolygonCentroid(
         f as Feature<Polygon | MultiPolygon>
       );

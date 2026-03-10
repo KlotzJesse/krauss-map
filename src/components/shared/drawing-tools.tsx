@@ -693,8 +693,8 @@ function DrawingToolsImpl({
         {
           loading: `Erstelle Gebiet "${createdLayerName}"...`,
           success: (result) => {
-            if (result?.data?.id && onLayerSelect) {
-              onLayerSelect(result.data.id);
+            if (result?.id && onLayerSelect) {
+              onLayerSelect(result.id);
             }
             return `Gebiet "${createdLayerName}" erstellt`;
           },
@@ -1343,7 +1343,7 @@ function DrawingToolsImpl({
                         onClick={() => {
                           onClearAll();
 
-                          toast.success("🗑️ Zeichnungen gelöscht", {
+                          toast.success("Zeichnungen gelöscht", {
                             duration: 2000,
                           });
                         }}
@@ -1434,7 +1434,7 @@ function DrawingToolsImpl({
                       />
                     }
                   >
-                    📄 PDF
+                    PDF
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Als PDF-Datei exportieren</p>

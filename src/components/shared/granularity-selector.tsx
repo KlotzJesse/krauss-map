@@ -234,6 +234,7 @@ export function GranularitySelector({
           value={optimisticGranularity}
           onValueChange={(val) => val && handleGranularitySelect(val)}
           disabled={_isPending}
+          items={Object.fromEntries(GRANULARITY_OPTIONS.map(opt => [opt.value, opt.label]))}
         >
           <SelectTrigger className="w-full h-8 text-xs">
             <SelectValue placeholder="Granularität wählen" />

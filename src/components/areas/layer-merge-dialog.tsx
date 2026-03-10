@@ -219,10 +219,7 @@ export function LayerMergeDialog({
           {selectedLayers.size >= 2 && (
             <div className="space-y-2">
               <Label>Ziel-Layer (behält Name und Farbe)</Label>
-              <Select
-                value={targetLayerId}
-                onValueChange={(val) => val && setTargetLayerId(val)}
-              >
+              <Select value={targetLayerId} onValueChange={(val) => val && setTargetLayerId(val)} items={Object.fromEntries([...selectedLayers].map(id => [id, layers.find(l => l.id.toString() === id.toString())?.name || id]))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Ziel-Layer wählen..." />
                 </SelectTrigger>
@@ -255,13 +252,7 @@ export function LayerMergeDialog({
           {selectedLayers.size >= 2 && targetLayerId && (
             <div className="space-y-2">
               <Label>Strategie</Label>
-              <Select
-                value={strategy}
-                onValueChange={(val) =>
-                  val &&
-                  setStrategy(val as "union" | "keep-target" | "keep-source")
-                }
-              >
+              <Select value={strategy} onValueChange={(val) => val && setStrategy(val as any)} items={{ union: "Vereinigung (Union)", "keep-target": "Ziel behalten", "keep-source": "Beide behalten" }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

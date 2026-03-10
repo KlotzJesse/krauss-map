@@ -297,14 +297,7 @@ export function BulkImportDialog({
                     <Layers className="h-4 w-4" />
                     Layer (optional)
                   </Label>
-                  <Select
-                    value={columnMapping.layerColumn || "none"}
-                    onValueChange={(value) =>
-                      updateColumnMapping({
-                        layerColumn: value === "none" ? null : value,
-                      })
-                    }
-                  >
+                  <Select value={columnMapping.layerColumn || "none"} onValueChange={(value) => updateColumnMapping({ layerColumn: value === "none" ? null : value }) } items={{ "none": "Keine (Standard)", ...Object.fromEntries(fileData.headers.map(h => [h, h])) }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Keine (Standard)" />
                     </SelectTrigger>

@@ -161,7 +161,7 @@ export function getGranularityChangeDescription(
     title: `Wechsel zu ${newLabel}`,
     description:
       postalCodeCount > 0
-        ? `⚠️ Würde alle ${postalCodeCount} Regionen löschen`
+        ? `Würde alle ${postalCodeCount} Regionen löschen`
         : "Niedrigere Granularität",
   };
 }

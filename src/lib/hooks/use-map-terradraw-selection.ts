@@ -230,7 +230,7 @@ export function useMapTerraDrawSelection({
 
         // Provide toast feedback for drawing completion
         const count = uniqueSelectedFeatures.length;
-        toast.info(`🎯 ${count} Region${count === 1 ? "" : "en"} gefunden`, {
+        toast.info(`${count} Region${count === 1 ? "" : "en"} gefunden`, {
           description: `Klicken Sie auf "Hinzufügen" oder "Entfernen"`,
           duration: 3000,
         });
@@ -259,7 +259,7 @@ export function useMapTerraDrawSelection({
     if (pendingPostalCodes.length > 0) {
       const removedCount = pendingPostalCodes.length;
       toast.success(
-        `🗑️ ${removedCount} Region${removedCount === 1 ? "" : "en"} gelöscht`,
+        `${removedCount} Region${removedCount === 1 ? "" : "en"} gelöscht`,
         {
           duration: 2000,
         }

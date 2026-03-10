@@ -164,14 +164,14 @@ export function FloatingDrawingToolbar({
       // Deactivate current mode
       onModeChange(null);
       const modeInfo = drawingModes.find((m) => m.id === modeId);
-      toast.success(`🖱️ ${modeInfo?.name || "Werkzeug"} deaktiviert`, {
+      toast.success(`${modeInfo?.name || "Werkzeug"} deaktiviert`, {
         duration: 2000,
       });
     } else {
       // Activate new mode
       onModeChange(terraDrawMode);
       const modeInfo = drawingModes.find((m) => m.id === modeId);
-      toast.success(`🎯 ${modeInfo?.name || "Werkzeug"} aktiviert`, {
+      toast.success(`${modeInfo?.name || "Werkzeug"} aktiviert`, {
         description: modeInfo?.description,
         duration: 3000,
       });
