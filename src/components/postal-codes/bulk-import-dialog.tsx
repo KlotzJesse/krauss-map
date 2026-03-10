@@ -11,6 +11,7 @@ import {
 import { useCallback, useState, useOptimistic, useTransition } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { bulkImportPostalCodesAndLayers } from "@/app/actions/bulk-import-actions";
 import { Badge } from "@/components/ui/badge";
@@ -162,7 +163,7 @@ export function BulkImportDialog({
       });
 
       try {
-        await toast.promise(bulkImportPostalCodesAndLayers(areaId, layers), {
+        await executeAction(bulkImportPostalCodesAndLayers(areaId, layers), {
           loading: `Importiere ${layers.length} Gebiete...`,
           success: (data) => {
             if (data.success) {

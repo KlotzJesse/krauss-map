@@ -28,6 +28,7 @@ import {
   useTransition,
 } from "react";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import {
   createLayerAction,
@@ -259,10 +260,10 @@ async function fillRegions(
     }
   };
 
-  toast.promise(fillPromise(), {
+  executeAction(fillPromise(), {
     loading: "Geoverarbeitung läuft...",
 
-    success: (message) => message,
+    success: (message) => message as string,
 
     error: "Fehler bei der Geoverarbeitung",
   });
@@ -683,7 +684,7 @@ function DrawingToolsImpl({
 
       setNewLayerName("");
 
-      await toast.promise(
+      await executeAction(
         createLayer({
           name: createdLayerName,
           color: nextColor,
@@ -692,8 +693,8 @@ function DrawingToolsImpl({
         {
           loading: `Erstelle Gebiet "${createdLayerName}"...`,
           success: (result) => {
-            if (result && result.id && onLayerSelect) {
-              onLayerSelect(result.id);
+            if (result?.data?.id && onLayerSelect) {
+              onLayerSelect(result.data.id);
             }
             return `Gebiet "${createdLayerName}" erstellt`;
           },
@@ -740,11 +741,15 @@ function DrawingToolsImpl({
       const deletedLayerId = layerToDelete;
       setLayerToDelete(null);
 
-      await toast.promise(deleteLayer(deletedLayerId), {
-        loading: "Lösche Gebiet...",
-        success: "Gebiet gelöscht",
-        error: "Fehler beim Löschen - Änderung wird rückgängig gemacht",
-      });
+      try {
+        await executeAction(deleteLayer(deletedLayerId), {
+          loading: "Lösche Gebiet...",
+          success: "Gebiet gelöscht",
+          error: "Fehler beim Löschen - Änderung wird rückgängig gemacht",
+        });
+      } catch {
+        // error handled by executeAction
+      }
     });
   };
 
@@ -766,11 +771,15 @@ function DrawingToolsImpl({
       setEditingLayerId(null);
       setEditingLayerName("");
 
-      await toast.promise(updateLayer(layerId, { name: newName.trim() }), {
-        loading: "Benenne Gebiet um...",
-        success: "Gebiet umbenannt",
-        error: "Fehler beim Umbenennen - Bitte erneut versuchen",
-      });
+      try {
+        await executeAction(updateLayer(layerId, { name: newName.trim() }), {
+          loading: "Benenne Gebiet um...",
+          success: "Gebiet umbenannt",
+          error: "Fehler beim Umbenennen - Bitte erneut versuchen",
+        });
+      } catch {
+        // error handled by executeAction
+      }
     });
   };
 
@@ -971,24 +980,28 @@ function DrawingToolsImpl({
 
                 {/* Layer list - Optimized with shadcn */}
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {optimisticLayers.map((layer) => (
+                  {optimisticLayers.map((layer) => {
+                    const isOptimistic = layer.id > 1000000000;
+                    return (
                     <div
                       key={layer.id}
                       className={`group relative rounded-lg border transition-all ${
                         activeLayerId === layer.id
                           ? "border-primary bg-accent shadow-sm"
                           : "border-border hover:border-primary/50 hover:bg-accent/50"
-                      }`}
+                      } ${isOptimistic ? "opacity-60 pointer-events-none" : ""}`}
                     >
                       <div
                         role="button"
                         tabIndex={0}
                         className="px-3 py-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-lg"
-                        onClick={() => onLayerSelect?.(layer.id)}
+                        onClick={() => {
+                          if (!isOptimistic) onLayerSelect?.(layer.id);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            onLayerSelect?.(layer.id);
+                            if (!isOptimistic) onLayerSelect?.(layer.id);
                           }
                         }}
                       >
@@ -1175,7 +1188,8 @@ function DrawingToolsImpl({
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CollapsibleContent>
             </Collapsible>

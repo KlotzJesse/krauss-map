@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import {
   createVersionAction,
@@ -38,7 +39,7 @@ export function useVersionHistory(areaId: number) {
       changesSummary?: string;
       createdBy?: string;
     }) =>
-      toast.promise(
+      executeAction(
         (async () => {
           const result = await createVersionAction(areaId, data);
           if (result.success && result.data) {
@@ -49,7 +50,7 @@ export function useVersionHistory(areaId: number) {
         {
           loading: "Erstelle Version...",
           success: (data) =>
-            `Version ${data.versionNumber} erfolgreich erstellt`,
+            `Version ${(data as any).versionNumber} erfolgreich erstellt`,
           error: (err) =>
             `Fehler beim Erstellen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
         }
@@ -60,7 +61,7 @@ export function useVersionHistory(areaId: number) {
   const restoreVersion = useCallback(
     (version: AreaVersion) => {
       try {
-        toast.promise(
+        executeAction(
           (async () => {
             const result = await restoreVersionAction(areaId, version.id);
             if (result.success) {
@@ -70,7 +71,7 @@ export function useVersionHistory(areaId: number) {
           })(),
           {
             loading: "Wiederherstellen...",
-            success: (message) => message,
+            success: (message) => message as string,
             error: "Fehler beim Wiederherstellen",
           }
         );

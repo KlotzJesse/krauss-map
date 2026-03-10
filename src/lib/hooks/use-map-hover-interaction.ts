@@ -45,8 +45,7 @@ export function useMapHoverInteraction(
             };
             src.setData({
               type: "FeatureCollection",
-              // @ts-expect-error - cleanFeature is a valid GeoJSON Feature but types are complex
-              features: [cleanFeature],
+              features: [cleanFeature as any],
             });
           }
           map.setLayoutProperty(hoverLayerId, "visibility", "visible");

@@ -257,8 +257,17 @@ export function useTerraDraw({
     return () => {
       if (drawRef.current && currentMap) {
         try {
-          drawRef.current.stop();
-          drawRef.current.clear();
+          if (
+            drawRef.current.enabled ||
+            (drawRef.current as unknown as { _enabled?: boolean })._enabled
+          ) {
+            drawRef.current.stop();
+          }
+          try {
+            drawRef.current.clear();
+          } catch {
+            // ignore if clearing fails
+          }
           // Re-enable all map interactions
           currentMap.dragPan.enable();
           currentMap.scrollZoom.enable();

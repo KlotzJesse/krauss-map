@@ -2,7 +2,6 @@
 
 import { IconAlertTriangle, IconCheck, IconLoader } from "@tabler/icons-react";
 import { useState, useEffect, Activity } from "react";
-import { toast } from "sonner";
 
 import { updateLayerAction } from "@/app/actions/layer-actions";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { useLayerConflicts } from "@/lib/hooks/use-layer-conflicts";
 import type { Layer } from "@/lib/types/area-types";
+import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
+import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 
 interface ConflictResolutionDialogProps {
   open: boolean;
@@ -81,14 +82,17 @@ export function ConflictResolutionDialog({
               (code) => code !== conflict.postalCode
             );
             if (currentCodes.length !== newCodes.length) {
-              await toast.promise(
-                updateLayerAction(areaId, layer.id, { postalCodes: newCodes }),
-                {
-                  loading: `Entferne ${conflict.postalCode} aus ${layer.name}...`,
-                  success: `${conflict.postalCode} aus ${layer.name} entfernt`,
-                  error: `Fehler beim Entfernen aus ${layer.name}`,
-                }
-              );
+              await withCallbacks(
+                () =>
+                  updateLayerAction(areaId, layer.id, {
+                    postalCodes: newCodes,
+                  }),
+                createToastCallbacks({
+                  loadingMessage: `Entferne ${conflict.postalCode} aus ${layer.name}...`,
+                  successMessage: `${conflict.postalCode} aus ${layer.name} entfernt`,
+                  errorMessage: `Fehler beim Entfernen aus ${layer.name}`,
+                })
+              )();
             }
           }
         }
@@ -101,14 +105,15 @@ export function ConflictResolutionDialog({
             (code) => code !== conflict.postalCode
           );
           if (currentCodes.length !== newCodes.length) {
-            await toast.promise(
-              updateLayerAction(areaId, layer.id, { postalCodes: newCodes }),
-              {
-                loading: `Entferne ${conflict.postalCode} aus ${layer.name}...`,
-                success: `${conflict.postalCode} aus ${layer.name} entfernt`,
-                error: `Fehler beim Entfernen aus ${layer.name}`,
-              }
-            );
+            await withCallbacks(
+              () =>
+                updateLayerAction(areaId, layer.id, { postalCodes: newCodes }),
+              createToastCallbacks({
+                loadingMessage: `Entferne ${conflict.postalCode} aus ${layer.name}...`,
+                successMessage: `${conflict.postalCode} aus ${layer.name} entfernt`,
+                errorMessage: `Fehler beim Entfernen aus ${layer.name}`,
+              })
+            )();
           }
         }
       }

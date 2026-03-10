@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useOptimistic } from "react";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { createAreaAction } from "@/app/actions/area-actions";
 import { Button } from "@/components/ui/button";
@@ -53,19 +54,19 @@ export function CreateAreaDialog({
         updateOptimisticCreating(true);
 
         // Server action handles redirect automatically
-        await toast.promise(
-          createAreaAction({
-            name,
-            description,
-            granularity,
-            createdBy: "user",
-          }),
-          {
-            loading: `Erstelle Gebiet "${name}"...`,
-            success: `Gebiet "${name}" erfolgreich erstellt`,
-            error: "Fehler beim Erstellen des Gebiets",
-          }
-        );
+          await executeAction(
+            createAreaAction({
+              name,
+              description,
+              granularity,
+              createdBy: "user",
+            }),
+            {
+              loading: `Erstelle Gebiet "${name}"...`,
+              success: `Gebiet "${name}" erfolgreich erstellt`,
+              error: "Fehler beim Erstellen des Gebiets",
+            }
+          );
 
         // These lines won't execute if redirect happens (which is expected)
         setName("");

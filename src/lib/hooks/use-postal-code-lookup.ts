@@ -7,6 +7,7 @@ import type {
 } from "geojson";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { useStableCallback } from "./use-stable-callback";
 
@@ -160,10 +161,10 @@ export function usePostalCodeLookup({
       }
     };
 
-    return toast.promise(lookupPromise(), {
+    return executeAction(lookupPromise(), {
       loading: `🔍 Suche PLZ ${postalCode}...`,
 
-      success: (message) => message,
+      success: (message) => message as string,
 
       error: (error) =>
         error instanceof Error ? error.message : "PLZ-Suche fehlgeschlagen",

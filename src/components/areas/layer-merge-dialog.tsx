@@ -3,6 +3,7 @@
 import { IconGitMerge } from "@tabler/icons-react";
 import { useState, useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,19 +107,24 @@ export function LayerMergeDialog({
       // Optimistically update layers (remove source layers)
       updateOptimisticLayers({ targetId, sourceIds });
 
-      await toast.promise(mergeLayers(sourceIds, targetId, strategy), {
-        loading: `Führe ${sourceIds.length} Gebiete zusammen...`,
-        success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
-        error: "Fehler beim Zusammenführen der Gebiete",
-      });
+        try {
+          await executeAction(mergeLayers(sourceIds, targetId, strategy), {
+            loading: `Führe ${sourceIds.length} Gebiete zusammen...`,
+            success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
+            error: "Fehler beim Zusammenführen der Gebiete",
+          });
 
-      setSelectedLayers(new Set());
-      setTargetLayerId("");
-      onOpenChange(false);
-      if (onMergeComplete) {
-        onMergeComplete();
+          setSelectedLayers(new Set());
+          setTargetLayerId("");
+          onOpenChange(false);
+          if (onMergeComplete) {
+            onMergeComplete();
+          }
+      } catch (error) {
+        // err handled by executeAction
+      } finally {
+        setIsMerging(false);
       }
-      setIsMerging(false);
     });
   };
 
@@ -128,7 +134,6 @@ export function LayerMergeDialog({
     }
 
     const targetId = parseInt(targetLayerId, 10);
-
     const targetLayer = layers.find((l) => l.id === targetId);
 
     const sourceLayers = layers.filter(

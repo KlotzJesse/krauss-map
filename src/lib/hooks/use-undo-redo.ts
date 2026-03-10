@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useTransition } from "react";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import {
   undoChangeAction,
@@ -41,15 +42,15 @@ export function useUndoRedo(
       options?.onOptimisticUndo?.();
 
       try {
-        await toast.promise(undoChangeAction(areaId), {
+        await executeAction(undoChangeAction(areaId), {
           loading: "Mache Änderung rückgängig...",
           success: (data) => {
-            if (data.success) {
+            if (data && 'success' in data && data.success) {
               // Trigger revalidation to update status
               onStatusUpdate?.();
               return "Änderung rückgängig gemacht";
             }
-            throw new Error(data.error || "Fehler beim Rückgängigmachen");
+            throw new Error((data && 'error' in data && data.error as string) || "Fehler beim Rückgängigmachen");
           },
           error: "Fehler beim Rückgängigmachen",
         });
@@ -71,15 +72,15 @@ export function useUndoRedo(
       options?.onOptimisticRedo?.();
 
       try {
-        await toast.promise(redoChangeAction(areaId), {
+        await executeAction(redoChangeAction(areaId), {
           loading: "Stelle Änderung wieder her...",
           success: (data) => {
-            if (data.success) {
+            if (data && 'success' in data && data.success) {
               // Trigger revalidation to update status
               onStatusUpdate?.();
               return "Änderung wiederhergestellt";
             }
-            throw new Error(data.error || "Fehler beim Wiederherstellen");
+            throw new Error((data && 'error' in data && data.error as string) || "Fehler beim Wiederherstellen");
           },
           error: "Fehler beim Wiederherstellen",
         });

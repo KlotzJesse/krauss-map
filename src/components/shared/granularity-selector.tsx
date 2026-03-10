@@ -11,6 +11,8 @@ import {
 import { toast } from "sonner";
 
 import { changeAreaGranularityAction } from "@/app/actions/granularity-actions";
+import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
+import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,26 +96,19 @@ export function GranularitySelector({
       startTransition(async () => {
         const newLabel = getGranularityLabel(newGranularity);
 
-        await toast.promise(
-          changeAreaGranularityAction(
-            areaId,
-            newGranularity,
-            currentGranularity
-          ),
-          {
-            loading: `Wechsle zu ${newLabel}...`,
-            success: (data) => {
-              if (data.success) {
-                onGranularityChange(newGranularity);
-                return `Wechsel zu ${newLabel} erfolgreich`;
-              }
-              throw new Error(
-                data.error || "Fehler beim Ändern der Granularität"
-              );
-            },
-            error: "Fehler beim Ändern der Granularität",
-          }
+        const action = withCallbacks(
+          () => changeAreaGranularityAction(areaId, newGranularity, currentGranularity),
+          createToastCallbacks({
+            loadingMessage: `Wechsle zu ${newLabel}...`,
+            successMessage: `Wechsel zu ${newLabel} erfolgreich`,
+            errorMessage: "Fehler beim Ändern der Granularität",
+          })
         );
+
+        const result = await action();
+        if (result?.success) {
+          onGranularityChange(newGranularity);
+        }
       });
       return;
     }
@@ -138,31 +133,25 @@ export function GranularitySelector({
         updateOptimisticGranularity(newGranularity);
         const newLabel = getGranularityLabel(newGranularity);
 
-        await toast.promise(
-          changeAreaGranularityAction(
-            areaId,
-            newGranularity,
-            currentGranularity
-          ).then((data) => {
-            if (data.success && data.data) {
-              onGranularityChange(newGranularity);
-            }
-            return data;
-          }),
-          {
-            loading: `Wechsle zu ${newLabel} PLZ-Ansicht...`,
-            success: (data) => {
+        const action = withCallbacks(
+          () => changeAreaGranularityAction(areaId, newGranularity, currentGranularity),
+          createToastCallbacks({
+            loadingMessage: `Wechsle zu ${newLabel} PLZ-Ansicht...`,
+            successMessage: (data: any) => {
               if (data.success && data.data) {
                 const { addedPostalCodes, migratedLayers } = data.data;
                 return `Wechsel zu ${newLabel}: ${migratedLayers} Layer migriert, ${addedPostalCodes} Regionen hinzugefügt`;
               }
-              throw new Error(
-                data.error || "Fehler beim Ändern der Granularität"
-              );
+              return `Wechsel zu ${newLabel} erfolgreich`;
             },
-            error: "Fehler beim Ändern der Granularität",
-          }
+            errorMessage: "Fehler beim Ändern der Granularität",
+          })
         );
+
+        const result = await action();
+        if (result?.success && result.data) {
+          onGranularityChange(newGranularity);
+        }
       });
       return;
     }
@@ -181,31 +170,25 @@ export function GranularitySelector({
     const newLabel = getGranularityLabel(pendingGranularity);
 
     startTransition(async () => {
-      await toast.promise(
-        changeAreaGranularityAction(
-          areaId,
-          pendingGranularity,
-          currentGranularity
-        ).then((data) => {
-          if (data.success) {
-            onGranularityChange(pendingGranularity);
-          }
-          return data;
-        }),
-        {
-          loading: `Wechsle zu ${newLabel}...`,
-          success: (data) => {
+      const action = withCallbacks(
+        () => changeAreaGranularityAction(areaId, pendingGranularity, currentGranularity),
+        createToastCallbacks({
+          loadingMessage: `Wechsle zu ${newLabel}...`,
+          successMessage: (data: any) => {
             if (data.success && data.data) {
               const { removedPostalCodes } = data.data;
               return `Wechsel zu ${newLabel} erfolgreich: ${removedPostalCodes} Regionen entfernt`;
             }
-            throw new Error(
-              data.error || "Fehler beim Ändern der Granularität"
-            );
+            return `Wechsel zu ${newLabel} erfolgreich`;
           },
-          error: "Fehler beim Ändern der Granularität",
-        }
+          errorMessage: "Fehler beim Ändern der Granularität",
+        })
       );
+
+      const result = await action();
+      if (result?.success) {
+        onGranularityChange(pendingGranularity);
+      }
 
       setShowConfirmDialog(false);
       setPendingGranularity(null);

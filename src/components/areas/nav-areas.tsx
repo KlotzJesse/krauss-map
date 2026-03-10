@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, Activity, useOptimistic, useTransition, use } from "react";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { updateAreaAction, deleteAreaAction } from "@/app/actions/area-actions";
 import {
@@ -140,25 +141,23 @@ export function NavAreas({
         name: editingAreaName.trim(),
       });
 
-      await toast.promise(
-        updateAreaAction(areaId, {
-          name: editingAreaName.trim(),
-        }),
-        {
-          loading: "Benenne Gebiet um...",
-          success: (data) => {
-            if (data.success) {
-              setEditingAreaId(null);
-              setEditingAreaName("");
-              return "Gebiet umbenannt";
-            }
-            throw new Error(data.error || "Umbenennen fehlgeschlagen");
-          },
-          error: "Umbenennen fehlgeschlagen",
+        const result = await executeAction(
+          updateAreaAction(areaId, {
+            name: editingAreaName.trim(),
+          }),
+          {
+            loading: "Benenne Gebiet um...",
+            success: "Gebiet umbenannt",
+            error: "Umbenennen fehlgeschlagen",
+          }
+        );
+
+        if (result && 'success' in result && result.success) {
+          setEditingAreaId(null);
+          setEditingAreaName("");
         }
-      );
-    });
-  };
+      });
+    };
 
   const handleStartDelete = (area: Area, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -179,21 +178,23 @@ export function NavAreas({
       const areaName = areaToDelete.name;
 
       // Server action now handles redirect
-      await toast.promise(deleteAreaAction(areaToDelete.id), {
-        loading: `Lösche "${areaName}"...`,
-        success: `"${areaName}" gelöscht`,
-        error: "Löschen fehlgeschlagen",
-      });
-      // If successful, the server will redirect automatically
-      setDeleteDialogOpen(false);
-      setAreaToDelete(null);
-      setIsDeleting(false);
+        try {
+          await executeAction(deleteAreaAction(areaToDelete.id), {
+            loading: `Lösche "${areaName}"...`,
+            success: `"${areaName}" gelöscht`,
+            error: "Löschen fehlgeschlagen",
+          });
+        } finally {
+          setDeleteDialogOpen(false);
+          setAreaToDelete(null);
+          setIsDeleting(false);
+        }
     });
   };
 
   return (
     <>
-      <SidebarGroup>
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>
           <div className="flex items-center justify-between w-full">
             <span>Gebiete</span>

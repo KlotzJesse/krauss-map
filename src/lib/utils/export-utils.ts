@@ -1,5 +1,6 @@
 import type { Content, PageSize } from "pdfmake/interfaces";
 import { toast } from "sonner";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 interface LayerExportData {
   layerName: string;
@@ -113,7 +114,7 @@ export function exportLayersPDF(layers: LayerExportData[], areaName?: string) {
     return `${totalCodes} Postleitzahlen in ${layers.length} Ebenen als PDF exportiert`;
   };
 
-  return toast.promise(exportPromise(), {
+  return executeAction(exportPromise(), {
     loading: `📄 Exportiere Ebenen als PDF...`,
     success: (message: string) => message,
     error: "PDF-Export fehlgeschlagen",
@@ -188,7 +189,7 @@ export async function exportLayersXLSX(
     return `${totalCodes} Postleitzahlen in ${layers.length} Ebenen als XLSX exportiert`;
   };
 
-  return toast.promise(exportPromise(), {
+  return executeAction(exportPromise(), {
     loading: `📊 Exportiere Ebenen...`,
     success: (message: string) => message,
     error: "XLSX-Export fehlgeschlagen",
@@ -221,7 +222,7 @@ export async function exportPostalCodesXLSX(codes: string[]) {
     return `${codes.length} Postleitzahlen als XLSX exportiert`;
   };
 
-  return toast.promise(exportPromise(), {
+  return executeAction(exportPromise(), {
     loading: `📊 Exportiere ${codes.length} Postleitzahlen...`,
     success: (message: string) => message,
     error: "XLSX-Export fehlgeschlagen",
@@ -250,7 +251,7 @@ export async function copyPostalCodesCSV(codes: string[]) {
     return `${codes.length} Postleitzahlen in Zwischenablage kopiert`;
   };
 
-  return toast.promise(copyPromise(), {
+  return executeAction(copyPromise(), {
     loading: `📋 Kopiere ${codes.length} Postleitzahlen...`,
     success: (message: string) => message,
     error: "Kopieren in Zwischenablage fehlgeschlagen",

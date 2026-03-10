@@ -9,7 +9,6 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { useState, useTransition, useOptimistic } from "react";
-import { toast } from "sonner";
 
 import {
   restoreVersionAction,
@@ -41,6 +40,8 @@ import type {
   SelectAreaVersions,
   SelectAreaChanges,
 } from "@/lib/schema/schema";
+import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
+import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 
 interface VersionSnapshot {
   layers: {
@@ -129,28 +130,25 @@ export function EnhancedVersionHistoryDialog({
       // Optimistically show restoring state
       updateOptimisticRestoring(true);
 
-      await toast.promise(
-        restoreVersionAction(areaId, versionToRestore.versionNumber, {
-          createBranch: true,
-          branchName: `Restored from v${versionToRestore.versionNumber}`,
-        }),
-        {
-          loading: `Stelle Version ${versionToRestore.versionNumber} wieder her...`,
-          success: (data) => {
-            if (data.success) {
-              return `Version ${versionToRestore.versionNumber} wiederhergestellt`;
-            }
-            throw new Error(data.error || "Failed to restore version");
-          },
-          error: "Fehler beim Wiederherstellen der Version",
-        }
-      );
+      const result = await withCallbacks(
+        () =>
+          restoreVersionAction(areaId, versionToRestore.versionNumber, {
+            createBranch: true,
+            branchName: `Restored from v${versionToRestore.versionNumber}`,
+          }),
+        createToastCallbacks({
+          loadingMessage: `Stelle Version ${versionToRestore.versionNumber} wieder her...`,
+          successMessage: `Version ${versionToRestore.versionNumber} wiederhergestellt`,
+          errorMessage: "Fehler beim Wiederherstellen der Version",
+        })
+      )();
 
-      // If we get here, restoration was successful
-      onOpenChange(false);
-      window.location.reload();
-      setShowRestoreDialog(false);
-      setVersionToRestore(null);
+      if (result?.success) {
+        onOpenChange(false);
+        window.location.reload();
+        setShowRestoreDialog(false);
+        setVersionToRestore(null);
+      }
       updateOptimisticRestoring(false);
     });
   };
@@ -160,29 +158,24 @@ export function EnhancedVersionHistoryDialog({
       return;
     }
 
-    await toast.promise(
-      compareVersionsAction(
-        selectedVersion.areaId,
-        selectedVersion.versionNumber,
-        compareVersion.areaId,
-        compareVersion.versionNumber
-      ).then((data) => {
-        if (data.success && data.data) {
-          setComparison(data.data);
-        }
-        return data;
-      }),
-      {
-        loading: `Vergleiche Version ${selectedVersion.versionNumber} mit ${compareVersion.versionNumber}...`,
-        success: (data) => {
-          if (data.success && data.data) {
-            return `Versionen erfolgreich verglichen`;
-          }
-          throw new Error("Failed to compare versions");
-        },
-        error: "Fehler beim Vergleichen der Versionen",
-      }
-    );
+    const data = await withCallbacks(
+      () =>
+        compareVersionsAction(
+          selectedVersion.areaId,
+          selectedVersion.versionNumber,
+          compareVersion.areaId,
+          compareVersion.versionNumber
+        ),
+      createToastCallbacks({
+        loadingMessage: `Vergleiche Version ${selectedVersion.versionNumber} mit ${compareVersion.versionNumber}...`,
+        successMessage: `Versionen erfolgreich verglichen`,
+        errorMessage: "Fehler beim Vergleichen der Versionen",
+      })
+    )();
+
+    if (data?.success && data?.data) {
+      setComparison(data.data);
+    }
   };
 
   const getChangeTypeLabel = (type: string) => {

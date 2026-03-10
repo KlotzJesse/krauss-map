@@ -635,7 +635,7 @@ export function useMapLayers({
 
       // Find and remove orphaned area layers
       const allLayers = map.getStyle().layers || [];
-      allLayers.forEach((layer) => {
+      allLayers.forEach((layer: any) => {
         if (layer.id.startsWith("area-layer-")) {
           const match = layer.id.match(/area-layer-(\d+)-(fill|border)/);
           if (match) {

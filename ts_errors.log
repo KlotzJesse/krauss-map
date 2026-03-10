@@ -1,0 +1,46 @@
+drizzle.config.ts(2,30): error TS7016: Could not find a declaration file for module 'drizzle-kit'. 'C:/Projekte/nextjs-shadcn-tailwind-bun/node_modules/drizzle-kit/index.mjs' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/drizzle-kit` if it exists or add a new declaration (.d.ts) file containing `declare module 'drizzle-kit';`
+src/components/areas/create-area-dialog.tsx(50,7): error TS2345: Argument of type '(_state: unknown, payload: { name: string; description: string; granularity: string; }) => Promise<{ success: boolean; error: string; } | undefined>' is not assignable to parameter of type '(_state: unknown, payload: { name: string; description: string; granularity: string; }) => Promise<GenericActionState>'.
+  Type 'Promise<{ success: boolean; error: string; } | undefined>' is not assignable to type 'Promise<GenericActionState>'.
+    Type '{ success: boolean; error: string; } | undefined' is not assignable to type 'GenericActionState'.
+      Type 'undefined' is not assignable to type 'GenericActionState'.
+src/components/areas/layer-merge-dialog.tsx(77,7): error TS2345: Argument of type '(_state: unknown, payload: { sourceIds: number[]; targetId: number; strategy: "union" | "keep-target" | "keep-source"; }) => Promise<...>' is not assignable to parameter of type '(_state: unknown, payload: { sourceIds: number[]; targetId: number; strategy: "union" | "keep-target" | "keep-source"; }) => Promise<GenericActionState>'.
+  Type 'Promise<string[]>' is not assignable to type 'Promise<GenericActionState>'.
+    Type 'string[]' has no properties in common with type 'GenericActionState'.
+src/components/areas/layer-merge-dialog.tsx(86,25): error TS2322: Type '(data: any) => string' is not assignable to type 'string'.
+src/components/areas/layer-merge-dialog.tsx(86,26): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/components/areas/layer-merge-dialog.tsx(89,20): error TS2339: Property 'sourceIds' does not exist on type 'GenericActionState'.
+src/components/areas/nav-areas.tsx(108,9): error TS2353: Object literal may only specify known properties, and 'onSuccess' does not exist in type 'CreateToastCallbacksOptions'.
+src/components/areas/nav-areas.tsx(119,7): error TS2345: Argument of type '(_state: unknown, payload: { id: number; name: string; }) => Promise<{ success: boolean; error: string; } | undefined>' is not assignable to parameter of type '(_state: unknown, payload: { id: number; name: string; }) => Promise<GenericActionState>'.
+  Type 'Promise<{ success: boolean; error: string; } | undefined>' is not assignable to type 'Promise<GenericActionState>'.
+    Type '{ success: boolean; error: string; } | undefined' is not assignable to type 'GenericActionState'.
+      Type 'undefined' is not assignable to type 'GenericActionState'.
+src/components/areas/nav-areas.tsx(122,25): error TS2322: Type '(data: any) => string' is not assignable to type 'string'.
+src/components/areas/nav-areas.tsx(122,26): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/components/areas/nav-areas.tsx(123,45): error TS2339: Property 'name' does not exist on type 'GenericActionState'.
+src/components/areas/nav-areas.tsx(221,14): error TS2304: Cannot find name 'Activity'.
+src/components/areas/nav-areas.tsx(225,15): error TS2304: Cannot find name 'Activity'.
+src/components/areas/nav-areas.tsx(226,14): error TS2304: Cannot find name 'Activity'.
+src/components/areas/nav-areas.tsx(242,15): error TS2304: Cannot find name 'Activity'.
+src/components/areas/nav-areas.tsx(405,25): error TS2304: Cannot find name 'isDeleting'.
+src/components/areas/nav-areas.tsx(411,25): error TS2304: Cannot find name 'isDeleting'.
+src/components/areas/nav-areas.tsx(414,16): error TS2304: Cannot find name 'isDeleting'.
+src/components/postal-codes/bulk-import-dialog.tsx(167,15): error TS2322: Type 'Promise<BulkImportResult>' is not assignable to type 'Promise<GenericActionState>'.
+  Type 'BulkImportResult' is not assignable to type 'GenericActionState'.
+    Types of property 'errors' are incompatible.
+      Type 'string[] | undefined' is not assignable to type 'Record<string, string[] | undefined> | undefined'.
+        Type 'string[]' is not assignable to type 'Record<string, string[] | undefined>'.
+          Index signature for type 'string' is missing in type 'string[]'.
+src/components/ui/chart.tsx(110,3): error TS2339: Property 'payload' does not exist on type 'Omit<Props<ValueType, NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & ClassAttributes<...> & HTMLAttributes<...> & { ...; }'.
+src/components/ui/chart.tsx(115,3): error TS2339: Property 'label' does not exist on type 'Omit<Props<ValueType, NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & ClassAttributes<...> & HTMLAttributes<...> & { ...; }'.
+src/components/ui/chart.tsx(184,20): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/ui/chart.tsx(185,17): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/ui/chart.tsx(185,23): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/ui/chart.tsx(263,39): error TS2344: Type '"payload" | "verticalAlign"' does not satisfy the constraint '"string" | "id" | "name" | "mode" | "bbox" | "color" | "opacity" | "filter" | "fill" | "values" | "version" | "end" | "offset" | "type" | "from" | "layout" | "result" | "radius" | ... 432 more ... | "portal"'.
+  Type '"payload"' is not assignable to type '"string" | "id" | "name" | "mode" | "bbox" | "color" | "opacity" | "filter" | "fill" | "values" | "version" | "end" | "offset" | "type" | "from" | "layout" | "result" | "radius" | ... 432 more ... | "portal"'.
+src/components/ui/chart.tsx(269,17): error TS2339: Property 'length' does not exist on type '{}'.
+src/components/ui/chart.tsx(282,10): error TS2339: Property 'filter' does not exist on type '{}'.
+src/components/ui/chart.tsx(282,18): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/ui/chart.tsx(283,15): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/lib/hooks/use-map-hover-interaction.ts(48,15): error TS2578: Unused '@ts-expect-error' directive.
+src/lib/hooks/use-map-layers.ts(638,26): error TS7006: Parameter 'layer' implicitly has an 'any' type.

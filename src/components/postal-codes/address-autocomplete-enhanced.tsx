@@ -6,6 +6,7 @@ import {
   EyeOffIcon,
 } from "lucide-react";
 import { useRef, useState, useOptimistic } from "react";
+import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import { toast } from "sonner";
 
 import {
@@ -197,9 +198,9 @@ export function AddressAutocompleteEnhanced({
       };
 
       // Use promise-based toast for geocoding feedback
-      toast.promise(geocodePromise(), {
+      executeAction(geocodePromise(), {
         loading: `🔍 Suche nach "${value}"... (DE/EN unterstützt)`,
-        success: (message) => message,
+        success: (message) => message as string,
         error: (error) =>
           error instanceof Error ? error.message : "Adresssuche fehlgeschlagen",
       });
@@ -277,10 +278,10 @@ export function AddressAutocompleteEnhanced({
         }
       };
 
-      toast.promise(boundarySearchPromise(), {
+      executeAction(boundarySearchPromise(), {
         loading: `🗺️ Suche PLZ-Regionen in ${result.display_name}...`,
         success: (message: string) => message,
-        error: (error: Error) => error.message,
+        error: (error: unknown) => (error instanceof Error ? error.message : "Ein Fehler ist aufgetreten"),
       });
 
       return;
