@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, and, like } from "drizzle-orm";
+import { eq, and, like, or } from "drizzle-orm";
 import { updateTag, refresh } from "next/cache";
 
 import { getGranularityLevel } from "@/lib/utils/granularity-utils";
@@ -78,31 +78,22 @@ export async function changeAreaGranularityAction(
 
           const currentCodes = layer.postalCodes.map((pc) => pc.postalCode);
 
-          const expandedCodes = new Set<string>();
-
-          // For each current postal code, find all matching codes at new granularity
-
-          for (const code of currentCodes) {
-            // Query database for all codes at new granularity that start with this code
-
-            const matchingCodes = await tx
-
-              .select({ code: postalCodes.code })
-
-              .from(postalCodes)
-
-              .where(
-                and(
-                  eq(postalCodes.granularity, newGranularity),
-
-                  like(postalCodes.code, `${code}%`)
+          // Single batch query instead of N+1 per-code queries
+          const allMatchingRows = await tx
+            .select({ code: postalCodes.code })
+            .from(postalCodes)
+            .where(
+              and(
+                eq(postalCodes.granularity, newGranularity),
+                or(
+                  ...currentCodes.map((code) =>
+                    like(postalCodes.code, `${code}%`)
+                  )
                 )
-              );
+              )
+            );
 
-            matchingCodes.forEach((mc) => expandedCodes.add(mc.code));
-          }
-
-          // If we found expanded codes, update the layer
+          const expandedCodes = new Set(allMatchingRows.map((r) => r.code));
 
           if (expandedCodes.size > 0) {
             // Delete old postal codes for this layer

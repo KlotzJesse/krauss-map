@@ -1,8 +1,6 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect } from "react";
 import { flushSync } from "react-dom";
-
-import { useStableCallback } from "./use-stable-callback";
 
 interface UseMapEventListenersProps {
   map: MapLibreMap | null;
@@ -30,8 +28,8 @@ export function useMapEventListeners({
   handleMouseLeave,
   handleClick,
 }: UseMapEventListenersProps) {
-  // Cursor style handlers with flushSync for synchronous updates
-  const handleMouseDown = useStableCallback(() => {
+  // useEffectEvent: cursor style handlers — read latest map without being a dep
+  const handleMouseDown = useEffectEvent(() => {
     if (!map) {
       return;
     }
@@ -43,7 +41,7 @@ export function useMapEventListeners({
     });
   });
 
-  const handleMouseUp = useStableCallback(() => {
+  const handleMouseUp = useEffectEvent(() => {
     if (!map) {
       return;
     }
@@ -54,6 +52,12 @@ export function useMapEventListeners({
       }
     });
   });
+
+  // Wrap prop handlers as useEffectEvent so they aren't effect dependencies
+  const onMouseEnter = useEffectEvent((...args: unknown[]) => handleMouseEnter(...args));
+  const onMouseMove = useEffectEvent((...args: unknown[]) => handleMouseMove(...args));
+  const onMouseLeave = useEffectEvent(() => handleMouseLeave());
+  const onClick = useEffectEvent((...args: unknown[]) => handleClick(...args));
 
   // Use useLayoutEffect for cursor style updates to prevent visual flicker
   // This ensures cursor changes are applied synchronously before paint
@@ -87,16 +91,11 @@ export function useMapEventListeners({
         return;
       }
 
-      map.on("mouseenter", targetLayer, handleMouseEnter);
-      map.on("mousemove", targetLayer, handleMouseMove);
-      map.on("mouseleave", targetLayer, handleMouseLeave);
-      map.on("click", targetLayer, handleClick);
+      map.on("mouseenter", targetLayer, onMouseEnter);
+      map.on("mousemove", targetLayer, onMouseMove);
+      map.on("mouseleave", targetLayer, onMouseLeave);
+      map.on("click", targetLayer, onClick);
       attached = true;
-
-      console.debug(
-        "[useMapEventListeners] Cursor mode listeners attached to layer:",
-        targetLayer
-      );
     }
 
     // Listen for 'styledata' event to re-attach handlers after style reloads
@@ -115,30 +114,16 @@ export function useMapEventListeners({
 
     return () => {
       if (map && attached) {
-        map.off("mouseenter", targetLayer, handleMouseEnter);
-        map.off("mousemove", targetLayer, handleMouseMove);
-        map.off("mouseleave", targetLayer, handleMouseLeave);
-        map.off("click", targetLayer, handleClick);
-        console.debug(
-          "[useMapEventListeners] Cursor mode listeners detached from layer:",
-          targetLayer
-        );
+        map.off("mouseenter", targetLayer, onMouseEnter);
+        map.off("mousemove", targetLayer, onMouseMove);
+        map.off("mouseleave", targetLayer, onMouseLeave);
+        map.off("click", targetLayer, onClick);
       }
 
       map?.off("styledata", onStyleData);
       canvas.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [
-    map,
-    layerId,
-    layersLoaded,
-    isCursorMode,
-    handleMouseEnter,
-    handleMouseMove,
-    handleMouseLeave,
-    handleClick,
-    handleMouseDown,
-    handleMouseUp,
-  ]);
+  // All handlers are useEffectEvent — only structural deps remain
+  }, [map, layerId, layersLoaded, isCursorMode]);
 }

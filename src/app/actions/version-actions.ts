@@ -403,39 +403,37 @@ export async function restoreVersionAction(
         await tx.delete(areaLayers).where(eq(areaLayers.areaId, areaId));
       }
 
-      // Restore layers from snapshot
-
-      for (const layerData of snapshot.layers) {
-        const [layer] = await tx
-
+      // Restore layers from snapshot — batch insert all layers at once,
+      // then batch insert all postal codes together (avoids N sequential round-trips)
+      if (snapshot.layers.length > 0) {
+        const insertedLayers = await tx
           .insert(areaLayers)
-
-          .values({
-            areaId,
-
-            name: layerData.name,
-
-            color: layerData.color,
-
-            opacity: layerData.opacity,
-
-            isVisible: layerData.isVisible,
-
-            orderIndex: layerData.orderIndex,
-          })
-
+          .values(
+            snapshot.layers.map((layerData) => ({
+              areaId,
+              name: layerData.name,
+              color: layerData.color,
+              opacity: layerData.opacity,
+              isVisible: layerData.isVisible,
+              orderIndex: layerData.orderIndex,
+            }))
+          )
           .returning();
 
-        // Restore postal codes
+        // Collect all postal code rows from all layers
+        const allPostalCodeRows = insertedLayers.flatMap((layer, i) =>
+          (snapshot.layers[i].postalCodes ?? []).map((code: string) => ({
+            layerId: layer.id,
+            postalCode: code,
+          }))
+        );
 
-        if (layerData.postalCodes?.length > 0) {
-          await tx.insert(areaLayerPostalCodes).values(
-            layerData.postalCodes.map((code: string) => ({
-              layerId: layer.id,
-
-              postalCode: code,
-            }))
-          );
+        // Batch insert with chunks of 500 to stay within DB limits
+        const BATCH_SIZE = 500;
+        for (let i = 0; i < allPostalCodeRows.length; i += BATCH_SIZE) {
+          await tx
+            .insert(areaLayerPostalCodes)
+            .values(allPostalCodeRows.slice(i, i + BATCH_SIZE));
         }
       }
 

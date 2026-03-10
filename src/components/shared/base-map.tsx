@@ -73,7 +73,7 @@ const BaseMapComponent = ({
   activeLayerId,
   areaId,
   areaName,
-    previewPostalCode,
+  previewPostalCode,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
   isViewingVersion = false,
@@ -121,7 +121,8 @@ const BaseMapComponent = ({
     granularity,
     previewPostalCode,
     getSelectedFeatureCollection: optimizations.getSelectedFeatureCollection,
-    getLabelPoints: optimizations.getLabelPoints,
+    labelPoints: optimizations.labelPoints,
+    statesLabelPoints: optimizations.statesLabelPoints,
     layers,
     activeLayerId,
   });

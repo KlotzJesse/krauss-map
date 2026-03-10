@@ -1,7 +1,5 @@
 import type { MapLayerMouseEvent, Map as MapLibre } from "maplibre-gl";
-import { useEffect, useRef } from "react";
-
-import { useStableCallback } from "./use-stable-callback";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 interface CursorSelectionProps {
   map: MapLibre | null;
@@ -27,8 +25,8 @@ export function useCursorSelection({
   const throttleTimeout = useRef<NodeJS.Timeout | null>(null);
   const pendingEvent = useRef<MapLayerMouseEvent | null>(null);
 
-  // Click handler for selecting/deselecting regions
-  const handleClick = useStableCallback((e: MapLayerMouseEvent) => {
+// useEffectEvent: all handlers read latest state without being effect deps
+  const handleClick = useEffectEvent((e: MapLayerMouseEvent) => {
     if (!map || !enabled || !e.features || e.features.length === 0) {
       return;
     }
@@ -43,8 +41,7 @@ export function useCursorSelection({
     }
   });
 
-  // Throttled hover handler
-  const processHover = useStableCallback((e: MapLayerMouseEvent) => {
+  const processHover = useEffectEvent((e: MapLayerMouseEvent) => {
     if (!map || !enabled) {
       return;
     }
@@ -65,8 +62,7 @@ export function useCursorSelection({
     }
   });
 
-  // Throttle wrapper
-  const handleMouseMove = useStableCallback((e: MapLayerMouseEvent) => {
+  const handleMouseMove = useEffectEvent((e: MapLayerMouseEvent) => {
     if (throttleTimeout.current) {
       pendingEvent.current = e;
       return;
@@ -81,7 +77,7 @@ export function useCursorSelection({
     }, 32); // ~30fps
   });
 
-  const handleMouseLeave = useStableCallback(() => {
+  const handleMouseLeave = useEffectEvent(() => {
     if (!map || !enabled) {
       return;
     }
@@ -112,13 +108,6 @@ export function useCursorSelection({
       pendingEvent.current = null;
       lastRegionIdRef.current = null;
     };
-  }, [
-    map,
-    isMapLoaded,
-    enabled,
-    layerId,
-    handleClick,
-    handleMouseMove,
-    handleMouseLeave,
-  ]);
+  // Handlers are useEffectEvent — only structural deps needed
+  }, [map, isMapLoaded, enabled, layerId]);
 }

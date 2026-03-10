@@ -107,6 +107,10 @@ export async function createAreaAction(data: {
 
     updateTag(`area-${area.id}-undo-redo`);
 
+    updateTag("version-info");
+
+    updateTag(`area-${area.id}-version-info`);
+
     // Set redirect path for finally block
     redirectPath = `/postal-codes/${area.id}`;
   } catch (error) {

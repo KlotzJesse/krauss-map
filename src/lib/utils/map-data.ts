@@ -1,6 +1,6 @@
 import area from "@turf/area";
-import { centerOfMass } from "@turf/turf";
 import { point } from "@turf/helpers";
+import centerOfMass from "@turf/center-of-mass";
 import type {
   Feature,
   FeatureCollection,
@@ -28,11 +28,13 @@ export function featureCollectionFromIds(
   if (!data || !Array.isArray(data.features)) {
     return emptyFeatureCollection();
   }
+  // Use Set for O(1) lookups instead of O(n) Array.includes per feature
+  const codeSet = new Set(codes);
   return {
     type: "FeatureCollection",
-    features: (data.features as Feature[])
-      .filter((f) => codes.includes(f.properties?.code))
-      .map((f) => f),
+    features: (data.features as Feature[]).filter(
+      (f) => codeSet.has(f.properties?.code)
+    ),
   };
 }
 
@@ -71,8 +73,8 @@ export function getLargestPolygonCentroid(
       }
     }
 
-    result = centerOfMass({ type: "Polygon", coordinates: bestPolygon }).geometry
-      .coordinates as [number, number];
+    result = centerOfMass({ type: "Polygon", coordinates: bestPolygon })
+      .geometry.coordinates as [number, number];
   } else {
     result = centerOfMass(feature).geometry.coordinates as [number, number];
   }

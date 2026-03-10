@@ -5,7 +5,7 @@ import type {
   LayerSpecification,
   Map as MapLibreMap,
 } from "maplibre-gl";
-import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import type { areaLayers } from "../schema/schema";
 
@@ -31,9 +31,10 @@ interface UseMapLayersProps {
   granularity?: string | null;
   previewPostalCode?: string | null;
   getSelectedFeatureCollection: () => FeatureCollection<Polygon | MultiPolygon>;
-  getLabelPoints: (
-    data: FeatureCollection<Polygon | MultiPolygon>
-  ) => FeatureCollection;
+  /** Pre-computed label points for postal code data (from useMapOptimizations) */
+  labelPoints: FeatureCollection;
+  /** Pre-computed label points for state boundaries (from useMapOptimizations) */
+  statesLabelPoints?: FeatureCollection | null;
   layers?: Layer[];
   activeLayerId?: number | null;
 }
@@ -51,7 +52,8 @@ export function useMapLayers({
   granularity,
   previewPostalCode,
   getSelectedFeatureCollection,
-  getLabelPoints,
+  labelPoints,
+  statesLabelPoints,
   layers,
   activeLayerId,
 }: UseMapLayersProps) {
@@ -80,6 +82,9 @@ export function useMapLayers({
     [layerId]
   );
 
+  // Cache the first base-map symbol layer ID — stable after initial map style loads
+  const topSymbolLayerIdRef = useRef<string | undefined>(undefined);
+
   // Helper to add a layer with beforeId if it exists
 
   // Use useLayoutEffect for layer initialization to prevent visual flicker
@@ -92,12 +97,6 @@ export function useMapLayers({
 
     // Create stable references for functions to avoid dependency issues
     const selectedFeatureCollection = (() => getSelectedFeatureCollection())();
-
-    const labelPoints = (() => getLabelPoints(data))();
-
-    const statesLabelPoints = statesData
-      ? (() => getLabelPoints(statesData))()
-      : null;
 
     // --- Robust source creation ---
     // Always create all sources first
@@ -161,29 +160,24 @@ export function useMapLayers({
     }
 
     // --- Robust layer creation ---
-    // Helper to find the first symbol layer from the base map to draw polygons underneath
-    // This dramatically improves label visibility since city labels will render ON TOP of our postal code shapes
-    const getFirstSymbolLayerId = () => {
-      if (!map) {
-        return;
-      }
+    // Cache: find first symbol layer from base map style once (stable after load)
+    // Placing custom polygons behind it keeps city labels visible on top.
+    if (!topSymbolLayerIdRef.current) {
       const mapLayers = map.getStyle()?.layers;
-      if (!mapLayers) {
-        return;
-      }
-      for (const mapLayer of mapLayers) {
-        if (
-          mapLayer.type === "symbol" &&
-          !mapLayer.id.includes("state-boundaries") &&
-          mapLayer.id !== ids.labelLayerId
-        ) {
-          return mapLayer.id;
+      if (mapLayers) {
+        for (const mapLayer of mapLayers) {
+          if (
+            mapLayer.type === "symbol" &&
+            !mapLayer.id.includes("state-boundaries") &&
+            mapLayer.id !== ids.labelLayerId
+          ) {
+            topSymbolLayerIdRef.current = mapLayer.id;
+            break;
+          }
         }
       }
-      return;
-    };
-
-    const topSymbolLayerId = getFirstSymbolLayerId();
+    }
+    const topSymbolLayerId = topSymbolLayerIdRef.current;
 
     // Helper to add a layer with beforeId if it exists
     function safeAddLayer(
@@ -422,7 +416,9 @@ export function useMapLayers({
       );
     }
     // 7. Postal code labels — one layer per digit level (1–5), zoom-gated
-    const labelBeforeId = statesData ? "state-boundaries-label" : ids.hoverLayerId;
+    const labelBeforeId = statesData
+      ? "state-boundaries-label"
+      : ids.hoverLayerId;
     for (let level = 1; level <= 5; level++) {
       const levelLayerId = `${ids.labelLayerId}-${level}`;
       if (!map.getLayer(levelLayerId)) {
@@ -466,7 +462,8 @@ export function useMapLayers({
     ids,
     layerId,
     getSelectedFeatureCollection,
-    getLabelPoints,
+    labelPoints,
+    statesLabelPoints,
     activeLayerId,
     layers,
     granularity,
@@ -699,45 +696,6 @@ export function useMapLayers({
 
     // We do NOT return a cleanup function here. The previous effect cleans up the main sources which in turn cleans up the bound layers.
   }, [mapRef, isMapLoaded, layers, ids.hoverLayerId, activeLayerId]);
-
-  // Optimized layer switching - only update visibility and active state
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !layersLoaded || !layers) {
-      return;
-    }
-
-    layers.forEach((layer) => {
-      const layerFillId = `area-layer-${layer.id}-fill`;
-      const layerBorderId = `area-layer-${layer.id}-border`;
-
-      const isVisible = layer.isVisible === "true";
-      const isActive = activeLayerId === layer.id;
-
-      // Only update visibility and active state - no expensive operations
-      if (map.getLayer(layerFillId)) {
-        map.setLayoutProperty(
-          layerFillId,
-          "visibility",
-          isVisible ? "visible" : "none"
-        );
-      }
-
-      if (map.getLayer(layerBorderId)) {
-        map.setPaintProperty(layerBorderId, "line-width", isActive ? 2.5 : 1.5);
-        map.setPaintProperty(
-          layerBorderId,
-          "line-opacity",
-          isVisible ? (isActive ? 0.9 : 0.7) : 0
-        );
-        map.setLayoutProperty(
-          layerBorderId,
-          "visibility",
-          isVisible ? "visible" : "none"
-        );
-      }
-    });
-  }, [mapRef, layersLoaded, activeLayerId, layers]);
 
   // Update selected regions color when active layer changes
   useEffect(() => {

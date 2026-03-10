@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect } from "react";
 
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { MapLibreMap } from "@/types/map";
@@ -49,8 +49,8 @@ export function useMapCenterZoomSync({
     }
   });
 
-  // Memoized handler for move/zoom end
-  const handleMoveOrZoomEnd = useStableCallback(() => {
+  // useEffectEvent: reads latest mapRef/setMapCenterZoom without being an effect dep
+  const handleMoveOrZoomEnd = useEffectEvent(() => {
     if (mapRef.current) {
       const c = mapRef.current.getCenter();
       setMapCenterZoom([c.lng, c.lat], mapRef.current.getZoom());
@@ -77,5 +77,6 @@ export function useMapCenterZoomSync({
         map.off("zoomend", handleMoveOrZoomEnd);
       }
     };
-  }, [isMapLoaded, handleMoveOrZoomEnd, mapRef]);
+  // Only isMapLoaded is a real dep; mapRef is a stable ref, handleMoveOrZoomEnd is useEffectEvent
+  }, [isMapLoaded]);
 }

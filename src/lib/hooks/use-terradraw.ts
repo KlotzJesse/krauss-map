@@ -1,5 +1,5 @@
 import type { Map as MapLibre } from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import type { RefObject } from "react";
 import {
   TerraDraw,
@@ -54,18 +54,18 @@ export function useTerraDraw({
   const drawRef = useRef<TerraDraw | null>(null);
   const isInitializedRef = useRef(false);
 
-  // Stable callbacks to prevent unnecessary re-initializations
-  const stableOnSelectionChange = useStableCallback(
+  // useEffectEvent: read latest prop callbacks without being effect deps
+  const onSelectionChangeEvent = useEffectEvent(
     (features: (string | number)[]) => {
       onSelectionChange?.(features);
     }
   );
 
-  const stableOnStart = useStableCallback(() => {
+  const onStartEvent = useEffectEvent(() => {
     onStart?.();
   });
 
-  const stableOnStop = useStableCallback(() => {
+  const onStopEvent = useEffectEvent(() => {
     onStop?.();
   });
 
@@ -112,7 +112,7 @@ export function useTerraDraw({
 
               const featureIds = allFeatures.map((feature) => feature.id);
               if (featureIds.length > 0) {
-                stableOnSelectionChange(
+                onSelectionChangeEvent(
                   featureIds.filter((id) => id !== undefined && id !== null)
                 );
               }
@@ -132,7 +132,7 @@ export function useTerraDraw({
       console.error("[TerraDraw] Failed to initialize TerraDraw:", error);
       isInitializedRef.current = false;
     }
-  }, [mapRef, isMapLoaded, stableOnSelectionChange]); // Include stableOnSelectionChange since it's used in the effect
+  }, [mapRef, isMapLoaded]); // onSelectionChangeEvent is useEffectEvent — not a dep
 
   const clearAll = useStableCallback(() => {
     if (!drawRef.current) {
@@ -230,7 +230,7 @@ export function useTerraDraw({
         // Force a repaint to ensure events are properly attached
         //map.triggerRepaint();
 
-        stableOnStart();
+        onStartEvent();
       } else {
         // Set to select mode
         drawRef.current.setMode("select");
@@ -244,12 +244,12 @@ export function useTerraDraw({
         map.keyboard.enable();
         map.getContainer().style.cursor = "";
 
-        stableOnStop();
+        onStopEvent();
       }
     } catch (error) {
       console.error("[TerraDraw] Error in mode change:", error);
     }
-  }, [isEnabled, mode, stableOnStart, stableOnStop, mapRef]); // Use stable callbacks
+  }, [isEnabled, mode]); // onStartEvent/onStopEvent are useEffectEvent — not deps
 
   // Cleanup on unmount
   useEffect(() => {

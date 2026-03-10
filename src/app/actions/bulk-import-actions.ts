@@ -205,7 +205,8 @@ export async function bulkImportPostalCodesAndLayers(
     updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
-    updateTag("undo-redo-status");
+    updateTag("undo-redo");
+    updateTag(`area-${areaId}-undo-redo`);
     refresh();
 
     return {

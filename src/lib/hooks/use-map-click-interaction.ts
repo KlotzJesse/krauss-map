@@ -59,22 +59,9 @@ export function useMapClickInteraction(
           return;
         }
 
-        console.log(
-          "[Click] AreaId:",
-          areaId,
-          "ActiveLayerId:",
-          activeLayerId,
-          "Available layers:",
-          layers?.length || 0
-        );
-
         // Find the active layer to check if postal code already exists
         const activeLayer = layers?.find((l) => l.id === activeLayerId);
         if (!activeLayer) {
-          console.warn(
-            "[Click] Active layer not found. Available layers:",
-            layers?.map((l) => ({ id: l.id, name: l.name })) || []
-          );
           toast.warning(
             `Aktiver Layer (ID: ${activeLayerId}) nicht gefunden. Verfügbare Layer: ${
               layers?.length || 0
@@ -84,32 +71,21 @@ export function useMapClickInteraction(
           return;
         }
 
-        const existingCodes =
-          activeLayer.postalCodes?.map((pc) => pc.postalCode) || [];
-        const codeExists = existingCodes.includes(regionCode);
-
-        console.log(
-          "[Click] Layer:",
-          activeLayer.name,
-          "Code:",
-          regionCode,
-          "Exists:",
-          codeExists,
-          "Current codes:",
-          existingCodes
+        // Use Set for O(1) lookup instead of O(n) Array.includes
+        const existingCodesSet = new Set(
+          activeLayer.postalCodes?.map((pc) => pc.postalCode) ?? []
         );
+        const codeExists = existingCodesSet.has(regionCode);
 
         try {
           if (codeExists) {
             // Remove if it exists
-            console.log("[Click] Removing code from layer");
             await removePostalCodesFromLayer(activeLayerId, [regionCode]);
             toast.success(`PLZ ${regionCode} aus Gebiet entfernt`, {
               duration: 2000,
             });
           } else {
             // Add if it doesn't exist
-            console.log("[Click] Adding code to layer");
             await addPostalCodesToLayer(activeLayerId, [regionCode]);
             toast.success(`PLZ ${regionCode} zu Gebiet hinzugefügt`, {
               duration: 2000,

@@ -1,6 +1,8 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type { GeoJSONFeature, Map as MapLibre } from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
+
+import { getLargestPolygonCentroid } from "@/lib/utils/map-data";
 
 // Fixed: define LassoSelectionProps as a type
 interface LassoSelectionProps {
@@ -24,6 +26,15 @@ export function useLassoSelection({
 }: LassoSelectionProps) {
   const isDrawing = useRef(false);
   const lassoPoints = useRef<[number, number][]>([]);
+
+  // useEffectEvent: reads latest data/callbacks without triggering effect re-runs
+  const onRegionSelectEvent = useEffectEvent((featureId: string) => {
+    onRegionSelect?.(featureId);
+  });
+
+  const getDataFeatures = useEffectEvent(() => {
+    return (data.features ?? []) as GeoJSONFeature[];
+  });
 
   useEffect(() => {
     if (!map || !isMapLoaded) {
@@ -109,7 +120,7 @@ export function useLassoSelection({
 
         // Update selected regions
         selectedFeatures.forEach((featureId) => {
-          onRegionSelect?.(featureId);
+          onRegionSelectEvent(featureId);
         });
       }
 
@@ -119,12 +130,13 @@ export function useLassoSelection({
     };
 
     const findFeaturesInLasso = (): string[] => {
-      // Simple implementation - in a real app, you'd want more sophisticated point-in-polygon testing
       const selectedFeatures: string[] = [];
-      const features = (data.features ?? []) as GeoJSONFeature[];
+      const features = getDataFeatures();
       features.forEach((feature: GeoJSONFeature) => {
-        // Check if feature centroid is within lasso area
-        const centroid = getFeatureCentroid(feature);
+        // Use cached getLargestPolygonCentroid (WeakMap-backed, supports MultiPolygon)
+        const centroid = getLargestPolygonCentroid(
+          feature as unknown as import("geojson").Feature<Polygon | MultiPolygon>
+        );
         if (centroid && isPointInLasso(centroid)) {
           const featureId =
             feature.properties?.code ||
@@ -136,28 +148,6 @@ export function useLassoSelection({
         }
       });
       return selectedFeatures;
-    };
-
-    const getFeatureCentroid = (
-      feature: GeoJSONFeature
-    ): [number, number] | null => {
-      // Simple centroid calculation - in a real app, use a proper geometry library
-      if (
-        feature.geometry.type === "Polygon" &&
-        Array.isArray(feature.geometry.coordinates)
-      ) {
-        const coords = feature.geometry.coordinates[0] as [number, number][];
-        const sumX = coords.reduce(
-          (sum: number, coord: [number, number]) => sum + coord[0],
-          0
-        );
-        const sumY = coords.reduce(
-          (sum: number, coord: [number, number]) => sum + coord[1],
-          0
-        );
-        return [sumX / coords.length, sumY / coords.length];
-      }
-      return null;
     };
 
     const isPointInLasso = (point: [number, number]): boolean => {
@@ -208,13 +198,7 @@ export function useLassoSelection({
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
     };
-  }, [
-    map,
-    isMapLoaded,
-    data,
-    granularity,
-    enabled,
-    onRegionSelect,
-    onRegionDeselect,
-  ]);
+  // granularity is not read inside the effect; data/callbacks are accessed
+  // via useEffectEvent so they don't trigger listener re-attachment
+  }, [map, isMapLoaded, enabled]);
 }

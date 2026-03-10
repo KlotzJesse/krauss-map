@@ -1,4 +1,10 @@
+import bundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: true,
+});
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
@@ -24,7 +30,14 @@ const nextConfig: NextConfig = {
     globalNotFound: true,
     turbopackFileSystemCacheForDev: true,
     viewTransition: true,
+    optimizePackageImports: [
+      "lucide-react",
+      "@base-ui/react",
+      "sonner",
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+    ],
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

@@ -1,6 +1,6 @@
-const fs = require('fs');
+const fs = require("fs");
 
-const code = fs.readFileSync('src/lib/utils/map-data.ts', 'utf8');
+const code = fs.readFileSync("src/lib/utils/map-data.ts", "utf8");
 const newMakeLabelPoints = `
 /**
  * Creates a FeatureCollection of label points from a polygon FeatureCollection.
@@ -73,6 +73,9 @@ export function makeLabelPoints(features: FeatureCollection) {
 }
 `;
 
-const updatedCode = code.replace(/\/\*\*\n \* Creates a FeatureCollection of label points[\s\S]*\}\n\}/m, newMakeLabelPoints.trim());
-fs.writeFileSync('src/lib/utils/map-data.ts', updatedCode);
-console.log('done');
+const updatedCode = code.replace(
+  /\/\*\*\n \* Creates a FeatureCollection of label points[\s\S]*\}\n\}/m,
+  newMakeLabelPoints.trim()
+);
+fs.writeFileSync("src/lib/utils/map-data.ts", updatedCode);
+console.log("done");

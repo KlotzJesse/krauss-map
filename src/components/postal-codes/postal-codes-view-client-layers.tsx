@@ -155,9 +155,9 @@ export function PostalCodesViewClientWithLayers({
           if (update.type === "add") {
             newCodes = [...new Set([...currentCodes, ...update.postalCodes])];
           } else {
-            newCodes = currentCodes.filter(
-              (code) => !update.postalCodes.includes(code)
-            );
+            // Use Set for O(1) per-code lookup instead of O(n) Array.includes
+            const removeSet = new Set(update.postalCodes);
+            newCodes = currentCodes.filter((code) => !removeSet.has(code));
           }
 
           return {

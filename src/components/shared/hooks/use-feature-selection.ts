@@ -37,9 +37,9 @@ export function useFindFeaturesInPolygon(
     }
     const selectedFeatures: string[] = [];
     data.features.forEach((feature) => {
-        if (!feature || !feature.geometry) return;
-        if (
-          feature.geometry.type !== "Polygon" &&
+      if (!feature || !feature.geometry) return;
+      if (
+        feature.geometry.type !== "Polygon" &&
         feature.geometry.type !== "MultiPolygon"
       ) {
         return;

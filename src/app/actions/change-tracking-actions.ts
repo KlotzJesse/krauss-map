@@ -162,6 +162,8 @@ export async function recordChangeAction(
 
     updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
+    updateTag("change-history");
+    updateTag(`area-${areaId}-change-history`);
 
     refresh();
     return { success: true, data: changeKey };
@@ -319,6 +321,8 @@ export async function undoChangeAction(
 
     updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
+    updateTag("change-history");
+    updateTag(`area-${areaId}-change-history`);
 
     refresh();
     return { success: true, data: result };
@@ -430,6 +434,8 @@ export async function redoChangeAction(
 
     updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
+    updateTag("change-history");
+    updateTag(`area-${areaId}-change-history`);
 
     refresh();
     return { success: true, data: result };
@@ -738,6 +744,8 @@ export async function clearUndoRedoStacksAction(
 
     updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
+    updateTag("change-history");
+    updateTag(`area-${areaId}-change-history`);
 
     refresh();
     return { success: true };
