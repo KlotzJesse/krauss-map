@@ -37,9 +37,16 @@ export function useMapHoverInteraction(
         if (regionCode && hoveredRegionIdRef.current !== regionCode) {
           const src = map.getSource(hoverSourceId);
           if (src && "setData" in src && typeof src.setData === "function") {
+            // Strip MapLibre's internal classes from the feature before passing to setData
+            const cleanFeature = {
+              type: "Feature" as const,
+              geometry: (feature as { geometry: unknown }).geometry,
+              properties: typedFeature.properties,
+            };
             src.setData({
               type: "FeatureCollection",
-              features: [typedFeature],
+              // @ts-expect-error - cleanFeature is a valid GeoJSON Feature but types are complex
+              features: [cleanFeature],
             });
           }
           map.setLayoutProperty(hoverLayerId, "visibility", "visible");
