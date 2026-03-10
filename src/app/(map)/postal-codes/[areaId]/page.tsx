@@ -7,6 +7,7 @@ import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { SiteHeaderSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import { getAreaById, getVersion } from "@/lib/db/data-functions";
+import { getPostalCodesDataForGranularity } from "@/lib/utils/postal-codes-data";
 
 const ServerPostalCodesView = nextDynamic(
   () => import("@/components/postal-codes/server-postal-codes-view"),
@@ -21,45 +22,47 @@ interface PostalCodesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+/** Resolve granularity from area or version snapshot — parallel fetch both. */
+async function resolveGranularity(
+  areaId: number,
+  versionId: number | null
+): Promise<string> {
+  const isValidVersion = versionId != null && versionId > 0;
+
+  // Always prefetch area (used by VersionIndicator in SiteHeader too).
+  // Fire version fetch in parallel when applicable.
+  const [area, version] = await Promise.all([
+    getAreaById(areaId),
+    isValidVersion ? getVersion(areaId, versionId) : Promise.resolve(null),
+  ]);
+
+  if (isValidVersion && version?.snapshot) {
+    const snap = version.snapshot as { granularity?: string };
+    return snap.granularity ?? "1digit";
+  }
+  return area?.granularity ?? "1digit";
+}
+
 export async function generateMetadata({
   params,
   searchParams,
 }: PostalCodesPageProps): Promise<Metadata> {
-  const { areaId: areaIdParam } = await params;
-  const search = await searchParams;
-
+  const [{ areaId: areaIdParam }, search] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const areaId = parseInt(areaIdParam, 10);
-
-  // Get granularity from area or version
   let granularity = "1digit";
 
   if (!isNaN(areaId)) {
     try {
-      // Check if viewing a version
-      if (search.versionId) {
-        const versionIdValue = Array.isArray(search.versionId)
-          ? search.versionId[0]
-          : search.versionId;
-        const versionId = parseInt(versionIdValue, 10);
-
-        if (!isNaN(versionId)) {
-          const version = await getVersion(areaId, versionId!);
-
-          if (version && version.snapshot) {
-            const snapshot = version.snapshot as { granularity?: string };
-            granularity = snapshot.granularity || "1digit";
-          }
-        }
-      } else {
-        // Get granularity from area
-        const area = await getAreaById(areaId);
-
-        if (area && area.granularity) {
-          granularity = area.granularity;
-        }
-      }
+      const versionIdRaw = Array.isArray(search.versionId)
+        ? search.versionId[0]
+        : search.versionId;
+      const versionId = versionIdRaw ? parseInt(versionIdRaw, 10) : null;
+      granularity = await resolveGranularity(areaId, versionId);
     } catch (error) {
-      console.error("Failed to fetch granularity:", error);
+      console.error("Failed to fetch granularity for metadata:", error);
     }
   }
 
@@ -78,50 +81,29 @@ export default async function PostalCodesPage({
   params,
   searchParams,
 }: PostalCodesPageProps) {
-  const { areaId: areaIdParam } = await params;
-  const search = await searchParams;
+  const [{ areaId: areaIdParam }, search] = await Promise.all([
+    params,
+    searchParams,
+  ]);
 
-  // Extract area ID from route params
   const areaId = parseInt(areaIdParam, 10);
-
-  // Note: activeLayerId is now handled purely client-side via URL state
-  // to prevent server re-renders on layer switching
   const versionId = search.versionId
     ? parseInt(search.versionId as string, 10)
     : null;
 
-  // Determine granularity from area or version
   let granularity: string = "1digit";
-
-  const isValidVersion = versionId ? versionId > 0 : false;
 
   if (areaId && areaId > 0) {
     try {
-      // Check if viewing a version
-      if (isValidVersion) {
-        const version = await getVersion(areaId, versionId!);
-
-        if (version?.snapshot) {
-          const snapshot = version.snapshot as { granularity?: string };
-          const snapGranularity = snapshot.granularity;
-          if (snapGranularity) {
-            granularity = snapGranularity;
-          } else {
-            granularity = "1digit";
-          }
-        }
-      } else {
-        // Get granularity from current area
-        const area = await getAreaById(areaId);
-
-        if (area && area.granularity) {
-          granularity = area.granularity;
-        }
-      }
+      granularity = await resolveGranularity(areaId, versionId);
     } catch (error) {
       console.error("Failed to fetch granularity:", error);
     }
   }
+
+  // Preload geodata now so the Suspense boundary resolves faster —
+  // "use cache" deduplicates this with the identical call inside ServerPostalCodesView.
+  void getPostalCodesDataForGranularity(granularity);
 
   return (
     <>

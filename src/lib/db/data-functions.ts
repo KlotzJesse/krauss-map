@@ -2,7 +2,7 @@ import "server-only";
 // Database functions for data loading - to be used directly in server components
 // These replace the server actions for GET operations
 import { eq, and, desc, like } from "drizzle-orm";
-import { cacheTag } from "next/cache";
+import { cacheTag, cacheLife } from "next/cache";
 
 import { db } from "../db";
 import {
@@ -16,6 +16,7 @@ import {
 
 export async function getAreas() {
   "use cache";
+  cacheLife("minutes");
   cacheTag("areas");
   try {
     const result = await db.query.areas.findMany({
@@ -30,6 +31,7 @@ export async function getAreas() {
 
 export async function getAreaById(id: number) {
   "use cache";
+  cacheLife("minutes");
   cacheTag("areas", `area-${id}`);
   try {
     const area = await db.query.areas.findFirst({
@@ -57,6 +59,7 @@ export async function getAreaById(id: number) {
 
 export async function getLayers(areaId: number) {
   "use cache";
+  cacheLife("minutes");
   cacheTag("layers", `area-${areaId}-layers`);
   try {
     const result = await db.query.areaLayers.findMany({
@@ -77,6 +80,7 @@ export async function getLayers(areaId: number) {
 // Version-related functions
 export async function getVersions(areaId: number) {
   "use cache";
+  cacheLife("minutes");
   cacheTag("versions", `area-${areaId}-versions`);
   try {
     const versions = await db.query.areaVersions.findMany({
@@ -92,6 +96,7 @@ export async function getVersions(areaId: number) {
 
 export async function getVersion(areaId: number, versionNumber: number) {
   "use cache";
+  cacheLife("hours");
   cacheTag("version", `area-${areaId}-version-${versionNumber}`);
   try {
     const version = await db.query.areaVersions.findFirst({
@@ -117,6 +122,7 @@ export async function getVersionIndicatorInfo(
   versionId?: number | null
 ) {
   "use cache";
+  cacheLife("minutes");
   cacheTag("version-info", `area-${areaId}-version-info`);
   try {
     const versions = await db.query.areaVersions.findMany({
@@ -170,6 +176,7 @@ export async function getChangeHistory(
   }
 ) {
   "use cache";
+  cacheLife("seconds");
   cacheTag("change-history", `area-${areaId}-change-history`);
   try {
     let whereConditions = eq(areaChanges.areaId, areaId);
@@ -220,6 +227,7 @@ export async function getChangeHistory(
 // Undo/redo status function
 export async function getUndoRedoStatus(areaId: number) {
   "use cache";
+  cacheLife("seconds");
   cacheTag("undo-redo", `area-${areaId}-undo-redo`);
   try {
     const stack = await db.query.areaUndoStacks.findFirst({
@@ -251,6 +259,7 @@ export async function getMatchingPostalCodes(
   targetGranularity: string
 ) {
   "use cache";
+  cacheLife("days");
   cacheTag("postal-codes", `postal-codes-${targetGranularity}-${prefix}`);
   try {
     const matchingCodes = await db

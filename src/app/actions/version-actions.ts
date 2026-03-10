@@ -213,7 +213,10 @@ export async function createVersionAction(
     updateTag("versions");
     updateTag(`area-${areaId}-versions`);
     updateTag(`area-${areaId}`);
-    updateTag("undo-redo-status");
+    updateTag("undo-redo");
+    updateTag(`area-${areaId}-undo-redo`);
+    updateTag("version-info");
+    updateTag(`area-${areaId}-version-info`);
 
     return { success: true, data: result };
   } catch (error) {
@@ -514,7 +517,10 @@ export async function restoreVersionAction(
     updateTag(`area-${areaId}`);
     updateTag("layers");
     updateTag(`area-${areaId}-layers`);
-    updateTag("undo-redo-status");
+    updateTag("undo-redo");
+    updateTag(`area-${areaId}-undo-redo`);
+    updateTag("version-info");
+    updateTag(`area-${areaId}-version-info`);
 
     return { success: true, data: result };
   } catch (error) {

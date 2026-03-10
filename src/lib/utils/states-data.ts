@@ -5,7 +5,7 @@ import type {
   MultiPolygon,
   Polygon,
 } from "geojson";
-import { cache } from "react";
+import { cacheTag, cacheLife } from "next/cache";
 
 import { db } from "@/lib/db";
 
@@ -21,10 +21,12 @@ interface StateRow {
   updated_at?: string;
 }
 
-async function _getStatesData(): Promise<
+export async function getStatesData(): Promise<
   FeatureCollection<Polygon | MultiPolygon>
 > {
   "use cache";
+  cacheLife("days");
+  cacheTag("states-geodata");
   try {
     // Select all columns, but geometry as GeoJSON
     const { rows } = await db.execute(
@@ -52,8 +54,6 @@ async function _getStatesData(): Promise<
     throw error;
   }
 }
-
-export const getStatesData = cache(_getStatesData);
 
 export async function getStatesDataServer(): Promise<FeatureCollection<
   Polygon | MultiPolygon

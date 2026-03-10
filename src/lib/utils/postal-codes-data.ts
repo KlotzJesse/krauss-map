@@ -5,7 +5,7 @@ import type {
   MultiPolygon,
   Polygon,
 } from "geojson";
-import { cache } from "react";
+import { cacheTag, cacheLife } from "next/cache";
 
 import { db } from "@/lib/db";
 
@@ -22,10 +22,12 @@ interface PostalCodeRow {
 }
 
 // Fetch all postal codes for a given granularity from the Neon database as GeoJSON
-async function _getPostalCodesDataForGranularity(
+export async function getPostalCodesDataForGranularity(
   granularity: string
 ): Promise<FeatureCollection<Polygon | MultiPolygon>> {
   "use cache";
+  cacheLife("hours");
+  cacheTag("postal-codes-geodata", `postal-codes-geodata-${granularity}`);
   try {
     const { rows } = await db.execute(
       sql`SELECT id, code, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity}`
@@ -51,10 +53,6 @@ async function _getPostalCodesDataForGranularity(
     throw error;
   }
 }
-
-export const getPostalCodesDataForGranularity = cache(
-  _getPostalCodesDataForGranularity
-);
 
 export async function getPostalCodesDataForGranularityServer(
   granularity: string

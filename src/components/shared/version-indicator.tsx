@@ -3,7 +3,7 @@ import { Activity } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getVersionIndicatorInfo, getAreaById } from "@/lib/db/data-functions";
+import { getVersionIndicatorInfo } from "@/lib/db/data-functions";
 
 interface VersionIndicatorProps {
   areaId?: number | null;
@@ -14,13 +14,7 @@ export async function VersionIndicator({ areaId }: VersionIndicatorProps) {
     return null;
   }
 
-  // Server Component: fetch data where it's used
-  // Deduplication ensures this is efficient even if area is fetched elsewhere
-  const area = await getAreaById(areaId);
-  const versionInfo = await getVersionIndicatorInfo(
-    areaId,
-    area.currentVersionNumber
-  );
+  const versionInfo = await getVersionIndicatorInfo(areaId);
 
   // Don't show anything if no versions exist
   if (!versionInfo.hasVersions || !versionInfo.versionInfo) {
