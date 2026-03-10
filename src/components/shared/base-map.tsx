@@ -118,6 +118,8 @@ const BaseMapComponent = ({
     layerId,
     data,
     statesData,
+    granularity,
+    previewPostalCode,
     getSelectedFeatureCollection: optimizations.getSelectedFeatureCollection,
     getLabelPoints: optimizations.getLabelPoints,
     layers,

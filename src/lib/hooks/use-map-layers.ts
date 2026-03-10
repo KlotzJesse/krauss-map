@@ -13,12 +13,23 @@ type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
 
+// Minimum zoom level at which labels become visible, keyed by digit count (1–5)
+const LABEL_MIN_ZOOM: Record<number, number> = {
+  1: 3,
+  2: 5,
+  3: 7,
+  4: 8,
+  5: 9,
+};
+
 interface UseMapLayersProps {
   mapRef: React.RefObject<MapLibreMap | null>;
   isMapLoaded: boolean;
   layerId: string;
   data: FeatureCollection<Polygon | MultiPolygon>;
   statesData?: FeatureCollection<Polygon | MultiPolygon> | null;
+  granularity?: string | null;
+  previewPostalCode?: string | null;
   getSelectedFeatureCollection: () => FeatureCollection<Polygon | MultiPolygon>;
   getLabelPoints: (
     data: FeatureCollection<Polygon | MultiPolygon>
@@ -37,6 +48,8 @@ export function useMapLayers({
   layerId,
   data,
   statesData,
+  granularity,
+  previewPostalCode,
   getSelectedFeatureCollection,
   getLabelPoints,
   layers,
@@ -54,7 +67,6 @@ export function useMapLayers({
       sourceId: `${layerId}-source`,
       hoverSourceId: `${layerId}-hover-source`,
       hoverLayerId: `${layerId}-hover-layer`,
-      previewLayerId: `${layerId}-preview-layer`,
       previewLayerId: `${layerId}-preview-layer`,
       selectedSourceId: `${layerId}-selected-source`,
       selectedLayerId: `${layerId}-selected-layer`,
@@ -409,39 +421,42 @@ export function useMapLayers({
         statesData ? ids.stateLayerId : ids.hoverLayerId
       );
     }
-    // 7. Postal code label (above all layers)
-    if (!map.getLayer(ids.labelLayerId)) {
-      safeAddLayer(
-        {
-          id: ids.labelLayerId,
-          type: "symbol",
-          source: ids.labelSourceId,
-          layout: {
-            "text-field": [
-              "coalesce",
-              ["get", "PLZ"],
-              ["get", "plz"],
-              ["get", "code"],
-              "",
-            ],
-            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-            "text-size": 9,
-            "text-anchor": "center",
-            "text-allow-overlap": true,
-            "text-ignore-placement": true,
+    // 7. Postal code labels — one layer per digit level (1–5), zoom-gated
+    const labelBeforeId = statesData ? "state-boundaries-label" : ids.hoverLayerId;
+    for (let level = 1; level <= 5; level++) {
+      const levelLayerId = `${ids.labelLayerId}-${level}`;
+      if (!map.getLayer(levelLayerId)) {
+        const minZoom = LABEL_MIN_ZOOM[level] ?? 10;
+        safeAddLayer(
+          {
+            id: levelLayerId,
+            type: "symbol",
+            source: ids.labelSourceId,
+            minzoom: minZoom,
+            filter: ["==", ["get", "_labelLevel"], level],
+            layout: {
+              "text-field": ["get", "_labelCode"],
+              "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+              "text-size": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                minZoom,
+                8,
+                minZoom + 4,
+                12,
+              ],
+              "text-anchor": "center",
+            },
+            paint: {
+              "text-color": "#222",
+              "text-halo-color": "#ffffff",
+              "text-halo-width": 2,
+            },
           },
-          paint: {
-            "text-color": "#222",
-            "text-halo-color": "#ffffff",
-            "text-halo-width": 2,
-          },
-        },
-        statesData
-          ? "state-boundaries-label"
-          : statesData
-            ? ids.stateLayerId
-            : ids.hoverLayerId
-      );
+          labelBeforeId
+        );
+      }
     }
   }, [
     mapRef,
@@ -454,6 +469,7 @@ export function useMapLayers({
     getLabelPoints,
     activeLayerId,
     layers,
+    granularity,
   ]);
 
   // Update selected features source when layers change
@@ -487,7 +503,11 @@ export function useMapLayers({
       // First, remove all layers (order matters: remove layers before sources)
       // Order: top to bottom (reverse of creation order)
       const layerIds = [
-        ids.labelLayerId,
+        `${ids.labelLayerId}-5`,
+        `${ids.labelLayerId}-4`,
+        `${ids.labelLayerId}-3`,
+        `${ids.labelLayerId}-2`,
+        `${ids.labelLayerId}-1`,
         "state-boundaries-label",
         ids.stateLayerId,
         "state-boundaries-fill",
@@ -761,29 +781,7 @@ export function useMapLayers({
         map.setLayoutProperty(ids.previewLayerId, "visibility", "none");
       }
     }
-  }, [mapRef, layersLoaded, ids.previewLayerId]);
-
-  // Handle preview feature filtering
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !layersLoaded) {
-      return;
-    }
-
-    if (map.getLayer(ids.previewLayerId)) {
-      if (previewPostalCode) {
-        map.setFilter(ids.previewLayerId, [
-          "any",
-          ["==", ["get", "code"], previewPostalCode],
-          ["==", ["get", "PLZ"], previewPostalCode],
-          ["==", ["get", "plz"], previewPostalCode],
-        ]);
-        map.setLayoutProperty(ids.previewLayerId, "visibility", "visible");
-      } else {
-        map.setLayoutProperty(ids.previewLayerId, "visibility", "none");
-      }
-    }
-  }, [mapRef, layersLoaded, ids.previewLayerId]);
+  }, [mapRef, layersLoaded, previewPostalCode, ids.previewLayerId]);
 
   return { layersLoaded };
 }
