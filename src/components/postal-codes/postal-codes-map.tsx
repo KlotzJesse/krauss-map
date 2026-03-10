@@ -29,6 +29,7 @@ interface PostalCodesMapProps {
   activeLayerId?: number | null;
   areaId?: number | null;
   areaName?: string; // Optional area/project name for exports
+  previewPostalCode?: string | null;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   removePostalCodesFromLayer?: (
     layerId: number,
@@ -63,6 +64,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
   versionId,
   versions,
   changes,
+  previewPostalCode,
 }: PostalCodesMapProps) {
   const { center, zoom } = useMapState();
 
@@ -80,6 +82,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
       activeLayerId={activeLayerId}
       areaId={areaId}
       areaName={areaName}
+      previewPostalCode={previewPostalCode}
       addPostalCodesToLayer={addPostalCodesToLayer}
       removePostalCodesFromLayer={removePostalCodesFromLayer}
       isViewingVersion={isViewingVersion}

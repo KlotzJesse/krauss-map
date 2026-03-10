@@ -54,6 +54,8 @@ export function useMapLayers({
       sourceId: `${layerId}-source`,
       hoverSourceId: `${layerId}-hover-source`,
       hoverLayerId: `${layerId}-hover-layer`,
+      previewLayerId: `${layerId}-preview-layer`,
+      previewLayerId: `${layerId}-preview-layer`,
       selectedSourceId: `${layerId}-selected-source`,
       selectedLayerId: `${layerId}-selected-layer`,
       labelSourceId: `${layerId}-label-points`,
@@ -150,9 +152,13 @@ export function useMapLayers({
     // Helper to find the first symbol layer from the base map to draw polygons underneath
     // This dramatically improves label visibility since city labels will render ON TOP of our postal code shapes
     const getFirstSymbolLayerId = () => {
-      if (!map) return undefined;
+      if (!map) {
+        return;
+      }
       const mapLayers = map.getStyle()?.layers;
-      if (!mapLayers) return undefined;
+      if (!mapLayers) {
+        return;
+      }
       for (const mapLayer of mapLayers) {
         if (
           mapLayer.type === "symbol" &&
@@ -162,7 +168,7 @@ export function useMapLayers({
           return mapLayer.id;
         }
       }
-      return undefined;
+      return;
     };
 
     const topSymbolLayerId = getFirstSymbolLayerId();
@@ -522,8 +528,10 @@ export function useMapLayers({
             allMapLayers.forEach((layer: any) => {
               if ("source" in layer && layer.source === id) {
                 try {
-                  if (map.getLayer(layer.id)) map.removeLayer(layer.id);
-                } catch (e) {}
+                  if (map.getLayer(layer.id)) {
+                    map.removeLayer(layer.id);
+                  }
+                } catch {}
               }
             });
             map.removeSource(id);
@@ -556,7 +564,9 @@ export function useMapLayers({
 
       if (postalCodes.length > 0) {
         // Critical: Only proceed if the source actually exists in MapLibre
-        if (!map.getSource(ids.sourceId)) return;
+        if (!map.getSource(ids.sourceId)) {
+          return;
+        }
 
         layerIdsToKeep.add(layerFillId);
         layerIdsToKeep.add(layerBorderId);
@@ -662,7 +672,7 @@ export function useMapLayers({
         if (!layerIdsToKeep.has(layer.id)) {
           try {
             map.removeLayer(layer.id);
-          } catch (e) {}
+          } catch {}
         }
       }
     });
@@ -730,6 +740,50 @@ export function useMapLayers({
       );
     }
   }, [mapRef, layersLoaded, layers, activeLayerId, ids.selectedLayerId]);
+
+  // Handle preview feature filtering
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !layersLoaded) {
+      return;
+    }
+
+    if (map.getLayer(ids.previewLayerId)) {
+      if (previewPostalCode) {
+        map.setFilter(ids.previewLayerId, [
+          "any",
+          ["==", ["get", "code"], previewPostalCode],
+          ["==", ["get", "PLZ"], previewPostalCode],
+          ["==", ["get", "plz"], previewPostalCode],
+        ]);
+        map.setLayoutProperty(ids.previewLayerId, "visibility", "visible");
+      } else {
+        map.setLayoutProperty(ids.previewLayerId, "visibility", "none");
+      }
+    }
+  }, [mapRef, layersLoaded, ids.previewLayerId]);
+
+  // Handle preview feature filtering
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !layersLoaded) {
+      return;
+    }
+
+    if (map.getLayer(ids.previewLayerId)) {
+      if (previewPostalCode) {
+        map.setFilter(ids.previewLayerId, [
+          "any",
+          ["==", ["get", "code"], previewPostalCode],
+          ["==", ["get", "PLZ"], previewPostalCode],
+          ["==", ["get", "plz"], previewPostalCode],
+        ]);
+        map.setLayoutProperty(ids.previewLayerId, "visibility", "visible");
+      } else {
+        map.setLayoutProperty(ids.previewLayerId, "visibility", "none");
+      }
+    }
+  }, [mapRef, layersLoaded, ids.previewLayerId]);
 
   return { layersLoaded };
 }

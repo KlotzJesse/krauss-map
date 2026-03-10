@@ -440,12 +440,12 @@ export function PostalCodesViewClientWithLayers({
               onBoundarySelect={(codes) => handleImport(codes)}
               onRadiusSelect={handleRadiusSelect}
               onPreviewSelect={(coords, label, postalCode) => {
-                // Set preview postal code and zoom to it
                 if (postalCode) {
-                  setPreviewPostalCode(
-                    previewPostalCode === postalCode ? null : postalCode
-                  );
-                  // Zoom to the postal code
+                  const isClosing = previewPostalCode === postalCode;
+                  setPreviewPostalCode(isClosing ? null : postalCode);
+                  if (!isClosing && coords) {
+                    mapState.setMapCenterZoom([coords[0], coords[1]], 11);
+                  }
                   searchPostalCodes(postalCode);
                 }
               }}

@@ -73,6 +73,7 @@ const BaseMapComponent = ({
   activeLayerId,
   areaId,
   areaName,
+    previewPostalCode,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
   isViewingVersion = false,

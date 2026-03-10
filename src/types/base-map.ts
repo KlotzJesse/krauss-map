@@ -24,6 +24,7 @@ export interface BaseMapProps {
   activeLayerId: number | null;
   areaId: number | null;
   areaName?: string; // Optional area/project name for exports
+  previewPostalCode?: string | null;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   removePostalCodesFromLayer?: (
     layerId: number,
