@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
-import { toast } from "sonner";
 
 import {
   undoChangeAction,
@@ -51,7 +50,7 @@ export function useUndoRedo(
               return "Änderung rückgängig gemacht";
             }
             throw new Error(
-              (data && "error" in data && (data.error as string)) ||
+              (data && "error" in data && data.error!) ||
                 "Fehler beim Rückgängigmachen"
             );
           },
@@ -84,7 +83,7 @@ export function useUndoRedo(
               return "Änderung wiederhergestellt";
             }
             throw new Error(
-              (data && "error" in data && (data.error as string)) ||
+              (data && "error" in data && data.error!) ||
                 "Fehler beim Wiederherstellen"
             );
           },

@@ -50,7 +50,7 @@ export function useVersionHistory(areaId: number) {
         {
           loading: "Erstelle Version...",
           success: (data) =>
-            `Version ${(data as any).versionNumber} erfolgreich erstellt`,
+            `Version ${(data as { versionNumber: number }).versionNumber} erfolgreich erstellt`,
           error: (err) =>
             `Fehler beim Erstellen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
         }

@@ -2,7 +2,6 @@
 
 import { IconGitMerge } from "@tabler/icons-react";
 import { useState, useOptimistic, useTransition } from "react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,58 @@ interface LayerMergeDialogProps {
   layers: Layer[];
 
   onMergeComplete?: () => void;
+}
+
+interface MergePreviewStats {
+  targetCount: number;
+  sourceCount: number;
+  resultCount: number;
+}
+
+function computeMergePreviewStats(
+  targetLayerId: string,
+  selectedLayers: Set<number>,
+  strategy: "union" | "keep-target" | "keep-source",
+  layers: Layer[]
+): MergePreviewStats | null {
+  if (!targetLayerId || selectedLayers.size < 2) {
+    return null;
+  }
+
+  const targetId = parseInt(targetLayerId, 10);
+  const targetLayer = layers.find((l) => l.id === targetId);
+
+  const sourceLayers = layers.filter(
+    (l) => selectedLayers.has(l.id) && l.id !== targetId
+  );
+
+  if (!targetLayer) {
+    return null;
+  }
+
+  const targetCodes = new Set(
+    targetLayer.postalCodes?.map((pc) => pc.postalCode) || []
+  );
+
+  const sourceCodes = new Set(
+    sourceLayers.flatMap((l) => l.postalCodes?.map((pc) => pc.postalCode) || [])
+  );
+
+  let resultCount = 0;
+
+  if (strategy === "union") {
+    resultCount = new Set([...targetCodes, ...sourceCodes]).size;
+  } else if (strategy === "keep-target") {
+    resultCount = targetCodes.size;
+  } else {
+    resultCount = targetCodes.size + sourceCodes.size;
+  }
+
+  return {
+    targetCount: targetCodes.size,
+    sourceCount: sourceCodes.size,
+    resultCount,
+  };
 }
 
 export function LayerMergeDialog({
@@ -120,60 +171,19 @@ export function LayerMergeDialog({
         if (onMergeComplete) {
           onMergeComplete();
         }
-      } catch (error) {
+      } catch {
         // err handled by executeAction
-      } finally {
-        setIsMerging(false);
       }
+      setIsMerging(false);
     });
   };
 
-  const getPreviewStats = () => {
-    if (!targetLayerId || selectedLayers.size < 2) {
-      return null;
-    }
-
-    const targetId = parseInt(targetLayerId, 10);
-    const targetLayer = layers.find((l) => l.id === targetId);
-
-    const sourceLayers = layers.filter(
-      (l) => selectedLayers.has(l.id) && l.id !== targetId
-    );
-
-    if (!targetLayer) {
-      return null;
-    }
-
-    const targetCodes = new Set(
-      targetLayer.postalCodes?.map((pc) => pc.postalCode) || []
-    );
-
-    const sourceCodes = new Set(
-      sourceLayers.flatMap(
-        (l) => l.postalCodes?.map((pc) => pc.postalCode) || []
-      )
-    );
-
-    let resultCount = 0;
-
-    if (strategy === "union") {
-      resultCount = new Set([...targetCodes, ...sourceCodes]).size;
-    } else if (strategy === "keep-target") {
-      resultCount = targetCodes.size;
-    } else {
-      resultCount = targetCodes.size + sourceCodes.size;
-    }
-
-    return {
-      targetCount: targetCodes.size,
-
-      sourceCount: sourceCodes.size,
-
-      resultCount,
-    };
-  };
-
-  const stats = getPreviewStats();
+  const stats = computeMergePreviewStats(
+    targetLayerId,
+    selectedLayers,
+    strategy,
+    layers
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -192,7 +202,7 @@ export function LayerMergeDialog({
           {/* Layer selection */}
           <div className="space-y-2">
             <Label>Layer auswählen (mindestens 2)</Label>
-            <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-2">
+            <div className="space-y-2 max-h-50 overflow-y-auto border rounded-lg p-2">
               {optimisticLayers.map((layer) => (
                 <div
                   key={layer.id}
@@ -264,7 +274,10 @@ export function LayerMergeDialog({
               <Label>Strategie</Label>
               <Select
                 value={strategy}
-                onValueChange={(val) => val && setStrategy(val as any)}
+                onValueChange={(val) =>
+                  val &&
+                  setStrategy(val as "union" | "keep-target" | "keep-source")
+                }
                 items={{
                   union: "Vereinigung (Union)",
                   "keep-target": "Ziel behalten",

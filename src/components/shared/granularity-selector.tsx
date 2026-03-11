@@ -47,11 +47,204 @@ import {
 } from "@/lib/utils/granularity-utils";
 
 const EMPTY_ARRAY: never[] = [];
+
+function getSelectItemStatus(
+  optionValue: string,
+  currentGranularity: string,
+  hasPostalCodes: boolean,
+  totalPostalCodes: number
+): "current" | "available" | "destructive" | "compatible" {
+  if (optionValue === currentGranularity) {
+    return "current";
+  }
+  if (!hasPostalCodes) {
+    return "available";
+  }
+
+  const changeDescription = getGranularityChangeDescription(
+    currentGranularity,
+    optionValue,
+    totalPostalCodes
+  );
+
+  return changeDescription.type === "destructive"
+    ? "destructive"
+    : changeDescription.type === "compatible"
+      ? "compatible"
+      : "available";
+}
+
+function getSelectItemTooltip(
+  optionValue: string,
+  currentGranularity: string,
+  totalPostalCodes: number
+): string {
+  const changeDescription = getGranularityChangeDescription(
+    currentGranularity,
+    optionValue,
+    totalPostalCodes
+  );
+  return changeDescription.description;
+}
 interface GranularitySelectorProps {
   currentGranularity: string;
   onGranularityChange: (granularity: string) => void;
   areaId?: number;
   layers?: Layer[];
+}
+
+function useGranularityActions({
+  currentGranularity,
+  areaId,
+  hasPostalCodes,
+  onGranularityChange,
+}: {
+  currentGranularity: string;
+  areaId: number | undefined;
+  hasPostalCodes: boolean;
+  onGranularityChange: (granularity: string) => void;
+}) {
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingGranularity, setPendingGranularity] = useState<string | null>(
+    null
+  );
+  const [_isPending, startTransition] = useTransition();
+
+  const [optimisticGranularity, updateOptimisticGranularity] = useOptimistic(
+    currentGranularity,
+    (_state, newGranularity: string) => newGranularity
+  );
+
+  const handleGranularitySelect = (newGranularity: string) => {
+    if (newGranularity === currentGranularity) {
+      return;
+    }
+    if (!areaId) {
+      return;
+    }
+
+    if (!hasPostalCodes) {
+      startTransition(async () => {
+        const newLabel = getGranularityLabel(newGranularity);
+        const action = withCallbacks(
+          () =>
+            changeAreaGranularityAction(
+              areaId,
+              newGranularity,
+              currentGranularity
+            ),
+          createToastCallbacks({
+            loadingMessage: `Wechsle zu ${newLabel}...`,
+            successMessage: `Wechsel zu ${newLabel} erfolgreich`,
+            errorMessage: "Fehler beim Ändern der Granularität",
+          })
+        );
+        const result = await action();
+        if (result?.success) {
+          onGranularityChange(newGranularity);
+        }
+      });
+      return;
+    }
+
+    if (
+      wouldGranularityChangeCauseDataLoss(
+        currentGranularity,
+        newGranularity,
+        hasPostalCodes
+      )
+    ) {
+      setPendingGranularity(newGranularity);
+      setShowConfirmDialog(true);
+      return;
+    }
+
+    if (isGranularityChangeCompatible(currentGranularity, newGranularity)) {
+      startTransition(async () => {
+        updateOptimisticGranularity(newGranularity);
+        const newLabel = getGranularityLabel(newGranularity);
+        const action = withCallbacks(
+          () =>
+            changeAreaGranularityAction(
+              areaId,
+              newGranularity,
+              currentGranularity
+            ),
+          createToastCallbacks({
+            loadingMessage: `Wechsle zu ${newLabel} PLZ-Ansicht...`,
+            successMessage: (data: unknown) => {
+              const d = data as {
+                success?: boolean;
+                data?: { addedPostalCodes?: number; migratedLayers?: number };
+              };
+              if (d.success && d.data) {
+                const { addedPostalCodes, migratedLayers } = d.data;
+                return `Wechsel zu ${newLabel}: ${migratedLayers} Layer migriert, ${addedPostalCodes} Regionen hinzugefügt`;
+              }
+              return `Wechsel zu ${newLabel} erfolgreich`;
+            },
+            errorMessage: "Fehler beim Ändern der Granularität",
+          })
+        );
+        const result = await action();
+        if (result?.success && result.data) {
+          onGranularityChange(newGranularity);
+        }
+      });
+      return;
+    }
+
+    toast.error("Unerwarteter Fehler beim Ändern der Granularität");
+  };
+
+  const handleConfirmChange = async () => {
+    if (!pendingGranularity || !areaId) {
+      setShowConfirmDialog(false);
+      setPendingGranularity(null);
+      return;
+    }
+    const newLabel = getGranularityLabel(pendingGranularity);
+    startTransition(async () => {
+      const action = withCallbacks(
+        () =>
+          changeAreaGranularityAction(
+            areaId,
+            pendingGranularity,
+            currentGranularity
+          ),
+        createToastCallbacks({
+          loadingMessage: `Wechsle zu ${newLabel}...`,
+          successMessage: (data: unknown) => {
+            const d = data as {
+              success?: boolean;
+              data?: { removedPostalCodes?: number };
+            };
+            if (d.success && d.data) {
+              return `Wechsel zu ${newLabel} erfolgreich: ${d.data.removedPostalCodes} Regionen entfernt`;
+            }
+            return `Wechsel zu ${newLabel} erfolgreich`;
+          },
+          errorMessage: "Fehler beim Ändern der Granularität",
+        })
+      );
+      const result = await action();
+      if (result?.success) {
+        onGranularityChange(pendingGranularity);
+      }
+      setShowConfirmDialog(false);
+      setPendingGranularity(null);
+    });
+  };
+
+  return {
+    showConfirmDialog,
+    setShowConfirmDialog,
+    pendingGranularity,
+    optimisticGranularity,
+    isPending: _isPending,
+    handleGranularitySelect,
+    handleConfirmChange,
+  };
 }
 
 export function GranularitySelector({
@@ -71,175 +264,19 @@ export function GranularitySelector({
     };
   }, [layers]);
 
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingGranularity, setPendingGranularity] = useState<string | null>(
-    null
-  );
-  const [_isPending, startTransition] = useTransition();
-
-  // Optimistic granularity state
-  const [optimisticGranularity, updateOptimisticGranularity] = useOptimistic(
+  const {
+    showConfirmDialog,
+    setShowConfirmDialog,
+    optimisticGranularity,
+    handleGranularitySelect,
+    handleConfirmChange,
+    isPending,
+  } = useGranularityActions({
     currentGranularity,
-    (_state, newGranularity: string) => newGranularity
-  );
-
-  const handleGranularitySelect = (newGranularity: string) => {
-    if (newGranularity === currentGranularity) {
-      return;
-    }
-    if (!areaId) {
-      return;
-    }
-
-    // If no postal codes, allow any change
-    if (!hasPostalCodes) {
-      startTransition(async () => {
-        const newLabel = getGranularityLabel(newGranularity);
-
-        const action = withCallbacks(
-          () =>
-            changeAreaGranularityAction(
-              areaId,
-              newGranularity,
-              currentGranularity
-            ),
-          createToastCallbacks({
-            loadingMessage: `Wechsle zu ${newLabel}...`,
-            successMessage: `Wechsel zu ${newLabel} erfolgreich`,
-            errorMessage: "Fehler beim Ändern der Granularität",
-          })
-        );
-
-        const result = await action();
-        if (result?.success) {
-          onGranularityChange(newGranularity);
-        }
-      });
-      return;
-    }
-
-    // Check if change would cause data loss
-    if (
-      wouldGranularityChangeCauseDataLoss(
-        currentGranularity,
-        newGranularity,
-        hasPostalCodes
-      )
-    ) {
-      setPendingGranularity(newGranularity);
-      setShowConfirmDialog(true);
-      return;
-    }
-
-    // If compatible change (upgrade), show info and proceed with migration
-    if (isGranularityChangeCompatible(currentGranularity, newGranularity)) {
-      startTransition(async () => {
-        // Optimistically update granularity
-        updateOptimisticGranularity(newGranularity);
-        const newLabel = getGranularityLabel(newGranularity);
-
-        const action = withCallbacks(
-          () =>
-            changeAreaGranularityAction(
-              areaId,
-              newGranularity,
-              currentGranularity
-            ),
-          createToastCallbacks({
-            loadingMessage: `Wechsle zu ${newLabel} PLZ-Ansicht...`,
-            successMessage: (data: any) => {
-              if (data.success && data.data) {
-                const { addedPostalCodes, migratedLayers } = data.data;
-                return `Wechsel zu ${newLabel}: ${migratedLayers} Layer migriert, ${addedPostalCodes} Regionen hinzugefügt`;
-              }
-              return `Wechsel zu ${newLabel} erfolgreich`;
-            },
-            errorMessage: "Fehler beim Ändern der Granularität",
-          })
-        );
-
-        const result = await action();
-        if (result?.success && result.data) {
-          onGranularityChange(newGranularity);
-        }
-      });
-      return;
-    }
-
-    // Fallback
-    toast.error("Unerwarteter Fehler beim Ändern der Granularität");
-  };
-
-  const handleConfirmChange = async () => {
-    if (!pendingGranularity || !areaId) {
-      setShowConfirmDialog(false);
-      setPendingGranularity(null);
-      return;
-    }
-
-    const newLabel = getGranularityLabel(pendingGranularity);
-
-    startTransition(async () => {
-      const action = withCallbacks(
-        () =>
-          changeAreaGranularityAction(
-            areaId,
-            pendingGranularity,
-            currentGranularity
-          ),
-        createToastCallbacks({
-          loadingMessage: `Wechsle zu ${newLabel}...`,
-          successMessage: (data: any) => {
-            if (data.success && data.data) {
-              const { removedPostalCodes } = data.data;
-              return `Wechsel zu ${newLabel} erfolgreich: ${removedPostalCodes} Regionen entfernt`;
-            }
-            return `Wechsel zu ${newLabel} erfolgreich`;
-          },
-          errorMessage: "Fehler beim Ändern der Granularität",
-        })
-      );
-
-      const result = await action();
-      if (result?.success) {
-        onGranularityChange(pendingGranularity);
-      }
-
-      setShowConfirmDialog(false);
-      setPendingGranularity(null);
-    });
-  };
-
-  const getSelectItemStatus = (optionValue: string) => {
-    if (optionValue === currentGranularity) {
-      return "current";
-    }
-    if (!hasPostalCodes) {
-      return "available";
-    }
-
-    const changeDescription = getGranularityChangeDescription(
-      currentGranularity,
-      optionValue,
-      totalPostalCodes
-    );
-
-    return changeDescription.type === "destructive"
-      ? "destructive"
-      : changeDescription.type === "compatible"
-        ? "compatible"
-        : "available";
-  };
-
-  const getSelectItemTooltip = (optionValue: string, _status: string) => {
-    const changeDescription = getGranularityChangeDescription(
-      currentGranularity,
-      optionValue,
-      totalPostalCodes
-    );
-
-    return changeDescription.description;
-  };
+    areaId,
+    hasPostalCodes,
+    onGranularityChange,
+  });
 
   return (
     <TooltipProvider>
@@ -248,7 +285,7 @@ export function GranularitySelector({
         <Select
           value={optimisticGranularity}
           onValueChange={(val) => val && handleGranularitySelect(val)}
-          disabled={_isPending}
+          disabled={isPending}
           items={Object.fromEntries(
             GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
           )}
@@ -258,8 +295,17 @@ export function GranularitySelector({
           </SelectTrigger>
           <SelectContent>
             {GRANULARITY_OPTIONS.map((option) => {
-              const status = getSelectItemStatus(option.value);
-              const tooltip = getSelectItemTooltip(option.value, status);
+              const status = getSelectItemStatus(
+                option.value,
+                currentGranularity,
+                hasPostalCodes,
+                totalPostalCodes
+              );
+              const tooltip = getSelectItemTooltip(
+                option.value,
+                currentGranularity,
+                totalPostalCodes
+              );
 
               return (
                 <Tooltip key={option.value}>
@@ -357,7 +403,6 @@ export function GranularitySelector({
               <AlertDialogCancel
                 onClick={() => {
                   setShowConfirmDialog(false);
-                  setPendingGranularity(null);
                 }}
               >
                 Abbrechen

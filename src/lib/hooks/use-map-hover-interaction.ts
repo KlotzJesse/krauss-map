@@ -1,4 +1,4 @@
-import type { Map as MapLibreMap } from "maplibre-gl";
+import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { useRef } from "react";
 import { flushSync } from "react-dom";
 
@@ -36,16 +36,23 @@ export function useMapHoverInteraction(
         const regionCode = typedFeature.properties?.code;
         if (regionCode && hoveredRegionIdRef.current !== regionCode) {
           const src = map.getSource(hoverSourceId);
-          if (src && "setData" in src && typeof src.setData === "function") {
+          if (src && "setData" in src) {
+            const geoSrc = src as GeoJSONSource;
             // Strip MapLibre's internal classes from the feature before passing to setData
             const cleanFeature = {
               type: "Feature" as const,
               geometry: (feature as { geometry: unknown }).geometry,
               properties: typedFeature.properties,
             };
-            src.setData({
+            geoSrc.setData({
               type: "FeatureCollection",
-              features: [cleanFeature as any],
+              features: [
+                cleanFeature as Parameters<typeof geoSrc.setData>[0] extends {
+                  features: (infer F)[];
+                }
+                  ? F
+                  : never,
+              ],
             });
           }
           map.setLayoutProperty(hoverLayerId, "visibility", "visible");

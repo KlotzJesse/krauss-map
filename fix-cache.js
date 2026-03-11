@@ -1,15 +1,22 @@
-const fs = require('fs');
-const glob = require('glob');
+import fs from "node:fs";
 
-const files = glob.sync('src/app/actions/*.ts');
+import { sync } from "glob";
 
-files.forEach(file => {
-  let content = fs.readFileSync(file, 'utf8');
-  content = content.replace(/,\\s*revalidatePath/g, '');
-  content = content.replace(/\\s*revalidatePath,\\s*/g, ' ');
-  content = content.replace(/revalidatePath,\\s*/g, '');
-  content = content.replace(/import\\s*{\\s*revalidatePath\\s*}\\s*from\\s*"next\\/cache";\\n?/g, '');
-  content = content.replace(/revalidatePath\\([^)]+\\);?\\s*\\n/g, '');
+const files = sync("src/app/actions/*.ts");
+
+for (const file of files) {
+  let content = fs.readFileSync(file, "utf8");
+  content = content.replace(/,\\s*revalidatePath/g, "");
+  content = content.replace(/\\s*revalidatePath,\\s*/g, " ");
+  content = content.replace(/revalidatePath,\\s*/g, "");
+  content = content.replace(
+    new RegExp(
+      'import\\\\s*{\\\\s*revalidatePath\\\\s*}\\\\s*from\\\\s*"next/cache";\\\\n?',
+      "g"
+    ),
+    ""
+  );
+  content = content.replace(/revalidatePath\\([^)]+\\);?\\s*\\n/g, "");
   fs.writeFileSync(file, content);
-});
-console.log('Fixed caching!');
+}
+console.log("Fixed caching!");

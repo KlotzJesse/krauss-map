@@ -27,7 +27,7 @@ export async function executeAction<T>(
           typeof messages.error === "function"
             ? (messages.error(result) as string)
             : (Reflect.get(result, "error") as string) ||
-                (messages.error as string) ||
+                messages.error! ||
                 "Aktion fehlgeschlagen",
           { id: toastId }
         );
@@ -42,7 +42,7 @@ export async function executeAction<T>(
           typeof messages.error === "function"
             ? (messages.error(result) as string)
             : (Reflect.get(result, "error") as string) ||
-                (messages.error as string) ||
+                messages.error! ||
                 "Aktion fehlgeschlagen",
           { id: toastId }
         );
@@ -58,15 +58,16 @@ export async function executeAction<T>(
     );
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If it's a Next.js framework error containing NEXT_REDIRECT or NEXT_NOT_FOUND,
     // unstable_rethrow prevents it from being swallowed by our try/catch
     // and correctly propagates it to Next.js internals framework catchers.
     if (
       error &&
       typeof error === "object" &&
-      typeof error.digest === "string" &&
-      error.digest.startsWith("NEXT_REDIRECT")
+      "digest" in error &&
+      typeof (error as { digest?: unknown }).digest === "string" &&
+      (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
     ) {
       // It's a redirect, meaning the action completed and ordered navigation.
       toast.success(

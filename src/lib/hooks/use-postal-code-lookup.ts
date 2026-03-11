@@ -6,7 +6,6 @@ import type {
   Geometry,
 } from "geojson";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
@@ -46,7 +45,9 @@ export function usePostalCodeLookup({
     data.features.forEach((feature) => {
       const geometry = feature.geometry;
 
-      if (!geometry) return;
+      if (!geometry) {
+        return;
+      }
 
       let maxLat = -Infinity,
         maxLng = -Infinity,

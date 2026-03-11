@@ -54,8 +54,12 @@ export function useMapEventListeners({
   });
 
   // Wrap prop handlers as useEffectEvent so they aren't effect dependencies
-  const onMouseEnter = useEffectEvent((...args: unknown[]) => handleMouseEnter(...args));
-  const onMouseMove = useEffectEvent((...args: unknown[]) => handleMouseMove(...args));
+  const onMouseEnter = useEffectEvent((...args: unknown[]) =>
+    handleMouseEnter(...args)
+  );
+  const onMouseMove = useEffectEvent((...args: unknown[]) =>
+    handleMouseMove(...args)
+  );
   const onMouseLeave = useEffectEvent(() => handleMouseLeave());
   const onClick = useEffectEvent((...args: unknown[]) => handleClick(...args));
 
@@ -124,6 +128,6 @@ export function useMapEventListeners({
       canvas.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  // All handlers are useEffectEvent — only structural deps remain
+    // All handlers are useEffectEvent — only structural deps remain
   }, [map, layerId, layersLoaded, isCursorMode]);
 }

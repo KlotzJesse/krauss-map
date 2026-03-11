@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require("node:fs");
 
 const code = fs.readFileSync("src/lib/utils/map-data.ts", "utf8");
 const newMakeLabelPoints = `
@@ -15,11 +15,11 @@ export function makeLabelPoints(features: FeatureCollection) {
 
   // Group by code/plz to avoid duplicate labels for multi-part areas
   const groups = new Map<string, Feature<Polygon | MultiPolygon>[]>();
-  
+
   for (const f of validFeatures) {
     const props = f.properties || {};
     const code = props.PLZ || props.plz || props.code;
-    
+
     if (code !== undefined && code !== null) {
       const key = String(code);
       if (!groups.has(key)) {
@@ -38,7 +38,7 @@ export function makeLabelPoints(features: FeatureCollection) {
     // Find the absolute largest polygon across all features in the group
     let maxArea = -1;
     let bestCoords: [number, number] = [0, 0];
-    
+
     // We just use the first feature's properties for the label
     const properties = groupFeatures[0].properties;
 
@@ -62,7 +62,7 @@ export function makeLabelPoints(features: FeatureCollection) {
         }
       }
     }
-    
+
     labelFeatures.push(point(bestCoords, properties));
   }
 

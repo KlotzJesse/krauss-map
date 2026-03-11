@@ -27,7 +27,8 @@ async function resolveGranularity(
   areaId: number,
   versionId: number | null
 ): Promise<string> {
-  const isValidVersion = versionId != null && versionId > 0;
+  const isValidVersion =
+    versionId !== null && versionId !== undefined && versionId > 0;
 
   // Always prefetch area (used by VersionIndicator in SiteHeader too).
   // Fire version fetch in parallel when applicable.

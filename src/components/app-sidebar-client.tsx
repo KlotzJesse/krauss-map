@@ -1,6 +1,7 @@
 "use client";
 
 import { IconDashboard, IconMapPin2 } from "@tabler/icons-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Suspense } from "react";
@@ -49,14 +50,16 @@ function NavAreasLoading() {
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {[1, 2, 3].map((i) => (
-            <SidebarMenuItem key={i}>
-              <SidebarMenuButton disabled className="justify-start">
-                <Skeleton className="w-4 h-4 rounded" />
-                <Skeleton className="h-4 w-32" />
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {(["skeleton-1", "skeleton-2", "skeleton-3"] as const).map(
+            (skeletonKey) => (
+              <SidebarMenuItem key={skeletonKey}>
+                <SidebarMenuButton disabled className="justify-start">
+                  <Skeleton className="w-4 h-4 rounded" />
+                  <Skeleton className="h-4 w-32" />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          )}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
@@ -83,7 +86,7 @@ export function AppSidebarClient({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<a href="#" />}
+                render={<Link href="/" />}
                 className="data-[slot=sidebar-menu-button]:p-1.5!"
               >
                 <IconMapPin2 className="size-5!" />

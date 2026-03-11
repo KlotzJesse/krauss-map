@@ -1,6 +1,7 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type {
+  FilterSpecification,
   GeoJSONSource,
   LayerSpecification,
   Map as MapLibreMap,
@@ -83,7 +84,7 @@ export function useMapLayers({
   );
 
   // Cache the first base-map symbol layer ID — stable after initial map style loads
-  const topSymbolLayerIdRef = useRef<string | undefined>(undefined);
+  const topSymbolLayerIdRef = useRef<string | null>(null);
 
   // Helper to add a layer with beforeId if it exists
 
@@ -194,7 +195,7 @@ export function useMapLayers({
         // Automatically push non-label custom geometries behind base map labels for better clarity
         // unless they are explicitly placed relative to another custom layer.
         if (!targetBeforeId && autoUnderLabels && layer.type !== "symbol") {
-          targetBeforeId = topSymbolLayerId;
+          targetBeforeId = topSymbolLayerId ?? undefined;
         }
 
         if (targetBeforeId && map.getLayer(targetBeforeId)) {
@@ -542,7 +543,7 @@ export function useMapLayers({
           if (map.getSource(id)) {
             // First carefully find & remove ANY dynamic layers still attached to this source
             const allMapLayers = map.getStyle()?.layers || [];
-            allMapLayers.forEach((layer: any) => {
+            allMapLayers.forEach((layer: LayerSpecification) => {
               if ("source" in layer && layer.source === id) {
                 try {
                   if (map.getLayer(layer.id)) {
@@ -612,7 +613,7 @@ export function useMapLayers({
               id: layerFillId,
               type: "fill",
               source: ids.sourceId,
-              filter: matchFilter as any,
+              filter: matchFilter as FilterSpecification,
               paint: {
                 "fill-color": layer.color,
                 "fill-opacity": isVisible ? opacity * 0.6 : 0,
@@ -620,12 +621,12 @@ export function useMapLayers({
               layout: {
                 visibility: isVisible ? "visible" : "none",
               },
-            } as any,
+            } as LayerSpecification,
             ids.hoverLayerId
           );
         } else {
           // Update existing layer properties
-          map.setFilter(layerFillId, matchFilter as any);
+          map.setFilter(layerFillId, matchFilter as FilterSpecification);
           map.setPaintProperty(layerFillId, "fill-color", layer.color);
           map.setPaintProperty(
             layerFillId,
@@ -645,7 +646,7 @@ export function useMapLayers({
               id: layerBorderId,
               type: "line",
               source: ids.sourceId,
-              filter: matchFilter as any,
+              filter: matchFilter as FilterSpecification,
               paint: {
                 "line-color": layer.color,
                 "line-width": isActive ? 2.5 : 1.5,
@@ -656,12 +657,12 @@ export function useMapLayers({
                 "line-join": "round",
                 visibility: isVisible ? "visible" : "none",
               },
-            } as any,
+            } as LayerSpecification,
             ids.hoverLayerId
           );
         } else {
           // Update existing layer properties
-          map.setFilter(layerBorderId, matchFilter as any);
+          map.setFilter(layerBorderId, matchFilter as FilterSpecification);
           map.setPaintProperty(layerBorderId, "line-color", layer.color);
           map.setPaintProperty(
             layerBorderId,
@@ -684,18 +685,27 @@ export function useMapLayers({
 
     // Cleanup phase: Remove any dynamically created layers that no longer exist in the standard set
     const allLayers = map.getStyle()?.layers || [];
-    allLayers.forEach((layer: any) => {
-      if (layer.id && layer.id.startsWith("area-layer-")) {
-        if (!layerIdsToKeep.has(layer.id)) {
-          try {
-            map.removeLayer(layer.id);
-          } catch {}
-        }
+    allLayers.forEach((layer: LayerSpecification) => {
+      if (
+        layer.id &&
+        layer.id.startsWith("area-layer-") &&
+        !layerIdsToKeep.has(layer.id)
+      ) {
+        try {
+          map.removeLayer(layer.id);
+        } catch {}
       }
     });
 
     // We do NOT return a cleanup function here. The previous effect cleans up the main sources which in turn cleans up the bound layers.
-  }, [mapRef, isMapLoaded, layers, ids.hoverLayerId, activeLayerId]);
+  }, [
+    mapRef,
+    isMapLoaded,
+    layers,
+    ids.hoverLayerId,
+    activeLayerId,
+    ids.sourceId,
+  ]);
 
   // Update selected regions color when active layer changes
   useEffect(() => {

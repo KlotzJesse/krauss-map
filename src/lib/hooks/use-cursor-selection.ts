@@ -25,7 +25,7 @@ export function useCursorSelection({
   const throttleTimeout = useRef<NodeJS.Timeout | null>(null);
   const pendingEvent = useRef<MapLayerMouseEvent | null>(null);
 
-// useEffectEvent: all handlers read latest state without being effect deps
+  // useEffectEvent: all handlers read latest state without being effect deps
   const handleClick = useEffectEvent((e: MapLayerMouseEvent) => {
     if (!map || !enabled || !e.features || e.features.length === 0) {
       return;
@@ -108,6 +108,6 @@ export function useCursorSelection({
       pendingEvent.current = null;
       lastRegionIdRef.current = null;
     };
-  // Handlers are useEffectEvent — only structural deps needed
+    // Handlers are useEffectEvent — only structural deps needed
   }, [map, isMapLoaded, enabled, layerId]);
 }

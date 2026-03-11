@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition, useOptimistic } from "react";
-import { toast } from "sonner";
 
 import { createAreaAction } from "@/app/actions/area-actions";
 import { Button } from "@/components/ui/button";

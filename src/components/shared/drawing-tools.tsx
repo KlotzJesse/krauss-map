@@ -1,44 +1,42 @@
 "use client";
 
 import {
-  IconPlus,
-  IconPalette,
   IconAlertTriangle,
   IconClock,
   IconDeviceFloppy,
   IconGitMerge,
   IconHistory,
+  IconPlus,
 } from "@tabler/icons-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import {
-  Copy,
-  Diamond,
-  FileSpreadsheet,
-  Loader2Icon,
-  X,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
+import type { Dispatch, RefObject } from "react";
 import {
   Suspense,
-  useState,
-  Activity,
   useOptimistic,
+  useReducer,
+  useState,
   useTransition,
 } from "react";
 import { toast } from "sonner";
 
 import {
   createLayerAction,
-  updateLayerAction,
   deleteLayerAction,
+  updateLayerAction,
 } from "@/app/actions/area-actions";
 import { ConflictResolutionDialog } from "@/components/areas/conflict-resolution-dialog";
 import { CreateVersionDialog } from "@/components/areas/create-version-dialog";
 import { EnhancedVersionHistoryDialog } from "@/components/areas/enhanced-version-history-dialog";
 import { LayerMergeDialog } from "@/components/areas/layer-merge-dialog";
+import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
+import {
+  DEFAULT_LAYER_COLORS,
+  LayerListItem,
+} from "@/components/shared/layer-list-item";
+import { PendingRegionsSection } from "@/components/shared/pending-regions-section";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,11 +62,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -76,18 +69,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type {
-  SelectAreaVersions,
   SelectAreaChanges,
+  SelectAreaVersions,
   areaLayers,
 } from "@/lib/schema/schema";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
-import {
-  copyPostalCodesCSV,
-  exportLayersXLSX,
-  exportLayersPDF,
-} from "@/lib/utils/export-utils";
+import { exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
 
 const EMPTY_ARRAY: never[] = [];
 
@@ -153,23 +143,78 @@ export interface DrawingToolsProps {
   changes: SelectAreaChanges[];
 }
 
-const DEFAULT_COLORS = [
-  "#3b82f6", // blue
+// --- UI state reducer ---
 
-  "#ef4444", // red
+interface DrawingToolsUIState {
+  layersOpen: boolean;
+  regionsOpen: boolean;
+  showConflicts: boolean;
+  showVersionHistory: boolean;
+  showCreateVersion: boolean;
+  showLayerMerge: boolean;
+  isFilling: boolean;
+}
 
-  "#10b981", // green
+type DrawingToolsUIAction =
+  | { type: "SET_LAYERS_OPEN"; open: boolean }
+  | { type: "SET_REGIONS_OPEN"; open: boolean }
+  | { type: "OPEN_CONFLICTS" }
+  | { type: "CLOSE_CONFLICTS" }
+  | { type: "OPEN_HISTORY" }
+  | { type: "CLOSE_HISTORY" }
+  | { type: "OPEN_VERSION" }
+  | { type: "CLOSE_VERSION" }
+  | { type: "OPEN_MERGE" }
+  | { type: "CLOSE_MERGE" }
+  | { type: "SET_FILLING"; value: boolean }
+  | { type: "AUTO_OPEN_REGIONS" };
 
-  "#f59e0b", // amber
-
-  "#8b5cf6", // purple
-
-  "#ec4899", // pink
-
-  "#14b8a6", // teal
-
-  "#f97316", // orange
-];
+function drawingToolsUIReducer(
+  state: DrawingToolsUIState,
+  action: DrawingToolsUIAction
+): DrawingToolsUIState {
+  switch (action.type) {
+    case "SET_LAYERS_OPEN": {
+      return { ...state, layersOpen: action.open };
+    }
+    case "SET_REGIONS_OPEN": {
+      return { ...state, regionsOpen: action.open };
+    }
+    case "AUTO_OPEN_REGIONS": {
+      return { ...state, regionsOpen: true };
+    }
+    case "OPEN_CONFLICTS": {
+      return { ...state, showConflicts: true };
+    }
+    case "CLOSE_CONFLICTS": {
+      return { ...state, showConflicts: false };
+    }
+    case "OPEN_HISTORY": {
+      return { ...state, showVersionHistory: true };
+    }
+    case "CLOSE_HISTORY": {
+      return { ...state, showVersionHistory: false };
+    }
+    case "OPEN_VERSION": {
+      return { ...state, showCreateVersion: true };
+    }
+    case "CLOSE_VERSION": {
+      return { ...state, showCreateVersion: false };
+    }
+    case "OPEN_MERGE": {
+      return { ...state, showLayerMerge: true };
+    }
+    case "CLOSE_MERGE": {
+      return { ...state, showLayerMerge: false };
+    }
+    case "SET_FILLING": {
+      return { ...state, isFilling: action.value };
+    }
+    default: {
+      return state;
+    }
+  }
+}
 
 // Fill logic using server-side geoprocessing API
 
@@ -204,20 +249,6 @@ async function fillRegions(
     try {
       const layerCodes =
         activeLayer.postalCodes?.map((pc) => pc.postalCode) || [];
-
-      console.log(
-        "Filling regions with mode:",
-
-        mode,
-
-        "granularity:",
-
-        granularity,
-
-        "layer codes:",
-
-        layerCodes
-      );
 
       // Use server action instead of client-side fetch
 
@@ -255,62 +286,50 @@ async function fillRegions(
       return `${count} Region${count === 1 ? "" : "en"} gefüllt (${modeText})`;
     } catch (error) {
       console.error(error);
-    } finally {
-      setIsFilling(false);
     }
+    setIsFilling(false);
   };
 
   executeAction(fillPromise(), {
     loading: "Geoverarbeitung läuft...",
 
-    success: (message) => message as string,
+    success: (message) => message!,
 
     error: "Fehler bei der Geoverarbeitung",
   });
 }
 
-function DrawingToolsImpl({
-  currentMode,
+interface UseDrawingToolsActionsProps {
+  areaId: DrawingToolsProps["areaId"];
+  areaName: DrawingToolsProps["areaName"];
+  activeLayerId: DrawingToolsProps["activeLayerId"];
+  onLayerSelect: DrawingToolsProps["onLayerSelect"];
+  layers: Layer[];
+  onLayerUpdate: DrawingToolsProps["onLayerUpdate"];
+  addPostalCodesToLayer: DrawingToolsProps["addPostalCodesToLayer"];
+  removePostalCodesFromLayer: DrawingToolsProps["removePostalCodesFromLayer"];
+  pendingPostalCodes: string[];
+  onAddPending: DrawingToolsProps["onAddPending"];
+  onRemovePending: DrawingToolsProps["onRemovePending"];
+  granularity: DrawingToolsProps["granularity"];
+  postalCodesData: DrawingToolsProps["postalCodesData"];
+}
 
-  onClearAll,
-
-  onToggleVisibility,
-
-  granularity,
-
-  onGranularityChange,
-
-  postalCodesData,
-
-  pendingPostalCodes = EMPTY_ARRAY,
-
-  onAddPending,
-
-  onRemovePending,
-
+function useDrawingToolsActions({
   areaId,
-
   areaName,
-
   activeLayerId,
-
   onLayerSelect,
-
-  layers = EMPTY_ARRAY,
-
+  layers,
   onLayerUpdate,
-
   addPostalCodesToLayer,
-
   removePostalCodesFromLayer,
-
-  isViewingVersion = false,
-
-  versions = EMPTY_ARRAY,
-
-  changes = EMPTY_ARRAY,
-}: DrawingToolsProps) {
-  // Optimistic layer state for instant UI updates
+  pendingPostalCodes,
+  onAddPending,
+  onRemovePending,
+  granularity,
+  postalCodesData,
+}: UseDrawingToolsActionsProps) {
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
     layers,
     (
@@ -338,14 +357,23 @@ function DrawingToolsImpl({
 
   const [_isPending, startTransition] = useTransition();
 
-  // Collapsible section states
+  const [ui, dispatchUI] = useReducer(drawingToolsUIReducer, {
+    layersOpen: !!areaId,
+    regionsOpen: false,
+    showConflicts: false,
+    showVersionHistory: false,
+    showCreateVersion: false,
+    showLayerMerge: false,
+    isFilling: false,
+  });
 
-  const [layersOpen, setLayersOpen] = useState(!!areaId);
+  const {
+    state: form,
+    dispatch: dispatchForm,
+    editLayerInputRef,
+  } = useLayerFormState();
 
-  const [regionsOpen, setRegionsOpen] = useState(false);
-
-  const [actionsOpen, setActionsOpen] = useState(false);
-
+  // Derived-state pattern: auto-open regions when new pending codes arrive
   const [prevPendingLength, setPrevPendingLength] = useState(
     pendingPostalCodes.length
   );
@@ -354,95 +382,32 @@ function DrawingToolsImpl({
     pendingPostalCodes.length !== prevPendingLength
   ) {
     setPrevPendingLength(pendingPostalCodes.length);
-    setRegionsOpen(true);
+    dispatchUI({ type: "AUTO_OPEN_REGIONS" });
   }
-
-  const [prevCurrentMode, setPrevCurrentMode] = useState(currentMode);
-  if (currentMode !== prevCurrentMode) {
-    setPrevCurrentMode(currentMode);
-    const isDrawingMode =
-      currentMode !== null &&
-      [
-        "freehand",
-        "circle",
-        "rectangle",
-        "polygon",
-        "point",
-        "linestring",
-        "angled-rectangle",
-      ].includes(currentMode);
-    if (isDrawingMode) {
-      setActionsOpen(true);
-    }
-  }
-
-  // Layer management state
-
-  const [newLayerName, setNewLayerName] = useState("");
-
-  const [isCreating, setIsCreating] = useState(false);
-
-  const [editingLayerId, setEditingLayerId] = useState<number | null>(null);
-
-  const [editingLayerName, setEditingLayerName] = useState("");
-
-  const [showConflicts, setShowConflicts] = useState(false);
-
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
-
-  const [showCreateVersion, setShowCreateVersion] = useState(false);
-
-  const [showLayerMerge, setShowLayerMerge] = useState(false);
-
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const [layerToDelete, setLayerToDelete] = useState<number | null>(null);
-
-  // Server action implementations
 
   const createLayer = async (data: {
     name: string;
-
     color: string;
-
     orderIndex: number;
   }) => {
-    if (!areaId) {
-      return;
-    }
-
+    if (!areaId) { return; }
     const result = await createLayerAction(areaId, {
       name: data.name,
-
       color: data.color,
-
       opacity: 100,
-
       isVisible: true,
-
       orderIndex: data.orderIndex,
     });
-
     if (result.success) {
       onLayerUpdate?.();
-
       return result.data;
     }
-
     throw new Error(result.error);
   };
 
-  const updateLayer = async (
-    layerId: number,
-
-    data: Record<string, unknown>
-  ) => {
-    if (!areaId) {
-      return;
-    }
-
+  const updateLayer = async (layerId: number, data: Record<string, unknown>) => {
+    if (!areaId) { return; }
     const result = await updateLayerAction(areaId, layerId, data);
-
     if (result.success) {
       onLayerUpdate?.();
     } else {
@@ -451,12 +416,8 @@ function DrawingToolsImpl({
   };
 
   const deleteLayer = async (layerId: number) => {
-    if (!areaId) {
-      return;
-    }
-
+    if (!areaId) { return; }
     const result = await deleteLayerAction(areaId, layerId);
-
     if (result.success) {
       onLayerUpdate?.();
     } else {
@@ -464,211 +425,92 @@ function DrawingToolsImpl({
     }
   };
 
-  const updateLayerColor = async (layerId: number, color: string) => {
-    await updateLayer(layerId, { color });
-  };
-
-  // Create handlers for adding/removing pending postal codes to/from active layer
-
   const handleAddPendingToLayer = async () => {
-    console.log("[handleAddPendingToLayer] Called with:", {
-      areaId,
-
-      activeLayerId,
-
-      pendingCount: pendingPostalCodes.length,
-
-      addFunction: !!addPostalCodesToLayer,
-    });
-
-    if (
-      !areaId ||
-      !activeLayerId ||
-      !addPostalCodesToLayer ||
-      pendingPostalCodes.length === 0
-    ) {
+    if (!areaId || !activeLayerId || !addPostalCodesToLayer || pendingPostalCodes.length === 0) {
       if (!areaId || !activeLayerId) {
-        toast.warning("Bitte wählen Sie ein aktives Gebiet aus", {
-          duration: 3000,
-        });
+        toast.warning("Bitte wählen Sie ein aktives Gebiet aus", { duration: 3000 });
       } else if (pendingPostalCodes.length === 0) {
-        toast.info("Keine Regionen zum Hinzufügen gefunden", {
-          duration: 2000,
-        });
+        toast.info("Keine Regionen zum Hinzufügen gefunden", { duration: 2000 });
       } else if (!addPostalCodesToLayer) {
         toast.error("Gebiets-Funktion nicht verfügbar", { duration: 2000 });
       }
-
       return;
     }
-
+    const suffix = pendingPostalCodes.length === 1 ? "" : "en";
     try {
-      console.log(
-        "[handleAddPendingToLayer] Adding codes:",
-
-        pendingPostalCodes
-      );
-
       await addPostalCodesToLayer(activeLayerId, pendingPostalCodes);
-
-      toast.success(
-        `${pendingPostalCodes.length} Region${
-          pendingPostalCodes.length === 1 ? "" : "en"
-        } zu Gebiet hinzugefügt`,
-
-        { duration: 2000 }
-      );
-
-      // Call the original onAddPending to clear the pending codes
-
-      onAddPending?.();
+      toast.success(`${pendingPostalCodes.length} Region${suffix} zu Gebiet hinzugefügt`, { duration: 2000 });
     } catch (error) {
       console.error("Error adding pending codes to layer:", error);
-
       toast.error("Fehler beim Hinzufügen der Regionen", { duration: 2000 });
     }
+    onAddPending?.();
   };
 
   const handleRemovePendingFromLayer = async () => {
-    console.log("[handleRemovePendingFromLayer] Called with:", {
-      areaId,
-
-      activeLayerId,
-
-      pendingCount: pendingPostalCodes.length,
-
-      removeFunction: !!removePostalCodesFromLayer,
-    });
-
-    if (
-      !areaId ||
-      !activeLayerId ||
-      !removePostalCodesFromLayer ||
-      pendingPostalCodes.length === 0
-    ) {
+    if (!areaId || !activeLayerId || !removePostalCodesFromLayer || pendingPostalCodes.length === 0) {
       if (!areaId || !activeLayerId) {
-        toast.warning("Bitte wählen Sie ein aktives Gebiet aus", {
-          duration: 3000,
-        });
+        toast.warning("Bitte wählen Sie ein aktives Gebiet aus", { duration: 3000 });
       } else if (pendingPostalCodes.length === 0) {
         toast.info("Keine Regionen zum Entfernen gefunden", { duration: 2000 });
       } else if (!removePostalCodesFromLayer) {
         toast.error("Gebiets-Funktion nicht verfügbar", { duration: 2000 });
       }
-
       return;
     }
-
+    const removeSuffix = pendingPostalCodes.length === 1 ? "" : "en";
     try {
-      console.log(
-        "[handleRemovePendingFromLayer] Removing codes:",
-
-        pendingPostalCodes
-      );
-
       await removePostalCodesFromLayer(activeLayerId, pendingPostalCodes);
-
-      toast.success(
-        `${pendingPostalCodes.length} Region${
-          pendingPostalCodes.length === 1 ? "" : "en"
-        } aus Gebiet entfernt`,
-
-        { duration: 2000 }
-      );
-
-      // Call the original onRemovePending to clear the pending codes
-
-      onRemovePending?.();
+      toast.success(`${pendingPostalCodes.length} Region${removeSuffix} aus Gebiet entfernt`, { duration: 2000 });
     } catch (error) {
       console.error("Error removing pending codes from layer:", error);
-
       toast.error("Fehler beim Entfernen der Regionen", { duration: 2000 });
     }
+    onRemovePending?.();
   };
-
-  // Export as Excel with multiple sheets per layer
 
   const handleExportExcel = async () => {
     if (!optimisticLayers.length) {
       toast.warning("Keine Ebenen zum Exportieren vorhanden");
-
       return;
     }
-
     const layersWithCodes = optimisticLayers
-
       .filter((layer) => layer.postalCodes && layer.postalCodes.length > 0)
-
       .map((layer) => ({
         layerName: layer.name,
-
         postalCodes: layer.postalCodes!.map((pc) => pc.postalCode),
       }));
-
     if (!layersWithCodes.length) {
       toast.warning("Keine Ebenen mit Postleitzahlen zum Exportieren");
-
       return;
     }
-
     await exportLayersXLSX(layersWithCodes, areaName);
   };
-
-  // Copy as CSV - moved to per-layer buttons
-
-  // const handleCopyCSV = async () => {
-
-  //   const codes = getPostalCodes();
-
-  //   await copyPostalCodesCSV(codes);
-
-  // };
-
-  // Export as PDF with CSV list format
 
   const handleExportPDF = async () => {
     if (!layers.length) {
       toast.warning("Keine Ebenen zum Exportieren vorhanden");
-
       return;
     }
-
     const layersWithCodes = layers
-
       .filter((layer) => layer.postalCodes && layer.postalCodes.length > 0)
-
       .map((layer) => ({
         layerName: layer.name,
-
         postalCodes: layer.postalCodes!.map((pc) => pc.postalCode),
       }));
-
     if (!layersWithCodes.length) {
       toast.warning("Keine Ebenen mit Postleitzahlen zum Exportieren");
-
       return;
     }
-
     await exportLayersPDF(layersWithCodes, areaName);
   };
 
-  // --- UI State ---
-
-  const [isFilling, setIsFilling] = useState(false);
-
   const handleCreateLayer = async () => {
-    if (!newLayerName.trim()) {
-      return;
-    }
-
-    setIsCreating(true);
-
+    if (!form.newLayerName.trim()) { return; }
+    dispatchForm({ type: "START_CREATING" });
     startTransition(async () => {
-      const nextColor =
-        DEFAULT_COLORS[optimisticLayers.length % DEFAULT_COLORS.length];
-      const createdLayerName = newLayerName;
-
-      // Optimistic update
+      const nextColor = DEFAULT_LAYER_COLORS[optimisticLayers.length % DEFAULT_LAYER_COLORS.length];
+      const createdLayerName = form.newLayerName;
       updateOptimisticLayers({
         type: "create",
         layer: {
@@ -681,40 +523,26 @@ function DrawingToolsImpl({
           postalCodes: [],
         },
       });
-
-      setNewLayerName("");
-
+      dispatchForm({ type: "FINISH_CREATING" });
       await executeAction(
-        createLayer({
-          name: createdLayerName,
-          color: nextColor,
-          orderIndex: optimisticLayers.length,
-        }),
+        createLayer({ name: createdLayerName, color: nextColor, orderIndex: optimisticLayers.length }),
         {
           loading: `Erstelle Gebiet "${createdLayerName}"...`,
           success: (result) => {
-            if (result?.id && onLayerSelect) {
-              onLayerSelect(result.id);
-            }
+            if (result?.id && onLayerSelect) { onLayerSelect(result.id); }
             return `Gebiet "${createdLayerName}" erstellt`;
           },
           error: "Fehler beim Erstellen - Bitte erneut versuchen",
         }
       );
-      setIsCreating(false);
     });
   };
 
   const handleColorChange = async (layerId: number, color: string) => {
     startTransition(async () => {
-      // Optimistic update
       updateOptimisticLayers({ type: "update", id: layerId, layer: { color } });
-
-      // Instant visual feedback - no need for toast, color changes are self-evident
-
       try {
-        await updateLayerColor(layerId, color);
-        // Success - optimistic update was correct
+        await updateLayer(layerId, { color });
       } catch (error) {
         console.error("Error updating layer color:", error);
         toast.error("Fehler beim Ändern der Farbe - Bitte erneut versuchen");
@@ -722,25 +550,16 @@ function DrawingToolsImpl({
     });
   };
 
-  const handleDeleteLayer = async (layerId: number) => {
-    setLayerToDelete(layerId);
-
-    setShowDeleteDialog(true);
+  const handleDeleteLayer = (layerId: number) => {
+    dispatchForm({ type: "OPEN_DELETE", layerId });
   };
 
   const confirmDeleteLayer = async () => {
-    if (!layerToDelete || !deleteLayer) {
-      return;
-    }
-
+    if (!form.layerToDelete) { return; }
     startTransition(async () => {
-      // Optimistic update
-      updateOptimisticLayers({ type: "delete", id: layerToDelete });
-
-      setShowDeleteDialog(false);
-      const deletedLayerId = layerToDelete;
-      setLayerToDelete(null);
-
+      updateOptimisticLayers({ type: "delete", id: form.layerToDelete! });
+      dispatchForm({ type: "CLOSE_DELETE" });
+      const deletedLayerId = form.layerToDelete!;
       try {
         await executeAction(deleteLayer(deletedLayerId), {
           loading: "Lösche Gebiet...",
@@ -756,21 +575,11 @@ function DrawingToolsImpl({
   const handleRenameLayer = async (layerId: number, newName: string) => {
     if (!newName.trim()) {
       toast.error("Gebiets-Name darf nicht leer sein");
-
       return;
     }
-
     startTransition(async () => {
-      // Optimistic update - instantly rename in UI
-      updateOptimisticLayers({
-        type: "update",
-        id: layerId,
-        layer: { name: newName.trim() },
-      });
-
-      setEditingLayerId(null);
-      setEditingLayerName("");
-
+      updateOptimisticLayers({ type: "update", id: layerId, layer: { name: newName.trim() } });
+      dispatchForm({ type: "CANCEL_EDIT" });
       try {
         await executeAction(updateLayer(layerId, { name: newName.trim() }), {
           loading: "Benenne Gebiet um...",
@@ -782,6 +591,381 @@ function DrawingToolsImpl({
       }
     });
   };
+
+  const handleFillHoles = () => {
+    const activeLayer = optimisticLayers.find((l) => l.id === activeLayerId);
+    if (postalCodesData && activeLayer) {
+      fillRegions(
+        "holes",
+        postalCodesData,
+        activeLayer,
+        addPostalCodesToLayer ?? (async () => {}),
+        (v) => dispatchUI({ type: "SET_FILLING", value: v }),
+        granularity
+      );
+    }
+  };
+
+  return {
+    optimisticLayers,
+    ui,
+    dispatchUI,
+    form,
+    dispatchForm,
+    editLayerInputRef,
+    handleAddPendingToLayer,
+    handleRemovePendingFromLayer,
+    handleExportExcel,
+    handleExportPDF,
+    handleCreateLayer,
+    handleColorChange,
+    handleDeleteLayer,
+    confirmDeleteLayer,
+    handleRenameLayer,
+    handleFillHoles,
+  };
+}
+
+interface LayerManagementSectionProps {
+  areaId: number;
+  optimisticLayers: Layer[];
+  ui: DrawingToolsUIState;
+  dispatchUI: Dispatch<DrawingToolsUIAction>;
+  form: ReturnType<typeof useLayerFormState>["state"];
+  dispatchForm: ReturnType<typeof useLayerFormState>["dispatch"];
+  editLayerInputRef: RefObject<HTMLInputElement | null>;
+  activeLayerId: number | null | undefined;
+  isViewingVersion: boolean;
+  onLayerSelect: DrawingToolsProps["onLayerSelect"];
+  handleCreateLayer: () => void;
+  handleRenameLayer: (layerId: number, newName: string) => void;
+  handleColorChange: (layerId: number, color: string) => void;
+  handleDeleteLayer: (layerId: number) => void;
+}
+
+function LayerManagementSection({
+  optimisticLayers,
+  ui,
+  dispatchUI,
+  form,
+  dispatchForm,
+  editLayerInputRef,
+  activeLayerId,
+  isViewingVersion,
+  onLayerSelect,
+  handleCreateLayer,
+  handleRenameLayer,
+  handleColorChange,
+  handleDeleteLayer,
+}: LayerManagementSectionProps) {
+  return (
+    <>
+      <Collapsible
+        open={ui.layersOpen}
+        onOpenChange={(open) => dispatchUI({ type: "SET_LAYERS_OPEN", open })}
+      >
+        <CollapsibleTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-between h-7 px-2 text-xs font-semibold"
+            />
+          }
+        >
+          <span>Gebiete ({optimisticLayers.length})</span>
+          {ui.layersOpen ? (
+            <ChevronUp className="h-3 w-3" />
+          ) : (
+            <ChevronDown className="h-3 w-3" />
+          )}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-2 pt-2">
+          {/* Layer action buttons */}
+          <div className="grid grid-cols-4 gap-1">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={() => dispatchUI({ type: "OPEN_CONFLICTS" })}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-1.5"
+                  />
+                }
+              >
+                <IconAlertTriangle className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Konflikte anzeigen und lösen</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={() => dispatchUI({ type: "OPEN_HISTORY" })}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-1.5"
+                  />
+                }
+              >
+                <IconClock className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Versionsverlauf anzeigen</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={() => dispatchUI({ type: "OPEN_VERSION" })}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-1.5"
+                  />
+                }
+              >
+                <IconDeviceFloppy className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Neue Version erstellen</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={() => dispatchUI({ type: "OPEN_MERGE" })}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-1.5"
+                  />
+                }
+              >
+                <IconGitMerge className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Gebiete zusammenführen</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Create new layer */}
+          <div className="flex gap-1">
+            <Input
+              value={form.newLayerName}
+              onChange={(e) =>
+                dispatchForm({ type: "SET_NEW_NAME", name: e.target.value })
+              }
+              placeholder={
+                isViewingVersion ? "Neues Gebiet (neue Version)..." : "Neues Gebiet..."
+              }
+              className="h-7 text-xs"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { handleCreateLayer(); }
+              }}
+            />
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={handleCreateLayer}
+                    disabled={!form.newLayerName.trim() || form.isCreating}
+                    size="icon"
+                    className="h-7 w-7"
+                    title={
+                      isViewingVersion
+                        ? "Gebiet wird in neuer Version erstellt"
+                        : "Gebiet erstellen"
+                    }
+                  />
+                }
+              >
+                <IconPlus className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Neues Gebiet erstellen</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Layer list */}
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {optimisticLayers.map((layer) => (
+              <LayerListItem
+                key={layer.id}
+                layer={layer}
+                activeLayerId={activeLayerId}
+                editingLayerId={form.editingLayerId}
+                editingLayerName={form.editingLayerName}
+                editLayerInputRef={editLayerInputRef}
+                onSelect={(id) => onLayerSelect?.(id)}
+                onStartEdit={(id, name) =>
+                  dispatchForm({ type: "START_EDIT", layerId: id, name })
+                }
+                onConfirmEdit={handleRenameLayer}
+                onCancelEdit={() => dispatchForm({ type: "CANCEL_EDIT" })}
+                onEditNameChange={(name) =>
+                  dispatchForm({ type: "SET_EDIT_NAME", name })
+                }
+                onColorChange={handleColorChange}
+                onDelete={handleDeleteLayer}
+              />
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+      <Separator />
+    </>
+  );
+}
+
+interface LayerDialogsProps {
+  areaId: number;
+  ui: DrawingToolsUIState;
+  dispatchUI: Dispatch<DrawingToolsUIAction>;
+  form: ReturnType<typeof useLayerFormState>["state"];
+  dispatchForm: ReturnType<typeof useLayerFormState>["dispatch"];
+  layers: Layer[];
+  versions: DrawingToolsProps["versions"];
+  changes: DrawingToolsProps["changes"];
+  onLayerUpdate: DrawingToolsProps["onLayerUpdate"];
+  confirmDeleteLayer: () => void;
+}
+
+function LayerDialogs({
+  areaId,
+  ui,
+  dispatchUI,
+  form,
+  dispatchForm,
+  layers,
+  versions,
+  changes,
+  onLayerUpdate,
+  confirmDeleteLayer,
+}: LayerDialogsProps) {
+  return (
+    <>
+      <ConflictResolutionDialog
+        open={ui.showConflicts}
+        onOpenChange={(open) =>
+          dispatchUI(open ? { type: "OPEN_CONFLICTS" } : { type: "CLOSE_CONFLICTS" })
+        }
+        areaId={areaId}
+        layers={layers}
+      />
+      <EnhancedVersionHistoryDialog
+        open={ui.showVersionHistory}
+        onOpenChange={(open) =>
+          dispatchUI(open ? { type: "OPEN_HISTORY" } : { type: "CLOSE_HISTORY" })
+        }
+        areaId={areaId}
+        versions={versions}
+        changes={changes}
+      />
+      <CreateVersionDialog
+        open={ui.showCreateVersion}
+        onOpenChange={(open) =>
+          dispatchUI(open ? { type: "OPEN_VERSION" } : { type: "CLOSE_VERSION" })
+        }
+        areaId={areaId}
+        onVersionCreated={() => onLayerUpdate?.()}
+      />
+      <LayerMergeDialog
+        open={ui.showLayerMerge}
+        onOpenChange={(open) =>
+          dispatchUI(open ? { type: "OPEN_MERGE" } : { type: "CLOSE_MERGE" })
+        }
+        areaId={areaId}
+        layers={layers}
+        onMergeComplete={() => onLayerUpdate?.()}
+      />
+      <AlertDialog
+        open={form.showDeleteDialog}
+        onOpenChange={(open) => {
+          if (!open) { dispatchForm({ type: "CLOSE_DELETE" }); }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gebiet löschen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie dieses Gebiet wirklich löschen? Diese Aktion
+              kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => dispatchForm({ type: "CLOSE_DELETE" })}>
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteLayer}>
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function DrawingToolsImpl({
+  currentMode,
+  onClearAll,
+  onToggleVisibility,
+  granularity,
+  onGranularityChange,
+  postalCodesData,
+  pendingPostalCodes = EMPTY_ARRAY,
+  onAddPending,
+  onRemovePending,
+  areaId,
+  areaName,
+  activeLayerId,
+  onLayerSelect,
+  layers = EMPTY_ARRAY,
+  onLayerUpdate,
+  addPostalCodesToLayer,
+  removePostalCodesFromLayer,
+  isViewingVersion = false,
+  versions = EMPTY_ARRAY,
+  changes = EMPTY_ARRAY,
+}: DrawingToolsProps) {
+  const {
+    optimisticLayers,
+    ui,
+    dispatchUI,
+    form,
+    dispatchForm,
+    editLayerInputRef,
+    handleAddPendingToLayer,
+    handleRemovePendingFromLayer,
+    handleExportExcel,
+    handleExportPDF,
+    handleCreateLayer,
+    handleColorChange,
+    handleDeleteLayer,
+    confirmDeleteLayer,
+    handleRenameLayer,
+    handleFillHoles,
+  } = useDrawingToolsActions({
+    areaId,
+    areaName,
+    activeLayerId,
+    onLayerSelect,
+    layers,
+    onLayerUpdate,
+    addPostalCodesToLayer,
+    removePostalCodesFromLayer,
+    pendingPostalCodes,
+    onAddPending,
+    onRemovePending,
+    granularity,
+    postalCodesData,
+  });
 
   return (
     <Card
@@ -821,686 +1005,90 @@ function DrawingToolsImpl({
         {/* Granularity Management Section */}
         {granularity && onGranularityChange && (
           <>
-            <Collapsible open={true}>
-              <div className="pb-2">
-                <div className="text-xs font-semibold mb-2 flex items-center justify-between">
-                  <span>PLZ-Granularität</span>
-                  <Badge variant="outline" className="text-xs">
-                    {granularity === "1digit" && "1-stellig"}
-                    {granularity === "2digit" && "2-stellig"}
-                    {granularity === "3digit" && "3-stellig"}
-                    {granularity === "5digit" && "5-stellig"}
-                  </Badge>
-                </div>
-                <GranularitySelector
-                  currentGranularity={granularity}
-                  onGranularityChange={onGranularityChange}
-                  areaId={areaId}
-                  layers={layers}
-                />
+            <div className="pb-2">
+              <div className="text-xs font-semibold mb-2 flex items-center justify-between">
+                <span>PLZ-Granularität</span>
+                <Badge variant="outline" className="text-xs">
+                  {granularity === "1digit" && "1-stellig"}
+                  {granularity === "2digit" && "2-stellig"}
+                  {granularity === "3digit" && "3-stellig"}
+                  {granularity === "5digit" && "5-stellig"}
+                </Badge>
               </div>
-            </Collapsible>
+              <GranularitySelector
+                currentGranularity={granularity}
+                onGranularityChange={onGranularityChange}
+                areaId={areaId}
+                layers={layers}
+              />
+            </div>
             <Separator />
           </>
         )}
 
         {/* Layer Management Section - Only show if areaId is provided */}
         {areaId && (
-          <>
-            <Collapsible open={layersOpen} onOpenChange={setLayersOpen}>
-              <CollapsibleTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-between h-7 px-2 text-xs font-semibold"
-                  />
-                }
-              >
-                <span>Gebiete ({optimisticLayers.length})</span>
-                {layersOpen ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
-                )}
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 pt-2">
-                {/* Layer action buttons */}
-                <div className="grid grid-cols-4 gap-1">
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          onClick={() => setShowConflicts(true)}
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-1.5"
-                        />
-                      }
-                    >
-                      <IconAlertTriangle className="h-3 w-3" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Konflikte anzeigen und lösen</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          onClick={() => setShowVersionHistory(true)}
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-1.5"
-                        />
-                      }
-                    >
-                      <IconClock className="h-3 w-3" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Versionsverlauf anzeigen</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          onClick={() => setShowCreateVersion(true)}
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-1.5"
-                        />
-                      }
-                    >
-                      <IconDeviceFloppy className="h-3 w-3" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Neue Version erstellen</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          onClick={() => setShowLayerMerge(true)}
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-1.5"
-                        />
-                      }
-                    >
-                      <IconGitMerge className="h-3 w-3" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Gebiete zusammenführen</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                {/* Create new layer */}
-                <div className="flex gap-1">
-                  <Input
-                    value={newLayerName}
-                    onChange={(e) => setNewLayerName(e.target.value)}
-                    placeholder={
-                      isViewingVersion
-                        ? "Neues Gebiet (neue Version)..."
-                        : "Neues Gebiet..."
-                    }
-                    className="h-7 text-xs"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleCreateLayer();
-                      }
-                    }}
-                  />
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          onClick={handleCreateLayer}
-                          disabled={!newLayerName.trim() || isCreating}
-                          size="icon"
-                          className="h-7 w-7"
-                          title={
-                            isViewingVersion
-                              ? "Gebiet wird in neuer Version erstellt"
-                              : "Gebiet erstellen"
-                          }
-                        />
-                      }
-                    >
-                      <IconPlus className="h-3 w-3" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Neues Gebiet erstellen</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                {/* Layer list - Optimized with shadcn */}
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {optimisticLayers.map((layer) => {
-                    const isOptimistic = layer.id > 1000000000;
-                    return (
-                      <div
-                        key={layer.id}
-                        className={`group relative rounded-lg border transition-all ${
-                          activeLayerId === layer.id
-                            ? "border-primary bg-accent shadow-sm"
-                            : "border-border hover:border-primary/50 hover:bg-accent/50"
-                        } ${isOptimistic ? "opacity-60 pointer-events-none" : ""}`}
-                      >
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          className="px-3 py-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-lg"
-                          onClick={() => {
-                            if (!isOptimistic) onLayerSelect?.(layer.id);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              if (!isOptimistic) onLayerSelect?.(layer.id);
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            {/* Layer info */}
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              {/* Color indicator */}
-                              <div
-                                className="w-3 h-3 rounded-sm flex-shrink-0 border border-border"
-                                style={{ backgroundColor: layer.color }}
-                              />
-
-                              {/* Name - editable on double-click */}
-                              {editingLayerId === layer.id ? (
-                                <Input
-                                  value={editingLayerName}
-                                  onChange={(e) =>
-                                    setEditingLayerName(e.target.value)
-                                  }
-                                  className="h-6 text-sm flex-1"
-                                  autoFocus
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => {
-                                    e.stopPropagation();
-
-                                    if (e.key === "Enter") {
-                                      handleRenameLayer(
-                                        layer.id,
-
-                                        editingLayerName
-                                      );
-                                    } else if (e.key === "Escape") {
-                                      setEditingLayerId(null);
-
-                                      setEditingLayerName("");
-                                    }
-                                  }}
-                                  onBlur={() => {
-                                    if (editingLayerName.trim()) {
-                                      handleRenameLayer(
-                                        layer.id,
-
-                                        editingLayerName
-                                      );
-                                    } else {
-                                      setEditingLayerId(null);
-
-                                      setEditingLayerName("");
-                                    }
-                                  }}
-                                />
-                              ) : (
-                                <span
-                                  className="font-medium text-sm truncate"
-                                  onDoubleClick={(e) => {
-                                    e.stopPropagation();
-
-                                    setEditingLayerId(layer.id);
-
-                                    setEditingLayerName(layer.name);
-                                  }}
-                                  title="Doppelklick zum Umbenennen"
-                                >
-                                  {layer.name}
-                                </span>
-                              )}
-
-                              {/* Postal code count */}
-                              <Badge variant="secondary" className="text-xs">
-                                {layer.postalCodes?.length || 0}
-                              </Badge>
-                            </div>
-
-                            {/* Action buttons */}
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              {/* Color picker */}
-                              <Popover>
-                                <PopoverTrigger
-                                  render={
-                                    <Tooltip>
-                                      <TooltipTrigger
-                                        render={
-                                          <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-6 w-6"
-                                            onClick={(e) => e.stopPropagation()}
-                                          />
-                                        }
-                                      >
-                                        <IconPalette className="h-3.5 w-3.5" />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Gebiet-Farbe ändern</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  }
-                                />
-                                <PopoverContent
-                                  className="w-auto p-3"
-                                  onClick={(e: React.MouseEvent) =>
-                                    e.stopPropagation()
-                                  }
-                                >
-                                  <div className="grid grid-cols-4 gap-2">
-                                    {DEFAULT_COLORS.map((color) => (
-                                      <button
-                                        type="button"
-                                        key={color}
-                                        className="w-8 h-8 rounded-md border-2 hover:scale-110 transition-transform"
-                                        style={{
-                                          backgroundColor: color,
-
-                                          borderColor:
-                                            layer.color === color
-                                              ? "currentColor"
-                                              : "transparent",
-                                        }}
-                                        onClick={() =>
-                                          handleColorChange(layer.id, color)
-                                        }
-                                      />
-                                    ))}
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                              {/* Copy as CSV */}
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-6 w-6"
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-
-                                        const codes =
-                                          layer.postalCodes?.map(
-                                            (pc) => `D-${pc.postalCode}`
-                                          ) || [];
-
-                                        if (codes.length > 0) {
-                                          await copyPostalCodesCSV(codes);
-                                        } else {
-                                          toast.info(
-                                            "Keine Postleitzahlen zum Kopieren"
-                                          );
-                                        }
-                                      }}
-                                    />
-                                  }
-                                >
-                                  <Copy className="h-3.5 w-3.5" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Postleitzahlen als CSV kopieren</p>
-                                </TooltipContent>
-                              </Tooltip>
-
-                              {/* Delete */}
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-
-                                        handleDeleteLayer(layer.id);
-                                      }}
-                                    />
-                                  }
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Gebiet löschen</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-            <Separator />
-          </>
+          <LayerManagementSection
+            areaId={areaId}
+            optimisticLayers={optimisticLayers}
+            ui={ui}
+            dispatchUI={dispatchUI}
+            form={form}
+            dispatchForm={dispatchForm}
+            editLayerInputRef={editLayerInputRef}
+            activeLayerId={activeLayerId}
+            isViewingVersion={isViewingVersion}
+            onLayerSelect={onLayerSelect}
+            handleCreateLayer={handleCreateLayer}
+            handleRenameLayer={handleRenameLayer}
+            handleColorChange={handleColorChange}
+            handleDeleteLayer={handleDeleteLayer}
+          />
         )}
 
         {/* Regions Section */}
-        <Collapsible
-          open={regionsOpen}
-          onOpenChange={setRegionsOpen}
-          className="space-y-2"
-        >
-          <CollapsibleTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between h-7 px-2 text-xs font-semibold"
-              />
-            }
-          >
-            <span>Regionen ({pendingPostalCodes.length})</span>
-            {regionsOpen ? (
-              <ChevronUp className="h-3 w-3" />
-            ) : (
-              <ChevronDown className="h-3 w-3" />
-            )}
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-2 pt-2">
-            {/* Gefundene Regionen durch Zeichnung */}
-            <Activity
-              mode={pendingPostalCodes.length > 0 ? "visible" : "hidden"}
-            >
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center px-1">
-                  <span className="text-xs font-medium">Gefunden</span>
-                  <span className="text-xs text-muted-foreground">
-                    {pendingPostalCodes.length}
-                  </span>
-                </div>
-                <div className="max-h-20 overflow-y-auto space-y-0.5">
-                  {pendingPostalCodes.slice(0, 5).map((region: string) => (
-                    <div
-                      key={region}
-                      className="text-xs p-1 bg-muted rounded truncate"
-                    >
-                      {region}
-                    </div>
-                  ))}
-                  <Activity
-                    mode={pendingPostalCodes.length > 5 ? "visible" : "hidden"}
-                  >
-                    <div className="text-xs text-muted-foreground text-center py-0.5">
-                      +{pendingPostalCodes.length - 5}
-                    </div>
-                  </Activity>
-                </div>
-                <div className="grid grid-cols-2 gap-1">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleAddPendingToLayer}
-                    className="h-6 text-xs"
-                    title="Gefundene zum aktiven Gebiet hinzufügen"
-                    disabled={
-                      !areaId || !activeLayerId || !addPostalCodesToLayer
-                    }
-                  >
-                    Hinzufügen
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleRemovePendingFromLayer}
-                    className="h-6 text-xs"
-                    title="Gefundene aus aktivem Layer entfernen"
-                    disabled={
-                      !areaId || !activeLayerId || !removePostalCodesFromLayer
-                    }
-                  >
-                    Entfernen
-                  </Button>
-                </div>
-                <Separator />
-              </div>
-            </Activity>
-          </CollapsibleContent>
-        </Collapsible>
+        <PendingRegionsSection
+          pendingPostalCodes={pendingPostalCodes}
+          regionsOpen={ui.regionsOpen}
+          onOpenChange={(open) =>
+            dispatchUI({ type: "SET_REGIONS_OPEN", open })
+          }
+          canAdd={!!(areaId && activeLayerId && addPostalCodesToLayer)}
+          canRemove={!!(areaId && activeLayerId && removePostalCodesFromLayer)}
+          onAddPending={handleAddPendingToLayer}
+          onRemovePending={handleRemovePendingFromLayer}
+        />
 
-        {/* Actions Section */}
-        {currentMode !== null &&
-          [
-            "freehand",
-
-            "circle",
-
-            "rectangle",
-
-            "polygon",
-
-            "point",
-
-            "linestring",
-
-            "angled-rectangle",
-          ].includes(currentMode) && (
-            <>
-              <Separator />
-              <Collapsible
-                open={actionsOpen}
-                onOpenChange={setActionsOpen}
-                className="space-y-2"
-              >
-                <CollapsibleTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-between h-7 px-2 text-xs font-semibold"
-                    />
-                  }
-                >
-                  <span>Aktionen</span>
-                  {actionsOpen ? (
-                    <ChevronUp className="h-3 w-3" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3" />
-                  )}
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1 pt-2">
-                  {currentMode !== null &&
-                    [
-                      "freehand",
-
-                      "circle",
-
-                      "rectangle",
-
-                      "polygon",
-
-                      "point",
-
-                      "linestring",
-
-                      "angled-rectangle",
-                    ].includes(currentMode) && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          onClearAll();
-
-                          toast.success("Zeichnungen gelöscht", {
-                            duration: 2000,
-                          });
-                        }}
-                        className="w-full h-7 text-xs"
-                      >
-                        <X className="h-3 w-3 mr-1.5" />
-                        Zeichnung löschen
-                      </Button>
-                    )}
-                  <Activity
-                    mode={!!(activeLayerId && areaId) ? "visible" : "hidden"}
-                  >
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={
-                        isFilling ||
-                        !optimisticLayers.some((l) => l.id === activeLayerId)
-                      }
-                      onClick={() => {
-                        const activeLayer = optimisticLayers.find(
-                          (l) => l.id === activeLayerId
-                        );
-
-                        if (postalCodesData && activeLayer) {
-                          fillRegions(
-                            "holes",
-
-                            postalCodesData,
-
-                            activeLayer,
-
-                            addPostalCodesToLayer ?? (async () => {}),
-
-                            setIsFilling,
-
-                            granularity
-                          );
-                        }
-                      }}
-                      className="w-full h-7 text-xs"
-                    >
-                      {isFilling ? (
-                        <Loader2Icon className="h-3 w-3 mr-1.5 animate-spin" />
-                      ) : (
-                        <Diamond className="h-3 w-3 mr-1.5" />
-                      )}
-                      Löcher füllen
-                    </Button>
-                  </Activity>
-                </CollapsibleContent>
-              </Collapsible>
-            </>
-          )}
-
-        {/* Export Section */}
-        <Activity mode={!!postalCodesData ? "visible" : "hidden"}>
-          <>
-            <Separator />
-            <div className="space-y-1">
-              <div className="flex gap-1">
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportExcel}
-                        className="flex-1 h-7 text-xs"
-                      />
-                    }
-                  >
-                    <FileSpreadsheet className="h-3 w-3 mr-1" />
-                    XLS
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Als Excel-Datei exportieren</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportPDF}
-                        className="flex-1 h-7 text-xs"
-                      />
-                    }
-                  >
-                    PDF
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Als PDF-Datei exportieren</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-          </>
-        </Activity>
+        {/* Actions + Export Section */}
+        <DrawingActionsSection
+          currentMode={currentMode}
+          postalCodesData={postalCodesData}
+          activeLayerId={activeLayerId}
+          areaId={areaId}
+          isFilling={ui.isFilling}
+          onFillHoles={handleFillHoles}
+          onClearAll={() => {
+            onClearAll();
+            toast.success("Zeichnungen gelöscht", { duration: 2000 });
+          }}
+          onExportExcel={handleExportExcel}
+          onExportPDF={handleExportPDF}
+        />
 
         {/* Layer Dialogs */}
         {areaId && (
-          <>
-            <ConflictResolutionDialog
-              open={showConflicts}
-              onOpenChange={setShowConflicts}
-              areaId={areaId}
-              layers={layers}
-            />
-            <EnhancedVersionHistoryDialog
-              open={showVersionHistory}
-              onOpenChange={setShowVersionHistory}
-              areaId={areaId}
-              versions={versions}
-              changes={changes}
-            />
-            <CreateVersionDialog
-              open={showCreateVersion}
-              onOpenChange={setShowCreateVersion}
-              areaId={areaId}
-              onVersionCreated={() => {
-                onLayerUpdate?.();
-              }}
-            />
-            <LayerMergeDialog
-              open={showLayerMerge}
-              onOpenChange={setShowLayerMerge}
-              areaId={areaId}
-              layers={layers}
-              onMergeComplete={() => {
-                onLayerUpdate?.();
-              }}
-            />
-            <AlertDialog
-              open={showDeleteDialog}
-              onOpenChange={setShowDeleteDialog}
-            >
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Gebiet löschen</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Möchten Sie dieses Gebiet wirklich löschen? Diese Aktion
-                    kann nicht rückgängig gemacht werden.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>
-                    Abbrechen
-                  </AlertDialogCancel>
-                  <AlertDialogAction onClick={confirmDeleteLayer}>
-                    Löschen
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
+          <LayerDialogs
+            areaId={areaId}
+            ui={ui}
+            dispatchUI={dispatchUI}
+            form={form}
+            dispatchForm={dispatchForm}
+            layers={layers}
+            versions={versions}
+            changes={changes}
+            onLayerUpdate={onLayerUpdate}
+            confirmDeleteLayer={confirmDeleteLayer}
+          />
         )}
       </CardContent>
     </Card>
@@ -1510,7 +1098,7 @@ function DrawingToolsImpl({
 export function DrawingTools(props: DrawingToolsProps) {
   return (
     <Suspense
-      fallback={<Skeleton className="w-full h-full min-h-[200px] rounded-lg" />}
+      fallback={<Skeleton className="w-full h-full min-h-50 rounded-lg" />}
     >
       <DrawingToolsImpl {...props} />
     </Suspense>

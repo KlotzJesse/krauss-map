@@ -249,7 +249,7 @@ export function useTerraDraw({
     } catch (error) {
       console.error("[TerraDraw] Error in mode change:", error);
     }
-  }, [isEnabled, mode]); // onStartEvent/onStopEvent are useEffectEvent — not deps
+  }, [isEnabled, mode, mapRef]); // onStartEvent/onStopEvent are useEffectEvent — not deps
 
   // Cleanup on unmount
   useEffect(() => {

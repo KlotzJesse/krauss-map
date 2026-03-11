@@ -1,6 +1,6 @@
 import area from "@turf/area";
-import { point } from "@turf/helpers";
 import centerOfMass from "@turf/center-of-mass";
+import { point } from "@turf/helpers";
 import type {
   Feature,
   FeatureCollection,
@@ -32,8 +32,8 @@ export function featureCollectionFromIds(
   const codeSet = new Set(codes);
   return {
     type: "FeatureCollection",
-    features: (data.features as Feature[]).filter(
-      (f) => codeSet.has(f.properties?.code)
+    features: (data.features as Feature[]).filter((f) =>
+      codeSet.has(f.properties?.code)
     ),
   };
 }
@@ -138,7 +138,9 @@ export function makeLabelPoints(features: FeatureCollection) {
   for (const f of validFeatures) {
     const props = f.properties ?? {};
     const raw = String(props.PLZ ?? props.plz ?? props.code ?? "");
-    if (raw.length > maxLen) maxLen = raw.length;
+    if (raw.length > maxLen) {
+      maxLen = raw.length;
+    }
   }
   const levels = Math.min(maxLen, 5);
 
@@ -152,9 +154,13 @@ export function makeLabelPoints(features: FeatureCollection) {
       const props = f.properties ?? {};
       const raw = String(props.PLZ ?? props.plz ?? props.code ?? "");
       // Only include features whose code is at least `level` digits
-      if (raw.length < level) continue;
+      if (raw.length < level) {
+        continue;
+      }
       const prefix = raw.slice(0, level);
-      if (!prefixGroups.has(prefix)) prefixGroups.set(prefix, []);
+      if (!prefixGroups.has(prefix)) {
+        prefixGroups.set(prefix, []);
+      }
       prefixGroups.get(prefix)?.push(f as Feature<Polygon | MultiPolygon>);
     }
 

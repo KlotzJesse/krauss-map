@@ -5,7 +5,7 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from "lucide-react";
-import { useRef, useState, useOptimistic } from "react";
+import { useRef, useReducer, useOptimistic } from "react";
 import { toast } from "sonner";
 
 import {
@@ -55,6 +55,81 @@ interface GeocodeResult {
   isLocationBased?: boolean; // Flag for results from location search
 }
 
+interface AutocompleteState {
+  open: boolean;
+  query: string;
+  results: GeocodeResult[];
+  isLoading: boolean;
+  radiusDialogOpen: boolean;
+  selectedCoords: [number, number] | null;
+  radius: number;
+  customRadiusInput: string;
+  searchMode: "straight" | "distance" | "time";
+}
+
+type AutocompleteAction =
+  | { type: "SET_OPEN"; open: boolean }
+  | { type: "SET_QUERY"; query: string }
+  | { type: "SET_RESULTS"; results: GeocodeResult[] }
+  | { type: "SET_LOADING"; isLoading: boolean }
+  | { type: "OPEN_RADIUS"; coords: [number, number] }
+  | { type: "CLOSE_RADIUS" }
+  | { type: "SET_RADIUS"; radius: number }
+  | { type: "SET_RADIUS_INPUT"; input: string }
+  | { type: "SET_SEARCH_MODE"; mode: "straight" | "distance" | "time" };
+
+const initialAutocompleteState: AutocompleteState = {
+  open: false,
+  query: "",
+  results: [],
+  isLoading: false,
+  radiusDialogOpen: false,
+  selectedCoords: null,
+  radius: 5,
+  customRadiusInput: "5",
+  searchMode: "distance",
+};
+
+function autocompleteReducer(
+  state: AutocompleteState,
+  action: AutocompleteAction
+): AutocompleteState {
+  switch (action.type) {
+    case "SET_OPEN": {
+      return { ...state, open: action.open };
+    }
+    case "SET_QUERY": {
+      return { ...state, query: action.query };
+    }
+    case "SET_RESULTS": {
+      return { ...state, results: action.results };
+    }
+    case "SET_LOADING": {
+      return { ...state, isLoading: action.isLoading };
+    }
+    case "OPEN_RADIUS": {
+      return {
+        ...state,
+        radiusDialogOpen: true,
+        selectedCoords: action.coords,
+        open: false,
+      };
+    }
+    case "CLOSE_RADIUS": {
+      return { ...state, radiusDialogOpen: false, selectedCoords: null };
+    }
+    case "SET_RADIUS": {
+      return { ...state, radius: action.radius };
+    }
+    case "SET_RADIUS_INPUT": {
+      return { ...state, customRadiusInput: action.input };
+    }
+    case "SET_SEARCH_MODE": {
+      return { ...state, searchMode: action.mode };
+    }
+  }
+}
+
 interface AddressAutocompleteEnhancedProps {
   onAddressSelect: (
     coords: [number, number],
@@ -90,54 +165,66 @@ interface AddressAutocompleteEnhancedProps {
   }[]; // Available layers to check postal code membership
 }
 
-export function AddressAutocompleteEnhanced({
+interface UseAddressAutocompleteOptions {
+  onAddressSelect: (
+    coords: [number, number],
+    label: string,
+    postalCode?: string
+  ) => void;
+  onBoundarySelect?: (postalCodes: string[]) => void;
+  onRadiusSelect: (
+    coords: [number, number],
+    radius: number,
+    granularity: string
+  ) => void;
+  performDrivingRadiusSearch?: (
+    coordinates: [number, number],
+    radius: number,
+    granularity: string,
+    mode: "distance" | "time",
+    method: "osrm" | "approximation"
+  ) => Promise<unknown>;
+  granularity: string;
+  layers: {
+    id: number;
+    name: string;
+    color: string;
+    postalCodes?: { postalCode: string }[];
+  }[];
+}
+
+function useAddressAutocomplete({
   onAddressSelect,
   onBoundarySelect,
   onRadiusSelect,
-  onPreviewSelect,
   performDrivingRadiusSearch,
   granularity,
-  triggerClassName = "",
-  previewPostalCode,
-  layers = EMPTY_ARRAY,
-}: AddressAutocompleteEnhancedProps) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<GeocodeResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [radiusDialogOpen, setRadiusDialogOpen] = useState(false);
-  const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(
-    null
+  layers,
+}: UseAddressAutocompleteOptions) {
+  const [state, dispatch] = useReducer(
+    autocompleteReducer,
+    initialAutocompleteState
   );
-  const [, setRadius] = useState<number>(5);
-  const [customRadiusInput, setCustomRadiusInput] = useState<string>("5");
-  const [searchMode, setSearchMode] = useState<
-    "straight" | "distance" | "time"
-  >("distance"); // Simplified: straight, driving distance, or driving time
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Optimistic search state
   const [_optimisticSearching, _updateOptimisticSearching] = useOptimistic(
     false,
     (_state, searching: boolean) => searching
   );
 
-  // Sync input field with slider value
   const syncInputWithRadius = useStableCallback((newRadius: number) => {
-    setRadius(newRadius);
-    setCustomRadiusInput(newRadius.toString());
+    dispatch({ type: "SET_RADIUS", radius: newRadius });
+    dispatch({ type: "SET_RADIUS_INPUT", input: newRadius.toString() });
   });
 
-  // Update radius from input and sync with slider if within range
   const handleRadiusInputChange = useStableCallback((inputValue: string) => {
-    setCustomRadiusInput(inputValue);
+    dispatch({ type: "SET_RADIUS_INPUT", input: inputValue });
     const numValue = parseFloat(inputValue);
     if (!isNaN(numValue) && numValue >= 0.5 && numValue <= 200) {
-      setRadius(numValue);
+      dispatch({ type: "SET_RADIUS", radius: numValue });
     }
   });
 
-  // Helper function to get layers containing a postal code
   const getLayersForPostalCode = useStableCallback((postalCode: string) => {
     if (!layers || layers.length === 0) {
       return [];
@@ -147,76 +234,12 @@ export function AddressAutocompleteEnhanced({
     );
   });
 
-  const handleInputChange = useStableCallback((value: string) => {
-    setQuery(value);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    if (value.length < 2) {
-      setResults([]);
-      return;
-    }
-
-    setIsLoading(true);
-    timeoutRef.current = setTimeout(async () => {
-      // Create a promise for toast feedback
-      const geocodePromise = async () => {
-        try {
-          // Detect if query is likely an address (contains numbers) or a place name (only letters)
-          const looksLikeAddress = /\d/.test(value.trim());
-
-          // Enhanced search with German/English support and city/state handling
-          const geocodeResult = await geocodeSearchAction({
-            query: value,
-            includePostalCode: looksLikeAddress, // Only require postal codes for address-like queries
-            limit: 8,
-            enhancedSearch: true, // Enable enhanced German/English search
-          });
-
-          if (!geocodeResult.success || !geocodeResult.data) {
-            throw new Error(geocodeResult.error || "Geocoding failed");
-          }
-
-          const results = geocodeResult.data.results || [];
-
-          setResults(results);
-
-          if (results.length === 0) {
-            throw new Error(
-              `Keine Ergebnisse für "${value}" gefunden. Versuchen Sie deutsche Stadtnamen (z.B. München statt Munich) oder PLZ.`
-            );
-          }
-
-          const resultType = "Adressen";
-          return `${results.length} ${resultType}${
-            results.length > 1 ? "" : ""
-          } gefunden`;
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      // Use promise-based toast for geocoding feedback
-      executeAction(geocodePromise(), {
-        loading: `Suche nach "${value}"... (DE/EN unterstützt)`,
-        success: (message) => message as string,
-        error: (error) =>
-          error instanceof Error ? error.message : "Adresssuche fehlgeschlagen",
-      });
-    }, 300);
-  });
-
-  // Utility function to convert postal code to granularity format
   const convertPostalCodeToGranularity = useStableCallback(
     (postalCode: string, granularityLevel: string): string => {
       if (!postalCode) {
         return postalCode;
       }
-
-      // Remove any non-digit characters and ensure it's a string
       const cleanCode = postalCode.replace(/\D/g, "");
-
       switch (granularityLevel) {
         case "1digit": {
           return cleanCode.slice(0, 1);
@@ -234,10 +257,60 @@ export function AddressAutocompleteEnhanced({
     }
   );
 
-  const handleDirectSelect = useStableCallback((result: GeocodeResult) => {
-    setOpen(false);
+  const handleInputChange = useStableCallback((value: string) => {
+    dispatch({ type: "SET_QUERY", query: value });
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
-    // Detect if this is an administrative area (city, state, etc.) without postal code
+    if (value.length < 2) {
+      dispatch({ type: "SET_RESULTS", results: [] });
+      return;
+    }
+
+    dispatch({ type: "SET_LOADING", isLoading: true });
+    timeoutRef.current = setTimeout(async () => {
+      const geocodePromise = async () => {
+        const looksLikeAddress = /\d/.test(value.trim());
+
+        const geocodeResult = await geocodeSearchAction({
+          query: value,
+          includePostalCode: looksLikeAddress,
+          limit: 8,
+          enhancedSearch: true,
+        });
+
+        dispatch({ type: "SET_LOADING", isLoading: false });
+
+        if (!geocodeResult.success || !geocodeResult.data) {
+          throw new Error(geocodeResult.error ?? "Geocoding failed");
+        }
+
+        const fetchedResults = geocodeResult.data.results ?? [];
+
+        dispatch({ type: "SET_RESULTS", results: fetchedResults });
+
+        if (fetchedResults.length === 0) {
+          throw new Error(
+            `Keine Ergebnisse für "${value}" gefunden. Versuchen Sie deutsche Stadtnamen (z.B. München statt Munich) oder PLZ.`
+          );
+        }
+
+        return `${fetchedResults.length} Adressen gefunden`;
+      };
+
+      executeAction(geocodePromise(), {
+        loading: `Suche nach "${value}"... (DE/EN unterstützt)`,
+        success: (message) => message as string,
+        error: (error) =>
+          error instanceof Error ? error.message : "Adresssuche fehlgeschlagen",
+      });
+    }, 300);
+  });
+
+  const handleDirectSelect = useStableCallback((result: GeocodeResult) => {
+    dispatch({ type: "SET_OPEN", open: false });
+
     const isAdministrativeArea =
       !result.postal_code &&
       (result.city ||
@@ -250,32 +323,26 @@ export function AddressAutocompleteEnhanced({
           result.display_name
         ));
 
-    // If this is an administrative area and we have boundary selection capability
     if (isAdministrativeArea && onBoundarySelect) {
+      const areaName =
+        result.city ?? result.state ?? result.display_name.split(",")[0];
       const boundarySearchPromise = async () => {
-        try {
-          const boundaryResult = await searchPostalCodesByBoundaryAction({
-            areaName:
-              result.city || result.state || result.display_name.split(",")[0],
-            granularity: granularity,
-            limit: 3000, // Increased to handle large states like Bayern (2320 postal codes)
-          });
+        const boundaryResult = await searchPostalCodesByBoundaryAction({
+          areaName,
+          granularity: granularity,
+          limit: 3000,
+        });
 
-          if (!boundaryResult.success || !boundaryResult.data) {
-            throw new Error(boundaryResult.error || "Boundary search failed");
-          }
-
-          const data = boundaryResult.data;
-
-          if (data.postalCodes && data.postalCodes.length > 0) {
-            onBoundarySelect(data.postalCodes);
-            return `${data.count} PLZ-Regionen in ${data.areaInfo.name} ausgewählt`;
-          }
-          throw new Error("Keine PLZ-Regionen in diesem Gebiet gefunden");
-        } catch (error) {
-          console.error("Boundary search failed:", error);
-          throw new Error("Gebietsauswahl fehlgeschlagen", { cause: error });
+        if (!boundaryResult.success || !boundaryResult.data) {
+          throw new Error(boundaryResult.error ?? "Boundary search failed");
         }
+
+        const data = boundaryResult.data;
+        if (data.postalCodes && data.postalCodes.length > 0) {
+          onBoundarySelect(data.postalCodes);
+          return `${data.count} PLZ-Regionen in ${data.areaInfo.name} ausgewählt`;
+        }
+        throw new Error("Keine PLZ-Regionen in diesem Gebiet gefunden");
       };
 
       executeAction(boundarySearchPromise(), {
@@ -288,7 +355,6 @@ export function AddressAutocompleteEnhanced({
       return;
     }
 
-    // Convert postal code to match current granularity
     const adjustedPostalCode = result.postal_code
       ? convertPostalCodeToGranularity(result.postal_code, granularity)
       : result.postal_code;
@@ -301,17 +367,13 @@ export function AddressAutocompleteEnhanced({
   });
 
   const handleRadiusSelect = useStableCallback((result: GeocodeResult) => {
-    setSelectedCoords(result.coordinates);
-
-    setOpen(false);
-    setRadiusDialogOpen(true);
+    dispatch({ type: "OPEN_RADIUS", coords: result.coordinates });
   });
 
   const handleRadiusConfirm = useStableCallback(async () => {
-    if (selectedCoords) {
-      const finalRadius = parseFloat(customRadiusInput);
+    if (state.selectedCoords) {
+      const finalRadius = parseFloat(state.customRadiusInput);
 
-      // Validate radius
       if (isNaN(finalRadius) || finalRadius < 0.1 || finalRadius > 200) {
         toast.error(
           "Bitte geben Sie einen gültigen Radius zwischen 0.1 und 200 ein"
@@ -319,22 +381,17 @@ export function AddressAutocompleteEnhanced({
         return;
       }
 
-      // Create the search promise for toast handling with enhanced feedback
       const searchPromise = async () => {
-        if (searchMode === "straight") {
-          // Use traditional straight-line radius search - it handles its own toast
-          await onRadiusSelect(selectedCoords, finalRadius, granularity);
+        if (state.searchMode === "straight") {
+          await onRadiusSelect(state.selectedCoords!, finalRadius, granularity);
           return `${finalRadius}km Luftlinie erfolgreich ausgewählt`;
         }
-        // Use driving radius search - it handles its own toast
-        const mode = searchMode === "distance" ? "distance" : "time";
-        const method = "osrm"; // Always start with precision mode
+        const mode = state.searchMode === "distance" ? "distance" : "time";
+        const method = "osrm";
 
-        // The performDrivingRadiusSearch hook already calls the onRadiusComplete callback
-        // internally, so we don't need to call onDrivingRadiusSelect manually
         if (performDrivingRadiusSearch) {
           await performDrivingRadiusSearch(
-            selectedCoords,
+            state.selectedCoords!,
             finalRadius,
             granularity,
             mode,
@@ -349,17 +406,13 @@ export function AddressAutocompleteEnhanced({
         return `${finalRadius}${unit} ${modeText} erfolgreich ausgewählt`;
       };
 
-      // Since the individual search functions handle their own toasts,
-      // we just execute the search without wrapping in another toast
       await searchPromise();
 
-      setRadiusDialogOpen(false);
-      setSelectedCoords(null);
+      dispatch({ type: "CLOSE_RADIUS" });
     }
   });
 
   const formatDisplayName = (result: GeocodeResult): string => {
-    // Detect administrative areas for display
     const isAdministrativeArea =
       !result.postal_code &&
       (result.city ||
@@ -384,9 +437,339 @@ export function AddressAutocompleteEnhanced({
     return result.display_name;
   };
 
+  return {
+    state,
+    dispatch,
+    syncInputWithRadius,
+    handleRadiusInputChange,
+    getLayersForPostalCode,
+    handleInputChange,
+    handleDirectSelect,
+    handleRadiusSelect,
+    handleRadiusConfirm,
+    formatDisplayName,
+  };
+}
+
+interface RadiusSearchDialogProps {
+  open: boolean;
+  onOpenChange: (val: boolean) => void;
+  customRadiusInput: string;
+  searchMode: "straight" | "distance" | "time";
+  dispatch: (action: AutocompleteAction) => void;
+  syncInputWithRadius: (radius: number) => void;
+  handleRadiusInputChange: (value: string) => void;
+  handleConfirm: () => void;
+}
+
+function RadiusSearchDialog({
+  open,
+  onOpenChange,
+  customRadiusInput,
+  searchMode,
+  dispatch,
+  syncInputWithRadius,
+  handleRadiusInputChange,
+  handleConfirm,
+}: RadiusSearchDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Umkreis auswählen</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Wählen Sie Art und Größe des Suchradius
+          </p>
+        </DialogHeader>
+        <div className="space-y-6">
+          {/* Enhanced search mode selector with better UX */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3">
+              <Button
+                variant="outline"
+                size="default"
+                onClick={() =>
+                  dispatch({ type: "SET_SEARCH_MODE", mode: "straight" })
+                }
+                className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
+                  searchMode === "straight"
+                    ? "border-primary ring-1 ring-primary bg-primary/5"
+                    : "hover:bg-muted"
+                }`}
+                role="radio"
+                aria-checked={searchMode === "straight"}
+                tabIndex={0}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <span className="text-sm font-medium">Luftlinie</span>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-auto">
+                    Schnell
+                  </span>
+                </div>
+                <span
+                  className={`text-xs ${searchMode === "straight" ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  Direkte Entfernung (wie der Vogel fliegt)
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="default"
+                onClick={() =>
+                  dispatch({ type: "SET_SEARCH_MODE", mode: "distance" })
+                }
+                className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
+                  searchMode === "distance"
+                    ? "border-primary ring-1 ring-primary bg-primary/5"
+                    : "hover:bg-muted"
+                }`}
+                role="radio"
+                aria-checked={searchMode === "distance"}
+                tabIndex={0}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <span className="text-sm font-medium">
+                    Fahrstrecke (km)
+                  </span>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-auto">
+                    Präzise
+                  </span>
+                </div>
+                <span
+                  className={`text-xs ${searchMode === "distance" ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  Tatsächliche Straßenentfernung
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="default"
+                onClick={() =>
+                  dispatch({ type: "SET_SEARCH_MODE", mode: "time" })
+                }
+                className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
+                  searchMode === "time"
+                    ? "border-primary ring-1 ring-primary bg-primary/5"
+                    : "hover:bg-muted"
+                }`}
+                role="radio"
+                aria-checked={searchMode === "time"}
+                tabIndex={0}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <span className="text-sm font-medium">Fahrzeit (min)</span>
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full ml-auto">
+                    Realistisch
+                  </span>
+                </div>
+                <span
+                  className={`text-xs ${searchMode === "time" ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  Geschätzte Fahrtdauer
+                </span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Smart preset buttons with contextual values */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">
+                Häufige Werte für{" "}
+                {searchMode === "straight"
+                  ? "Luftlinie"
+                  : searchMode === "distance"
+                    ? "Fahrstrecke"
+                    : "Fahrzeit"}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {searchMode === "straight"
+                  ? "Direkte Entfernung in km"
+                  : searchMode === "distance"
+                    ? "Tatsächliche Straßenentfernung in km"
+                    : "Realistische Fahrtdauer in Minuten"}
+              </p>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {(searchMode === "time"
+                ? [5, 15, 30, 45] // Time presets in minutes
+                : [1, 5, 10, 25]
+              ) // Distance presets in km
+                .map((preset) => (
+                  <Button
+                    key={preset}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => syncInputWithRadius(preset)}
+                    className="text-xs font-medium"
+                  >
+                    {preset}
+                    {searchMode === "time" ? "min" : "km"}
+                  </Button>
+                ))}
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {(searchMode === "time"
+                ? [60, 90, 120, 180] // Extended time presets
+                : [50, 75, 100, 150]
+              ) // Extended distance presets
+                .map((preset) => (
+                  <Button
+                    key={preset}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      dispatch({
+                        type: "SET_RADIUS_INPUT",
+                        input: preset.toString(),
+                      });
+                      dispatch({ type: "SET_RADIUS", radius: preset });
+                    }}
+                    className="text-xs font-medium"
+                  >
+                    {preset}
+                    {searchMode === "time" ? "min" : "km"}
+                  </Button>
+                ))}
+            </div>
+          </div>
+
+          {/* Slider for 0.5-200 range */}
+          {/* <div className="space-y-2">
+              <Label htmlFor="radius-slider">
+                Präzise Auswahl: {radius}{" "}
+                {searchMode === "time" ? "min" : "km"}
+              </Label>
+              <Slider
+                id="radius-slider"
+                min={0.5}
+                max={200}
+                step={0.5}
+                value={[radius]}
+                onValueChange={(value) => syncInputWithRadius(value[0])}
+                className="w-full pt-4"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0.5{searchMode === "time" ? "min" : "km"}</span>
+                <span>200{searchMode === "time" ? "min" : "km"}</span>
+              </div>
+            </div>*/}
+
+          {/* Direct input for any value */}
+          <div className="space-y-2">
+            <Label htmlFor="radius-input">
+              Exakte Eingabe (0.1-200{searchMode === "time" ? "min" : "km"})
+            </Label>
+            <Input
+              id="radius-input"
+              type="number"
+              min="0.1"
+              max="200"
+              step="0.1"
+              value={customRadiusInput}
+              onChange={(e) => handleRadiusInputChange(e.target.value)}
+              placeholder="z.B. 75.5"
+              className="w-full"
+            />
+            <div className="text-xs text-muted-foreground">
+              Werte zwischen 0.1{searchMode === "time" ? "min" : "km"} und 200
+              {searchMode === "time" ? "min" : "km"} sind möglich
+            </div>
+          </div>
+        </div>
+        {/* Enhanced result summary with accuracy indicators */}
+        <div className="text-sm border-t pt-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">
+              Ausgewählter Radius:
+            </span>
+            <span className="font-medium text-foreground">
+              {customRadiusInput}
+              {searchMode === "time" ? "min" : "km"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Suchmethode:</span>
+            <span className="font-medium text-foreground">
+              {searchMode === "straight"
+                ? "Luftlinie"
+                : searchMode === "distance"
+                  ? "Fahrstrecke"
+                  : "Fahrzeit"}
+            </span>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Abbrechen
+            </Button>
+            <Button onClick={handleConfirm}>
+              {customRadiusInput}
+              {searchMode === "time" ? "min" : "km"}{" "}
+              {searchMode === "straight"
+                ? "Luftlinie"
+                : searchMode === "distance"
+                  ? "Fahrstrecke"
+                  : "Fahrzeit"}{" "}
+              auswählen
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function AddressAutocompleteEnhanced({
+  onAddressSelect,
+  onBoundarySelect,
+  onRadiusSelect,
+  onPreviewSelect,
+  performDrivingRadiusSearch,
+  granularity,
+  triggerClassName = "",
+  previewPostalCode,
+  layers = EMPTY_ARRAY,
+}: AddressAutocompleteEnhancedProps) {
+  const {
+    state,
+    dispatch,
+    syncInputWithRadius,
+    handleRadiusInputChange,
+    getLayersForPostalCode,
+    handleInputChange,
+    handleDirectSelect,
+    handleRadiusSelect,
+    handleRadiusConfirm,
+    formatDisplayName,
+  } = useAddressAutocomplete({
+    onAddressSelect,
+    onBoundarySelect,
+    onRadiusSelect,
+    performDrivingRadiusSearch,
+    granularity,
+    layers,
+  });
+
+  const {
+    open,
+    query,
+    results,
+    isLoading,
+    radiusDialogOpen,
+    customRadiusInput,
+    searchMode,
+  } = state;
+
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(val) => dispatch({ type: "SET_OPEN", open: val })}
+      >
         <PopoverTrigger
           render={
             <Button
@@ -574,244 +957,20 @@ export function AddressAutocompleteEnhanced({
         </PopoverContent>
       </Popover>
 
-      <Dialog open={radiusDialogOpen} onOpenChange={setRadiusDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Umkreis auswählen</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Wählen Sie Art und Größe des Suchradius
-            </p>
-          </DialogHeader>
-          <div className="space-y-6">
-            {/* Enhanced search mode selector with better UX */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={() => setSearchMode("straight")}
-                  className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
-                    searchMode === "straight"
-                      ? "border-primary ring-1 ring-primary bg-primary/5"
-                      : "hover:bg-muted"
-                  }`}
-                  role="radio"
-                  aria-checked={searchMode === "straight"}
-                  tabIndex={0}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <span className="text-sm font-medium">Luftlinie</span>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-auto">
-                      Schnell
-                    </span>
-                  </div>
-                  <span
-                    className={`text-xs ${searchMode === "straight" ? "text-primary" : "text-muted-foreground"}`}
-                  >
-                    Direkte Entfernung (wie der Vogel fliegt)
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={() => setSearchMode("distance")}
-                  className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
-                    searchMode === "distance"
-                      ? "border-primary ring-1 ring-primary bg-primary/5"
-                      : "hover:bg-muted"
-                  }`}
-                  role="radio"
-                  aria-checked={searchMode === "distance"}
-                  tabIndex={0}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <span className="text-sm font-medium">
-                      Fahrstrecke (km)
-                    </span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-auto">
-                      Präzise
-                    </span>
-                  </div>
-                  <span
-                    className={`text-xs ${searchMode === "distance" ? "text-primary" : "text-muted-foreground"}`}
-                  >
-                    Tatsächliche Straßenentfernung
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={() => setSearchMode("time")}
-                  className={`h-auto p-4 text-left flex flex-col items-start gap-1 transition-all ${
-                    searchMode === "time"
-                      ? "border-primary ring-1 ring-primary bg-primary/5"
-                      : "hover:bg-muted"
-                  }`}
-                  role="radio"
-                  aria-checked={searchMode === "time"}
-                  tabIndex={0}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <span className="text-sm font-medium">Fahrzeit (min)</span>
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full ml-auto">
-                      Realistisch
-                    </span>
-                  </div>
-                  <span
-                    className={`text-xs ${searchMode === "time" ? "text-primary" : "text-muted-foreground"}`}
-                  >
-                    Geschätzte Fahrtdauer
-                  </span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Smart preset buttons with contextual values */}
-            <div className="space-y-3">
-              <div>
-                <Label className="text-sm font-medium">
-                  Häufige Werte für{" "}
-                  {searchMode === "straight"
-                    ? "Luftlinie"
-                    : searchMode === "distance"
-                      ? "Fahrstrecke"
-                      : "Fahrzeit"}
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {searchMode === "straight"
-                    ? "Direkte Entfernung in km"
-                    : searchMode === "distance"
-                      ? "Tatsächliche Straßenentfernung in km"
-                      : "Realistische Fahrtdauer in Minuten"}
-                </p>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {(searchMode === "time"
-                  ? [5, 15, 30, 45] // Time presets in minutes
-                  : [1, 5, 10, 25]
-                ) // Distance presets in km
-                  .map((preset) => (
-                    <Button
-                      key={preset}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => syncInputWithRadius(preset)}
-                      className="text-xs font-medium"
-                    >
-                      {preset}
-                      {searchMode === "time" ? "min" : "km"}
-                    </Button>
-                  ))}
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {(searchMode === "time"
-                  ? [60, 90, 120, 180] // Extended time presets
-                  : [50, 75, 100, 150]
-                ) // Extended distance presets
-                  .map((preset) => (
-                    <Button
-                      key={preset}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setCustomRadiusInput(preset.toString());
-                        setRadius(preset);
-                      }}
-                      className="text-xs font-medium"
-                    >
-                      {preset}
-                      {searchMode === "time" ? "min" : "km"}
-                    </Button>
-                  ))}
-              </div>
-            </div>
-
-            {/* Slider for 0.5-200 range */}
-            {/* <div className="space-y-2">
-                <Label htmlFor="radius-slider">
-                  Präzise Auswahl: {radius}{" "}
-                  {searchMode === "time" ? "min" : "km"}
-                </Label>
-                <Slider
-                  id="radius-slider"
-                  min={0.5}
-                  max={200}
-                  step={0.5}
-                  value={[radius]}
-                  onValueChange={(value) => syncInputWithRadius(value[0])}
-                  className="w-full pt-4"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>0.5{searchMode === "time" ? "min" : "km"}</span>
-                  <span>200{searchMode === "time" ? "min" : "km"}</span>
-                </div>
-              </div>*/}
-
-            {/* Direct input for any value */}
-            <div className="space-y-2">
-              <Label htmlFor="radius-input">
-                Exakte Eingabe (0.1-200{searchMode === "time" ? "min" : "km"})
-              </Label>
-              <Input
-                id="radius-input"
-                type="number"
-                min="0.1"
-                max="200"
-                step="0.1"
-                value={customRadiusInput}
-                onChange={(e) => handleRadiusInputChange(e.target.value)}
-                placeholder="z.B. 75.5"
-                className="w-full"
-              />
-              <div className="text-xs text-muted-foreground">
-                Werte zwischen 0.1{searchMode === "time" ? "min" : "km"} und 200
-                {searchMode === "time" ? "min" : "km"} sind möglich
-              </div>
-            </div>
-          </div>
-          {/* Enhanced result summary with accuracy indicators */}
-          <div className="text-sm border-t pt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">
-                Ausgewählter Radius:
-              </span>
-              <span className="font-medium text-foreground">
-                {customRadiusInput}
-                {searchMode === "time" ? "min" : "km"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Suchmethode:</span>
-              <span className="font-medium text-foreground">
-                {searchMode === "straight"
-                  ? "Luftlinie"
-                  : searchMode === "distance"
-                    ? "Fahrstrecke"
-                    : "Fahrzeit"}
-              </span>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setRadiusDialogOpen(false)}
-              >
-                Abbrechen
-              </Button>
-              <Button onClick={handleRadiusConfirm}>
-                {customRadiusInput}
-                {searchMode === "time" ? "min" : "km"}{" "}
-                {searchMode === "straight"
-                  ? "Luftlinie"
-                  : searchMode === "distance"
-                    ? "Fahrstrecke"
-                    : "Fahrzeit"}{" "}
-                auswählen
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <RadiusSearchDialog
+        open={radiusDialogOpen}
+        onOpenChange={(val) => {
+          if (!val) {
+            dispatch({ type: "CLOSE_RADIUS" });
+          }
+        }}
+        customRadiusInput={customRadiusInput}
+        searchMode={searchMode}
+        dispatch={dispatch}
+        syncInputWithRadius={syncInputWithRadius}
+        handleRadiusInputChange={handleRadiusInputChange}
+        handleConfirm={handleRadiusConfirm}
+      />
     </>
   );
 }

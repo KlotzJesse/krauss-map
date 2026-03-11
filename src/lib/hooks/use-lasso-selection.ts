@@ -1,4 +1,9 @@
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import type {
+  Feature,
+  FeatureCollection,
+  MultiPolygon,
+  Polygon,
+} from "geojson";
 import type { GeoJSONFeature, Map as MapLibre } from "maplibre-gl";
 import { useEffect, useEffectEvent, useRef } from "react";
 
@@ -19,10 +24,10 @@ export function useLassoSelection({
   map,
   isMapLoaded,
   data,
-  granularity,
+  granularity: _granularity,
   enabled,
   onRegionSelect,
-  onRegionDeselect,
+  onRegionDeselect: _onRegionDeselect,
 }: LassoSelectionProps) {
   const isDrawing = useRef(false);
   const lassoPoints = useRef<[number, number][]>([]);
@@ -32,9 +37,9 @@ export function useLassoSelection({
     onRegionSelect?.(featureId);
   });
 
-  const getDataFeatures = useEffectEvent(() => {
-    return (data.features ?? []) as GeoJSONFeature[];
-  });
+  const getDataFeatures = useEffectEvent(
+    () => (data.features ?? []) as GeoJSONFeature[]
+  );
 
   useEffect(() => {
     if (!map || !isMapLoaded) {
@@ -135,7 +140,7 @@ export function useLassoSelection({
       features.forEach((feature: GeoJSONFeature) => {
         // Use cached getLargestPolygonCentroid (WeakMap-backed, supports MultiPolygon)
         const centroid = getLargestPolygonCentroid(
-          feature as unknown as import("geojson").Feature<Polygon | MultiPolygon>
+          feature as unknown as Feature<Polygon | MultiPolygon>
         );
         if (centroid && isPointInLasso(centroid)) {
           const featureId =
@@ -198,7 +203,7 @@ export function useLassoSelection({
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
     };
-  // granularity is not read inside the effect; data/callbacks are accessed
-  // via useEffectEvent so they don't trigger listener re-attachment
+    // granularity is not read inside the effect; data/callbacks are accessed
+    // via useEffectEvent so they don't trigger listener re-attachment
   }, [map, isMapLoaded, enabled]);
 }

@@ -1,5 +1,4 @@
 import type { Content, PageSize } from "pdfmake/interfaces";
-import { toast } from "sonner";
 
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 

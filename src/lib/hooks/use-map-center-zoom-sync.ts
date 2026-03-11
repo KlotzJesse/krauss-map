@@ -77,6 +77,6 @@ export function useMapCenterZoomSync({
         map.off("zoomend", handleMoveOrZoomEnd);
       }
     };
-  // Only isMapLoaded is a real dep; mapRef is a stable ref, handleMoveOrZoomEnd is useEffectEvent
-  }, [isMapLoaded]);
+    // mapRef is stable (React.RefObject), handleMoveOrZoomEnd is useEffectEvent — not real deps
+  }, [isMapLoaded, mapRef]);
 }

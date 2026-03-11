@@ -73,7 +73,7 @@ export function useMapClickInteraction(
 
         // Use Set for O(1) lookup instead of O(n) Array.includes
         const existingCodesSet = new Set(
-          activeLayer.postalCodes?.map((pc) => pc.postalCode) ?? []
+          activeLayer.postalCodes?.map((pc) => pc.postalCode)
         );
         const codeExists = existingCodesSet.has(regionCode);
 
