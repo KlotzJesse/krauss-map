@@ -1,11 +1,8 @@
-import dynamic from "next/dynamic";
-const BaseMap = dynamic(() =>
-  import("@/components/shared/base-map").then((m) => m.BaseMap)
-);
-
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { memo } from "react";
+
+import { BaseMap } from "@/components/shared/base-map";
 
 import type {
   SelectAreaChanges,

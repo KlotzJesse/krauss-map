@@ -1040,7 +1040,7 @@ function DrawingToolsImpl({
     <Card
       role="region"
       aria-label="Kartentools-Panel"
-      className="gap-2 max-w-md"
+      className="gap-2 max-w-md flex flex-col max-h-full min-h-0"
     >
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Kartentools</CardTitle>
@@ -1070,7 +1070,7 @@ function DrawingToolsImpl({
           </button>
         </CardAction>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 overflow-y-auto min-h-0 flex-1">
         {/* Granularity Management Section */}
         {granularity && onGranularityChange && (
           <>

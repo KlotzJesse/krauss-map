@@ -545,7 +545,7 @@ export function PostalCodesViewClientWithLayers({
       </div>
 
       {/* Map with integrated tools */}
-      <div className="h-full">
+      <div className="relative h-full overflow-hidden">
         <MapErrorBoundary>
           <PostalCodesMap
             data={data}

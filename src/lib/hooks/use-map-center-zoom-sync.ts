@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useLayoutEffect } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
 
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { MapLibreMap } from "@/types/map";
@@ -49,12 +49,20 @@ export function useMapCenterZoomSync({
     }
   });
 
+  // Debounce timer to throttle URL state writes on pan/zoom
+  const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // useEffectEvent: reads latest mapRef/setMapCenterZoom without being an effect dep
   const handleMoveOrZoomEnd = useEffectEvent(() => {
-    if (mapRef.current) {
-      const c = mapRef.current.getCenter();
-      setMapCenterZoom([c.lng, c.lat], mapRef.current.getZoom());
+    if (moveDebounceRef.current) {
+      clearTimeout(moveDebounceRef.current);
     }
+    moveDebounceRef.current = setTimeout(() => {
+      if (mapRef.current) {
+        const c = mapRef.current.getCenter();
+        setMapCenterZoom([c.lng, c.lat], mapRef.current.getZoom());
+      }
+    }, 500);
   });
 
   // Use useLayoutEffect for synchronous map view updates to prevent visual flicker

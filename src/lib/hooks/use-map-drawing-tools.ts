@@ -11,11 +11,16 @@ export function useMapDrawingTools() {
   const [currentDrawingMode, setCurrentDrawingMode] =
     useState<TerraDrawMode | null>(null);
   const [isDrawingToolsVisible, setIsDrawingToolsVisible] = useState(true);
+  const [editingFeatureId, setEditingFeatureId] = useState<string | null>(null);
 
   // Memoized handlers to prevent unnecessary re-renders
   const handleDrawingModeChange = useStableCallback(
     (mode: TerraDrawMode | null) => {
       setCurrentDrawingMode(mode);
+      // Clear editing state when entering a drawing mode
+      if (mode !== null && mode !== "cursor") {
+        setEditingFeatureId(null);
+      }
     }
   );
 
@@ -29,6 +34,14 @@ export function useMapDrawingTools() {
 
   const hideTools = useStableCallback(() => {
     setIsDrawingToolsVisible(false);
+  });
+
+  const handleFeatureSelect = useStableCallback((id: string) => {
+    setEditingFeatureId(id);
+  });
+
+  const handleFeatureDeselect = useStableCallback(() => {
+    setEditingFeatureId(null);
   });
 
   // Check if currently in cursor mode (for hover/click interactions)
@@ -45,11 +58,14 @@ export function useMapDrawingTools() {
     isDrawingToolsVisible,
     isCursorMode,
     isDrawingActive,
+    editingFeatureId,
 
     // Actions
     handleDrawingModeChange,
     toggleToolsVisibility,
     showTools,
     hideTools,
+    handleFeatureSelect,
+    handleFeatureDeselect,
   } as const;
 }

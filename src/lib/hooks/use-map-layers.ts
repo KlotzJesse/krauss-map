@@ -26,6 +26,41 @@ const LABEL_MIN_ZOOM: Record<number, number> = {
   5: 9,
 };
 
+// State name → brand color mapping — defined once at module level to avoid
+// recreating the 16-entry object on every render / effect run.
+const STATE_COLORS: Record<string, string> = {
+  "Baden-Württemberg": "#e57373",
+  Bayern: "#64b5f6",
+  Berlin: "#81c784",
+  Brandenburg: "#ffd54f",
+  Bremen: "#ba68c8",
+  Hamburg: "#4dd0e1",
+  Hessen: "#ffb74d",
+  "Mecklenburg-Vorpommern": "#a1887f",
+  Niedersachsen: "#90a4ae",
+  "Nordrhein-Westfalen": "#f06292",
+  "Rheinland-Pfalz": "#9575cd",
+  Saarland: "#4caf50",
+  Sachsen: "#fbc02d",
+  "Sachsen-Anhalt": "#388e3c",
+  "Schleswig-Holstein": "#0288d1",
+  Thüringen: "#d84315",
+};
+
+// Build the MapLibre match expression from the STATE_COLORS map so we define it
+// ONCE at module level (avoids object allocation inside effects / renders).
+function buildStateColorExpression(defaultColor: string): unknown[] {
+  const expr: unknown[] = ["match", ["get", "name"]];
+  for (const [name, color] of Object.entries(STATE_COLORS)) {
+    expr.push(name, color);
+  }
+  expr.push(defaultColor);
+  return expr;
+}
+
+const STATE_FILL_COLOR_EXPR = buildStateColorExpression("#222");
+const STATE_LINE_COLOR_EXPR = buildStateColorExpression("#222");
+
 /**
  * Computes the best label placement for a layer's postal codes.
  *
@@ -148,35 +183,46 @@ export function useMapLayers({
   // Cache the first base-map symbol layer ID — stable after initial map style loads
   const topSymbolLayerIdRef = useRef<string | null>(null);
 
-  // Helper to add a layer with beforeId if it exists
+  // Refs for data values that the layer-creation effect needs to read but should NOT
+  // trigger a re-run when they change (data is stable post-mount; updates go through
+  // the dedicated data-sync effect below).
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const labelPointsRef = useRef(labelPoints);
+  labelPointsRef.current = labelPoints;
+  const statesDataRef = useRef(statesData);
+  statesDataRef.current = statesData;
+  const statesLabelPointsRef = useRef(statesLabelPoints);
+  statesLabelPointsRef.current = statesLabelPoints;
 
-  // Use useLayoutEffect for layer initialization to prevent visual flicker
-  // This ensures all layers are created synchronously before paint
+  // Layer CREATION effect — runs exactly once when the map finishes loading.
+  // It creates all MapLibre sources and layer definitions. It does NOT update
+  // source data on subsequent renders; that is handled by the data-sync effect below.
   useLayoutEffect(() => {
     const map = mapRef.current;
-    if (!map || !isMapLoaded || !data) {
+    if (!map || !isMapLoaded) {
       return;
     }
 
-    // Create stable references for functions to avoid dependency issues
-    const selectedFeatureCollection = (() => getSelectedFeatureCollection())();
+    const d = dataRef.current;
+    const lp = labelPointsRef.current;
+    const sd = statesDataRef.current;
+    const slp = statesLabelPointsRef.current;
 
-    // --- Robust source creation ---
-    // Always create all sources first
+    if (!d) {
+      return;
+    }
+
+    // --- Source creation (first-time only) ---
     // 1. Main data source
     if (!map.getSource(ids.sourceId)) {
-      map.addSource(ids.sourceId, { type: "geojson", data });
-    } else {
-      const src = map.getSource(ids.sourceId) as GeoJSONSource | undefined;
-      if (src && typeof src.setData === "function") {
-        src.setData(data);
-      }
+      map.addSource(ids.sourceId, { type: "geojson", data: d });
     }
-    // 2. Selected source
+    // 2. Selected source (empty; filled by area-layers effect)
     if (!map.getSource(ids.selectedSourceId)) {
       map.addSource(ids.selectedSourceId, {
         type: "geojson",
-        data: selectedFeatureCollection,
+        data: { type: "FeatureCollection", features: [] },
       });
     }
     // 3. Hover source
@@ -188,37 +234,15 @@ export function useMapLayers({
     }
     // 4. Label points source
     if (!map.getSource(ids.labelSourceId)) {
-      map.addSource(ids.labelSourceId, { type: "geojson", data: labelPoints });
-    } else {
-      const src = map.getSource(ids.labelSourceId) as GeoJSONSource | undefined;
-      if (src && typeof src.setData === "function") {
-        src.setData(labelPoints);
-      }
+      map.addSource(ids.labelSourceId, { type: "geojson", data: lp });
     }
     // 5. State boundaries sources
-    if (statesData) {
+    if (sd) {
       if (!map.getSource(ids.stateSourceId)) {
-        map.addSource(ids.stateSourceId, { type: "geojson", data: statesData });
-      } else {
-        const src = map.getSource(ids.stateSourceId) as
-          | GeoJSONSource
-          | undefined;
-        if (src && typeof src.setData === "function") {
-          src.setData(statesData);
-        }
+        map.addSource(ids.stateSourceId, { type: "geojson", data: sd });
       }
-      if (!map.getSource(ids.stateLabelSourceId)) {
-        map.addSource(ids.stateLabelSourceId, {
-          type: "geojson",
-          data: statesLabelPoints!,
-        });
-      } else {
-        const src = map.getSource(ids.stateLabelSourceId) as
-          | GeoJSONSource
-          | undefined;
-        if (src && typeof src.setData === "function") {
-          src.setData(statesLabelPoints!);
-        }
+      if (!map.getSource(ids.stateLabelSourceId) && slp) {
+        map.addSource(ids.stateLabelSourceId, { type: "geojson", data: slp });
       }
     }
 
@@ -302,22 +326,17 @@ export function useMapLayers({
       });
     }
     // 3. Selected postal code fill (above postal code border)
-    // This shows a preview of what will be added to the active layer
+    // Created with a static default color; the active-layer effect updates it afterwards.
     if (!map.getLayer(ids.selectedLayerId)) {
-      // Get active layer color or default to blue
-      const activeLayer = layers?.find((l) => l.id === activeLayerId);
-      const fillColor = activeLayer?.color || "#2563EB";
-      const fillOpacity = 0.3; // Lower opacity to show this is a preview/temporary
-
       safeAddLayer(
         {
           id: ids.selectedLayerId,
           type: "fill",
           source: ids.selectedSourceId,
           paint: {
-            "fill-color": fillColor,
-            "fill-opacity": fillOpacity,
-            "fill-outline-color": fillColor,
+            "fill-color": "#2563EB",
+            "fill-opacity": 0.3,
+            "fill-outline-color": "#2563EB",
           },
         },
         `${layerId}-border`
@@ -341,7 +360,7 @@ export function useMapLayers({
     }
     // 5a. State boundaries fill (subtle background color for each state)
     if (
-      statesData &&
+      sd &&
       map.getSource(ids.stateSourceId) &&
       !map.getLayer("state-boundaries-fill")
     ) {
@@ -351,43 +370,7 @@ export function useMapLayers({
           type: "fill",
           source: ids.stateSourceId,
           paint: {
-            "fill-color": [
-              "match",
-              ["get", "name"],
-              "Baden-Württemberg",
-              "#e57373",
-              "Bayern",
-              "#64b5f6",
-              "Berlin",
-              "#81c784",
-              "Brandenburg",
-              "#ffd54f",
-              "Bremen",
-              "#ba68c8",
-              "Hamburg",
-              "#4dd0e1",
-              "Hessen",
-              "#ffb74d",
-              "Mecklenburg-Vorpommern",
-              "#a1887f",
-              "Niedersachsen",
-              "#90a4ae",
-              "Nordrhein-Westfalen",
-              "#f06292",
-              "Rheinland-Pfalz",
-              "#9575cd",
-              "Saarland",
-              "#4caf50",
-              "Sachsen",
-              "#fbc02d",
-              "Sachsen-Anhalt",
-              "#388e3c",
-              "Schleswig-Holstein",
-              "#0288d1",
-              "Thüringen",
-              "#d84315",
-              "#222", // default
-            ],
+            "fill-color": STATE_FILL_COLOR_EXPR as unknown as string,
             "fill-opacity": 0.1,
           },
         },
@@ -396,7 +379,7 @@ export function useMapLayers({
     }
     // 5b. State boundaries line (above all postal code layers - highest priority)
     if (
-      statesData &&
+      sd &&
       map.getSource(ids.stateSourceId) &&
       !map.getLayer(ids.stateLayerId)
     ) {
@@ -406,43 +389,7 @@ export function useMapLayers({
           type: "line",
           source: ids.stateSourceId,
           paint: {
-            "line-color": [
-              "match",
-              ["get", "name"],
-              "Baden-Württemberg",
-              "#e57373",
-              "Bayern",
-              "#64b5f6",
-              "Berlin",
-              "#81c784",
-              "Brandenburg",
-              "#ffd54f",
-              "Bremen",
-              "#ba68c8",
-              "Hamburg",
-              "#4dd0e1",
-              "Hessen",
-              "#ffb74d",
-              "Mecklenburg-Vorpommern",
-              "#a1887f",
-              "Niedersachsen",
-              "#90a4ae",
-              "Nordrhein-Westfalen",
-              "#f06292",
-              "Rheinland-Pfalz",
-              "#9575cd",
-              "Saarland",
-              "#4caf50",
-              "Sachsen",
-              "#fbc02d",
-              "Sachsen-Anhalt",
-              "#388e3c",
-              "Schleswig-Holstein",
-              "#0288d1",
-              "Thüringen",
-              "#d84315",
-              "#222", // default
-            ],
+            "line-color": STATE_LINE_COLOR_EXPR as unknown as string,
             "line-width": 2,
             "line-opacity": 1,
           },
@@ -455,7 +402,7 @@ export function useMapLayers({
       );
     }
     // 6. State label (above state boundaries)
-    if (statesData && !map.getLayer("state-boundaries-label")) {
+    if (sd && !map.getLayer("state-boundaries-label")) {
       safeAddLayer(
         {
           id: "state-boundaries-label",
@@ -475,11 +422,11 @@ export function useMapLayers({
             "text-halo-width": 3,
           },
         },
-        statesData ? ids.stateLayerId : ids.hoverLayerId
+        sd ? ids.stateLayerId : ids.hoverLayerId
       );
     }
     // 7. Postal code labels — one layer per digit level (1–5), zoom-gated
-    const labelBeforeId = statesData
+    const labelBeforeId = sd
       ? "state-boundaries-label"
       : ids.hoverLayerId;
     for (let level = 1; level <= 5; level++) {
@@ -521,17 +468,33 @@ export function useMapLayers({
   }, [
     mapRef,
     isMapLoaded,
-    data,
-    statesData,
     ids,
-    layerId,
-    getSelectedFeatureCollection,
-    labelPoints,
-    statesLabelPoints,
-    activeLayerId,
-    layers,
-    granularity,
   ]);
+
+  // Data-sync effect — updates source data without blocking paint (useEffect, not useLayoutEffect).
+  // Runs after the layer-creation effect and whenever the underlying data changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded) {
+      return;
+    }
+
+    const srcMain = map.getSource(ids.sourceId) as GeoJSONSource | undefined;
+    srcMain?.setData(data);
+
+    const srcLabel = map.getSource(ids.labelSourceId) as GeoJSONSource | undefined;
+    srcLabel?.setData(labelPoints);
+
+    if (statesData) {
+      const srcState = map.getSource(ids.stateSourceId) as GeoJSONSource | undefined;
+      srcState?.setData(statesData);
+
+      if (statesLabelPoints) {
+        const srcStateLabel = map.getSource(ids.stateLabelSourceId) as GeoJSONSource | undefined;
+        srcStateLabel?.setData(statesLabelPoints);
+      }
+    }
+  }, [mapRef, isMapLoaded, ids, data, labelPoints, statesData, statesLabelPoints]);
 
   // Update selected features source when layers change
   // Note: Selections are now managed per-layer in the database

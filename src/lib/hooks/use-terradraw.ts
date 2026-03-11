@@ -36,6 +36,8 @@ export interface UseTerraDrawProps {
   isEnabled: boolean;
   mode: TerraDrawMode | null;
   onSelectionChange?: (features: (string | number)[]) => void;
+  onFeatureSelect?: (featureId: string) => void;
+  onFeatureDeselect?: () => void;
   onStart?: () => void;
   onStop?: () => void;
 }
@@ -48,6 +50,8 @@ export function useTerraDraw({
   isEnabled,
   mode,
   onSelectionChange,
+  onFeatureSelect,
+  onFeatureDeselect,
   onStart,
   onStop,
 }: UseTerraDrawProps) {
@@ -67,6 +71,14 @@ export function useTerraDraw({
 
   const onStopEvent = useEffectEvent(() => {
     onStop?.();
+  });
+
+  const onFeatureSelectEvent = useEffectEvent((featureId: string) => {
+    onFeatureSelect?.(featureId);
+  });
+
+  const onFeatureDeselectEvent = useEffectEvent(() => {
+    onFeatureDeselect?.();
   });
 
   useEffect(() => {
@@ -101,6 +113,14 @@ export function useTerraDraw({
           new TerraDrawAngledRectangleMode(),
           new TerraDrawSectorMode(),
         ],
+      });
+
+      draw.on("select", (id: string | number) => {
+        onFeatureSelectEvent(String(id));
+      });
+
+      draw.on("deselect", () => {
+        onFeatureDeselectEvent();
       });
 
       draw.on(

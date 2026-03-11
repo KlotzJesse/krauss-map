@@ -3,8 +3,17 @@
 import { IconPalette } from "@tabler/icons-react";
 import { Copy, X } from "lucide-react";
 import type { RefObject } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
+import {
+  ColorPicker,
+  ColorPickerEyeDropper,
+  ColorPickerFormat,
+  ColorPickerHue,
+  ColorPickerOutput,
+  ColorPickerSelection,
+} from "@/components/kibo-ui/color-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +62,82 @@ interface LayerListItemProps {
   onDelete: (layerId: number) => void;
 }
 
+function LayerColorPickerContent({
+  currentColor,
+  onConfirm,
+}: {
+  currentColor: string;
+  onConfirm: (hex: string) => void;
+}) {
+  const [pending, setPending] = useState(currentColor);
+  const [pickerKey, setPickerKey] = useState(0);
+
+  return (
+    <div className="w-60 space-y-3">
+      {/* Live preview */}
+      <div className="flex items-center gap-2">
+        <div
+          className="h-7 w-7 rounded border border-border shadow-sm shrink-0"
+          style={{ backgroundColor: pending }}
+        />
+        <span className="font-mono text-xs text-muted-foreground">
+          {pending.toUpperCase()}
+        </span>
+      </div>
+
+      {/* Preset swatches */}
+      <div className="grid grid-cols-8 gap-1">
+        {DEFAULT_LAYER_COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            className="h-6 w-6 rounded border-2 transition-transform hover:scale-110"
+            style={{
+              backgroundColor: c,
+              borderColor: pending === c ? "currentColor" : "transparent",
+            }}
+            onClick={() => {
+              setPending(c);
+              setPickerKey((k) => k + 1);
+              onConfirm(c);
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Full color picker */}
+      <ColorPicker
+        key={pickerKey}
+        defaultValue={pending}
+        onChange={(value) => {
+          const [r, g, b] = value as number[];
+          const hex = `#${[r, g, b]
+            .map((v) => Math.round(v).toString(16).padStart(2, "0"))
+            .join("")}`;
+
+          setPending(hex);
+        }}
+      >
+        <ColorPickerSelection className="h-36 w-full" />
+        <ColorPickerHue />
+        <div className="flex items-center gap-2">
+          <ColorPickerEyeDropper />
+          <ColorPickerOutput />
+          <ColorPickerFormat className="flex-1" />
+        </div>
+      </ColorPicker>
+
+      <Button
+        size="sm"
+        className="w-full"
+        onClick={() => onConfirm(pending)}
+      >
+        Farbe übernehmen
+      </Button>
+    </div>
+  );
+}
+
 export function LayerListItem({
   layer,
   activeLayerId,
@@ -68,6 +153,7 @@ export function LayerListItem({
   onDelete,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   return (
     <div
@@ -142,11 +228,14 @@ export function LayerListItem({
           </div>
 
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Tooltip>
-                    <TooltipTrigger
+            <Popover
+              open={colorPickerOpen}
+              onOpenChange={setColorPickerOpen}
+            >
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <PopoverTrigger
                       render={
                         <Button
                           variant="outline"
@@ -155,36 +244,26 @@ export function LayerListItem({
                           onClick={(e) => e.stopPropagation()}
                         />
                       }
-                    >
-                      <IconPalette className="h-3.5 w-3.5" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Gebiet-Farbe ändern</p>
-                    </TooltipContent>
-                  </Tooltip>
-                }
-              />
+                    />
+                  }
+                >
+                  <IconPalette className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Gebiet-Farbe ändern</p>
+                </TooltipContent>
+              </Tooltip>
               <PopoverContent
                 className="w-auto p-3"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="grid grid-cols-4 gap-2">
-                  {DEFAULT_LAYER_COLORS.map((color) => (
-                    <button
-                      type="button"
-                      key={color}
-                      className="w-8 h-8 rounded-md border-2 hover:scale-110 transition-transform"
-                      style={{
-                        backgroundColor: color,
-                        borderColor:
-                          layer.color === color
-                            ? "currentColor"
-                            : "transparent",
-                      }}
-                      onClick={() => onColorChange(layer.id, color)}
-                    />
-                  ))}
-                </div>
+                <LayerColorPickerContent
+                  currentColor={layer.color}
+                  onConfirm={(hex) => {
+                    onColorChange(layer.id, hex);
+                    setColorPickerOpen(false);
+                  }}
+                />
               </PopoverContent>
             </Popover>
 

@@ -42,6 +42,17 @@ const FloatingDrawingToolbar = dynamic(
   }
 );
 
+// Floating edit bar shown when a drawn shape is selected
+const FloatingDrawingEditBar = dynamic(
+  () =>
+    import("./floating-drawing-edit-bar").then(
+      (m) => m.FloatingDrawingEditBar
+    ),
+  {
+    ssr: false,
+  }
+);
+
 // Memoized error message component to prevent re-renders
 const MapErrorMessage = memo(({ message }: MapErrorMessageProps) => (
   <div className="flex items-center justify-center w-full h-full min-h-[400px] text-destructive">
@@ -169,8 +180,21 @@ const BaseMapComponent = ({
     });
   });
 
+  const handleDeleteEditingFeature = useStableCallback(() => {
+    startTransition(() => {
+      interactions.deleteEditingFeature();
+    });
+  });
+
+  const handleDeselectEditingFeature = useStableCallback(() => {
+    startTransition(() => {
+      interactions.deselectEditingFeature();
+    });
+  });
+
   return (
     <MapErrorBoundary>
+      <div className="relative w-full h-full">
       <div
         ref={mapContainer}
         className="w-full h-full min-h-[400px]"
@@ -185,12 +209,19 @@ const BaseMapComponent = ({
         areaId={areaId}
         initialUndoRedoStatus={initialUndoRedoStatus}
       />
+      {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
+      {interactions.editingFeatureId && (
+        <FloatingDrawingEditBar
+          onDelete={handleDeleteEditingFeature}
+          onDismiss={handleDeselectEditingFeature}
+        />
+      )}
 
       <Activity
         mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
       >
         <div
-          className="absolute top-4 left-4 z-10"
+          className="absolute top-4 left-4 bottom-4 z-10 flex flex-col"
           role="region"
           aria-label="Kartentools-Panel"
         >
@@ -210,10 +241,7 @@ const BaseMapComponent = ({
                 areaId={areaId ?? undefined}
                 areaName={areaName}
                 activeLayerId={activeLayerId}
-                onLayerSelect={(layerId: number) => {
-                  console.log("Test");
-                  mapState.setActiveLayer(layerId);
-                }}
+                onLayerSelect={mapState.setActiveLayer}
                 addPostalCodesToLayer={addPostalCodesToLayer}
                 removePostalCodesFromLayer={removePostalCodesFromLayer}
                 layers={layers}
@@ -244,6 +272,7 @@ const BaseMapComponent = ({
           </ToggleButton>
         </div>
       </Activity>
+      </div>
     </MapErrorBoundary>
   );
 };

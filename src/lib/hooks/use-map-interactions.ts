@@ -7,6 +7,7 @@ import { useMapDrawingTools } from "@/lib/hooks/use-map-drawing-tools";
 import { useMapEventListeners } from "@/lib/hooks/use-map-event-listeners";
 import { useMapHoverInteraction } from "@/lib/hooks/use-map-hover-interaction";
 import { useMapTerraDrawSelection } from "@/lib/hooks/use-map-terradraw-selection";
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useTerraDraw } from "@/lib/hooks/use-terradraw";
 import type { SelectAreaLayers } from "@/lib/schema/schema";
 
@@ -85,6 +86,12 @@ export function useMapInteractions({
     showTools,
 
     hideTools,
+
+    editingFeatureId,
+
+    handleFeatureSelect,
+
+    handleFeatureDeselect,
   } = useMapDrawingTools();
 
   // TerraDraw selection logic - now managed per layer
@@ -94,7 +101,7 @@ export function useMapInteractions({
 
     handleTerraDrawSelection,
 
-    clearAll,
+    clearAll: clearAllDrawings,
 
     pendingPostalCodes,
 
@@ -121,11 +128,36 @@ export function useMapInteractions({
     mode: isDrawingActive ? currentDrawingMode : null,
 
     onSelectionChange: handleTerraDrawSelection,
+
+    onFeatureSelect: handleFeatureSelect,
+
+    onFeatureDeselect: handleFeatureDeselect,
   });
 
   // Always assign terraDrawRef for stability
 
   terraDrawRef.current = terraDrawApi;
+
+  // Clear all drawings + pending postal codes + editing state
+  const clearAll = useStableCallback(() => {
+    clearAllDrawings();
+    handleFeatureDeselect();
+  });
+
+  // Delete only the currently-selected drawing
+  const deleteEditingFeature = useStableCallback(() => {
+    if (!editingFeatureId) return;
+    terraDrawApi.removeFeatures([editingFeatureId]);
+    handleFeatureDeselect();
+  });
+
+  // Deselect the current drawing without deleting it (Escape / X button)
+  const deselectEditingFeature = useStableCallback(() => {
+    if (editingFeatureId) {
+      terraDrawApi.deselectFeature(editingFeatureId);
+    }
+    handleFeatureDeselect();
+  });
 
   // Hover interaction management
 
@@ -209,6 +241,14 @@ export function useMapInteractions({
     hideTools,
 
     clearAll,
+
+    // Editing state
+
+    editingFeatureId,
+
+    deleteEditingFeature,
+
+    deselectEditingFeature,
 
     // Hover state
 
