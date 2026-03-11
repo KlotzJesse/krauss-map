@@ -173,7 +173,7 @@ const BaseMapComponent = ({
     <MapErrorBoundary>
       <div
         ref={mapContainer}
-        className="w-full h-full min-h-[400px] rounded-lg"
+        className="w-full h-full min-h-[400px]"
         style={{ minHeight: mapConfig.minHeight }}
         role="region"
         aria-label="Interaktive Karte"

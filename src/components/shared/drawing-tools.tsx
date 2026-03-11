@@ -81,6 +81,75 @@ import { exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
 
 const EMPTY_ARRAY: never[] = [];
 
+interface StatsSectionProps {
+  layers: Layer[];
+  postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
+}
+
+function StatsSection({ layers, postalCodesData }: StatsSectionProps) {
+  const totalFeatures = postalCodesData?.features.length ?? 0;
+  const assignedSet = new Set(
+    layers.flatMap((l) => l.postalCodes?.map((pc) => pc.postalCode) ?? [])
+  );
+  const assignedCount = assignedSet.size;
+  const unassignedCount = Math.max(0, totalFeatures - assignedCount);
+  const coverage =
+    totalFeatures > 0 ? (assignedCount / totalFeatures) * 100 : 0;
+
+  return (
+    <>
+      <Separator />
+      <div className="space-y-2 pb-1">
+        <div className="text-xs font-semibold">Statistik</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="rounded-md bg-muted/60 px-2 py-1.5 text-center">
+            <div className="text-sm font-bold tabular-nums">
+              {assignedCount.toLocaleString("de-DE")}
+            </div>
+            <div className="text-[10px] text-muted-foreground leading-tight">
+              Zugewiesen
+            </div>
+          </div>
+          <div className="rounded-md bg-muted/60 px-2 py-1.5 text-center">
+            <div className="text-sm font-bold tabular-nums">
+              {unassignedCount.toLocaleString("de-DE")}
+            </div>
+            <div className="text-[10px] text-muted-foreground leading-tight">
+              Ohne Gebiet
+            </div>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Abdeckung</span>
+            <span className="font-semibold tabular-nums">
+              {coverage.toFixed(1)}&thinsp;%
+            </span>
+          </div>
+          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-primary transition-[width] duration-300"
+              style={{ width: `${Math.min(coverage, 100)}%` }}
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Gesamt PLZ</span>
+          <span className="tabular-nums">
+            {totalFeatures.toLocaleString("de-DE")}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Gebiete</span>
+          <span className="tabular-nums">{layers.length}</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+
+
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
@@ -1074,6 +1143,14 @@ function DrawingToolsImpl({
           onExportExcel={handleExportExcel}
           onExportPDF={handleExportPDF}
         />
+
+        {/* Stats Section */}
+        {postalCodesData && (
+          <StatsSection
+            layers={optimisticLayers}
+            postalCodesData={postalCodesData}
+          />
+        )}
 
         {/* Layer Dialogs */}
         {areaId && (

@@ -1,5 +1,8 @@
+import centerOfMass from "@turf/center-of-mass";
+import turfArea from "@turf/area";
+import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import type { InferSelectModel } from "drizzle-orm";
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import type { Feature, FeatureCollection, MultiPolygon, Point, Polygon } from "geojson";
 import type {
   FilterSpecification,
   GeoJSONSource,
@@ -22,6 +25,63 @@ const LABEL_MIN_ZOOM: Record<number, number> = {
   4: 8,
   5: 9,
 };
+
+/**
+ * Computes the best label placement for a layer's postal codes.
+ *
+ * Strategy:
+ *  1. Take the area-weighted centerOfMass of the whole collection.
+ *     For connected/compact areas this is always inside the polygons → perfect.
+ *  2. If the center lands in empty space (disconnected clusters), fall back to
+ *     the centroid of the single largest polygon in the set.
+ */
+function getLayerLabelCenter(
+  data: FeatureCollection<Polygon | MultiPolygon>,
+  postalCodes: string[]
+): [number, number] | null {
+  if (!postalCodes.length) { return null; }
+  const codeSet = new Set(postalCodes);
+
+  const matched: Feature<Polygon | MultiPolygon>[] = [];
+  let largestFeature: Feature<Polygon | MultiPolygon> | null = null;
+  let largestArea = -1;
+
+  for (const feature of data.features) {
+    if (!feature.geometry) { continue; }
+    const props = feature.properties ?? {};
+    const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
+    if (!code || !codeSet.has(String(code))) { continue; }
+    const f = feature as Feature<Polygon | MultiPolygon>;
+    matched.push(f);
+    const a = turfArea(f);
+    if (a > largestArea) {
+      largestArea = a;
+      largestFeature = f;
+    }
+  }
+
+  if (!matched.length || !largestFeature) { return null; }
+
+  // Area-weighted center of the entire collection.
+  const collection: FeatureCollection<Polygon | MultiPolygon> = {
+    type: "FeatureCollection",
+    features: matched,
+  };
+  const collectionCenter = centerOfMass(collection);
+  const centerPoint = collectionCenter.geometry;
+
+  // Check if it actually falls inside any polygon.
+  const isOnLand = matched.some((f) => booleanPointInPolygon(centerPoint, f));
+
+  if (isOnLand) {
+    return collectionCenter.geometry.coordinates as [number, number];
+  }
+
+  // Fallback: centroid of the largest polygon (always on solid ground).
+  const fallback = centerOfMass(largestFeature);
+  return fallback.geometry.coordinates as [number, number];
+}
+
 
 interface UseMapLayersProps {
   mapRef: React.RefObject<MapLibreMap | null>;
@@ -79,6 +139,8 @@ export function useMapLayers({
       stateLayerId: "state-boundaries-layer",
       stateLabelSourceId: "state-boundaries-label-points",
       stateLabelLayerId: "state-boundaries-label",
+      areaLabelSourceId: "map-area-name-labels-source",
+      areaLabelLayerId: "map-area-name-labels-layer",
     }),
     [layerId]
   );
@@ -455,6 +517,7 @@ export function useMapLayers({
         );
       }
     }
+
   }, [
     mapRef,
     isMapLoaded,
@@ -501,6 +564,7 @@ export function useMapLayers({
       // First, remove all layers (order matters: remove layers before sources)
       // Order: top to bottom (reverse of creation order)
       const layerIds = [
+        ids.areaLabelLayerId,
         `${ids.labelLayerId}-5`,
         `${ids.labelLayerId}-4`,
         `${ids.labelLayerId}-3`,
@@ -536,6 +600,7 @@ export function useMapLayers({
         ids.labelSourceId,
         ids.stateSourceId,
         ids.stateLabelSourceId,
+        ids.areaLabelSourceId,
       ];
 
       sourceIds.forEach((id) => {
@@ -706,6 +771,78 @@ export function useMapLayers({
     activeLayerId,
     ids.sourceId,
   ]);
+
+  // Dedicated effect: create the area-label source+layer and keep its data in sync
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded || !layers) {
+      return;
+    }
+
+    // Ensure the GeoJSON source exists before touching any layer
+    if (!map.getSource(ids.areaLabelSourceId)) {
+      map.addSource(ids.areaLabelSourceId, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }
+
+    // Ensure the symbol layer exists (added at the very top of the stack)
+    if (!map.getLayer(ids.areaLabelLayerId)) {
+      try {
+        map.addLayer({
+          id: ids.areaLabelLayerId,
+          type: "symbol",
+          source: ids.areaLabelSourceId,
+          layout: {
+            "text-field": ["get", "name"],
+            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            "text-size": 14,
+            "text-anchor": "center",
+            "text-allow-overlap": true,
+            "text-ignore-placement": true,
+            "text-max-width": 14,
+          },
+          paint: {
+            "text-color": ["coalesce", ["get", "color"], "#1a1a1a"],
+            "text-halo-color": "rgba(255,255,255,0.9)",
+            "text-halo-width": 2,
+          },
+        } as LayerSpecification);
+      } catch {
+        // Layer may already exist from a concurrent render
+      }
+    }
+
+    // Compute one label point per visible layer
+    const labelFeatures: Feature<Point>[] = [];
+    for (const layer of layers) {
+      const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
+      if (postalCodes.length === 0 || layer.isVisible !== "true") {
+        continue;
+      }
+      const center = getLayerLabelCenter(data, postalCodes);
+      if (!center) {
+        continue;
+      }
+      labelFeatures.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: center },
+        properties: {
+          name: layer.name,
+          color: layer.color,
+          layerId: layer.id,
+        },
+      });
+    }
+
+    const src = map.getSource(ids.areaLabelSourceId) as
+      | GeoJSONSource
+      | undefined;
+    if (src && typeof src.setData === "function") {
+      src.setData({ type: "FeatureCollection", features: labelFeatures });
+    }
+  }, [mapRef, isMapLoaded, layers, data, ids.areaLabelSourceId, ids.areaLabelLayerId]);
 
   // Update selected regions color when active layer changes
   useEffect(() => {
