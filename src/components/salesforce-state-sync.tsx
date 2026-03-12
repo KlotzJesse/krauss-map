@@ -3,8 +3,6 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useEffectEvent, useRef } from "react";
 
-const SF_ORIGIN = "https://krauss.my.salesforce.com";
-
 function detectIframed(): boolean {
   try {
     return window.self !== window.top;
@@ -23,7 +21,7 @@ export function SalesforceStateSync() {
     if (!iframed.current) return;
     window.parent.postMessage(
       { type: "area-path-change", search: `?${searchParams.toString()}` },
-      SF_ORIGIN
+      "*"
     );
   });
 
