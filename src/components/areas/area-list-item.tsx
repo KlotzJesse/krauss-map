@@ -12,6 +12,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { RefObject } from "react";
 
+import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -136,9 +138,10 @@ export function AreaListItem({
               e.stopPropagation();
               onAreaClick(area);
             }}
-            className="flex-1 text-sm font-medium truncate min-w-0"
+            className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
           >
-            {area.name}
+            <span className="truncate">{area.name}</span>
+            <LinkPendingIndicator />
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger

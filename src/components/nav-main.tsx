@@ -6,6 +6,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import { memo } from "react";
 
+import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
+
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -53,6 +55,7 @@ export function NavMain({
               >
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
+                <LinkPendingIndicator />
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}

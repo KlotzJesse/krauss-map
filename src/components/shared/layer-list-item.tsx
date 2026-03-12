@@ -1,7 +1,7 @@
 "use client";
 
 import { IconPalette } from "@tabler/icons-react";
-import { Copy, X } from "lucide-react";
+import { Copy, Loader2, X } from "lucide-react";
 import type { RefObject } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -50,6 +50,7 @@ interface LayerListItemLayer {
 interface LayerListItemProps {
   layer: LayerListItemLayer;
   activeLayerId?: number | null;
+  isLayerSwitchPending?: boolean;
   editingLayerId: number | null;
   editingLayerName: string;
   editLayerInputRef: RefObject<HTMLInputElement | null>;
@@ -141,6 +142,7 @@ function LayerColorPickerContent({
 export function LayerListItem({
   layer,
   activeLayerId,
+  isLayerSwitchPending = false,
   editingLayerId,
   editingLayerName,
   editLayerInputRef,
@@ -225,6 +227,9 @@ export function LayerListItem({
             <Badge variant="secondary" className="text-xs">
               {layer.postalCodes?.length ?? 0}
             </Badge>
+            {isLayerSwitchPending && activeLayerId === layer.id && (
+              <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
+            )}
           </div>
 
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

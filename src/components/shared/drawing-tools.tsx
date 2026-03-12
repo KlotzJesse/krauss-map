@@ -205,6 +205,8 @@ export interface DrawingToolsProps {
 
   versionId?: number | null;
 
+  isLayerSwitchPending?: boolean;
+
   // Version and change data for dialogs
 
   versions: SelectAreaVersions[];
@@ -705,6 +707,7 @@ interface LayerManagementSectionProps {
   editLayerInputRef: RefObject<HTMLInputElement | null>;
   activeLayerId: number | null | undefined;
   isViewingVersion: boolean;
+  isLayerSwitchPending?: boolean;
   onLayerSelect: DrawingToolsProps["onLayerSelect"];
   handleCreateLayer: () => void;
   handleRenameLayer: (layerId: number, newName: string) => void;
@@ -721,6 +724,7 @@ function LayerManagementSection({
   editLayerInputRef,
   activeLayerId,
   isViewingVersion,
+  isLayerSwitchPending = false,
   onLayerSelect,
   handleCreateLayer,
   handleRenameLayer,
@@ -868,6 +872,7 @@ function LayerManagementSection({
                 key={layer.id}
                 layer={layer}
                 activeLayerId={activeLayerId}
+                isLayerSwitchPending={isLayerSwitchPending}
                 editingLayerId={form.editingLayerId}
                 editingLayerName={form.editingLayerName}
                 editLayerInputRef={editLayerInputRef}
@@ -1000,6 +1005,7 @@ function DrawingToolsImpl({
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
   isViewingVersion = false,
+  isLayerSwitchPending = false,
   versions = EMPTY_ARRAY,
   changes = EMPTY_ARRAY,
 }: DrawingToolsProps) {
@@ -1107,6 +1113,7 @@ function DrawingToolsImpl({
             editLayerInputRef={editLayerInputRef}
             activeLayerId={activeLayerId}
             isViewingVersion={isViewingVersion}
+            isLayerSwitchPending={isLayerSwitchPending}
             onLayerSelect={onLayerSelect}
             handleCreateLayer={handleCreateLayer}
             handleRenameLayer={handleRenameLayer}

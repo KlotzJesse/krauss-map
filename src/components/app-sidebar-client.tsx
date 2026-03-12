@@ -2,11 +2,11 @@
 
 import { IconDashboard, IconMapPin2 } from "@tabler/icons-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Suspense } from "react";
 
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
+import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
 import { NavAreas } from "@/components/areas/nav-areas";
 import { NavMain } from "@/components/nav-main";
 import {
@@ -72,7 +72,6 @@ export function AppSidebarClient({
   onAreaSelect,
   ...props
 }: AppSidebarClientProps) {
-  const _router = useRouter();
   const [createAreaDialogOpen, setCreateAreaDialogOpen] = React.useState(false);
 
   const handleCreateArea = () => {
@@ -93,6 +92,7 @@ export function AppSidebarClient({
                 <span className="text-base font-semibold">
                   KRAUSS Gebietsmanagement
                 </span>
+                <LinkPendingIndicator />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

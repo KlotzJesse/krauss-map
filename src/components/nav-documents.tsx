@@ -10,6 +10,8 @@ import type { Icon } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "next/link";
 
+import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +49,7 @@ export function NavDocuments({
             <SidebarMenuButton render={<Link href={item.url as Route} />}>
               <item.icon />
               <span>{item.name}</span>
+              <LinkPendingIndicator />
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger

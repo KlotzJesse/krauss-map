@@ -1,5 +1,5 @@
 import { useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { useMemo, useTransition } from "react";
 
 import { useStableCallback } from "../hooks/use-stable-callback";
 
@@ -25,9 +25,13 @@ export function useMapState() {
   const [granularity, setGranularity] = useQueryState("granularity");
   const [radius, setRadius] = useQueryState("radius");
 
+  // Track server re-render while switching active layer (shallow: false triggers full RSC reload)
+  const [isLayerPending, startLayerTransition] = useTransition();
+
   // Layer management (activeLayerId and versionId remain as search params)
   const [activeLayerId, setActiveLayerId] = useQueryState("activeLayerId", {
     shallow: false,
+    startTransition: startLayerTransition,
   });
   const [versionId, setVersionId] = useQueryState("versionId");
 
@@ -65,6 +69,7 @@ export function useMapState() {
     radius: radius ? parseInt(radius, 10) : 10,
     activeLayerId: parsedActiveLayerId,
     versionId: parsedVersionId,
+    isLayerPending,
     setGranularity,
     setMapCenterZoom, // atomic
     setRadius: useStableCallback((radiusValue: number) =>
