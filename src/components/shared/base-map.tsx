@@ -242,6 +242,7 @@ const BaseMapComponent = ({
                 areaName={areaName}
                 activeLayerId={activeLayerId}
                 onLayerSelect={mapState.setActiveLayer}
+                isLayerSwitchPending={mapState.isLayerPending}
                 addPostalCodesToLayer={addPostalCodesToLayer}
                 removePostalCodesFromLayer={removePostalCodesFromLayer}
                 layers={layers}
