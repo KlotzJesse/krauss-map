@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { SalesforceStateSync } from "@/components/salesforce-state-sync";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -44,6 +45,9 @@ export default function RootLayout({
       className={cn("font-sans", geist.variable)}
     >
       <body className={inter.className}>
+        <Suspense>
+          <SalesforceStateSync />
+        </Suspense>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
