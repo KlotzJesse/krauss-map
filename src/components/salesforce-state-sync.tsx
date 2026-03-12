@@ -1,7 +1,8 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useEffectEvent, useRef } from "react";
+
 
 function detectIframed(): boolean {
   try {
@@ -12,6 +13,7 @@ function detectIframed(): boolean {
 }
 
 export function SalesforceStateSync() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const iframed = useRef<boolean>(detectIframed());
 
@@ -19,15 +21,20 @@ export function SalesforceStateSync() {
   // a reactive dependency — exactly the useEffectEvent use case.
   const sendStateChange = useEffectEvent(() => {
     if (!iframed.current) return;
+    const search = searchParams.toString();
     window.parent.postMessage(
-      { type: "area-path-change", search: `?${searchParams.toString()}` },
+      {
+        type: "area-path-change",
+        pathname,
+        search: search ? `?${search}` : "",
+      },
       "*"
     );
   });
 
   useEffect(() => {
     sendStateChange();
-  }, [searchParams]);
+  }, [pathname, searchParams]);
 
   return null;
 }
