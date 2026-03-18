@@ -374,9 +374,9 @@ function useAddressAutocomplete({
     if (state.selectedCoords) {
       const finalRadius = parseFloat(state.customRadiusInput);
 
-      if (isNaN(finalRadius) || finalRadius < 0.1 || finalRadius > 200) {
+      if (isNaN(finalRadius) || finalRadius < 0.1 || finalRadius > 1000) {
         toast.error(
-          "Bitte geben Sie einen gültigen Radius zwischen 0.1 und 200 ein"
+          "Bitte geben Sie einen gültigen Radius zwischen 0.1 und 1000 ein"
         );
         return;
       }
