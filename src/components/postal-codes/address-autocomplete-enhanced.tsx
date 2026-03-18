@@ -658,13 +658,13 @@ function RadiusSearchDialog({
           {/* Direct input for any value */}
           <div className="space-y-2">
             <Label htmlFor="radius-input">
-              Exakte Eingabe (0.1-200{searchMode === "time" ? "min" : "km"})
+              Exakte Eingabe (0.1-1000{searchMode === "time" ? "min" : "km"})
             </Label>
             <Input
               id="radius-input"
               type="number"
               min="0.1"
-              max="200"
+              max="1000"
               step="0.1"
               value={customRadiusInput}
               onChange={(e) => handleRadiusInputChange(e.target.value)}
@@ -672,7 +672,7 @@ function RadiusSearchDialog({
               className="w-full"
             />
             <div className="text-xs text-muted-foreground">
-              Werte zwischen 0.1{searchMode === "time" ? "min" : "km"} und 200
+              Werte zwischen 0.1{searchMode === "time" ? "min" : "km"} und 1000
               {searchMode === "time" ? "min" : "km"} sind möglich
             </div>
           </div>
