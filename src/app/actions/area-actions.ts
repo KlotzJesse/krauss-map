@@ -3,7 +3,7 @@
 import { eq, and, inArray, sql } from "drizzle-orm";
 import type { FeatureCollection, Geometry } from "geojson";
 import type { Route } from "next";
-import { updateTag } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "../../lib/db";
@@ -13,7 +13,10 @@ import {
   areaLayerPostalCodes,
   postalCodes,
 } from "../../lib/schema/schema";
-import { recordChangeAction } from "./change-tracking-actions";
+import {
+  recordChangeAction,
+  recordChangeWithTx,
+} from "./change-tracking-actions";
 import { createVersionAction } from "./version-actions";
 
 type ServerActionResponse<T = void> = Promise<{
@@ -600,79 +603,64 @@ export async function addPostalCodesToLayerAction(
   createdBy?: string
 ): ServerActionResponse {
   try {
-    // Validate inputs
-
     if (!areaId || !layerId || !postalCodes || postalCodes.length === 0) {
       return { success: false, error: "Invalid parameters" };
     }
 
-    // Verify layer belongs to area
+    // One atomic transaction: verify layer, insert codes, record change
+    const newCodes = await db.transaction(async (tx) => {
+      const layer = await tx.query.areaLayers.findFirst({
+        where: and(eq(areaLayers.id, layerId), eq(areaLayers.areaId, areaId)),
+      });
 
-    const layer = await db.query.areaLayers.findFirst({
-      where: and(eq(areaLayers.id, layerId), eq(areaLayers.areaId, areaId)),
+      if (!layer) {
+        return null;
+      }
 
-      with: { postalCodes: true },
+      // Unique constraint handles dedup; RETURNING gives only what was inserted
+      const insertedRows = await tx
+        .insert(areaLayerPostalCodes)
+        .values(postalCodes.map((code) => ({ layerId, postalCode: code })))
+        .onConflictDoNothing()
+        .returning({ postalCode: areaLayerPostalCodes.postalCode });
+
+      const inserted = insertedRows.map((r) => r.postalCode);
+      if (inserted.length === 0) {
+        return inserted;
+      }
+
+      const changeKey = await recordChangeWithTx(tx, areaId, {
+        changeType: "add_postal_codes",
+        entityType: "postal_code",
+        entityId: layerId,
+        changeData: { postalCodes: inserted, layerId },
+        previousData: {},
+        createdBy,
+      });
+
+      if (!changeKey) {
+        throw new Error("Area not found or no active version");
+      }
+
+      return inserted;
     });
 
-    if (!layer) {
+    if (newCodes === null) {
       return {
         success: false,
-
         error: "Layer not found or does not belong to area",
       };
     }
 
-    // Get existing postal codes
-
-    const existingCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];
-
-    const newCodes = postalCodes.filter(
-      (code) => !existingCodes.includes(code)
-    );
-
     if (newCodes.length === 0) {
-      return { success: true }; // No new codes to add
+      return { success: true };
     }
 
-    await db.insert(areaLayerPostalCodes).values(
-      newCodes.map((code) => ({
-        layerId,
-
-        postalCode: code,
-      }))
-    );
-
-    // Record change
-
-    await recordChangeAction(areaId, {
-      changeType: "add_postal_codes",
-
-      entityType: "postal_code",
-
-      entityId: layerId,
-
-      changeData: {
-        postalCodes: newCodes,
-
-        layerId,
-      },
-
-      previousData: {
-        postalCodes: existingCodes,
-      },
-
-      createdBy,
-    });
-
     updateTag("layers");
-
     updateTag(`area-${areaId}-layers`);
-
-    updateTag(`area-${areaId}`);
-
     updateTag("undo-redo");
-
     updateTag(`area-${areaId}-undo-redo`);
+    refresh();
 
     return { success: true };
   } catch (error) {
@@ -692,81 +680,68 @@ export async function removePostalCodesFromLayerAction(
   createdBy?: string
 ): ServerActionResponse {
   try {
-    // Validate inputs
-
     if (!areaId || !layerId || !postalCodes || postalCodes.length === 0) {
       return { success: false, error: "Invalid parameters" };
     }
 
-    // Verify layer belongs to area
+    // One atomic transaction: verify layer, delete codes, record change
+    const removedCodes = await db.transaction(async (tx) => {
+      const layer = await tx.query.areaLayers.findFirst({
+        where: and(eq(areaLayers.id, layerId), eq(areaLayers.areaId, areaId)),
+      });
 
-    const layer = await db.query.areaLayers.findFirst({
-      where: and(eq(areaLayers.id, layerId), eq(areaLayers.areaId, areaId)),
+      if (!layer) {
+        return null;
+      }
 
-      with: { postalCodes: true },
+      // RETURNING gives only what was actually deleted
+      const deletedRows = await tx
+        .delete(areaLayerPostalCodes)
+        .where(
+          and(
+            eq(areaLayerPostalCodes.layerId, layerId),
+            inArray(areaLayerPostalCodes.postalCode, postalCodes)
+          )
+        )
+        .returning({ postalCode: areaLayerPostalCodes.postalCode });
+
+      const deleted = deletedRows.map((r) => r.postalCode);
+      if (deleted.length === 0) {
+        return deleted;
+      }
+
+      const changeKey = await recordChangeWithTx(tx, areaId, {
+        changeType: "remove_postal_codes",
+        entityType: "postal_code",
+        entityId: layerId,
+        changeData: { postalCodes: deleted, layerId },
+        previousData: { postalCodes: deleted },
+        createdBy,
+      });
+
+      if (!changeKey) {
+        throw new Error("Area not found or no active version");
+      }
+
+      return deleted;
     });
 
-    if (!layer) {
+    if (removedCodes === null) {
       return {
         success: false,
-
         error: "Layer not found or does not belong to area",
       };
     }
 
-    const existingCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];
-
-    const codesToRemove = postalCodes.filter((code) =>
-      existingCodes.includes(code)
-    );
-
-    if (codesToRemove.length === 0) {
-      return { success: true }; // No codes to remove
+    if (removedCodes.length === 0) {
+      return { success: true };
     }
 
-    await db
-
-      .delete(areaLayerPostalCodes)
-
-      .where(
-        and(
-          eq(areaLayerPostalCodes.layerId, layerId),
-
-          inArray(areaLayerPostalCodes.postalCode, postalCodes)
-        )
-      );
-
-    // Record change
-
-    await recordChangeAction(areaId, {
-      changeType: "remove_postal_codes",
-
-      entityType: "postal_code",
-
-      entityId: layerId,
-
-      changeData: {
-        postalCodes: codesToRemove,
-
-        layerId,
-      },
-
-      previousData: {
-        postalCodes: codesToRemove, // Store removed codes for undo
-      },
-
-      createdBy,
-    });
-
     updateTag("layers");
-
     updateTag(`area-${areaId}-layers`);
-
-    updateTag(`area-${areaId}`);
-
     updateTag("undo-redo");
-
     updateTag(`area-${areaId}-undo-redo`);
+    refresh();
 
     return { success: true };
   } catch (error) {
@@ -774,7 +749,6 @@ export async function removePostalCodesFromLayerAction(
 
     return {
       success: false,
-
       error: "Failed to remove postal codes from layer",
     };
   }
