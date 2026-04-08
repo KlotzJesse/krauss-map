@@ -146,7 +146,7 @@ function MapInner({
   });
 
   // deck.gl layers (polygons, fills, hover, preview)
-  const { deckLayers, onHover } = useDeckLayers({
+  const { deckLayers, onHover, cursor } = useDeckLayers({
     data,
     statesData,
     layers,
@@ -155,6 +155,14 @@ function MapInner({
     featureIndex: optimizations.featureIndex,
     isCursorMode: interactions.isCursorMode,
   });
+
+  // Sync cursor state from deck.gl hover to map canvas
+  useEffect(() => {
+    const map = mapRef?.getMap();
+    if (map) {
+      map.getCanvas().style.cursor = cursor;
+    }
+  }, [mapRef, cursor]);
 
   // MapLibre native labels (hybrid escape hatch)
   useMapLabels({

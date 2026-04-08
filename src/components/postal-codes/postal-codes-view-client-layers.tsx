@@ -556,6 +556,7 @@ export function PostalCodesViewClientWithLayers({
             activeLayerId={activeLayerId}
             areaId={areaId}
             areaName={area?.name}
+            previewPostalCode={previewPostalCode}
             addPostalCodesToLayer={addPostalCodesToLayer}
             removePostalCodesFromLayer={removePostalCodesFromLayer}
             isViewingVersion={isViewingVersion}

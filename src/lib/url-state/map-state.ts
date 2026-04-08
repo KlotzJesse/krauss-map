@@ -1,18 +1,37 @@
 import { useQueryState } from "nuqs";
-import { useMemo, useTransition } from "react";
+import { useMemo, useRef, useTransition } from "react";
 
 import { useStableCallback } from "../hooks/use-stable-callback";
 
 // Helper for atomic map view state
 export function useMapView() {
   const [mapView, setMapViewRaw] = useQueryState("mapView");
-  // mapView: { center: [lng, lat], zoom: number }
-  const defaultView = { center: [10.4515, 51.1657], zoom: 5 };
+  const defaultView = {
+    center: [10.4515, 51.1657] as [number, number],
+    zoom: 5,
+  };
   const parsed = mapView ? JSON.parse(mapView) : defaultView;
+
+  // Extract primitive values for stable dependency tracking
+  const parsedLng = parsed.center[0] as number;
+  const parsedLat = parsed.center[1] as number;
+
+  // Memoize center array to avoid new reference on every render
+  const prevCenterRef = useRef<[number, number]>([parsedLng, parsedLat]);
+  const stableCenter = useMemo(() => {
+    const [prevLng, prevLat] = prevCenterRef.current;
+    if (parsedLng === prevLng && parsedLat === prevLat) {
+      return prevCenterRef.current;
+    }
+    const next: [number, number] = [parsedLng, parsedLat];
+    prevCenterRef.current = next;
+    return next;
+  }, [parsedLng, parsedLat]);
+
   const setMapView = (view: { center: [number, number]; zoom: number }) =>
     setMapViewRaw(JSON.stringify(view));
   return [
-    parsed as { center: [number, number]; zoom: number },
+    { center: stableCenter, zoom: parsed.zoom as number },
     setMapView,
   ] as const;
 }

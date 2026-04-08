@@ -7,7 +7,7 @@ import type {
   MultiPolygon,
   Polygon,
 } from "geojson";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { areaLayers } from "@/lib/schema/schema";
 import {
@@ -228,6 +228,15 @@ export function useDeckLayers({
     },
     [isCursorMode]
   );
+
+  // Clear hover state when leaving cursor mode (e.g., switching to drawing)
+  useEffect(() => {
+    if (!isCursorMode) {
+      hoveredCodeRef.current = null;
+      setHoveredFeature(null);
+      setCursor("grab");
+    }
+  }, [isCursorMode]);
 
   // Build all deck.gl layers
   const deckLayers = useMemo(() => {

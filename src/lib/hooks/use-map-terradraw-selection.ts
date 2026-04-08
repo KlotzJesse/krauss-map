@@ -246,12 +246,12 @@ export function useMapTerraDrawSelection({
     setPendingPostalCodes([]);
   });
 
-  // Add pending postal codes to selection - now does nothing since handled by drawing tools
+  // Clear pending selection and drawn shapes after adding to layer
   const addPendingToSelection = useStableCallback(() => {
-    console.log(
-      "[addPendingToSelection] This should not be called - use layer operations instead"
-    );
-    // This function is deprecated - the drawing tools should handle layer operations directly
+    setPendingPostalCodes([]);
+    if (terraDrawRef.current?.clearAll) {
+      terraDrawRef.current.clearAll();
+    }
   });
 
   // Remove pending postal codes from selection - clears pending

@@ -359,6 +359,53 @@ export function useMapLabels({
     }
   }, [mapInstance, isMapLoaded, layers, data, featureIndex, ids]);
 
+  // Ensure label layers stay above deck.gl interleaved layers.
+  // deck.gl MapboxOverlay inserts synthetic MapLibre layers that may end up above our labels.
+  useEffect(() => {
+    if (!mapInstance || !isMapLoaded) {
+      return;
+    }
+
+    const labelLayerIds = [
+      ids.stateLabelLayerId,
+      ...Array.from({ length: 5 }, (_, i) => `${ids.labelLayerId}-${i + 1}`),
+      ids.areaLabelLayerId,
+    ];
+
+    const moveLabelsToTop = () => {
+      const style = mapInstance.getStyle();
+      const allLayers = style?.layers;
+      if (!allLayers) {
+        return;
+      }
+
+      const existingIds = labelLayerIds.filter((id) =>
+        mapInstance.getLayer(id)
+      );
+      if (existingIds.length === 0) {
+        return;
+      }
+
+      // Check if labels are already the topmost layers — skip to avoid infinite styledata loop
+      const labelIdSet = new Set(existingIds);
+      const topN = allLayers.slice(-existingIds.length);
+      if (topN.every((l) => labelIdSet.has(l.id))) {
+        return;
+      }
+
+      for (const id of existingIds) {
+        mapInstance.moveLayer(id);
+      }
+    };
+
+    moveLabelsToTop();
+    mapInstance.on("styledata", moveLabelsToTop);
+
+    return () => {
+      mapInstance.off("styledata", moveLabelsToTop);
+    };
+  }, [mapInstance, isMapLoaded, ids]);
+
   // Cleanup on unmount
   useEffect(
     () => () => {
