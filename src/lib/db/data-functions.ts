@@ -29,6 +29,27 @@ export async function getAreas() {
   }
 }
 
+/**
+ * Lightweight fetch — only reads the granularity column.
+ * Used by resolveGranularity in page.tsx to avoid loading the full
+ * area + layers + postalCodes join just to get one scalar field.
+ */
+export async function getAreaGranularity(id: number): Promise<string | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("areas", `area-${id}`);
+  try {
+    const row = await db.query.areas.findFirst({
+      where: eq(areas.id, id),
+      columns: { granularity: true },
+    });
+    return row?.granularity ?? null;
+  } catch (error) {
+    console.error("Error fetching area granularity:", error);
+    return null;
+  }
+}
+
 export async function getAreaById(id: number) {
   "use cache";
   cacheLife("minutes");

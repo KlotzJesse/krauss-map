@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { SiteHeaderSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
-import { getAreaById, getVersion } from "@/lib/db/data-functions";
+import { getAreaGranularity, getVersion } from "@/lib/db/data-functions";
 import { getPostalCodesDataForGranularity } from "@/lib/utils/postal-codes-data";
 
 const ServerPostalCodesView = nextDynamic(
@@ -30,10 +30,10 @@ async function resolveGranularity(
   const isValidVersion =
     versionId !== null && versionId !== undefined && versionId > 0;
 
-  // Always prefetch area (used by VersionIndicator in SiteHeader too).
+  // Always prefetch area granularity (lightweight — no joins).
   // Fire version fetch in parallel when applicable.
-  const [area, version] = await Promise.all([
-    getAreaById(areaId),
+  const [granularity, version] = await Promise.all([
+    getAreaGranularity(areaId),
     isValidVersion ? getVersion(areaId, versionId) : Promise.resolve(null),
   ]);
 
@@ -41,7 +41,7 @@ async function resolveGranularity(
     const snap = version.snapshot as { granularity?: string };
     return snap.granularity ?? "1digit";
   }
-  return area?.granularity ?? "1digit";
+  return granularity ?? "1digit";
 }
 
 export async function generateMetadata({
