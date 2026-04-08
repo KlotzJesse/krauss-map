@@ -1,8 +1,14 @@
-import centerOfMass from "@turf/center-of-mass";
 import turfArea from "@turf/area";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
+import centerOfMass from "@turf/center-of-mass";
 import type { InferSelectModel } from "drizzle-orm";
-import type { Feature, FeatureCollection, MultiPolygon, Point, Polygon } from "geojson";
+import type {
+  Feature,
+  FeatureCollection,
+  MultiPolygon,
+  Point,
+  Polygon,
+} from "geojson";
 import type {
   FilterSpecification,
   GeoJSONSource,
@@ -74,7 +80,9 @@ function getLayerLabelCenter(
   data: FeatureCollection<Polygon | MultiPolygon>,
   postalCodes: string[]
 ): [number, number] | null {
-  if (!postalCodes.length) { return null; }
+  if (!postalCodes.length) {
+    return null;
+  }
   const codeSet = new Set(postalCodes);
 
   const matched: Feature<Polygon | MultiPolygon>[] = [];
@@ -82,10 +90,14 @@ function getLayerLabelCenter(
   let largestArea = -1;
 
   for (const feature of data.features) {
-    if (!feature.geometry) { continue; }
+    if (!feature.geometry) {
+      continue;
+    }
     const props = feature.properties ?? {};
     const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
-    if (!code || !codeSet.has(String(code))) { continue; }
+    if (!code || !codeSet.has(String(code))) {
+      continue;
+    }
     const f = feature as Feature<Polygon | MultiPolygon>;
     matched.push(f);
     const a = turfArea(f);
@@ -95,7 +107,9 @@ function getLayerLabelCenter(
     }
   }
 
-  if (!matched.length || !largestFeature) { return null; }
+  if (!matched.length || !largestFeature) {
+    return null;
+  }
 
   // Area-weighted center of the entire collection.
   const collection: FeatureCollection<Polygon | MultiPolygon> = {
@@ -116,7 +130,6 @@ function getLayerLabelCenter(
   const fallback = centerOfMass(largestFeature);
   return fallback.geometry.coordinates as [number, number];
 }
-
 
 interface UseMapLayersProps {
   mapRef: React.RefObject<MapLibreMap | null>;
@@ -426,9 +439,7 @@ export function useMapLayers({
       );
     }
     // 7. Postal code labels — one layer per digit level (1–5), zoom-gated
-    const labelBeforeId = sd
-      ? "state-boundaries-label"
-      : ids.hoverLayerId;
+    const labelBeforeId = sd ? "state-boundaries-label" : ids.hoverLayerId;
     for (let level = 1; level <= 5; level++) {
       const levelLayerId = `${ids.labelLayerId}-${level}`;
       if (!map.getLayer(levelLayerId)) {
@@ -464,12 +475,7 @@ export function useMapLayers({
         );
       }
     }
-
-  }, [
-    mapRef,
-    isMapLoaded,
-    ids,
-  ]);
+  }, [mapRef, isMapLoaded, ids]);
 
   // Data-sync effect — updates source data without blocking paint (useEffect, not useLayoutEffect).
   // Runs after the layer-creation effect and whenever the underlying data changes.
@@ -482,19 +488,33 @@ export function useMapLayers({
     const srcMain = map.getSource(ids.sourceId) as GeoJSONSource | undefined;
     srcMain?.setData(data);
 
-    const srcLabel = map.getSource(ids.labelSourceId) as GeoJSONSource | undefined;
+    const srcLabel = map.getSource(ids.labelSourceId) as
+      | GeoJSONSource
+      | undefined;
     srcLabel?.setData(labelPoints);
 
     if (statesData) {
-      const srcState = map.getSource(ids.stateSourceId) as GeoJSONSource | undefined;
+      const srcState = map.getSource(ids.stateSourceId) as
+        | GeoJSONSource
+        | undefined;
       srcState?.setData(statesData);
 
       if (statesLabelPoints) {
-        const srcStateLabel = map.getSource(ids.stateLabelSourceId) as GeoJSONSource | undefined;
+        const srcStateLabel = map.getSource(ids.stateLabelSourceId) as
+          | GeoJSONSource
+          | undefined;
         srcStateLabel?.setData(statesLabelPoints);
       }
     }
-  }, [mapRef, isMapLoaded, ids, data, labelPoints, statesData, statesLabelPoints]);
+  }, [
+    mapRef,
+    isMapLoaded,
+    ids,
+    data,
+    labelPoints,
+    statesData,
+    statesLabelPoints,
+  ]);
 
   // Update selected features source when layers change
   // Note: Selections are now managed per-layer in the database
@@ -805,7 +825,14 @@ export function useMapLayers({
     if (src && typeof src.setData === "function") {
       src.setData({ type: "FeatureCollection", features: labelFeatures });
     }
-  }, [mapRef, isMapLoaded, layers, data, ids.areaLabelSourceId, ids.areaLabelLayerId]);
+  }, [
+    mapRef,
+    isMapLoaded,
+    layers,
+    data,
+    ids.areaLabelSourceId,
+    ids.areaLabelLayerId,
+  ]);
 
   // Update selected regions color when active layer changes
   useEffect(() => {

@@ -5,7 +5,7 @@ import { sync } from "glob";
 const files = sync("src/app/actions/*.ts");
 
 for (const file of files) {
-  let content = fs.readFileSync(file, "utf8");
+  let content = fs.readFileSync(file, "utf-8");
   content = content.replace(/,\\s*revalidatePath/g, "");
   content = content.replace(/\\s*revalidatePath,\\s*/g, " ");
   content = content.replace(/revalidatePath,\\s*/g, "");

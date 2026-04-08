@@ -329,7 +329,7 @@ function useAddressAutocomplete({
       const boundarySearchPromise = async () => {
         const boundaryResult = await searchPostalCodesByBoundaryAction({
           areaName,
-          granularity: granularity,
+          granularity,
           limit: 3000,
         });
 
@@ -528,9 +528,7 @@ function RadiusSearchDialog({
                 tabIndex={0}
               >
                 <div className="flex items-center gap-2 w-full">
-                  <span className="text-sm font-medium">
-                    Fahrstrecke (km)
-                  </span>
+                  <span className="text-sm font-medium">Fahrstrecke (km)</span>
                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-auto">
                     Präzise
                   </span>
@@ -680,9 +678,7 @@ function RadiusSearchDialog({
         {/* Enhanced result summary with accuracy indicators */}
         <div className="text-sm border-t pt-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">
-              Ausgewählter Radius:
-            </span>
+            <span className="text-muted-foreground">Ausgewählter Radius:</span>
             <span className="font-medium text-foreground">
               {customRadiusInput}
               {searchMode === "time" ? "min" : "km"}
@@ -700,10 +696,7 @@ function RadiusSearchDialog({
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
             <Button onClick={handleConfirm}>

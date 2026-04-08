@@ -45,9 +45,7 @@ const FloatingDrawingToolbar = dynamic(
 // Floating edit bar shown when a drawn shape is selected
 const FloatingDrawingEditBar = dynamic(
   () =>
-    import("./floating-drawing-edit-bar").then(
-      (m) => m.FloatingDrawingEditBar
-    ),
+    import("./floating-drawing-edit-bar").then((m) => m.FloatingDrawingEditBar),
   {
     ssr: false,
   }
@@ -195,84 +193,84 @@ const BaseMapComponent = ({
   return (
     <MapErrorBoundary>
       <div className="relative w-full h-full">
-      <div
-        ref={mapContainer}
-        className="w-full h-full min-h-[400px]"
-        style={{ minHeight: mapConfig.minHeight }}
-        role="region"
-        aria-label="Interaktive Karte"
-      />
-      {/* Floating Drawing Toolbar - Center bottom */}
-      <FloatingDrawingToolbar
-        currentMode={interactions.currentDrawingMode}
-        onModeChange={interactions.handleDrawingModeChange}
-        areaId={areaId}
-        initialUndoRedoStatus={initialUndoRedoStatus}
-      />
-      {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
-      {interactions.editingFeatureId && (
-        <FloatingDrawingEditBar
-          onDelete={handleDeleteEditingFeature}
-          onDismiss={handleDeselectEditingFeature}
+        <div
+          ref={mapContainer}
+          className="w-full h-full min-h-[400px]"
+          style={{ minHeight: mapConfig.minHeight }}
+          role="region"
+          aria-label="Interaktive Karte"
         />
-      )}
+        {/* Floating Drawing Toolbar - Center bottom */}
+        <FloatingDrawingToolbar
+          currentMode={interactions.currentDrawingMode}
+          onModeChange={interactions.handleDrawingModeChange}
+          areaId={areaId}
+          initialUndoRedoStatus={initialUndoRedoStatus}
+        />
+        {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
+        {interactions.editingFeatureId && (
+          <FloatingDrawingEditBar
+            onDelete={handleDeleteEditingFeature}
+            onDismiss={handleDeselectEditingFeature}
+          />
+        )}
 
-      <Activity
-        mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
-      >
-        <div
-          className="absolute top-4 left-4 bottom-4 z-10 flex flex-col"
-          role="region"
-          aria-label="Kartentools-Panel"
+        <Activity
+          mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
         >
-          <DrawingToolsErrorBoundary>
-            <Suspense fallback={<DrawingToolsSkeleton />}>
-              <DrawingTools
-                currentMode={interactions.currentDrawingMode}
-                onModeChange={interactions.handleDrawingModeChange}
-                onClearAll={handleClearAll}
-                onToggleVisibility={handleHideTools}
-                granularity={granularity}
-                onGranularityChange={onGranularityChange}
-                postalCodesData={data}
-                pendingPostalCodes={interactions.pendingPostalCodes}
-                onAddPending={interactions.addPendingToSelection}
-                onRemovePending={interactions.removePendingFromSelection}
-                areaId={areaId ?? undefined}
-                areaName={areaName}
-                activeLayerId={activeLayerId}
-                onLayerSelect={mapState.setActiveLayer}
-                isLayerSwitchPending={mapState.isLayerPending}
-                addPostalCodesToLayer={addPostalCodesToLayer}
-                removePostalCodesFromLayer={removePostalCodesFromLayer}
-                layers={layers}
-                isViewingVersion={isViewingVersion}
-                versionId={versionId}
-                versions={versions}
-                changes={changes}
-              />
-            </Suspense>
-          </DrawingToolsErrorBoundary>
-        </div>
-      </Activity>
-
-      <Activity
-        mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}
-      >
-        <div
-          className="absolute top-4 left-4 z-10"
-          role="region"
-          aria-label="Kartentools-Panel"
-        >
-          <ToggleButton
-            onClick={handleShowTools}
-            title="Kartentools anzeigen"
-            ariaLabel="Kartentools-Panel anzeigen"
+          <div
+            className="absolute top-4 left-4 bottom-4 z-10 flex flex-col"
+            role="region"
+            aria-label="Kartentools-Panel"
           >
-            <PlusIcon width={24} height={24} />
-          </ToggleButton>
-        </div>
-      </Activity>
+            <DrawingToolsErrorBoundary>
+              <Suspense fallback={<DrawingToolsSkeleton />}>
+                <DrawingTools
+                  currentMode={interactions.currentDrawingMode}
+                  onModeChange={interactions.handleDrawingModeChange}
+                  onClearAll={handleClearAll}
+                  onToggleVisibility={handleHideTools}
+                  granularity={granularity}
+                  onGranularityChange={onGranularityChange}
+                  postalCodesData={data}
+                  pendingPostalCodes={interactions.pendingPostalCodes}
+                  onAddPending={interactions.addPendingToSelection}
+                  onRemovePending={interactions.removePendingFromSelection}
+                  areaId={areaId ?? undefined}
+                  areaName={areaName}
+                  activeLayerId={activeLayerId}
+                  onLayerSelect={mapState.setActiveLayer}
+                  isLayerSwitchPending={mapState.isLayerPending}
+                  addPostalCodesToLayer={addPostalCodesToLayer}
+                  removePostalCodesFromLayer={removePostalCodesFromLayer}
+                  layers={layers}
+                  isViewingVersion={isViewingVersion}
+                  versionId={versionId}
+                  versions={versions}
+                  changes={changes}
+                />
+              </Suspense>
+            </DrawingToolsErrorBoundary>
+          </div>
+        </Activity>
+
+        <Activity
+          mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}
+        >
+          <div
+            className="absolute top-4 left-4 z-10"
+            role="region"
+            aria-label="Kartentools-Panel"
+          >
+            <ToggleButton
+              onClick={handleShowTools}
+              title="Kartentools anzeigen"
+              ariaLabel="Kartentools-Panel anzeigen"
+            >
+              <PlusIcon width={24} height={24} />
+            </ToggleButton>
+          </div>
+        </Activity>
       </div>
     </MapErrorBoundary>
   );

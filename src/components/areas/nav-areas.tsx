@@ -3,7 +3,6 @@
 import { IconPlus } from "@tabler/icons-react";
 import { useParams } from "next/navigation";
 import {
-  Activity,
   useOptimistic,
   useReducer,
   useRef,
@@ -281,18 +280,12 @@ export function NavAreas({
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            <Activity mode={isLoading ? "visible" : "hidden"}>
+            {isLoading && (
               <SidebarMenuItem>
                 <SidebarMenuButton disabled>Lade...</SidebarMenuButton>
               </SidebarMenuItem>
-            </Activity>
-            <Activity
-              mode={
-                !isLoading && optimisticAreas.length === 0
-                  ? "visible"
-                  : "hidden"
-              }
-            >
+            )}
+            {!isLoading && optimisticAreas.length === 0 && (
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => dispatch({ type: "OPEN_CREATE" })}
@@ -302,7 +295,7 @@ export function NavAreas({
                   <span>Erstes Gebiet erstellen</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </Activity>
+            )}
             {!isLoading &&
               optimisticAreas.map((area) => (
                 <AreaListItem

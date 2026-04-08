@@ -146,7 +146,9 @@ export function useMapInteractions({
 
   // Delete only the currently-selected drawing
   const deleteEditingFeature = useStableCallback(() => {
-    if (!editingFeatureId) return;
+    if (!editingFeatureId) {
+      return;
+    }
     terraDrawApi.removeFeatures([editingFeatureId]);
     handleFeatureDeselect();
   });

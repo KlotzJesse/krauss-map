@@ -6,9 +6,9 @@ import * as React from "react";
 import { Suspense } from "react";
 
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
-import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
 import { NavAreas } from "@/components/areas/nav-areas";
 import { NavMain } from "@/components/nav-main";
+import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
 import {
   Sidebar,
   SidebarContent,

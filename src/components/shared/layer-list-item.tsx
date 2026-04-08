@@ -128,11 +128,7 @@ function LayerColorPickerContent({
         </div>
       </ColorPicker>
 
-      <Button
-        size="sm"
-        className="w-full"
-        onClick={() => onConfirm(pending)}
-      >
+      <Button size="sm" className="w-full" onClick={() => onConfirm(pending)}>
         Farbe übernehmen
       </Button>
     </div>
@@ -233,10 +229,7 @@ export function LayerListItem({
           </div>
 
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Popover
-              open={colorPickerOpen}
-              onOpenChange={setColorPickerOpen}
-            >
+            <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
               <Tooltip>
                 <TooltipTrigger
                   render={

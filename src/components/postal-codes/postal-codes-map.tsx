@@ -3,7 +3,6 @@ import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { memo } from "react";
 
 import { BaseMap } from "@/components/shared/base-map";
-
 import type {
   SelectAreaChanges,
   SelectAreaVersions,

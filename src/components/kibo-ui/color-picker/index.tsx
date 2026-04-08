@@ -4,9 +4,7 @@ import Color from "color";
 import { PipetteIcon } from "lucide-react";
 import { Slider } from "radix-ui";
 import {
-  type ComponentProps,
   createContext,
-  type HTMLAttributes,
   memo,
   useCallback,
   useContext,
@@ -15,6 +13,8 @@ import {
   useRef,
   useState,
 } from "react";
+import type { ComponentProps, HTMLAttributes } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-type ColorPickerContextValue = {
+interface ColorPickerContextValue {
   hue: number;
   saturation: number;
   lightness: number;
@@ -37,7 +37,7 @@ type ColorPickerContextValue = {
   setLightness: (lightness: number) => void;
   setAlpha: (alpha: number) => void;
   setMode: (mode: string) => void;
-};
+}
 
 const ColorPickerContext = createContext<ColorPickerContextValue | undefined>(
   undefined
@@ -137,11 +137,12 @@ export const ColorPickerSelection = memo(
     const [positionY, setPositionY] = useState(0);
     const { hue, setSaturation, setLightness } = useColorPicker();
 
-    const backgroundGradient = useMemo(() => {
-      return `linear-gradient(0deg, rgba(0,0,0,1), rgba(0,0,0,0)),
+    const backgroundGradient = useMemo(
+      () => `linear-gradient(0deg, rgba(0,0,0,1), rgba(0,0,0,0)),
             linear-gradient(90deg, rgba(255,255,255,1), rgba(255,255,255,0)),
-            hsl(${hue}, 100%, 50%)`;
-    }, [hue]);
+            hsl(${hue}, 100%, 50%)`,
+      [hue]
+    );
 
     const handlePointerMove = useCallback(
       (event: PointerEvent) => {
@@ -312,7 +313,14 @@ export const ColorPickerOutput = ({
   const { mode, setMode } = useColorPicker();
 
   return (
-    <Select onValueChange={(v) => { if (v) setMode(v); }} value={mode}>
+    <Select
+      onValueChange={(v) => {
+        if (v) {
+          setMode(v);
+        }
+      }}
+      value={mode}
+    >
       <SelectTrigger className="h-8 w-20 shrink-0 text-xs" {...props}>
         <SelectValue placeholder="Mode" />
       </SelectTrigger>
@@ -329,24 +337,22 @@ export const ColorPickerOutput = ({
 
 type PercentageInputProps = ComponentProps<typeof Input>;
 
-const PercentageInput = ({ className, ...props }: PercentageInputProps) => {
-  return (
-    <div className="relative">
-      <Input
-        readOnly
-        type="text"
-        {...props}
-        className={cn(
-          "h-8 w-[3.25rem] rounded-s-none bg-secondary px-2 text-xs shadow-none",
-          className
-        )}
-      />
-      <span className="-translate-y-1/2 absolute top-1/2 end-2 text-muted-foreground text-xs">
-        %
-      </span>
-    </div>
-  );
-};
+const PercentageInput = ({ className, ...props }: PercentageInputProps) => (
+  <div className="relative">
+    <Input
+      readOnly
+      type="text"
+      {...props}
+      className={cn(
+        "h-8 w-[3.25rem] rounded-s-none bg-secondary px-2 text-xs shadow-none",
+        className
+      )}
+    />
+    <span className="-translate-y-1/2 absolute top-1/2 end-2 text-muted-foreground text-xs">
+      %
+    </span>
+  </div>
+);
 
 export type ColorPickerFormatProps = HTMLAttributes<HTMLDivElement>;
 

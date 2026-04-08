@@ -107,6 +107,6 @@ function readFileAsText(file: File): Promise<string> {
       reject(new Error("Fehler beim Lesen der Datei"));
     });
 
-    reader.readAsText(file, "utf8");
+    reader.readAsText(file, "utf-8");
   });
 }

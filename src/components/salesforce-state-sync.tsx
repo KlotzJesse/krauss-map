@@ -3,7 +3,6 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useEffectEvent, useRef } from "react";
 
-
 function detectIframed(): boolean {
   try {
     return window.self !== window.top;
@@ -20,7 +19,9 @@ export function SalesforceStateSync() {
   // Non-reactive action: reads latest iframed + searchParams without being
   // a reactive dependency — exactly the useEffectEvent use case.
   const sendStateChange = useEffectEvent(() => {
-    if (!iframed.current) return;
+    if (!iframed.current) {
+      return;
+    }
     const search = searchParams.toString();
     window.parent.postMessage(
       {

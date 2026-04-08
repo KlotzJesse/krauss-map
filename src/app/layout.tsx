@@ -6,12 +6,12 @@ import { Inter, Geist } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Suspense } from "react";
 
+import { SalesforceStateSync } from "@/components/salesforce-state-sync";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-import { SalesforceStateSync } from "@/components/salesforce-state-sync";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 

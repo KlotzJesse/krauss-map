@@ -122,7 +122,7 @@ export async function updateLayerAction(
         if (data.postalCodes.length > 0) {
           await tx.insert(areaLayerPostalCodes).values(
             data.postalCodes.map((code: string) => ({
-              layerId: layerId,
+              layerId,
               postalCode: code,
             }))
           );
@@ -283,7 +283,7 @@ export async function addPostalCodesToLayerAction(
       if (newCodes.length > 0) {
         await tx.insert(areaLayerPostalCodes).values(
           newCodes.map((code) => ({
-            layerId: layerId,
+            layerId,
             postalCode: code,
           }))
         );
@@ -360,7 +360,7 @@ export async function removePostalCodesFromLayerAction(
       if (newCodes.length > 0) {
         await tx.insert(areaLayerPostalCodes).values(
           newCodes.map((code) => ({
-            layerId: layerId,
+            layerId,
             postalCode: code,
           }))
         );

@@ -7,7 +7,6 @@ import Link from "next/link";
 import { memo } from "react";
 
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
-
 import {
   SidebarGroup,
   SidebarGroupContent,

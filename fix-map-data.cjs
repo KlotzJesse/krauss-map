@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 
-const code = fs.readFileSync("src/lib/utils/map-data.ts", "utf8");
+const code = fs.readFileSync("src/lib/utils/map-data.ts", "utf-8");
 const newMakeLabelPoints = `
 /**
  * Creates a FeatureCollection of label points from a polygon FeatureCollection.

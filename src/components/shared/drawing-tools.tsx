@@ -148,8 +148,6 @@ function StatsSection({ layers, postalCodesData }: StatsSectionProps) {
   );
 }
 
-
-
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
@@ -461,7 +459,9 @@ function useDrawingToolsActions({
     color: string;
     orderIndex: number;
   }) => {
-    if (!areaId) { return; }
+    if (!areaId) {
+      return;
+    }
     const result = await createLayerAction(areaId, {
       name: data.name,
       color: data.color,
@@ -476,8 +476,13 @@ function useDrawingToolsActions({
     throw new Error(result.error);
   };
 
-  const updateLayer = async (layerId: number, data: Record<string, unknown>) => {
-    if (!areaId) { return; }
+  const updateLayer = async (
+    layerId: number,
+    data: Record<string, unknown>
+  ) => {
+    if (!areaId) {
+      return;
+    }
     const result = await updateLayerAction(areaId, layerId, data);
     if (result.success) {
       onLayerUpdate?.();
@@ -487,7 +492,9 @@ function useDrawingToolsActions({
   };
 
   const deleteLayer = async (layerId: number) => {
-    if (!areaId) { return; }
+    if (!areaId) {
+      return;
+    }
     const result = await deleteLayerAction(areaId, layerId);
     if (result.success) {
       onLayerUpdate?.();
@@ -497,11 +504,20 @@ function useDrawingToolsActions({
   };
 
   const handleAddPendingToLayer = async () => {
-    if (!areaId || !activeLayerId || !addPostalCodesToLayer || pendingPostalCodes.length === 0) {
+    if (
+      !areaId ||
+      !activeLayerId ||
+      !addPostalCodesToLayer ||
+      pendingPostalCodes.length === 0
+    ) {
       if (!areaId || !activeLayerId) {
-        toast.warning("Bitte wählen Sie ein aktives Gebiet aus", { duration: 3000 });
+        toast.warning("Bitte wählen Sie ein aktives Gebiet aus", {
+          duration: 3000,
+        });
       } else if (pendingPostalCodes.length === 0) {
-        toast.info("Keine Regionen zum Hinzufügen gefunden", { duration: 2000 });
+        toast.info("Keine Regionen zum Hinzufügen gefunden", {
+          duration: 2000,
+        });
       } else if (!addPostalCodesToLayer) {
         toast.error("Gebiets-Funktion nicht verfügbar", { duration: 2000 });
       }
@@ -510,7 +526,10 @@ function useDrawingToolsActions({
     const suffix = pendingPostalCodes.length === 1 ? "" : "en";
     try {
       await addPostalCodesToLayer(activeLayerId, pendingPostalCodes);
-      toast.success(`${pendingPostalCodes.length} Region${suffix} zu Gebiet hinzugefügt`, { duration: 2000 });
+      toast.success(
+        `${pendingPostalCodes.length} Region${suffix} zu Gebiet hinzugefügt`,
+        { duration: 2000 }
+      );
     } catch (error) {
       console.error("Error adding pending codes to layer:", error);
       toast.error("Fehler beim Hinzufügen der Regionen", { duration: 2000 });
@@ -519,9 +538,16 @@ function useDrawingToolsActions({
   };
 
   const handleRemovePendingFromLayer = async () => {
-    if (!areaId || !activeLayerId || !removePostalCodesFromLayer || pendingPostalCodes.length === 0) {
+    if (
+      !areaId ||
+      !activeLayerId ||
+      !removePostalCodesFromLayer ||
+      pendingPostalCodes.length === 0
+    ) {
       if (!areaId || !activeLayerId) {
-        toast.warning("Bitte wählen Sie ein aktives Gebiet aus", { duration: 3000 });
+        toast.warning("Bitte wählen Sie ein aktives Gebiet aus", {
+          duration: 3000,
+        });
       } else if (pendingPostalCodes.length === 0) {
         toast.info("Keine Regionen zum Entfernen gefunden", { duration: 2000 });
       } else if (!removePostalCodesFromLayer) {
@@ -532,7 +558,10 @@ function useDrawingToolsActions({
     const removeSuffix = pendingPostalCodes.length === 1 ? "" : "en";
     try {
       await removePostalCodesFromLayer(activeLayerId, pendingPostalCodes);
-      toast.success(`${pendingPostalCodes.length} Region${removeSuffix} aus Gebiet entfernt`, { duration: 2000 });
+      toast.success(
+        `${pendingPostalCodes.length} Region${removeSuffix} aus Gebiet entfernt`,
+        { duration: 2000 }
+      );
     } catch (error) {
       console.error("Error removing pending codes from layer:", error);
       toast.error("Fehler beim Entfernen der Regionen", { duration: 2000 });
@@ -577,10 +606,15 @@ function useDrawingToolsActions({
   };
 
   const handleCreateLayer = async () => {
-    if (!form.newLayerName.trim()) { return; }
+    if (!form.newLayerName.trim()) {
+      return;
+    }
     dispatchForm({ type: "START_CREATING" });
     startTransition(async () => {
-      const nextColor = DEFAULT_LAYER_COLORS[optimisticLayers.length % DEFAULT_LAYER_COLORS.length];
+      const nextColor =
+        DEFAULT_LAYER_COLORS[
+          optimisticLayers.length % DEFAULT_LAYER_COLORS.length
+        ];
       const createdLayerName = form.newLayerName;
       updateOptimisticLayers({
         type: "create",
@@ -596,11 +630,17 @@ function useDrawingToolsActions({
       });
       dispatchForm({ type: "FINISH_CREATING" });
       await executeAction(
-        createLayer({ name: createdLayerName, color: nextColor, orderIndex: optimisticLayers.length }),
+        createLayer({
+          name: createdLayerName,
+          color: nextColor,
+          orderIndex: optimisticLayers.length,
+        }),
         {
           loading: `Erstelle Gebiet "${createdLayerName}"...`,
           success: (result) => {
-            if (result?.id && onLayerSelect) { onLayerSelect(result.id); }
+            if (result?.id && onLayerSelect) {
+              onLayerSelect(result.id);
+            }
             return `Gebiet "${createdLayerName}" erstellt`;
           },
           error: "Fehler beim Erstellen - Bitte erneut versuchen",
@@ -626,7 +666,9 @@ function useDrawingToolsActions({
   };
 
   const confirmDeleteLayer = async () => {
-    if (!form.layerToDelete) { return; }
+    if (!form.layerToDelete) {
+      return;
+    }
     startTransition(async () => {
       updateOptimisticLayers({ type: "delete", id: form.layerToDelete! });
       dispatchForm({ type: "CLOSE_DELETE" });
@@ -649,7 +691,11 @@ function useDrawingToolsActions({
       return;
     }
     startTransition(async () => {
-      updateOptimisticLayers({ type: "update", id: layerId, layer: { name: newName.trim() } });
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { name: newName.trim() },
+      });
       dispatchForm({ type: "CANCEL_EDIT" });
       try {
         await executeAction(updateLayer(layerId, { name: newName.trim() }), {
@@ -834,11 +880,15 @@ function LayerManagementSection({
                 dispatchForm({ type: "SET_NEW_NAME", name: e.target.value })
               }
               placeholder={
-                isViewingVersion ? "Neues Gebiet (neue Version)..." : "Neues Gebiet..."
+                isViewingVersion
+                  ? "Neues Gebiet (neue Version)..."
+                  : "Neues Gebiet..."
               }
               className="h-7 text-xs"
               onKeyDown={(e) => {
-                if (e.key === "Enter") { handleCreateLayer(); }
+                if (e.key === "Enter") {
+                  handleCreateLayer();
+                }
               }}
             />
             <Tooltip>
@@ -927,7 +977,9 @@ function LayerDialogs({
       <ConflictResolutionDialog
         open={ui.showConflicts}
         onOpenChange={(open) =>
-          dispatchUI(open ? { type: "OPEN_CONFLICTS" } : { type: "CLOSE_CONFLICTS" })
+          dispatchUI(
+            open ? { type: "OPEN_CONFLICTS" } : { type: "CLOSE_CONFLICTS" }
+          )
         }
         areaId={areaId}
         layers={layers}
@@ -935,7 +987,9 @@ function LayerDialogs({
       <EnhancedVersionHistoryDialog
         open={ui.showVersionHistory}
         onOpenChange={(open) =>
-          dispatchUI(open ? { type: "OPEN_HISTORY" } : { type: "CLOSE_HISTORY" })
+          dispatchUI(
+            open ? { type: "OPEN_HISTORY" } : { type: "CLOSE_HISTORY" }
+          )
         }
         areaId={areaId}
         versions={versions}
@@ -944,7 +998,9 @@ function LayerDialogs({
       <CreateVersionDialog
         open={ui.showCreateVersion}
         onOpenChange={(open) =>
-          dispatchUI(open ? { type: "OPEN_VERSION" } : { type: "CLOSE_VERSION" })
+          dispatchUI(
+            open ? { type: "OPEN_VERSION" } : { type: "CLOSE_VERSION" }
+          )
         }
         areaId={areaId}
         onVersionCreated={() => onLayerUpdate?.()}
@@ -961,19 +1017,23 @@ function LayerDialogs({
       <AlertDialog
         open={form.showDeleteDialog}
         onOpenChange={(open) => {
-          if (!open) { dispatchForm({ type: "CLOSE_DELETE" }); }
+          if (!open) {
+            dispatchForm({ type: "CLOSE_DELETE" });
+          }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Gebiet löschen</AlertDialogTitle>
             <AlertDialogDescription>
-              Möchten Sie dieses Gebiet wirklich löschen? Diese Aktion
-              kann nicht rückgängig gemacht werden.
+              Möchten Sie dieses Gebiet wirklich löschen? Diese Aktion kann
+              nicht rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => dispatchForm({ type: "CLOSE_DELETE" })}>
+            <AlertDialogCancel
+              onClick={() => dispatchForm({ type: "CLOSE_DELETE" })}
+            >
               Abbrechen
             </AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteLayer}>
