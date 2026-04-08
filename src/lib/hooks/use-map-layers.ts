@@ -1,4 +1,17 @@
 import turfArea from "@turf/area";
+
+// Module-level WeakMap cache for turfArea results — valid because data features are
+// reference-stable for the lifetime of PostalCodesViewClientWithLayers (useState freeze).
+const _turfAreaCache = new WeakMap<Feature, number>();
+
+function _turfAreaCached(f: Feature): number {
+  let a = _turfAreaCache.get(f);
+  if (a === undefined) {
+    a = turfArea(f);
+    _turfAreaCache.set(f, a);
+  }
+  return a;
+}
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import centerOfMass from "@turf/center-of-mass";
 import type { InferSelectModel } from "drizzle-orm";
@@ -75,35 +88,57 @@ const STATE_LINE_COLOR_EXPR = buildStateColorExpression("#222");
  *     For connected/compact areas this is always inside the polygons → perfect.
  *  2. If the center lands in empty space (disconnected clusters), fall back to
  *     the centroid of the single largest polygon in the set.
+ *
+ * When `featureIndex` is provided, lookups are O(k) instead of O(n×k).
  */
 function getLayerLabelCenter(
   data: FeatureCollection<Polygon | MultiPolygon>,
-  postalCodes: string[]
+  postalCodes: string[],
+  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>
 ): [number, number] | null {
   if (!postalCodes.length) {
     return null;
   }
-  const codeSet = new Set(postalCodes);
 
   const matched: Feature<Polygon | MultiPolygon>[] = [];
   let largestFeature: Feature<Polygon | MultiPolygon> | null = null;
   let largestArea = -1;
 
-  for (const feature of data.features) {
-    if (!feature.geometry) {
-      continue;
+  if (featureIndex) {
+    // O(k) fast path — use pre-built index
+    for (const code of postalCodes) {
+      const features = featureIndex.get(code);
+      if (!features) {
+        continue;
+      }
+      for (const f of features) {
+        matched.push(f);
+        const a = _turfAreaCached(f);
+        if (a > largestArea) {
+          largestArea = a;
+          largestFeature = f;
+        }
+      }
     }
-    const props = feature.properties ?? {};
-    const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
-    if (!code || !codeSet.has(String(code))) {
-      continue;
-    }
-    const f = feature as Feature<Polygon | MultiPolygon>;
-    matched.push(f);
-    const a = turfArea(f);
-    if (a > largestArea) {
-      largestArea = a;
-      largestFeature = f;
+  } else {
+    // O(n) fallback scan — used when index is not available
+    const codeSet = new Set(postalCodes);
+    for (const feature of data.features) {
+      if (!feature.geometry) {
+        continue;
+      }
+      const props = feature.properties ?? {};
+      const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
+      if (!code || !codeSet.has(String(code))) {
+        continue;
+      }
+      const f = feature as Feature<Polygon | MultiPolygon>;
+      matched.push(f);
+      const a = _turfAreaCached(f);
+      if (a > largestArea) {
+        largestArea = a;
+        largestFeature = f;
+      }
     }
   }
 
@@ -146,6 +181,8 @@ interface UseMapLayersProps {
   statesLabelPoints?: FeatureCollection | null;
   layers?: Layer[];
   activeLayerId?: number | null;
+  /** Pre-built postal code → feature index for O(k) label center lookups */
+  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
 }
 
 /**
@@ -165,12 +202,20 @@ export function useMapLayers({
   statesLabelPoints,
   layers,
   activeLayerId,
+  featureIndex,
 }: UseMapLayersProps) {
   // Memoize layersLoaded calculation to prevent unnecessary rerenders
   const layersLoaded = useMemo(
     () => !!(isMapLoaded && data),
     [isMapLoaded, data]
   );
+
+  // Cache for label centers keyed by `${layerId}:${sortedCodes}`.
+  // Stores { data, cache } so we can invalidate when the underlying data changes.
+  const labelCenterCacheRef = useRef<{
+    data: FeatureCollection<Polygon | MultiPolygon> | null;
+    cache: Map<string, [number, number] | null>;
+  }>({ data: null, cache: new Map() });
 
   // Memoize all IDs for stable references
   const ids = useMemo(
@@ -799,12 +844,27 @@ export function useMapLayers({
 
     // Compute one label point per visible layer
     const labelFeatures: Feature<Point>[] = [];
+
+    // Invalidate cache if underlying data changed (e.g. granularity switch).
+    if (labelCenterCacheRef.current.data !== data) {
+      labelCenterCacheRef.current = { data, cache: new Map() };
+    }
+    const labelCache = labelCenterCacheRef.current.cache;
+
     for (const layer of layers) {
       const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
       if (postalCodes.length === 0 || layer.isVisible !== "true") {
         continue;
       }
-      const center = getLayerLabelCenter(data, postalCodes);
+
+      // Stable cache key: layer id + sorted codes (correct for all add/remove/undo scenarios).
+      const cacheKey = `${layer.id}:${[...postalCodes].sort().join(",")}`;
+      let center = labelCache.get(cacheKey);
+      if (center === undefined) {
+        center = getLayerLabelCenter(data, postalCodes, featureIndex) ?? null;
+        labelCache.set(cacheKey, center);
+      }
+
       if (!center) {
         continue;
       }
@@ -830,6 +890,7 @@ export function useMapLayers({
     isMapLoaded,
     layers,
     data,
+    featureIndex,
     ids.areaLabelSourceId,
     ids.areaLabelLayerId,
   ]);

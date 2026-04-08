@@ -53,6 +53,30 @@ export function useMapOptimizations({
     [data.features.length]
   );
 
+  // Pre-built postal-code → feature index for O(k) label center lookups.
+  // Normalizes keys the same way getLayerLabelCenter does (code | plz | PLZ | postalCode).
+  const featureIndex = useMemo(() => {
+    const index = new Map<string, Feature<Polygon | MultiPolygon>[]>();
+    for (const feature of data.features) {
+      if (!feature.geometry) {
+        continue;
+      }
+      const props = feature.properties ?? {};
+      const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
+      if (!code) {
+        continue;
+      }
+      const key = String(code);
+      const existing = index.get(key);
+      if (existing) {
+        existing.push(feature as Feature<Polygon | MultiPolygon>);
+      } else {
+        index.set(key, [feature as Feature<Polygon | MultiPolygon>]);
+      }
+    }
+    return index;
+  }, [data]);
+
   // Selected count is now managed per-layer
   const selectedCount = 0;
 
@@ -120,6 +144,7 @@ export function useMapOptimizations({
     featureCount,
     selectedCount,
     dataExtent,
+    featureIndex,
     getSelectedFeatureCollection,
     getLabelPoints,
   } as const;

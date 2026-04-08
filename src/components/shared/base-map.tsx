@@ -132,6 +132,7 @@ const BaseMapComponent = ({
     getSelectedFeatureCollection: optimizations.getSelectedFeatureCollection,
     labelPoints: optimizations.labelPoints,
     statesLabelPoints: optimizations.statesLabelPoints,
+    featureIndex: optimizations.featureIndex,
     layers,
     activeLayerId,
   });
