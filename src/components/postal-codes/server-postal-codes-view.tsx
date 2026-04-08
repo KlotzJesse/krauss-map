@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import {
-  getAreas,
   getAreaById,
   getLayers,
   getVersions,
@@ -34,7 +33,6 @@ export default async function ServerPostalCodesView({
   const postalCodesDataPromise =
     getPostalCodesDataForGranularity(defaultGranularity);
   const statesDataPromise = getStatesData();
-  const areasPromise = getAreas();
   const areaPromise = getAreaById(areaId);
   const layersPromise = getLayers(areaId);
   const versionsPromise = getVersions(areaId);
@@ -49,7 +47,6 @@ export default async function ServerPostalCodesView({
           statesDataPromise={statesDataPromise}
           defaultGranularity={defaultGranularity}
           areaId={areaId}
-          areasPromise={areasPromise}
           areaPromise={areaPromise}
           layersPromise={layersPromise}
           undoRedoStatusPromise={undoRedoStatusPromise}

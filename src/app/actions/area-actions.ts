@@ -660,6 +660,8 @@ export async function addPostalCodesToLayerAction(
     updateTag(`area-${areaId}-layers`);
     updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
+    updateTag("change-history");
+    updateTag(`area-${areaId}-change-history`);
     refresh();
 
     return { success: true };
@@ -741,6 +743,8 @@ export async function removePostalCodesFromLayerAction(
     updateTag(`area-${areaId}-layers`);
     updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
+    updateTag("change-history");
+    updateTag(`area-${areaId}-change-history`);
     refresh();
 
     return { success: true };

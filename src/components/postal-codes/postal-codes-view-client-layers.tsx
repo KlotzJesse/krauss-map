@@ -85,7 +85,6 @@ interface PostalCodesViewClientWithLayersProps {
   statesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon>>;
   defaultGranularity: string;
   areaId: number;
-  areasPromise: Promise<Area[]>;
   areaPromise: Promise<Area | null>;
   layersPromise: Promise<Layer[]>;
   undoRedoStatusPromise: Promise<{
