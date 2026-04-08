@@ -1,15 +1,16 @@
+import type { PickingInfo } from "@deck.gl/core";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import type { RefObject } from "react";
+import { useCallback } from "react";
+import { toast } from "sonner";
 
-import { useMapClickInteraction } from "@/lib/hooks/use-map-click-interaction";
 import { useMapDrawingTools } from "@/lib/hooks/use-map-drawing-tools";
-import { useMapEventListeners } from "@/lib/hooks/use-map-event-listeners";
-import { useMapHoverInteraction } from "@/lib/hooks/use-map-hover-interaction";
 import { useMapTerraDrawSelection } from "@/lib/hooks/use-map-terradraw-selection";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useTerraDraw } from "@/lib/hooks/use-terradraw";
 import type { SelectAreaLayers } from "@/lib/schema/schema";
+import { getFeatureCode } from "@/lib/utils/deck-gl-utils";
 
 type LayerWithPostalCodes = SelectAreaLayers & {
   postalCodes?: { postalCode: string }[];
@@ -17,125 +18,73 @@ type LayerWithPostalCodes = SelectAreaLayers & {
 
 interface UseMapInteractionsProps {
   mapRef: RefObject<MapLibreMap | null>;
-
-  layerId: string;
-
   data: FeatureCollection<Polygon | MultiPolygon>;
-
   isMapLoaded: boolean;
-
-  layersLoaded: boolean;
-
   areaId?: number | null;
-
   activeLayerId?: number | null;
-
   layers?: LayerWithPostalCodes[];
-
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
-
   removePostalCodesFromLayer?: (
     layerId: number,
-
     codes: string[]
   ) => Promise<void>;
 }
 
 /**
- * Comprehensive hook for managing all map interactions
- * Combines drawing tools, hover, click, and TerraDraw functionality
- * Optimized for React 19 with minimal re-renders and maximum performance
+ * Comprehensive hook for managing all map interactions.
+ * Combines drawing tools and TerraDraw functionality.
+ * Hover and click are now handled by deck.gl picking (via useDeckLayers onHover + onClick callback).
  */
-
 export function useMapInteractions({
   mapRef,
-
-  layerId,
-
   data,
-
   isMapLoaded,
-
-  layersLoaded,
-
   areaId,
-
   activeLayerId,
-
   layers,
-
   addPostalCodesToLayer,
-
   removePostalCodesFromLayer,
 }: UseMapInteractionsProps) {
   // Drawing tools state management
-
   const {
     currentDrawingMode,
-
     isDrawingToolsVisible,
-
     isCursorMode,
-
     isDrawingActive,
-
     handleDrawingModeChange,
-
     toggleToolsVisibility,
-
     showTools,
-
     hideTools,
-
     editingFeatureId,
-
     handleFeatureSelect,
-
     handleFeatureDeselect,
   } = useMapDrawingTools();
 
-  // TerraDraw selection logic - now managed per layer
-
+  // TerraDraw selection logic
   const {
     terraDrawRef,
-
     handleTerraDrawSelection,
-
     clearAll: clearAllDrawings,
-
     pendingPostalCodes,
-
     addPendingToSelection,
-
     removePendingFromSelection,
   } = useMapTerraDrawSelection({
     mapRef,
-
     data,
   });
 
-  // TerraDraw integration - initialize as soon as map is ready, don't wait for layers
-
-  // CRITICAL: Pass the ref directly to avoid unstable map references that cause constant remounting
-
+  // TerraDraw integration
   const terraDrawApi = useTerraDraw({
-    mapRef, // Pass the ref, let useTerraDraw handle the dereferencing
-
+    mapRef,
     isMapLoaded,
-
     isEnabled: isDrawingActive,
-
     mode: isDrawingActive ? currentDrawingMode : null,
-
     onSelectionChange: handleTerraDrawSelection,
-
     onFeatureSelect: handleFeatureSelect,
-
     onFeatureDeselect: handleFeatureDeselect,
   });
 
   // Always assign terraDrawRef for stability
-
   terraDrawRef.current = terraDrawApi;
 
   // Clear all drawings + pending postal codes + editing state
@@ -153,7 +102,7 @@ export function useMapInteractions({
     handleFeatureDeselect();
   });
 
-  // Deselect the current drawing without deleting it (Escape / X button)
+  // Deselect the current drawing without deleting it
   const deselectEditingFeature = useStableCallback(() => {
     if (editingFeatureId) {
       terraDrawApi.deselectFeature(editingFeatureId);
@@ -161,111 +110,95 @@ export function useMapInteractions({
     handleFeatureDeselect();
   });
 
-  // Hover interaction management
+  // deck.gl click handler — replaces useMapClickInteraction
+  const handleDeckClick = useCallback(
+    async (info: PickingInfo) => {
+      if (!isCursorMode || !info.object) {
+        return;
+      }
 
-  const {
-    hoveredRegionIdRef,
+      const code = getFeatureCode(info.object);
+      if (!code) {
+        return;
+      }
 
-    handleMouseEnter,
+      if (!areaId || !activeLayerId || areaId <= 0) {
+        toast.info(
+          `PLZ ${code} - Bitte wählen Sie einen Bereich und aktiven Layer aus`,
+          { duration: 3000 }
+        );
+        return;
+      }
 
-    handleMouseMove,
+      if (!addPostalCodesToLayer || !removePostalCodesFromLayer) {
+        toast.warning("Layer-Operationen nicht verfügbar", { duration: 2000 });
+        return;
+      }
 
-    handleMouseLeave,
-  } = useMapHoverInteraction(
-    mapRef.current,
+      const activeLayer = layers?.find((l) => l.id === activeLayerId);
+      if (!activeLayer) {
+        toast.warning(
+          `Aktiver Layer (ID: ${activeLayerId}) nicht gefunden. Verfügbare Layer: ${layers?.length || 0}`,
+          { duration: 3000 }
+        );
+        return;
+      }
 
-    layerId,
+      const existingCodesSet = new Set(
+        activeLayer.postalCodes?.map((pc) => pc.postalCode)
+      );
+      const codeExists = existingCodesSet.has(code);
 
-    layersLoaded,
-
-    isCursorMode
+      try {
+        if (codeExists) {
+          await removePostalCodesFromLayer(activeLayerId, [code]);
+          toast.success(`PLZ ${code} aus Gebiet entfernt`, { duration: 2000 });
+        } else {
+          await addPostalCodesToLayer(activeLayerId, [code]);
+          toast.success(`PLZ ${code} zu Gebiet hinzugefügt`, {
+            duration: 2000,
+          });
+        }
+      } catch (error) {
+        console.error("Error toggling postal code:", error);
+        toast.error(`Fehler beim Bearbeiten von PLZ ${code}`, {
+          duration: 2000,
+        });
+      }
+    },
+    [
+      isCursorMode,
+      areaId,
+      activeLayerId,
+      layers,
+      addPostalCodesToLayer,
+      removePostalCodesFromLayer,
+    ]
   );
-
-  // Click interaction management - now adds to active layer
-
-  const { handleClick } = useMapClickInteraction(
-    mapRef.current,
-
-    layersLoaded,
-
-    isCursorMode,
-
-    areaId,
-
-    activeLayerId,
-
-    layers,
-
-    addPostalCodesToLayer,
-
-    removePostalCodesFromLayer
-  );
-
-  // Event listeners management
-
-  useMapEventListeners({
-    map: mapRef.current,
-
-    layerId,
-
-    layersLoaded,
-
-    isCursorMode,
-
-    handleMouseEnter,
-
-    handleMouseMove,
-
-    handleMouseLeave,
-
-    handleClick,
-  });
 
   return {
     // Drawing tools state
-
     currentDrawingMode,
-
     isDrawingToolsVisible,
-
     isCursorMode,
-
     isDrawingActive,
-
     // Drawing tools actions
-
     handleDrawingModeChange,
-
     toggleToolsVisibility,
-
     showTools,
-
     hideTools,
-
     clearAll,
-
     // Editing state
-
     editingFeatureId,
-
     deleteEditingFeature,
-
     deselectEditingFeature,
-
-    // Hover state
-
-    hoveredRegionIdRef,
-
+    // deck.gl click handler
+    handleDeckClick,
     // TerraDraw API reference
-
     terraDrawRef,
-
     // Pending postal codes from drawing
-
     pendingPostalCodes,
-
     addPendingToSelection,
-
     removePendingFromSelection,
   } as const;
 }

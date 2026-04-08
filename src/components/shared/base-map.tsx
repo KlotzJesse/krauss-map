@@ -1,18 +1,27 @@
 "use no memo";
 import { PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
-import { memo, startTransition, Suspense, useRef, Activity } from "react";
+import {
+  memo,
+  startTransition,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  Activity,
+} from "react";
+import { Map, useMap } from "react-map-gl/maplibre";
 
+import "maplibre-gl/dist/maplibre-gl.css";
 import {
   DrawingToolsErrorBoundary,
   MapErrorBoundary,
 } from "@/components/ui/error-boundaries";
 import { DrawingToolsSkeleton } from "@/components/ui/loading-skeletons";
-import { useMapCenterZoomSync } from "@/lib/hooks/use-map-center-zoom-sync";
-import { useMapConfig } from "@/lib/hooks/use-map-config";
-import { useMapInitialization } from "@/lib/hooks/use-map-initialization";
+import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
 import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
-import { useMapLayers } from "@/lib/hooks/use-map-layers";
+import { useMapLabels } from "@/lib/hooks/use-map-labels";
 import { useMapOptimizations } from "@/lib/hooks/use-map-optimizations";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useMapState } from "@/lib/url-state/map-state";
@@ -23,6 +32,7 @@ import type {
 } from "@/types/base-map";
 
 import { Button } from "../ui/button";
+import { DeckGLOverlay } from "./deck-gl-overlay";
 
 // Memoized drawing tools component with lazy loading for performance
 const DrawingTools = dynamic(
@@ -69,12 +79,13 @@ const ToggleButton = memo(
 );
 ToggleButton.displayName = "ToggleButton";
 
-// Main BaseMap component with performance optimizations
-const BaseMapComponent = ({
+/**
+ * Inner map component — must be a child of <Map> to use useMap() hook.
+ * Manages TerraDraw integration via raw MapLibre instance and labels via hybrid approach.
+ */
+function MapInner({
   data,
   layerId,
-  center = [10.4515, 51.1657],
-  zoom = 5,
   statesData,
   granularity,
   onGranularityChange,
@@ -85,65 +96,48 @@ const BaseMapComponent = ({
   previewPostalCode,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
-  isViewingVersion = false,
+  isViewingVersion,
   versionId,
   versions,
   changes,
   initialUndoRedoStatus,
-}: BaseMapProps) => {
-  // Stable ref for map container
-  const mapContainer = useRef<HTMLDivElement>(null);
+}: Omit<BaseMapProps, "center" | "zoom">) {
+  const { current: mapRef } = useMap();
+  const rawMapRef = useRef<maplibregl.Map | null>(null);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
 
-  // Stable map configuration using custom hook
-  const mapConfig = useMapConfig(center, zoom);
+  // Get raw MapLibre instance for TerraDraw and labels
+  useEffect(() => {
+    if (!mapRef) {
+      return;
+    }
+    const raw = mapRef.getMap();
+    rawMapRef.current = raw;
 
-  // Map initialization with stable config
-  const { mapRef: map, isMapLoaded } = useMapInitialization({
-    mapContainer,
-    data,
-    center: mapConfig.center,
-    zoom: mapConfig.zoom,
-    style: mapConfig.style,
-  });
+    const handleLoad = () => setIsMapLoaded(true);
 
-  // URL state management with stable destructuring
+    if (raw.loaded()) {
+      setIsMapLoaded(true);
+    } else {
+      raw.once("load", handleLoad);
+    }
+
+    return () => {
+      raw.off("load", handleLoad);
+    };
+  }, [mapRef]);
+
+  // URL state management
   const mapState = useMapState();
-  const { setMapCenterZoom } = mapState;
 
   // Performance optimizations with memoized computations
-  const optimizations = useMapOptimizations({
-    data,
-    statesData,
-  });
+  const optimizations = useMapOptimizations({ data, statesData });
 
-  // Business logic with stable references (available for future use)
-
-  // Memoized hovered region ref to prevent layer re-initialization
-
-  // Map layers management with stable dependencies
-  const { layersLoaded } = useMapLayers({
-    mapRef: map,
-    isMapLoaded,
-    layerId,
-    data,
-    statesData,
-    granularity,
-    previewPostalCode,
-    getSelectedFeatureCollection: optimizations.getSelectedFeatureCollection,
-    labelPoints: optimizations.labelPoints,
-    statesLabelPoints: optimizations.statesLabelPoints,
-    featureIndex: optimizations.featureIndex,
-    layers,
-    activeLayerId,
-  });
-
-  // Map interactions with memoized callbacks
+  // Map interactions (drawing tools, TerraDraw, click handler)
   const interactions = useMapInteractions({
-    mapRef: map,
-    layerId,
+    mapRef: rawMapRef,
     data,
     isMapLoaded,
-    layersLoaded,
     areaId,
     activeLayerId,
     layers,
@@ -151,13 +145,27 @@ const BaseMapComponent = ({
     removePostalCodesFromLayer,
   });
 
-  // Map center/zoom synchronization
-  useMapCenterZoomSync({
-    mapRef: map,
+  // deck.gl layers (polygons, fills, hover, preview)
+  const { deckLayers, onHover } = useDeckLayers({
+    data,
+    statesData,
+    layers,
+    activeLayerId,
+    previewPostalCode,
+    featureIndex: optimizations.featureIndex,
+    isCursorMode: interactions.isCursorMode,
+  });
+
+  // MapLibre native labels (hybrid escape hatch)
+  useMapLabels({
+    mapInstance: rawMapRef.current,
     isMapLoaded,
-    center,
-    zoom,
-    setMapCenterZoom,
+    layerId,
+    data,
+    labelPoints: optimizations.labelPoints,
+    statesLabelPoints: optimizations.statesLabelPoints,
+    layers,
+    featureIndex: optimizations.featureIndex,
   });
 
   // Memoized toggle handlers with React 19 batching optimization
@@ -192,86 +200,198 @@ const BaseMapComponent = ({
   });
 
   return (
-    <MapErrorBoundary>
-      <div className="relative w-full h-full">
+    <>
+      <DeckGLOverlay
+        layers={deckLayers}
+        onHover={onHover}
+        onClick={interactions.handleDeckClick}
+      />
+
+      {/* Floating Drawing Toolbar - Center bottom */}
+      <FloatingDrawingToolbar
+        currentMode={interactions.currentDrawingMode}
+        onModeChange={interactions.handleDrawingModeChange}
+        areaId={areaId}
+        initialUndoRedoStatus={initialUndoRedoStatus}
+      />
+      {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
+      {interactions.editingFeatureId && (
+        <FloatingDrawingEditBar
+          onDelete={handleDeleteEditingFeature}
+          onDismiss={handleDeselectEditingFeature}
+        />
+      )}
+
+      <Activity
+        mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
+      >
         <div
-          ref={mapContainer}
-          className="w-full h-full min-h-[400px]"
-          style={{ minHeight: mapConfig.minHeight }}
+          className="absolute top-4 left-4 bottom-4 z-10 flex flex-col"
           role="region"
-          aria-label="Interaktive Karte"
-        />
-        {/* Floating Drawing Toolbar - Center bottom */}
-        <FloatingDrawingToolbar
-          currentMode={interactions.currentDrawingMode}
-          onModeChange={interactions.handleDrawingModeChange}
-          areaId={areaId}
-          initialUndoRedoStatus={initialUndoRedoStatus}
-        />
-        {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
-        {interactions.editingFeatureId && (
-          <FloatingDrawingEditBar
-            onDelete={handleDeleteEditingFeature}
-            onDismiss={handleDeselectEditingFeature}
+          aria-label="Kartentools-Panel"
+        >
+          <DrawingToolsErrorBoundary>
+            <Suspense fallback={<DrawingToolsSkeleton />}>
+              <DrawingTools
+                currentMode={interactions.currentDrawingMode}
+                onModeChange={interactions.handleDrawingModeChange}
+                onClearAll={handleClearAll}
+                onToggleVisibility={handleHideTools}
+                granularity={granularity}
+                onGranularityChange={onGranularityChange}
+                postalCodesData={data}
+                pendingPostalCodes={interactions.pendingPostalCodes}
+                onAddPending={interactions.addPendingToSelection}
+                onRemovePending={interactions.removePendingFromSelection}
+                areaId={areaId ?? undefined}
+                areaName={areaName}
+                activeLayerId={activeLayerId}
+                onLayerSelect={mapState.setActiveLayer}
+                isLayerSwitchPending={mapState.isLayerPending}
+                addPostalCodesToLayer={addPostalCodesToLayer}
+                removePostalCodesFromLayer={removePostalCodesFromLayer}
+                layers={layers}
+                isViewingVersion={isViewingVersion}
+                versionId={versionId}
+                versions={versions}
+                changes={changes}
+              />
+            </Suspense>
+          </DrawingToolsErrorBoundary>
+        </div>
+      </Activity>
+
+      <Activity
+        mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}
+      >
+        <div
+          className="absolute top-4 left-4 z-10"
+          role="region"
+          aria-label="Kartentools-Panel"
+        >
+          <ToggleButton
+            onClick={handleShowTools}
+            title="Kartentools anzeigen"
+            ariaLabel="Kartentools-Panel anzeigen"
+          >
+            <PlusIcon width={24} height={24} />
+          </ToggleButton>
+        </div>
+      </Activity>
+    </>
+  );
+}
+
+// Main BaseMap component with react-map-gl + deck.gl
+const BaseMapComponent = ({
+  data,
+  layerId,
+  center = [10.4515, 51.1657],
+  zoom = 5,
+  statesData,
+  granularity,
+  onGranularityChange,
+  layers,
+  activeLayerId,
+  areaId,
+  areaName,
+  previewPostalCode,
+  addPostalCodesToLayer,
+  removePostalCodesFromLayer,
+  isViewingVersion = false,
+  versionId,
+  versions,
+  changes,
+  initialUndoRedoStatus,
+}: BaseMapProps) => {
+  // Controlled view state for URL sync
+  const mapState = useMapState();
+  const { setMapCenterZoom } = mapState;
+  const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [viewState, setViewState] = useState({
+    longitude: center[0],
+    latitude: center[1],
+    zoom,
+  });
+
+  // Sync from URL changes (back/forward, saved views)
+  useEffect(() => {
+    setViewState((prev) => ({
+      ...prev,
+      longitude: center[0],
+      latitude: center[1],
+      zoom,
+    }));
+  }, [center, zoom]);
+
+  // Handle map movement with debounced URL sync
+  const handleMove = useCallback(
+    (evt: {
+      viewState: { longitude: number; latitude: number; zoom: number };
+    }) => {
+      setViewState(evt.viewState);
+
+      // Debounced URL sync — don't write to URL on every frame
+      if (moveDebounceRef.current) {
+        clearTimeout(moveDebounceRef.current);
+      }
+      moveDebounceRef.current = setTimeout(() => {
+        setMapCenterZoom(
+          [evt.viewState.longitude, evt.viewState.latitude],
+          evt.viewState.zoom
+        );
+      }, 500);
+    },
+    [setMapCenterZoom]
+  );
+
+  // Cleanup debounce timer
+  useEffect(
+    () => () => {
+      if (moveDebounceRef.current) {
+        clearTimeout(moveDebounceRef.current);
+      }
+    },
+    []
+  );
+
+  return (
+    <MapErrorBoundary>
+      <div
+        className="relative w-full h-full"
+        style={{ minHeight: "400px" }}
+        role="region"
+        aria-label="Interaktive Karte"
+      >
+        <Map
+          {...viewState}
+          onMove={handleMove}
+          mapStyle="/versatilescolorful.json"
+          style={{ width: "100%", height: "100%" }}
+          minZoom={3}
+          maxZoom={18}
+        >
+          <MapInner
+            data={data}
+            layerId={layerId}
+            statesData={statesData}
+            granularity={granularity}
+            onGranularityChange={onGranularityChange}
+            layers={layers}
+            activeLayerId={activeLayerId}
+            areaId={areaId}
+            areaName={areaName}
+            previewPostalCode={previewPostalCode}
+            addPostalCodesToLayer={addPostalCodesToLayer}
+            removePostalCodesFromLayer={removePostalCodesFromLayer}
+            isViewingVersion={isViewingVersion}
+            versionId={versionId}
+            versions={versions}
+            changes={changes}
+            initialUndoRedoStatus={initialUndoRedoStatus}
           />
-        )}
-
-        <Activity
-          mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
-        >
-          <div
-            className="absolute top-4 left-4 bottom-4 z-10 flex flex-col"
-            role="region"
-            aria-label="Kartentools-Panel"
-          >
-            <DrawingToolsErrorBoundary>
-              <Suspense fallback={<DrawingToolsSkeleton />}>
-                <DrawingTools
-                  currentMode={interactions.currentDrawingMode}
-                  onModeChange={interactions.handleDrawingModeChange}
-                  onClearAll={handleClearAll}
-                  onToggleVisibility={handleHideTools}
-                  granularity={granularity}
-                  onGranularityChange={onGranularityChange}
-                  postalCodesData={data}
-                  pendingPostalCodes={interactions.pendingPostalCodes}
-                  onAddPending={interactions.addPendingToSelection}
-                  onRemovePending={interactions.removePendingFromSelection}
-                  areaId={areaId ?? undefined}
-                  areaName={areaName}
-                  activeLayerId={activeLayerId}
-                  onLayerSelect={mapState.setActiveLayer}
-                  isLayerSwitchPending={mapState.isLayerPending}
-                  addPostalCodesToLayer={addPostalCodesToLayer}
-                  removePostalCodesFromLayer={removePostalCodesFromLayer}
-                  layers={layers}
-                  isViewingVersion={isViewingVersion}
-                  versionId={versionId}
-                  versions={versions}
-                  changes={changes}
-                />
-              </Suspense>
-            </DrawingToolsErrorBoundary>
-          </div>
-        </Activity>
-
-        <Activity
-          mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}
-        >
-          <div
-            className="absolute top-4 left-4 z-10"
-            role="region"
-            aria-label="Kartentools-Panel"
-          >
-            <ToggleButton
-              onClick={handleShowTools}
-              title="Kartentools anzeigen"
-              ariaLabel="Kartentools-Panel anzeigen"
-            >
-              <PlusIcon width={24} height={24} />
-            </ToggleButton>
-          </div>
-        </Activity>
+        </Map>
       </div>
     </MapErrorBoundary>
   );
