@@ -78,11 +78,17 @@ export function findPostalCodeMatches(
 ): PostalCodeMatch[] {
   const matches: PostalCodeMatch[] = [];
 
-  // Get all available postal codes from the data
-  const allCodes = availableData.features
-    .map((f) => f.properties?.code || f.properties?.PLZ || f.properties?.plz)
-    .filter((code): code is string => Boolean(code))
-    .map((code) => normalizePostalCode(code));
+  // Build Set for O(1) exact lookups + array for prefix scans
+  const allCodes: string[] = [];
+  const codeSet = new Set<string>();
+  for (const f of availableData.features) {
+    const raw = f.properties?.code || f.properties?.PLZ || f.properties?.plz;
+    if (raw) {
+      const code = normalizePostalCode(raw);
+      allCodes.push(code);
+      codeSet.add(code);
+    }
+  }
 
   for (const parsed of parsedCodes) {
     if (!parsed.isValid) {
@@ -92,8 +98,8 @@ export function findPostalCodeMatches(
     const inputCode = parsed.normalized;
     const matchedCodes: string[] = [];
 
-    // Exact match first
-    if (allCodes.includes(inputCode)) {
+    // Exact match first — O(1) via Set
+    if (codeSet.has(inputCode)) {
       matchedCodes.push(inputCode);
     } else {
       // Pattern matching based on granularity and input length
@@ -291,6 +297,31 @@ const STATE_NAME_MAPPINGS = {
   thüringen: ["thuringia", "thueringen", "thüringen", "th"],
 };
 
+// Pre-built inverse lookup maps for O(1) name resolution
+const CITY_ALIAS_MAP = new Map<
+  string,
+  { germanName: string; aliases: string[] }
+>();
+for (const [germanName, aliases] of Object.entries(CITY_NAME_MAPPINGS)) {
+  const entry = { germanName, aliases };
+  CITY_ALIAS_MAP.set(germanName, entry);
+  for (const alias of aliases) {
+    CITY_ALIAS_MAP.set(alias, entry);
+  }
+}
+
+const STATE_ALIAS_MAP = new Map<
+  string,
+  { germanName: string; aliases: string[] }
+>();
+for (const [germanName, aliases] of Object.entries(STATE_NAME_MAPPINGS)) {
+  const entry = { germanName, aliases };
+  STATE_ALIAS_MAP.set(germanName, entry);
+  for (const alias of aliases) {
+    STATE_ALIAS_MAP.set(alias, entry);
+  }
+}
+
 /**
  * Normalizes city/state names for better search matching
  */
@@ -310,32 +341,29 @@ export function normalizeCityStateName(input: string): string[] {
 
   const variants = [normalized];
 
-  // Check city mappings - exact match or word boundary match
-  for (const [germanName, aliases] of Object.entries(CITY_NAME_MAPPINGS)) {
-    // Check if input exactly matches any alias or the German name
-    if (germanName === normalized || aliases.includes(normalized)) {
-      variants.push(germanName, ...aliases);
-      break; // Found exact match, no need to continue
-    }
-
-    // Check if input is part of a compound city name
-    for (const alias of aliases) {
-      if (alias.includes(" ") && alias.includes(normalized)) {
-        const words = alias.split(" ");
-        if (words.includes(normalized)) {
-          variants.push(germanName, ...aliases);
-          break;
+  // O(1) city lookup via inverse map
+  const cityMatch = CITY_ALIAS_MAP.get(normalized);
+  if (cityMatch) {
+    variants.push(cityMatch.germanName, ...cityMatch.aliases);
+  } else {
+    // Fallback: compound city name check (rare path)
+    for (const [germanName, aliases] of Object.entries(CITY_NAME_MAPPINGS)) {
+      for (const alias of aliases) {
+        if (alias.includes(" ") && alias.includes(normalized)) {
+          const words = alias.split(" ");
+          if (words.includes(normalized)) {
+            variants.push(germanName, ...aliases);
+            break;
+          }
         }
       }
     }
   }
 
-  // Check state mappings - exact match only
-  for (const [germanName, aliases] of Object.entries(STATE_NAME_MAPPINGS)) {
-    if (germanName === normalized || aliases.includes(normalized)) {
-      variants.push(germanName, ...aliases);
-      break; // Found exact match, no need to continue
-    }
+  // O(1) state lookup via inverse map
+  const stateMatch = STATE_ALIAS_MAP.get(normalized);
+  if (stateMatch) {
+    variants.push(stateMatch.germanName, ...stateMatch.aliases);
   }
 
   return [...new Set(variants)];
@@ -375,6 +403,7 @@ export function findPostalCodesByLocation(
   availableData: FeatureCollection<Polygon | MultiPolygon>
 ): string[] {
   const searchVariants = normalizeCityStateName(locationName);
+  const variantSet = new Set(searchVariants);
   const foundCodes: string[] = [];
 
   for (const feature of availableData.features) {
@@ -395,11 +424,15 @@ export function findPostalCodesByLocation(
       .map((v) => v.toString().toLowerCase());
 
     // Check if any of our search variants match any property values
-    const hasMatch = searchVariants.some((variant) =>
-      propertyValues.some(
-        (prop) => prop.includes(variant) || variant.includes(prop)
-      )
-    );
+    // Use Set for exact matches, fall back to substring only when needed
+    let hasMatch = propertyValues.some((prop) => variantSet.has(prop));
+    if (!hasMatch) {
+      hasMatch = searchVariants.some((variant) =>
+        propertyValues.some(
+          (prop) => prop.includes(variant) || variant.includes(prop)
+        )
+      );
+    }
 
     if (hasMatch) {
       const code = properties.code || properties.PLZ || properties.plz;

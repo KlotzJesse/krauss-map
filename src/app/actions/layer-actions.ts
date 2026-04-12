@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { updateTag } from "next/cache";
 
 import { db } from "../../lib/db";
@@ -261,34 +261,22 @@ export async function addPostalCodesToLayerAction(
       return { success: false, error: "Layer not found" };
     }
 
-    const existingCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];
+    const existingCodesSet = new Set(
+      layer.postalCodes?.map((pc) => pc.postalCode) ?? []
+    );
     const codesToAdd = postalCodes.filter(
-      (code) => !existingCodes.includes(code)
+      (code) => !existingCodesSet.has(code)
     );
 
     if (codesToAdd.length === 0) {
       return { success: true }; // No new codes to add
     }
 
-    const newCodes = [...new Set([...existingCodes, ...postalCodes])];
-
-    // Update with combined postal codes
-    await db.transaction(async (tx) => {
-      // Delete existing postal codes
-      await tx
-        .delete(areaLayerPostalCodes)
-        .where(eq(areaLayerPostalCodes.layerId, layerId));
-
-      // Insert all postal codes (existing + new)
-      if (newCodes.length > 0) {
-        await tx.insert(areaLayerPostalCodes).values(
-          newCodes.map((code) => ({
-            layerId,
-            postalCode: code,
-          }))
-        );
-      }
-    });
+    // Delta insert only new codes — uses unique constraint to skip duplicates
+    await db
+      .insert(areaLayerPostalCodes)
+      .values(codesToAdd.map((code) => ({ layerId, postalCode: code })))
+      .onConflictDoNothing();
 
     // Record change
     await recordChangeAction(areaId, {
@@ -300,7 +288,7 @@ export async function addPostalCodesToLayerAction(
         layerId,
       },
       previousData: {
-        postalCodes: existingCodes,
+        postalCodes: [...existingCodesSet],
       },
       createdBy,
     });
@@ -336,36 +324,26 @@ export async function removePostalCodesFromLayerAction(
       return { success: false, error: "Layer not found" };
     }
 
-    const existingCodes = layer.postalCodes?.map((pc) => pc.postalCode) || [];
+    const existingCodesSet = new Set(
+      layer.postalCodes?.map((pc) => pc.postalCode) ?? []
+    );
     const codesToRemove = postalCodes.filter((code) =>
-      existingCodes.includes(code)
+      existingCodesSet.has(code)
     );
 
     if (codesToRemove.length === 0) {
       return { success: true }; // No codes to remove
     }
 
-    const newCodes = existingCodes.filter(
-      (code) => !postalCodes.includes(code)
-    );
-
-    // Update with filtered postal codes
-    await db.transaction(async (tx) => {
-      // Delete existing postal codes
-      await tx
-        .delete(areaLayerPostalCodes)
-        .where(eq(areaLayerPostalCodes.layerId, layerId));
-
-      // Insert remaining postal codes
-      if (newCodes.length > 0) {
-        await tx.insert(areaLayerPostalCodes).values(
-          newCodes.map((code) => ({
-            layerId,
-            postalCode: code,
-          }))
-        );
-      }
-    });
+    // Delta delete only the specified codes
+    await db
+      .delete(areaLayerPostalCodes)
+      .where(
+        and(
+          eq(areaLayerPostalCodes.layerId, layerId),
+          inArray(areaLayerPostalCodes.postalCode, codesToRemove)
+        )
+      );
 
     // Record change
     await recordChangeAction(areaId, {
