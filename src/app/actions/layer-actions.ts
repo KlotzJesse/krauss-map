@@ -52,7 +52,6 @@ export async function createLayerAction(
       createdBy,
     });
 
-    updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
     updateTag("undo-redo");
@@ -169,7 +168,6 @@ export async function updateLayerAction(
       createdBy,
     });
 
-    updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
     updateTag("undo-redo");
@@ -230,7 +228,6 @@ export async function deleteLayerAction(
       createdBy,
     });
 
-    updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
     updateTag("undo-redo");
@@ -293,7 +290,6 @@ export async function addPostalCodesToLayerAction(
       createdBy,
     });
 
-    updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
     updateTag("undo-redo");
@@ -360,7 +356,6 @@ export async function removePostalCodesFromLayerAction(
       createdBy,
     });
 
-    updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
     updateTag("undo-redo");

@@ -81,7 +81,7 @@ export async function getAreaById(id: number) {
 export async function getLayers(areaId: number) {
   "use cache";
   cacheLife("minutes");
-  cacheTag("layers", `area-${areaId}-layers`);
+  cacheTag(`area-${areaId}-layers`);
   try {
     const result = await db.query.areaLayers.findMany({
       where: eq(areaLayers.areaId, areaId),

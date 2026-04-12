@@ -159,7 +159,6 @@ export async function changeAreaGranularityAction(
     });
 
     updateTag(`area-${areaId}`);
-    updateTag("layers");
     updateTag(`area-${areaId}-layers`);
 
     refresh();

@@ -513,7 +513,6 @@ export async function restoreVersionAction(
     updateTag("versions");
     updateTag(`area-${areaId}-versions`);
     updateTag(`area-${areaId}`);
-    updateTag("layers");
     updateTag(`area-${areaId}-layers`);
     updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
