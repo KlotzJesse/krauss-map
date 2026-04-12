@@ -8,7 +8,7 @@ import type {
   SelectAreaVersions,
   areaLayers,
 } from "@/lib/schema/schema";
-import { useMapState } from "@/lib/url-state/map-state";
+import { useMapView } from "@/lib/url-state/map-state";
 
 const EMPTY_ARRAY: never[] = [];
 type Layer = InferSelectModel<typeof areaLayers> & {
@@ -62,7 +62,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
   changes,
   previewPostalCode,
 }: PostalCodesMapProps) {
-  const { center, zoom } = useMapState();
+  const [{ center, zoom }] = useMapView();
 
   return (
     <BaseMap

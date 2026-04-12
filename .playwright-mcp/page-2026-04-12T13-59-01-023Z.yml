@@ -1,0 +1,321 @@
+- generic [active] [ref=e1]:
+    - generic [ref=e2]:
+        - generic [ref=e5]:
+            - list [ref=e7]:
+                - listitem [ref=e8]:
+                    - link "KRAUSS Gebietsmanagement" [ref=e9] [cursor=pointer]:
+                        - /url: /
+                        - img [ref=e10]
+                        - generic [ref=e13]: KRAUSS Gebietsmanagement
+            - generic [ref=e14]:
+                - generic [ref=e16]:
+                    - list [ref=e17]:
+                        - listitem [ref=e18]:
+                            - button "Neues Gebiet erstellen" [ref=e19]:
+                                - img [ref=e20]
+                                - generic [ref=e22]: Neues Gebiet erstellen
+                    - list [ref=e23]:
+                        - listitem [ref=e24]:
+                            - link "Übersicht" [ref=e25] [cursor=pointer]:
+                                - /url: /
+                                - img [ref=e26]
+                                - generic [ref=e30]: Übersicht
+                - generic [ref=e31]:
+                    - generic [ref=e33]:
+                        - generic [ref=e34]: Gebiete
+                        - button "Neues Gebiet erstellen" [ref=e35]:
+                            - img [ref=e36]
+                    - list [ref=e38]:
+                        - listitem [ref=e39]:
+                            - generic [ref=e41]:
+                                - img [ref=e42]
+                                - link "Copilot Test Gebiet" [ref=e44] [cursor=pointer]:
+                                    - /url: /postal-codes/57
+                                    - generic [ref=e45]: Copilot Test Gebiet
+                        - listitem [ref=e46]:
+                            - generic [ref=e48]:
+                                - img [ref=e49]
+                                - link "Test Agent Area" [ref=e51] [cursor=pointer]:
+                                    - /url: /postal-codes/56
+                                    - generic [ref=e52]: Test Agent Area
+                                - button "Aktionen" [ref=e53]:
+                                    - img
+                                    - generic [ref=e54]: Aktionen
+                        - listitem [ref=e55]:
+                            - generic [ref=e57]:
+                                - img [ref=e58]
+                                - link "Point of Food" [ref=e60] [cursor=pointer]:
+                                    - /url: /postal-codes/55
+                                    - generic [ref=e61]: Point of Food
+                                - button "Aktionen" [ref=e62]:
+                                    - img
+                                    - generic [ref=e63]: Aktionen
+                        - listitem [ref=e64]:
+                            - generic [ref=e66]:
+                                - img [ref=e67]
+                                - link "Ungermann" [ref=e69] [cursor=pointer]:
+                                    - /url: /postal-codes/54
+                                    - generic [ref=e70]: Ungermann
+                                - button "Aktionen" [ref=e71]:
+                                    - img
+                                    - generic [ref=e72]: Aktionen
+                        - listitem [ref=e73]:
+                            - generic [ref=e75]:
+                                - img [ref=e76]
+                                - link "Test123" [ref=e78] [cursor=pointer]:
+                                    - /url: /postal-codes/53
+                                    - generic [ref=e79]: Test123
+                                - button "Aktionen" [ref=e80]:
+                                    - img
+                                    - generic [ref=e81]: Aktionen
+                        - listitem [ref=e82]:
+                            - generic [ref=e84]:
+                                - img [ref=e85]
+                                - link "Baur" [ref=e87] [cursor=pointer]:
+                                    - /url: /postal-codes/52
+                                    - generic [ref=e88]: Baur
+                                - button "Aktionen" [ref=e89]:
+                                    - img
+                                    - generic [ref=e90]: Aktionen
+                        - listitem [ref=e91]:
+                            - generic [ref=e93]:
+                                - img [ref=e94]
+                                - link "Frischdienst Umkreis" [ref=e96] [cursor=pointer]:
+                                    - /url: /postal-codes/51
+                                    - generic [ref=e97]: Frischdienst Umkreis
+                                - button "Aktionen" [ref=e98]:
+                                    - img
+                                    - generic [ref=e99]: Aktionen
+                        - listitem [ref=e100]:
+                            - generic [ref=e102]:
+                                - img [ref=e103]
+                                - link "Hinsche 2" [ref=e105] [cursor=pointer]:
+                                    - /url: /postal-codes/49
+                                    - generic [ref=e106]: Hinsche 2
+                                - button "Aktionen" [ref=e107]:
+                                    - img
+                                    - generic [ref=e108]: Aktionen
+                        - listitem [ref=e109]:
+                            - generic [ref=e111]:
+                                - img [ref=e112]
+                                - link "leer" [ref=e114] [cursor=pointer]:
+                                    - /url: /postal-codes/47
+                                    - generic [ref=e115]: leer
+                                - button "Aktionen" [ref=e116]:
+                                    - img
+                                    - generic [ref=e117]: Aktionen
+                        - listitem [ref=e118]:
+                            - generic [ref=e120]:
+                                - img [ref=e121]
+                                - link "test" [ref=e123] [cursor=pointer]:
+                                    - /url: /postal-codes/46
+                                    - generic [ref=e124]: test
+                                - button "Aktionen" [ref=e125]:
+                                    - img
+                                    - generic [ref=e126]: Aktionen
+                        - listitem [ref=e127]:
+                            - generic [ref=e129]:
+                                - img [ref=e130]
+                                - link "HOFMANNs" [ref=e132] [cursor=pointer]:
+                                    - /url: /postal-codes/45
+                                    - generic [ref=e133]: HOFMANNs
+                                - button "Aktionen" [ref=e134]:
+                                    - img
+                                    - generic [ref=e135]: Aktionen
+                        - listitem [ref=e136]:
+                            - generic [ref=e138]:
+                                - img [ref=e139]
+                                - link "TM" [ref=e141] [cursor=pointer]:
+                                    - /url: /postal-codes/44
+                                    - generic [ref=e142]: TM
+                                - button "Aktionen" [ref=e143]:
+                                    - img
+                                    - generic [ref=e144]: Aktionen
+                        - listitem [ref=e145]:
+                            - generic [ref=e147]:
+                                - img [ref=e148]
+                                - link "Tchibo 26" [ref=e150] [cursor=pointer]:
+                                    - /url: /postal-codes/43
+                                    - generic [ref=e151]: Tchibo 26
+                                - button "Aktionen" [ref=e152]:
+                                    - img
+                                    - generic [ref=e153]: Aktionen
+                        - listitem [ref=e154]:
+                            - generic [ref=e156]:
+                                - img [ref=e157]
+                                - link "Kissel" [ref=e159] [cursor=pointer]:
+                                    - /url: /postal-codes/39
+                                    - generic [ref=e160]: Kissel
+                                - button "Aktionen" [ref=e161]:
+                                    - img
+                                    - generic [ref=e162]: Aktionen
+                        - listitem [ref=e163]:
+                            - generic [ref=e165]:
+                                - img [ref=e166]
+                                - link "Eliware" [ref=e168] [cursor=pointer]:
+                                    - /url: /postal-codes/7
+                                    - generic [ref=e169]: Eliware
+                                - button "Aktionen" [ref=e170]:
+                                    - img
+                                    - generic [ref=e171]: Aktionen
+                        - listitem [ref=e172]:
+                            - generic [ref=e174]:
+                                - img [ref=e175]
+                                - link "Energytec" [ref=e177] [cursor=pointer]:
+                                    - /url: /postal-codes/38
+                                    - generic [ref=e178]: Energytec
+                                - button "Aktionen" [ref=e179]:
+                                    - img
+                                    - generic [ref=e180]: Aktionen
+                        - listitem [ref=e181]:
+                            - generic [ref=e183]:
+                                - img [ref=e184]
+                                - link "Ecolab Alt" [ref=e186] [cursor=pointer]:
+                                    - /url: /postal-codes/9
+                                    - generic [ref=e187]: Ecolab Alt
+                                - button "Aktionen" [ref=e188]:
+                                    - img
+                                    - generic [ref=e189]: Aktionen
+                        - listitem [ref=e190]:
+                            - generic [ref=e192]:
+                                - img [ref=e193]
+                                - link "Ecolab DM" [ref=e195] [cursor=pointer]:
+                                    - /url: /postal-codes/37
+                                    - generic [ref=e196]: Ecolab DM
+                                - button "Aktionen" [ref=e197]:
+                                    - img
+                                    - generic [ref=e198]: Aktionen
+                        - listitem [ref=e199]:
+                            - generic [ref=e201]:
+                                - img [ref=e202]
+                                - link "Ecolab SDM" [ref=e204] [cursor=pointer]:
+                                    - /url: /postal-codes/36
+                                    - generic [ref=e205]: Ecolab SDM
+                                - button "Aktionen" [ref=e206]:
+                                    - img
+                                    - generic [ref=e207]: Aktionen
+                        - listitem [ref=e208]:
+                            - generic [ref=e210]:
+                                - img [ref=e211]
+                                - link "CloudProjekt" [ref=e213] [cursor=pointer]:
+                                    - /url: /postal-codes/35
+                                    - generic [ref=e214]: CloudProjekt
+                                - button "Aktionen" [ref=e215]:
+                                    - img
+                                    - generic [ref=e216]: Aktionen
+                        - listitem [ref=e217]:
+                            - generic [ref=e219]:
+                                - img [ref=e220]
+                                - link "Tchibo Alt" [ref=e222] [cursor=pointer]:
+                                    - /url: /postal-codes/12
+                                    - generic [ref=e223]: Tchibo Alt
+                                - button "Aktionen" [ref=e224]:
+                                    - img
+                                    - generic [ref=e225]: Aktionen
+                        - listitem [ref=e226]:
+                            - generic [ref=e228]:
+                                - img [ref=e229]
+                                - link "Tchibo 2" [ref=e231] [cursor=pointer]:
+                                    - /url: /postal-codes/34
+                                    - generic [ref=e232]: Tchibo 2
+                                - button "Aktionen" [ref=e233]:
+                                    - img
+                                    - generic [ref=e234]: Aktionen
+                        - listitem [ref=e235]:
+                            - generic [ref=e237]:
+                                - img [ref=e238]
+                                - link "Leibinger" [ref=e240] [cursor=pointer]:
+                                    - /url: /postal-codes/33
+                                    - generic [ref=e241]: Leibinger
+                                - button "Aktionen" [ref=e242]:
+                                    - img
+                                    - generic [ref=e243]: Aktionen
+                        - listitem [ref=e244]:
+                            - generic [ref=e246]:
+                                - img [ref=e247]
+                                - link "Alpenhain" [ref=e249] [cursor=pointer]:
+                                    - /url: /postal-codes/32
+                                    - generic [ref=e250]: Alpenhain
+                                - button "Aktionen" [ref=e251]:
+                                    - img
+                                    - generic [ref=e252]: Aktionen
+                        - listitem [ref=e253]:
+                            - generic [ref=e255]:
+                                - img [ref=e256]
+                                - link "MCFT" [ref=e258] [cursor=pointer]:
+                                    - /url: /postal-codes/31
+                                    - generic [ref=e259]: MCFT
+                                - button "Aktionen" [ref=e260]:
+                                    - img
+                                    - generic [ref=e261]: Aktionen
+                        - listitem [ref=e262]:
+                            - generic [ref=e264]:
+                                - img [ref=e265]
+                                - link "SRH" [ref=e267] [cursor=pointer]:
+                                    - /url: /postal-codes/30
+                                    - generic [ref=e268]: SRH
+                                - button "Aktionen" [ref=e269]:
+                                    - img
+                                    - generic [ref=e270]: Aktionen
+                        - listitem [ref=e271]:
+                            - generic [ref=e273]:
+                                - img [ref=e274]
+                                - link "Orkla" [ref=e276] [cursor=pointer]:
+                                    - /url: /postal-codes/29
+                                    - generic [ref=e277]: Orkla
+                                - button "Aktionen" [ref=e278]:
+                                    - img
+                                    - generic [ref=e279]: Aktionen
+                        - listitem [ref=e280]:
+                            - generic [ref=e282]:
+                                - img [ref=e283]
+                                - link "Rittner Foodservice" [ref=e285] [cursor=pointer]:
+                                    - /url: /postal-codes/28
+                                    - generic [ref=e286]: Rittner Foodservice
+                                - button "Aktionen" [ref=e287]:
+                                    - img
+                                    - generic [ref=e288]: Aktionen
+                        - listitem [ref=e289]:
+                            - generic [ref=e291]:
+                                - img [ref=e292]
+                                - link "SB Zentralmarkt" [ref=e294] [cursor=pointer]:
+                                    - /url: /postal-codes/27
+                                    - generic [ref=e295]: SB Zentralmarkt
+                                - button "Aktionen" [ref=e296]:
+                                    - img
+                                    - generic [ref=e297]: Aktionen
+                        - listitem [ref=e298]:
+                            - generic [ref=e300]:
+                                - img [ref=e301]
+                                - link "Coperama" [ref=e303] [cursor=pointer]:
+                                    - /url: /postal-codes/26
+                                    - generic [ref=e304]: Coperama
+                                - button "Aktionen" [ref=e305]:
+                                    - img
+                                    - generic [ref=e306]: Aktionen
+                        - listitem [ref=e307]:
+                            - generic [ref=e309]:
+                                - img [ref=e310]
+                                - link "Lavazza" [ref=e312] [cursor=pointer]:
+                                    - /url: /postal-codes/25
+                                    - generic [ref=e313]: Lavazza
+                                - button "Aktionen" [ref=e314]:
+                                    - img
+                                    - generic [ref=e315]: Aktionen
+        - main [ref=e316]:
+            - generic [ref=e319]:
+                - generic [ref=e321]:
+                    - button "Toggle Sidebar" [ref=e322]:
+                        - img
+                        - generic [ref=e323]: Toggle Sidebar
+                    - separator [ref=e324]
+                    - heading "Gebietsmanagement" [level=1] [ref=e325]
+                    - generic [ref=e327]:
+                        - img
+                        - text: Aktuell v1 (Erstversion)
+                - button "PLZ importieren" [ref=e346]:
+                    - img
+    - region "Notifications alt+T"
+    - button "Open Next.js Dev Tools" [ref=e376] [cursor=pointer]:
+        - img [ref=e377]
+    - alert [ref=e380]

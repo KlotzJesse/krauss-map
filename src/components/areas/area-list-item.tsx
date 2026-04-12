@@ -4,8 +4,8 @@ import { IconCheck, IconFolder, IconX } from "@tabler/icons-react";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { memo } from 'react';
-import type { RefObject } from 'react';
+import { memo } from "react";
+import type { RefObject } from "react";
 
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
 import { Button } from "@/components/ui/button";
@@ -146,20 +146,40 @@ export const AreaListItem = memo(
   },
   (prev, next) => {
     // Custom comparator: skip edit-only props when not editing
-    if (prev.area !== next.area) {return false;}
-    if (prev.isCurrentRoute !== next.isCurrentRoute) {return false;}
-    if (prev.isEditing !== next.isEditing) {return false;}
+    if (prev.area !== next.area) {
+      return false;
+    }
+    if (prev.isCurrentRoute !== next.isCurrentRoute) {
+      return false;
+    }
+    if (prev.isEditing !== next.isEditing) {
+      return false;
+    }
     // Only compare edit props when actually editing
     if (next.isEditing) {
-      if (prev.editingAreaName !== next.editingAreaName) {return false;}
+      if (prev.editingAreaName !== next.editingAreaName) {
+        return false;
+      }
     }
     // Callbacks are stabilized with useCallback in parent, but shallow check as fallback
-    if (prev.onStartRename !== next.onStartRename) {return false;}
-    if (prev.onStartDelete !== next.onStartDelete) {return false;}
-    if (prev.onAreaClick !== next.onAreaClick) {return false;}
-    if (prev.onConfirmRename !== next.onConfirmRename) {return false;}
-    if (prev.onCancelRename !== next.onCancelRename) {return false;}
-    if (prev.onEditNameChange !== next.onEditNameChange) {return false;}
+    if (prev.onStartRename !== next.onStartRename) {
+      return false;
+    }
+    if (prev.onStartDelete !== next.onStartDelete) {
+      return false;
+    }
+    if (prev.onAreaClick !== next.onAreaClick) {
+      return false;
+    }
+    if (prev.onConfirmRename !== next.onConfirmRename) {
+      return false;
+    }
+    if (prev.onCancelRename !== next.onCancelRename) {
+      return false;
+    }
+    if (prev.onEditNameChange !== next.onEditNameChange) {
+      return false;
+    }
     return true;
   }
 );

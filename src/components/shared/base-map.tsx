@@ -24,7 +24,10 @@ import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
 import { useMapLabels } from "@/lib/hooks/use-map-labels";
 import { useMapOptimizations } from "@/lib/hooks/use-map-optimizations";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import { useMapState } from "@/lib/url-state/map-state";
+import {
+  useActiveLayerState,
+  useSetMapCenterZoom,
+} from "@/lib/url-state/map-state";
 import type {
   BaseMapProps,
   MapErrorMessageProps,
@@ -83,7 +86,7 @@ ToggleButton.displayName = "ToggleButton";
  * Inner map component — must be a child of <Map> to use useMap() hook.
  * Manages TerraDraw integration via raw MapLibre instance and labels via hybrid approach.
  */
-function MapInner({
+const MapInner = memo(function MapInner({
   data,
   layerId,
   statesData,
@@ -127,8 +130,8 @@ function MapInner({
     };
   }, [mapRef]);
 
-  // URL state management
-  const mapState = useMapState();
+  // URL state management (narrow: only layer switching, not view state)
+  const { setActiveLayer, isLayerPending } = useActiveLayerState();
 
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });
@@ -254,8 +257,8 @@ function MapInner({
                 areaId={areaId ?? undefined}
                 areaName={areaName}
                 activeLayerId={activeLayerId}
-                onLayerSelect={mapState.setActiveLayer}
-                isLayerSwitchPending={mapState.isLayerPending}
+                onLayerSelect={setActiveLayer}
+                isLayerSwitchPending={isLayerPending}
                 addPostalCodesToLayer={addPostalCodesToLayer}
                 removePostalCodesFromLayer={removePostalCodesFromLayer}
                 layers={layers}
@@ -288,7 +291,8 @@ function MapInner({
       </Activity>
     </>
   );
-}
+});
+MapInner.displayName = "MapInner";
 
 // Main BaseMap component with react-map-gl + deck.gl
 const BaseMapComponent = ({
@@ -312,9 +316,8 @@ const BaseMapComponent = ({
   changes,
   initialUndoRedoStatus,
 }: BaseMapProps) => {
-  // Controlled view state for URL sync
-  const mapState = useMapState();
-  const { setMapCenterZoom } = mapState;
+  // Controlled view state for URL sync (narrow: only setter, no view subscription)
+  const setMapCenterZoom = useSetMapCenterZoom();
   const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [viewState, setViewState] = useState({

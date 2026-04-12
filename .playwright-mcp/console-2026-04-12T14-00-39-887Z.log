@@ -1,0 +1,169 @@
+[    1956ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    1985ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4017ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://tiles.versatiles.org/assets/glyphs/Open%20Sans%20Bold,Arial%20Unicode%20MS%20Bold/0-255.pbf:0
+[    4019ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0030 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4019ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0031 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4020ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0032 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4020ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0033 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4020ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0034 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4020ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0035 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4020ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0036 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4021ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0037 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4021ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0038 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4021ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0039 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4024ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0020 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4024ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0041 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4025ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0044 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4025ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0049 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4025ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+004B locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4025ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+004C locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4025ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+004E locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4025ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0053 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4026ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0057 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4026ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0061 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4026ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0062 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4026ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0063 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4026ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0064 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4026ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0065 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4026ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0067 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4026ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0068 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0069 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+006C locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+006E locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+006F locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0070 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0072 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0073 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0074 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0076 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4027ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0078 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4028ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+0079 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[    4028ms] [WARNING] Unable to load glyph range 0, 0-255. Rendering codepoint U+00F6 locally instead. Error: AJAXError:  (404): https://tiles.versatiles.org/assets/glyphs/Open Sans Bold,Arial Unicode MS Bold/0-255.pbf @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[   54473ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[   54556ms] [ERROR] %o
+
+%s ReferenceError: useActiveLayerState is not defined
+    at MapInner (http://localhost:3000/_next/static/chunks/src_04j7.ke._.js?id=%255Bproject%255D%252Fsrc%252Fcomponents%252Fshared%252Fbase-map.tsx+%255Bapp-client%255D+%2528ecmascript%2529:139:48)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:15037:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:4620:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6081:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6691:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9555:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9449:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9433:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9098:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10263:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10179:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9230:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:299:13)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:886:13 The above error occurred in the <MapInner> component. It was handled by the <m> error boundary. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:1998
+[   54583ms] [LOG] [Fast Refresh] done in 169ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[   59587ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[   59635ms] [ERROR] %o
+
+%s ReferenceError: useActiveLayerState is not defined
+    at MapInner (http://localhost:3000/_next/static/chunks/src_04j7.ke._.js?id=%255Bproject%255D%252Fsrc%252Fcomponents%252Fshared%252Fbase-map.tsx+%255Bapp-client%255D+%2528ecmascript%2529:139:48)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:15037:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:4620:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6081:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6691:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9555:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9449:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9433:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9098:47)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10255:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:2647:64) The above error occurred in the <MapInner> component. It was handled by the <m> error boundary. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:1998
+[   59635ms] [LOG] [Fast Refresh] done in 110ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[   84228ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[   84286ms] [ERROR] %o
+
+%s ReferenceError: useSetMapCenterZoom is not defined
+    at BaseMapComponent (http://localhost:3000/_next/static/chunks/src_04j7.ke._.js?id=%255Bproject%255D%252Fsrc%252Fcomponents%252Fshared%252Fbase-map.tsx+%255Bapp-client%255D+%2528ecmascript%2529:381:30)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:15037:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:4620:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6081:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6691:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9555:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9449:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9433:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9098:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10263:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10179:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9230:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:299:13)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:886:13 The above error occurred in the <BaseMapComponent> component. It was handled by the <m> error boundary. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:1998
+[   84332ms] [LOG] [Fast Refresh] done in 154ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  105031ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  105182ms] [LOG] [Fast Refresh] done in 119ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  105954ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://tiles.versatiles.org/assets/glyphs/Open%20Sans%20Bold,Arial%20Unicode%20MS%20Bold/0-255.pbf:0
+[  169836ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  169841ms] [ERROR] %o
+
+%s ReferenceError: useMapState is not defined
+    at PostalCodesMap (http://localhost:3000/_next/static/chunks/src_04j7.ke._.js?id=%255Bproject%255D%252Fsrc%252Fcomponents%252Fpostal-codes%252Fpostal-codes-map.tsx+%255Bapp-client%255D+%2528ecmascript%2529:32:30)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:15037:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:4620:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6081:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6691:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9555:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9449:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9433:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9098:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10263:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10179:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9230:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:299:13)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0.4_mz-._.js:886:13 The above error occurred in the <PostalCodesMap> component. It was handled by the <m> error boundary. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:1998
+[  169867ms] [LOG] [Fast Refresh] done in 62ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  175032ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  175206ms] [LOG] [Fast Refresh] done in 58ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  176082ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://tiles.versatiles.org/assets/glyphs/Open%20Sans%20Bold,Arial%20Unicode%20MS%20Bold/0-255.pbf:0
+[  195221ms] [ERROR] ./src/components/shared/base-map.tsx:297:1
+Expected ',', got 'const'
+  295 |
+  296 | // Main BaseMap component with react-map-gl + deck.gl
+> 297 | const BaseMapComponent = ({
+      | ^^^^^
+  298 |   data,
+  299 |   layerId,
+  300 |   center = [10.4515, 51.1657],
+
+Parsing ecmascript source code failed
+
+Generated code of loaders [next/dist/build/babel/loader] transform of file content of src/components/shared/base-map.tsx:
+./src/components/shared/base-map.tsx:297:1
+  295 |
+  296 | // Main BaseMap component with react-map-gl + deck.gl
+> 297 | const BaseMapComponent = ({
+      | ^^^^^
+  298 |   data,
+  299 |   layerId,
+  300 |   center = [10.4515, 51.1657],
+
+Import trace:
+  Client Component Browser:
+    ./src/components/shared/base-map.tsx [Client Component Browser]
+    ./src/components/postal-codes/postal-codes-map.tsx [Client Component Browser]
+    ./src/components/postal-codes/postal-codes-view-client-layers.tsx [Client Component Browser]
+    ./src/components/postal-codes/postal-codes-view-client-layers.tsx [Server Component]
+    ./src/components/postal-codes/server-postal-codes-view.tsx [Server Component]
+    ./src/app/(map)/postal-codes/[areaId]/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:3766
+[  195237ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  200450ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
+[  200764ms] [LOG] [Fast Refresh] done in 70ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0ifwd0~._.js:2925
