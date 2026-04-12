@@ -7,7 +7,6 @@ import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { SiteHeaderSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import { getAreaGranularity, getVersion } from "@/lib/db/data-functions";
-import { getPostalCodesDataForGranularity } from "@/lib/utils/postal-codes-data";
 
 const ServerPostalCodesView = nextDynamic(
   () => import("@/components/postal-codes/server-postal-codes-view"),
@@ -102,9 +101,8 @@ export default async function PostalCodesPage({
     }
   }
 
-  // Preload geodata now so the Suspense boundary resolves faster —
-  // "use cache" deduplicates this with the identical call inside ServerPostalCodesView.
-  void getPostalCodesDataForGranularity(granularity);
+  // Geodata is now fetched client-side via API routes to avoid
+  // serializing ~9.6MB of GeoJSON into the RSC payload (TTFB: 1.3s → ~150ms)
 
   return (
     <>

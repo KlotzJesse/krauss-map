@@ -201,7 +201,7 @@ export function useMapLabels({
           source: ids.stateLabelSourceId,
           layout: {
             "text-field": ["coalesce", ["get", "name"], ["get", "code"], ""],
-            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            "text-font": ["noto_sans_bold"],
             "text-size": 11,
             "text-anchor": "center",
             "text-allow-overlap": true,
@@ -233,7 +233,7 @@ export function useMapLabels({
             filter: ["==", ["get", "_labelLevel"], level],
             layout: {
               "text-field": ["get", "_labelCode"],
-              "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+              "text-font": ["noto_sans_bold"],
               "text-size": [
                 "interpolate",
                 ["linear"],
@@ -306,7 +306,7 @@ export function useMapLabels({
           source: ids.areaLabelSourceId,
           layout: {
             "text-field": ["get", "name"],
-            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            "text-font": ["noto_sans_bold"],
             "text-size": 14,
             "text-anchor": "center",
             "text-allow-overlap": true,

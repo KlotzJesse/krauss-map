@@ -9,7 +9,6 @@ import {
   getChangeHistory,
   getUndoRedoStatus,
 } from "@/lib/db/data-functions";
-import { getPostalCodesDataForGranularity } from "@/lib/utils/postal-codes-data";
 import { getStatesData } from "@/lib/utils/states-data";
 
 import { PostalCodesViewClientWithLayers } from "./postal-codes-view-client-layers";
@@ -28,10 +27,9 @@ export default async function ServerPostalCodesView({
   versionId,
 }: ServerPostalCodesViewProps) {
   // Server Component: initiate all fetches as promises
-  // Pass promises down - let components consume where needed
-  // Deduplication ensures efficiency
-  const postalCodesDataPromise =
-    getPostalCodesDataForGranularity(defaultGranularity);
+  // Geodata (postal codes) is now fetched client-side via API route
+  // to avoid serializing ~9.6MB of GeoJSON into the RSC payload
+  // States data stays server-side (small payload, ~16 states)
   const statesDataPromise = getStatesData();
   const areaPromise = getAreaById(areaId);
   const layersPromise = getLayers(areaId);
@@ -43,7 +41,6 @@ export default async function ServerPostalCodesView({
     <PostalCodesErrorBoundary>
       <Suspense fallback={<PostalCodesViewSkeleton />}>
         <PostalCodesViewClientWithLayers
-          postalCodesDataPromise={postalCodesDataPromise}
           statesDataPromise={statesDataPromise}
           defaultGranularity={defaultGranularity}
           areaId={areaId}

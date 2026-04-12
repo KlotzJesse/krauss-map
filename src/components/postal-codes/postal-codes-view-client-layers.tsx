@@ -10,6 +10,7 @@ import {
   drivingRadiusSearchAction,
 } from "@/app/actions/area-actions";
 import { Button } from "@/components/ui/button";
+import { useGeodata } from "@/lib/hooks/use-geodata";
 import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
 import { usePostalCodeSearch } from "@/lib/hooks/use-postal-code-search";
 import type {
@@ -81,7 +82,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { PostalCodeImportDialog } from "./postal-code-import-dialog";
 
 interface PostalCodesViewClientWithLayersProps {
-  postalCodesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon>>;
   statesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon>>;
   defaultGranularity: string;
   areaId: number;
@@ -355,7 +355,6 @@ function usePostalCodesLayerActions({
 }
 
 export function PostalCodesViewClientWithLayers({
-  postalCodesDataPromise,
   statesDataPromise,
   defaultGranularity,
   areaPromise,
@@ -367,8 +366,7 @@ export function PostalCodesViewClientWithLayers({
   isViewingVersion = false,
   versionId,
 }: PostalCodesViewClientWithLayersProps) {
-  // Client Component: use() to consume promises where data is actually used
-  const initialData = use(postalCodesDataPromise);
+  // Client Component: use() to consume server-provided promises
   const statesData = use(statesDataPromise);
   const initialLayers = use(layersPromise);
   const initialUndoRedoStatus = use(undoRedoStatusPromise);
@@ -376,13 +374,13 @@ export function PostalCodesViewClientWithLayers({
   const changes = use(changesPromise);
   const area = use(areaPromise);
 
+  // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)
+  const { data, isLoading: isGeodataLoading } = useGeodata(defaultGranularity);
+
   // Read activeLayerId directly from URL state for instant switching
   const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
   const setMapCenterZoom = useSetMapCenterZoom();
   const activeLayerId = urlActiveLayerId || initialLayers[0]?.id || null;
-
-  const [data] =
-    useState<FeatureCollection<Polygon | MultiPolygon>>(initialData);
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const openImportDialog = useCallback(() => setImportDialogOpen(true), []);
@@ -546,6 +544,7 @@ export function PostalCodesViewClientWithLayers({
                   size="default"
                   className="h-10 px-4"
                   title="PLZ importieren"
+                  disabled={isGeodataLoading}
                 />
               }
             >
@@ -581,6 +580,13 @@ export function PostalCodesViewClientWithLayers({
             initialUndoRedoStatus={optimisticUndoRedo}
           />
         </MapErrorBoundary>
+        {isGeodataLoading && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/30 backdrop-blur-[1px] pointer-events-none">
+            <div className="bg-background/80 rounded-lg px-4 py-2 text-sm text-muted-foreground shadow-sm">
+              Geodaten werden geladen…
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Import Dialog */}
