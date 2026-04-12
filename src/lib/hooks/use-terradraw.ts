@@ -275,8 +275,14 @@ export function useTerraDraw({
   useEffect(() => {
     const currentMap = mapRef.current; // Capture the current map instance
     return () => {
-      if (drawRef.current && currentMap) {
-        try {
+      try {
+        if (drawRef.current && currentMap) {
+          // Guard: react-map-gl may call map.remove() before our cleanup runs,
+          // which sets map.style to null. getStyle() returns undefined after remove().
+          if (!currentMap.getStyle()) {
+            return;
+          }
+
           if (
             drawRef.current.enabled ||
             (drawRef.current as unknown as { _enabled?: boolean })._enabled
@@ -295,9 +301,19 @@ export function useTerraDraw({
           currentMap.doubleClickZoom.enable();
           currentMap.keyboard.enable();
           currentMap.getContainer().style.cursor = "";
-        } catch (cleanupError) {
-          console.error("Error during TerraDraw cleanup:", cleanupError);
         }
+      } catch (error) {
+        // Only log if map is still alive (unexpected error vs expected removal race)
+        try {
+          if (currentMap?.getStyle()) {
+            console.error("Error during TerraDraw cleanup:", error);
+          }
+        } catch {
+          // map is gone — expected during unmount
+        }
+      } finally {
+        drawRef.current = null;
+        isInitializedRef.current = false;
       }
     };
   }, [mapRef]); // Include mapRef dependency for cleanup

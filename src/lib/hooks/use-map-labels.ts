@@ -207,6 +207,7 @@ export function useMapLabels({
             "text-color": "#222",
             "text-halo-color": "#fff",
             "text-halo-width": 3,
+            "text-halo-blur": 0,
           },
         });
       } catch {
@@ -243,7 +244,8 @@ export function useMapLabels({
             paint: {
               "text-color": "#222",
               "text-halo-color": "#ffffff",
-              "text-halo-width": 2,
+              "text-halo-width": 2.5,
+              "text-halo-blur": 0,
             },
           });
         } catch {
@@ -306,8 +308,9 @@ export function useMapLabels({
           },
           paint: {
             "text-color": ["coalesce", ["get", "color"], "#1a1a1a"],
-            "text-halo-color": "rgba(255,255,255,0.9)",
-            "text-halo-width": 2,
+            "text-halo-color": "rgba(255,255,255,0.95)",
+            "text-halo-width": 3,
+            "text-halo-blur": 0,
           },
         } as LayerSpecification);
       } catch {
@@ -413,6 +416,11 @@ export function useMapLabels({
         return;
       }
       const map = mapInstance;
+
+      // Guard: react-map-gl may call map.remove() before our cleanup runs
+      if (!map.getStyle()) {
+        return;
+      }
 
       const layerIds = [
         ids.areaLabelLayerId,
