@@ -21,7 +21,7 @@ import {
   SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Area } from "@/lib/types/area-types";
+import type { AreaSummary } from "@/lib/types/area-types";
 
 const data = {
   navMain: [
@@ -34,7 +34,7 @@ const data = {
 };
 
 interface AppSidebarClientProps extends React.ComponentProps<typeof Sidebar> {
-  areasPromise: Promise<Area[]>;
+  areasPromise: Promise<AreaSummary[]>;
   currentAreaId?: number | null;
   onAreaSelect?: (areaId: number) => void;
 }

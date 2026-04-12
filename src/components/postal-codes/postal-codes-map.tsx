@@ -4,8 +4,8 @@ import { memo } from "react";
 
 import { BaseMap } from "@/components/shared/base-map";
 import type {
-  SelectAreaChanges,
-  SelectAreaVersions,
+  ChangeSummary,
+  VersionSummary,
   areaLayers,
 } from "@/lib/schema/schema";
 import { useMapView } from "@/lib/url-state/map-state";
@@ -32,14 +32,14 @@ interface PostalCodesMapProps {
   ) => Promise<void>;
   isViewingVersion?: boolean;
   versionId: number | null;
-  versions: SelectAreaVersions[];
+  versions: VersionSummary[];
   initialUndoRedoStatus: {
     canUndo: boolean;
     canRedo: boolean;
     undoCount: number;
     redoCount: number;
   };
-  changes: SelectAreaChanges[];
+  changes: ChangeSummary[];
 }
 
 export const PostalCodesMap = memo(function PostalCodesMap({

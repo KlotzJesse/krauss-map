@@ -2,8 +2,8 @@ import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import type {
-  SelectAreaVersions,
-  SelectAreaChanges,
+  VersionSummary,
+  ChangeSummary,
   areaLayers,
 } from "@/lib/schema/schema";
 
@@ -31,8 +31,8 @@ export interface BaseMapProps {
   ) => Promise<void>;
   isViewingVersion: boolean;
   versionId: number | null;
-  versions: SelectAreaVersions[];
-  changes: SelectAreaChanges[];
+  versions: VersionSummary[];
+  changes: ChangeSummary[];
   initialUndoRedoStatus: {
     canUndo: boolean;
     canRedo: boolean;

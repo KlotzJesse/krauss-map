@@ -11,12 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Area } from "@/lib/types/area-types";
+import type { AreaSummary } from "@/lib/types/area-types";
 
 interface AreaItemMenuProps {
-  area: Area;
-  onStartRename: (area: Area, e: React.MouseEvent) => void;
-  onStartDelete: (area: Area, e: React.MouseEvent) => void;
+  area: AreaSummary;
+  onStartRename: (area: AreaSummary, e: React.MouseEvent) => void;
+  onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
 }
 
 export const AreaItemMenu = memo(

@@ -74,8 +74,8 @@ import {
 import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type {
-  SelectAreaChanges,
-  SelectAreaVersions,
+  ChangeSummary,
+  VersionSummary,
   areaLayers,
 } from "@/lib/schema/schema";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
@@ -209,9 +209,9 @@ export interface DrawingToolsProps {
 
   // Version and change data for dialogs
 
-  versions: SelectAreaVersions[];
+  versions: VersionSummary[];
 
-  changes: SelectAreaChanges[];
+  changes: ChangeSummary[];
 }
 
 // --- UI state reducer ---

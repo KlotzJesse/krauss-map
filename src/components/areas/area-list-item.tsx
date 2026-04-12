@@ -9,22 +9,22 @@ import type { RefObject } from "react";
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
-import type { Area } from "@/lib/types/area-types";
+import type { AreaSummary } from "@/lib/types/area-types";
 
 import { AreaItemMenu } from "./area-item-menu";
 
 interface AreaListItemProps {
-  area: Area;
+  area: AreaSummary;
   isEditing: boolean;
   editingAreaName: string;
   editInputRef: RefObject<HTMLInputElement | null>;
   isCurrentRoute: boolean;
-  onStartRename: (area: Area, e: React.MouseEvent) => void;
+  onStartRename: (area: AreaSummary, e: React.MouseEvent) => void;
   onConfirmRename: (areaId: number) => void;
   onCancelRename: () => void;
   onEditNameChange: (name: string) => void;
-  onStartDelete: (area: Area, e: React.MouseEvent) => void;
-  onAreaClick: (area: Area) => void;
+  onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
+  onAreaClick: (area: AreaSummary) => void;
 }
 
 export const AreaListItem = memo(

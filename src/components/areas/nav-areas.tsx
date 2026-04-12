@@ -33,7 +33,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import type { Area } from "@/lib/types/area-types";
+import type { AreaSummary } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 import { AreaListItem } from "./area-list-item";
@@ -44,7 +44,7 @@ interface NavAreasState {
   editingAreaId: number | null;
   editingAreaName: string;
   deleteDialogOpen: boolean;
-  areaToDelete: Area | null;
+  areaToDelete: AreaSummary | null;
   isDeleting: boolean;
 }
 
@@ -55,7 +55,7 @@ type NavAreasAction =
   | { type: "SET_EDIT_NAME"; name: string }
   | { type: "CANCEL_EDIT" }
   | { type: "FINISH_EDIT" }
-  | { type: "OPEN_DELETE"; area: Area }
+  | { type: "OPEN_DELETE"; area: AreaSummary }
   | { type: "CLOSE_DELETE" }
   | { type: "START_DELETING" }
   | { type: "FINISH_DELETING" };
@@ -120,7 +120,7 @@ function navAreasReducer(
 }
 
 interface NavAreasProps {
-  areasPromise: Promise<Area[]>;
+  areasPromise: Promise<AreaSummary[]>;
   isLoading?: boolean;
   currentAreaId?: number | null;
   onAreaSelect?: (areaId: number) => void;
@@ -157,7 +157,7 @@ export function NavAreas({
   const [optimisticAreas, updateOptimisticAreas] = useOptimistic(
     areas,
     (
-      currentAreas: Area[],
+      currentAreas: AreaSummary[],
       update: { type: "rename" | "delete"; id: number; name?: string }
     ) => {
       if (update.type === "rename" && update.name) {
@@ -175,7 +175,7 @@ export function NavAreas({
   const [_isPending, startTransition] = useTransition();
 
   const handleAreaClick = useCallback(
-    (area: Area) => {
+    (area: AreaSummary) => {
       if (onAreaSelect) {
         onAreaSelect(area.id);
       }
@@ -183,10 +183,13 @@ export function NavAreas({
     [onAreaSelect]
   );
 
-  const handleStartRename = useCallback((area: Area, e: React.MouseEvent) => {
-    e.stopPropagation();
-    dispatch({ type: "START_EDIT", areaId: area.id, name: area.name });
-  }, []);
+  const handleStartRename = useCallback(
+    (area: AreaSummary, e: React.MouseEvent) => {
+      e.stopPropagation();
+      dispatch({ type: "START_EDIT", areaId: area.id, name: area.name });
+    },
+    []
+  );
 
   const handleCancelRename = useCallback(() => {
     dispatch({ type: "CANCEL_EDIT" });
@@ -234,10 +237,13 @@ export function NavAreas({
     dispatch({ type: "SET_EDIT_NAME", name });
   }, []);
 
-  const handleStartDelete = useCallback((area: Area, e: React.MouseEvent) => {
-    e.stopPropagation();
-    dispatch({ type: "OPEN_DELETE", area });
-  }, []);
+  const handleStartDelete = useCallback(
+    (area: AreaSummary, e: React.MouseEvent) => {
+      e.stopPropagation();
+      dispatch({ type: "OPEN_DELETE", area });
+    },
+    []
+  );
 
   const handleConfirmDelete = async () => {
     if (!areaToDelete) {

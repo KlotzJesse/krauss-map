@@ -14,13 +14,10 @@ import { useGeodata } from "@/lib/hooks/use-geodata";
 import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
 import { usePostalCodeSearch } from "@/lib/hooks/use-postal-code-search";
 import type {
-  areas,
   areaLayers,
-  SelectAreaChanges,
-  SelectAreaVersions,
+  ChangeSummary,
+  VersionSummary,
 } from "@/lib/schema/schema";
-
-type Area = InferSelectModel<typeof areas>;
 
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
@@ -84,7 +81,7 @@ import { PostalCodeImportDialog } from "./postal-code-import-dialog";
 interface PostalCodesViewClientWithLayersProps {
   defaultGranularity: string;
   areaId: number;
-  areaPromise: Promise<Area | null>;
+  areaNamePromise: Promise<string | null>;
   layersPromise: Promise<Layer[]>;
   undoRedoStatusPromise: Promise<{
     canUndo: boolean;
@@ -92,8 +89,8 @@ interface PostalCodesViewClientWithLayersProps {
     undoCount: number;
     redoCount: number;
   }>;
-  versionsPromise: Promise<SelectAreaVersions[]>;
-  changesPromise: Promise<SelectAreaChanges[]>;
+  versionsPromise: Promise<VersionSummary[]>;
+  changesPromise: Promise<ChangeSummary[]>;
   isViewingVersion?: boolean;
   versionId?: number | null;
 }
@@ -355,7 +352,7 @@ function usePostalCodesLayerActions({
 
 export function PostalCodesViewClientWithLayers({
   defaultGranularity,
-  areaPromise,
+  areaNamePromise,
   areaId,
   layersPromise,
   undoRedoStatusPromise,
@@ -369,7 +366,7 @@ export function PostalCodesViewClientWithLayers({
   const initialUndoRedoStatus = use(undoRedoStatusPromise);
   const versions = use(versionsPromise);
   const changes = use(changesPromise);
-  const area = use(areaPromise);
+  const areaName = use(areaNamePromise);
 
   // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)
   const { data, isLoading: isGeodataLoading } = useGeodata(defaultGranularity);
@@ -565,7 +562,7 @@ export function PostalCodesViewClientWithLayers({
             layers={optimisticLayers}
             activeLayerId={activeLayerId}
             areaId={areaId}
-            areaName={area?.name}
+            areaName={areaName ?? undefined}
             previewPostalCode={previewPostalCode}
             addPostalCodesToLayer={addPostalCodesToLayer}
             removePostalCodesFromLayer={removePostalCodesFromLayer}

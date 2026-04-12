@@ -36,28 +36,9 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type {
-  SelectAreaVersions,
-  SelectAreaChanges,
-} from "@/lib/schema/schema";
+import type { VersionSummary, ChangeSummary } from "@/lib/schema/schema";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
-
-interface VersionSnapshot {
-  layers: {
-    name: string;
-
-    postalCodes: string[];
-  }[];
-}
-
-interface ChangeData {
-  postalCodes?: string[];
-
-  layer?: {
-    name: string;
-  };
-}
 
 interface ComparisonResult {
   layersAdded: { name: string }[];
@@ -78,9 +59,9 @@ interface EnhancedVersionHistoryDialogProps {
 
   areaId: number;
 
-  versions: SelectAreaVersions[];
+  versions: VersionSummary[];
 
-  changes: SelectAreaChanges[];
+  changes: ChangeSummary[];
 }
 
 export function EnhancedVersionHistoryDialog({
@@ -94,11 +75,13 @@ export function EnhancedVersionHistoryDialog({
 
   changes,
 }: EnhancedVersionHistoryDialogProps) {
-  const [selectedVersion, setSelectedVersion] =
-    useState<SelectAreaVersions | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<VersionSummary | null>(
+    null
+  );
 
-  const [compareVersion, setCompareVersion] =
-    useState<SelectAreaVersions | null>(null);
+  const [compareVersion, setCompareVersion] = useState<VersionSummary | null>(
+    null
+  );
 
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
 
@@ -107,7 +90,7 @@ export function EnhancedVersionHistoryDialog({
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
 
   const [versionToRestore, setVersionToRestore] =
-    useState<SelectAreaVersions | null>(null);
+    useState<VersionSummary | null>(null);
 
   // Optimistic restore state
   const [_optimisticRestoring, updateOptimisticRestoring] = useOptimistic(
@@ -115,7 +98,7 @@ export function EnhancedVersionHistoryDialog({
     (_state, restoring: boolean) => restoring
   );
 
-  const handleRestore = (version: SelectAreaVersions) => {
+  const handleRestore = (version: VersionSummary) => {
     setVersionToRestore(version);
 
     setShowRestoreDialog(true);
@@ -289,11 +272,7 @@ export function EnhancedVersionHistoryDialog({
 
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>{version.changeCount} Änderungen</span>
-                        <span>
-                          {(version.snapshot as VersionSnapshot)?.layers
-                            ?.length || 0}{" "}
-                          Layer
-                        </span>
+                        <span>{version.layerCount} Layer</span>
                         {version.createdBy && (
                           <span>von {version.createdBy}</span>
                         )}
@@ -338,33 +317,23 @@ export function EnhancedVersionHistoryDialog({
                       <div className="text-sm">
                         {change.changeType === "add_postal_codes" && (
                           <span>
-                            Added{" "}
-                            {(change.changeData as ChangeData)?.postalCodes
-                              ?.length || 0}{" "}
-                            postal code(s)
+                            Added {change.postalCodeCount} postal code(s)
                           </span>
                         )}
                         {change.changeType === "remove_postal_codes" && (
                           <span>
-                            Removed{" "}
-                            {(change.changeData as ChangeData)?.postalCodes
-                              ?.length || 0}{" "}
-                            postal code(s)
+                            Removed {change.postalCodeCount} postal code(s)
                           </span>
                         )}
                         {change.changeType === "create_layer" && (
-                          <span>
-                            Layer erstellt:{" "}
-                            {(change.changeData as ChangeData)?.layer?.name}
-                          </span>
+                          <span>Layer erstellt: {change.layerName}</span>
                         )}
                         {change.changeType === "update_layer" && (
                           <span>Layer-Eigenschaften aktualisiert</span>
                         )}
                         {change.changeType === "delete_layer" && (
                           <span>
-                            Layer gelöscht:{" "}
-                            {(change.previousData as ChangeData)?.layer?.name}
+                            Layer gelöscht: {change.previousLayerName}
                           </span>
                         )}
                         {change.createdBy && (

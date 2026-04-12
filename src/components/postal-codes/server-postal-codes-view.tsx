@@ -3,10 +3,10 @@ import { Suspense } from "react";
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import {
-  getAreaById,
+  getAreaName,
   getLayers,
-  getVersions,
-  getChangeHistory,
+  getVersionSummaries,
+  getChangeSummaries,
   getUndoRedoStatus,
 } from "@/lib/db/data-functions";
 
@@ -29,10 +29,10 @@ export default async function ServerPostalCodesView({
   // Geodata (postal codes) is now fetched client-side via API route
   // to avoid serializing ~9.6MB of GeoJSON into the RSC payload
   // States data also fetched client-side to avoid 246KB RSC payload bloat
-  const areaPromise = getAreaById(areaId);
+  const areaNamePromise = getAreaName(areaId);
   const layersPromise = getLayers(areaId);
-  const versionsPromise = getVersions(areaId);
-  const changesPromise = getChangeHistory(areaId, { limit: 50 });
+  const versionsPromise = getVersionSummaries(areaId);
+  const changesPromise = getChangeSummaries(areaId, { limit: 50 });
   const undoRedoStatusPromise = getUndoRedoStatus(areaId);
 
   return (
@@ -41,7 +41,7 @@ export default async function ServerPostalCodesView({
         <PostalCodesViewClientWithLayers
           defaultGranularity={defaultGranularity}
           areaId={areaId}
-          areaPromise={areaPromise}
+          areaNamePromise={areaNamePromise}
           layersPromise={layersPromise}
           undoRedoStatusPromise={undoRedoStatusPromise}
           isViewingVersion={false}

@@ -602,6 +602,20 @@ export type SelectAreaVersions = typeof areaVersions.$inferSelect;
 
 export type InsertAreaVersions = typeof areaVersions.$inferInsert;
 
+/** Lightweight version summary — excludes the heavy `snapshot` JSONB column */
+export interface VersionSummary {
+  areaId: number;
+  versionNumber: number;
+  name: string | null;
+  description: string | null;
+  isActive: string;
+  changeCount: number;
+  branchName: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  layerCount: number;
+}
+
 export type SelectAreaLayers = typeof areaLayers.$inferSelect;
 
 export type InsertAreaLayers = typeof areaLayers.$inferInsert;
@@ -615,6 +629,23 @@ export type InsertAreaLayerPostalCodes =
 export type SelectAreaChanges = typeof areaChanges.$inferSelect;
 
 export type InsertAreaChanges = typeof areaChanges.$inferInsert;
+
+/** Lightweight change summary — excludes the heavy changeData/previousData JSONB columns */
+export interface ChangeSummary {
+  areaId: number;
+  versionAreaId: number | null;
+  versionNumber: number | null;
+  sequenceNumber: number;
+  changeType: string;
+  entityType: string;
+  entityId: number | null;
+  isUndone: string;
+  createdBy: string | null;
+  createdAt: string;
+  postalCodeCount: number;
+  layerName: string | null;
+  previousLayerName: string | null;
+}
 
 export type SelectAreaUndoStacks = typeof areaUndoStacks.$inferSelect;
 
