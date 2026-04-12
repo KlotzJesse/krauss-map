@@ -2,6 +2,7 @@
 import { PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
+  Component,
   memo,
   startTransition,
   Suspense,
@@ -11,6 +12,7 @@ import {
   useState,
   Activity,
 } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { Map, useMap } from "react-map-gl/maplibre";
 
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -83,6 +85,49 @@ const ToggleButton = memo(
 ToggleButton.displayName = "ToggleButton";
 
 /**
+ * Auto-recovering error boundary for the Map component.
+ * react-map-gl throws during concurrent renders after map.remove() — this boundary
+ * catches the transient error and immediately remounts the Map on the next frame.
+ */
+class MapRecoveryBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, _info: ErrorInfo) {
+    // Only auto-recover from known map destruction errors
+    const isMapDestroyedError =
+      error.message?.includes("_loaded") ||
+      error.message?.includes("getProjection") ||
+      error.message?.includes("getSource") ||
+      error.message?.includes("getLayer") ||
+      error.message?.includes("getStyle");
+    if (isMapDestroyedError) {
+      // Schedule reset on next frame — the new render will create a fresh map
+      requestAnimationFrame(() => {
+        this.setState({ hasError: false });
+      });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Return minimal placeholder during the single-frame recovery
+      return <div className="w-full h-full" />;
+    }
+    return this.props.children;
+  }
+}
+
+/**
  * Inner map component — must be a child of <Map> to use useMap() hook.
  * Manages TerraDraw integration via raw MapLibre instance and labels via hybrid approach.
  */
@@ -114,7 +159,13 @@ const MapInner = memo(function MapInner({
     if (!mapRef) {
       return;
     }
-    const raw = mapRef.getMap();
+    let raw: maplibregl.Map;
+    try {
+      raw = mapRef.getMap();
+    } catch {
+      // Map may have been removed during navigation
+      return;
+    }
     rawMapRef.current = raw;
 
     const handleLoad = () => setIsMapLoaded(true);
@@ -127,6 +178,7 @@ const MapInner = memo(function MapInner({
 
     return () => {
       raw.off("load", handleLoad);
+      setIsMapLoaded(false);
     };
   }, [mapRef]);
 
@@ -368,41 +420,43 @@ const BaseMapComponent = ({
   );
 
   return (
-    <MapErrorBoundary>
+    <MapErrorBoundary resetKeys={[areaId]}>
       <div
         className="relative w-full h-full"
         style={{ minHeight: "400px" }}
         role="region"
         aria-label="Interaktive Karte"
       >
-        <Map
-          {...viewState}
-          onMove={handleMove}
-          mapStyle="/versatilescolorful.json"
-          style={{ width: "100%", height: "100%" }}
-          minZoom={3}
-          maxZoom={18}
-        >
-          <MapInner
-            data={data}
-            layerId={layerId}
-            statesData={statesData}
-            granularity={granularity}
-            onGranularityChange={onGranularityChange}
-            layers={layers}
-            activeLayerId={activeLayerId}
-            areaId={areaId}
-            areaName={areaName}
-            previewPostalCode={previewPostalCode}
-            addPostalCodesToLayer={addPostalCodesToLayer}
-            removePostalCodesFromLayer={removePostalCodesFromLayer}
-            isViewingVersion={isViewingVersion}
-            versionId={versionId}
-            versions={versions}
-            changes={changes}
-            initialUndoRedoStatus={initialUndoRedoStatus}
-          />
-        </Map>
+        <MapRecoveryBoundary>
+          <Map
+            {...viewState}
+            onMove={handleMove}
+            mapStyle="/versatilescolorful.json"
+            style={{ width: "100%", height: "100%" }}
+            minZoom={3}
+            maxZoom={18}
+          >
+            <MapInner
+              data={data}
+              layerId={layerId}
+              statesData={statesData}
+              granularity={granularity}
+              onGranularityChange={onGranularityChange}
+              layers={layers}
+              activeLayerId={activeLayerId}
+              areaId={areaId}
+              areaName={areaName}
+              previewPostalCode={previewPostalCode}
+              addPostalCodesToLayer={addPostalCodesToLayer}
+              removePostalCodesFromLayer={removePostalCodesFromLayer}
+              isViewingVersion={isViewingVersion}
+              versionId={versionId}
+              versions={versions}
+              changes={changes}
+              initialUndoRedoStatus={initialUndoRedoStatus}
+            />
+          </Map>
+        </MapRecoveryBoundary>
       </div>
     </MapErrorBoundary>
   );

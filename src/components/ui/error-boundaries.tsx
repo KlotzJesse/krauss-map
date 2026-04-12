@@ -6,9 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 // Specific error boundaries for different features
-export function MapErrorBoundary({ children }: { children: React.ReactNode }) {
+export function MapErrorBoundary({
+  children,
+  resetKeys,
+}: {
+  children: React.ReactNode;
+  resetKeys?: unknown[];
+}) {
   return (
     <ErrorBoundary
+      resetKeys={resetKeys}
       fallback={
         <div className="h-full w-full flex items-center justify-center">
           <Card className="max-w-md">

@@ -20,6 +20,10 @@ export function DeckGLOverlay(
   const overlay = useControl<MapboxOverlay>(
     () => new MapboxOverlay({ ...props, interleaved: true })
   );
-  overlay.setProps({ ...props, interleaved: true });
+  try {
+    overlay.setProps({ ...props, interleaved: true });
+  } catch {
+    // Map may have been removed during navigation
+  }
   return null;
 }

@@ -175,6 +175,10 @@ export function useMapLabels({
     }
 
     const map = mapInstance;
+    // Guard: map may have been removed (style destroyed)
+    if (!map.getStyle()) {
+      return;
+    }
     const lp = labelPointsRef.current;
     const slp = statesLabelPointsRef.current;
 
@@ -257,7 +261,7 @@ export function useMapLabels({
 
   // Data-sync effect — updates label source data
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded) {
+    if (!mapInstance || !isMapLoaded || !mapInstance.getStyle()) {
       return;
     }
 
@@ -281,6 +285,9 @@ export function useMapLabels({
     }
 
     const map = mapInstance;
+    if (!map.getStyle()) {
+      return;
+    }
 
     // Ensure the GeoJSON source exists
     if (!map.getSource(ids.areaLabelSourceId)) {
@@ -365,7 +372,7 @@ export function useMapLabels({
   // Ensure label layers stay above deck.gl interleaved layers.
   // deck.gl MapboxOverlay inserts synthetic MapLibre layers that may end up above our labels.
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded) {
+    if (!mapInstance || !isMapLoaded || !mapInstance.getStyle()) {
       return;
     }
 

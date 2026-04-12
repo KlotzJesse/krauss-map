@@ -12,6 +12,7 @@ interface ErrorBoundaryProps {
     | React.ComponentType<{ error: unknown; resetErrorBoundary: () => void }>
     | React.ReactNode;
   onError?: (error: unknown, errorInfo: React.ErrorInfo) => void;
+  resetKeys?: unknown[];
 }
 
 function ErrorFallback({
@@ -40,6 +41,7 @@ export function ErrorBoundary({
   children,
   fallback,
   onError,
+  resetKeys,
 }: ErrorBoundaryProps) {
   // If fallback is a React element, use the fallback prop
   if (fallback && React.isValidElement(fallback)) {
@@ -47,6 +49,7 @@ export function ErrorBoundary({
       <ReactErrorBoundary
         fallback={fallback}
         onError={onError}
+        resetKeys={resetKeys}
         onReset={() => {
           // Optional: Add any cleanup logic here
         }}
@@ -68,6 +71,7 @@ export function ErrorBoundary({
           : ErrorFallback
       }
       onError={onError}
+      resetKeys={resetKeys}
       onReset={() => {
         // Optional: Add any cleanup logic here
       }}
