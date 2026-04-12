@@ -76,7 +76,10 @@ const PostalCodeImportDialog = dynamic(
   }
 );
 
-import { useMapState } from "@/lib/url-state/map-state";
+import {
+  useActiveLayerState,
+  useSetMapCenterZoom,
+} from "@/lib/url-state/map-state";
 
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
@@ -379,8 +382,9 @@ export function PostalCodesViewClientWithLayers({
   const area = use(areaPromise);
 
   // Read activeLayerId directly from URL state for instant switching
-  const mapState = useMapState();
-  const activeLayerId = mapState.activeLayerId || initialLayers[0]?.id || null;
+  const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
+  const setMapCenterZoom = useSetMapCenterZoom();
+  const activeLayerId = urlActiveLayerId || initialLayers[0]?.id || null;
 
   const [data] =
     useState<FeatureCollection<Polygon | MultiPolygon>>(initialData);
@@ -438,7 +442,7 @@ export function PostalCodesViewClientWithLayers({
                   const isClosing = previewPostalCode === postalCode;
                   setPreviewPostalCode(isClosing ? null : postalCode);
                   if (!isClosing && coords) {
-                    mapState.setMapCenterZoom([coords[0], coords[1]], 11);
+                    setMapCenterZoom([coords[0], coords[1]], 11);
                   }
                   searchPostalCodes(postalCode);
                 }

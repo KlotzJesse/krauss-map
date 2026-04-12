@@ -36,6 +36,34 @@ export function useMapView() {
   ] as const;
 }
 
+// Narrow hook: only active layer ID and setter (triggers server re-render)
+export function useActiveLayerState() {
+  const [isLayerPending, startLayerTransition] = useTransition();
+  const [activeLayerId, setActiveLayerId] = useQueryState("activeLayerId", {
+    shallow: false,
+    startTransition: startLayerTransition,
+  });
+
+  const parsedActiveLayerId = useMemo(
+    () => (activeLayerId ? Number.parseInt(activeLayerId, 10) : null),
+    [activeLayerId]
+  );
+
+  const setActiveLayer = useStableCallback((id: number | null) => {
+    setActiveLayerId(id !== null ? id.toString() : null);
+  });
+
+  return { activeLayerId: parsedActiveLayerId, isLayerPending, setActiveLayer };
+}
+
+// Narrow hook: only map center/zoom setter (no subscription to view changes)
+export function useSetMapCenterZoom() {
+  const [, setMapView] = useMapView();
+  return useStableCallback((center: [number, number], zoom: number) => {
+    setMapView({ center, zoom });
+  });
+}
+
 // Hook for managing all map state (Optimized v4 - with layer support)
 export function useMapState() {
   // --- Atomic map view state ---
@@ -44,24 +72,13 @@ export function useMapState() {
   const [granularity, setGranularity] = useQueryState("granularity");
   const [radius, setRadius] = useQueryState("radius");
 
-  // Track server re-render while switching active layer (shallow: false triggers full RSC reload)
-  const [isLayerPending, startLayerTransition] = useTransition();
+  const { activeLayerId, isLayerPending, setActiveLayer } =
+    useActiveLayerState();
 
-  // Layer management (activeLayerId and versionId remain as search params)
-  const [activeLayerId, setActiveLayerId] = useQueryState("activeLayerId", {
-    shallow: false,
-    startTransition: startLayerTransition,
-  });
   const [versionId, setVersionId] = useQueryState("versionId");
 
-  // Parse layer IDs
-  const parsedActiveLayerId = useMemo(
-    () => (activeLayerId ? parseInt(activeLayerId, 10) : null),
-    [activeLayerId]
-  );
-
   const parsedVersionId = useMemo(
-    () => (versionId ? parseInt(versionId, 10) : null),
+    () => (versionId ? Number.parseInt(versionId, 10) : null),
     [versionId]
   );
 
@@ -72,11 +89,6 @@ export function useMapState() {
     }
   );
 
-  // Layer helpers
-  const setActiveLayer = useStableCallback((id: number | null) => {
-    setActiveLayerId(id !== null ? id.toString() : null);
-  });
-
   const setVersion = useStableCallback((id: number | null) => {
     setVersionId(id !== null ? id.toString() : null);
   });
@@ -85,8 +97,8 @@ export function useMapState() {
     granularity: granularity || "1digit",
     center: mapView.center,
     zoom: mapView.zoom,
-    radius: radius ? parseInt(radius, 10) : 10,
-    activeLayerId: parsedActiveLayerId,
+    radius: radius ? Number.parseInt(radius, 10) : 10,
+    activeLayerId,
     versionId: parsedVersionId,
     isLayerPending,
     setGranularity,

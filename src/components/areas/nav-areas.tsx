@@ -8,6 +8,7 @@ import {
   useRef,
   useEffect,
   useTransition,
+  useCallback,
   use,
 } from "react";
 import { toast } from "sonner";
@@ -172,73 +173,79 @@ export function NavAreas({
 
   const [_isPending, startTransition] = useTransition();
 
-  const handleAreaClick = (area: Area) => {
-    // This function is now mainly for the onAreaSelect callback
-    // Navigation is handled by Link component
-    if (onAreaSelect) {
-      onAreaSelect(area.id);
-    }
-  };
+  const handleAreaClick = useCallback(
+    (area: Area) => {
+      if (onAreaSelect) {
+        onAreaSelect(area.id);
+      }
+    },
+    [onAreaSelect]
+  );
 
-  const getAreaUrl = (area: Area) => `/postal-codes/${area.id}`;
-
-  const _handleAreaDoubleClick = (area: Area, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleStartRename(area, e);
-  };
-
-  const handleStartRename = (area: Area, e: React.MouseEvent) => {
+  const handleStartRename = useCallback((area: Area, e: React.MouseEvent) => {
     e.stopPropagation();
     dispatch({ type: "START_EDIT", areaId: area.id, name: area.name });
-  };
+  }, []);
 
-  const handleCancelRename = () => {
+  const handleCancelRename = useCallback(() => {
     dispatch({ type: "CANCEL_EDIT" });
-  };
+  }, []);
 
-  const handleConfirmRename = async (areaId: number) => {
-    if (!editingAreaName.trim()) {
-      toast.error("Name darf nicht leer sein");
-      return;
-    }
-
-    // Don't save if name hasn't changed
-    const area = areas.find((a) => a.id === areaId);
-    if (area && editingAreaName.trim() === area.name) {
-      handleCancelRename();
-      return;
-    }
-
-    // Optimistic update for instant feedback
-    startTransition(async () => {
-      updateOptimisticAreas({
-        type: "rename",
-        id: areaId,
-        name: editingAreaName.trim(),
-      });
-
-      const result = await executeAction(
-        updateAreaAction(areaId, {
-          name: editingAreaName.trim(),
-        }),
-        {
-          loading: "Benenne Gebiet um...",
-          success: "Gebiet umbenannt",
-          error: "Umbenennen fehlgeschlagen",
-        }
-      );
-
-      if (result && "success" in result && result.success) {
-        dispatch({ type: "FINISH_EDIT" });
+  const handleConfirmRename = useCallback(
+    async (areaId: number) => {
+      if (!editingAreaName.trim()) {
+        toast.error("Name darf nicht leer sein");
+        return;
       }
-    });
-  };
 
-  const handleStartDelete = (area: Area, e: React.MouseEvent) => {
+      // Don't save if name hasn't changed
+      const area = areas.find((a) => a.id === areaId);
+      if (area && editingAreaName.trim() === area.name) {
+        handleCancelRename();
+        return;
+      }
+
+      // Optimistic update for instant feedback
+      startTransition(async () => {
+        updateOptimisticAreas({
+          type: "rename",
+          id: areaId,
+          name: editingAreaName.trim(),
+        });
+
+        const result = await executeAction(
+          updateAreaAction(areaId, {
+            name: editingAreaName.trim(),
+          }),
+          {
+            loading: "Benenne Gebiet um...",
+            success: "Gebiet umbenannt",
+            error: "Umbenennen fehlgeschlagen",
+          }
+        );
+
+        if (result && "success" in result && result.success) {
+          dispatch({ type: "FINISH_EDIT" });
+        }
+      });
+    },
+    [
+      editingAreaName,
+      areas,
+      handleCancelRename,
+      startTransition,
+      updateOptimisticAreas,
+    ]
+  );
+
+  const handleEditNameChange = useCallback((name: string) => {
+    dispatch({ type: "SET_EDIT_NAME", name });
+  }, []);
+
+  const handleStartDelete = useCallback((area: Area, e: React.MouseEvent) => {
     e.stopPropagation();
     dispatch({ type: "OPEN_DELETE", area });
-  };
+  }, []);
 
   const handleConfirmDelete = async () => {
     if (!areaToDelete) {
@@ -308,12 +315,9 @@ export function NavAreas({
                   onStartRename={handleStartRename}
                   onConfirmRename={handleConfirmRename}
                   onCancelRename={handleCancelRename}
-                  onEditNameChange={(name) =>
-                    dispatch({ type: "SET_EDIT_NAME", name })
-                  }
+                  onEditNameChange={handleEditNameChange}
                   onStartDelete={handleStartDelete}
                   onAreaClick={handleAreaClick}
-                  getAreaUrl={getAreaUrl}
                 />
               ))}
           </SidebarMenu>
