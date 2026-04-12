@@ -16,6 +16,8 @@ import {
   hexToRgba,
 } from "@/lib/utils/deck-gl-utils";
 
+import { LABEL_SENTINEL_LAYER_ID } from "./use-map-labels";
+
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
@@ -248,6 +250,7 @@ export function useDeckLayers({
         new GeoJsonLayer({
           id: "state-boundaries",
           data: statesData,
+          beforeId: LABEL_SENTINEL_LAYER_ID,
           filled: true,
           stroked: true,
           getFillColor: (f) => {
@@ -280,6 +283,7 @@ export function useDeckLayers({
       new GeoJsonLayer({
         id: "postal-codes",
         data,
+        beforeId: LABEL_SENTINEL_LAYER_ID,
         filled: true,
         stroked: true,
         getFillColor: [98, 125, 152, 25],
@@ -300,6 +304,7 @@ export function useDeckLayers({
         new GeoJsonLayer({
           id: "area-layers-combined",
           data: areaFeaturesData,
+          beforeId: LABEL_SENTINEL_LAYER_ID,
           filled: true,
           stroked: true,
           getFillColor: (f) => {
@@ -337,6 +342,7 @@ export function useDeckLayers({
         new GeoJsonLayer({
           id: "preview-layer",
           data: previewData,
+          beforeId: LABEL_SENTINEL_LAYER_ID,
           filled: true,
           stroked: true,
           getFillColor: [37, 99, 235, 80],
@@ -354,6 +360,7 @@ export function useDeckLayers({
         new GeoJsonLayer({
           id: "hover-outline",
           data: hoverData,
+          beforeId: LABEL_SENTINEL_LAYER_ID,
           filled: false,
           stroked: true,
           getLineColor: [37, 99, 235, 255],

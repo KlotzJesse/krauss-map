@@ -22,6 +22,14 @@ type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
 
+/**
+ * Sentinel layer ID used to separate deck.gl proxy layers from MapLibre label layers.
+ * All deck.gl layers use `beforeId: LABEL_SENTINEL_LAYER_ID` to insert BELOW this layer,
+ * and all label symbol layers are added ABOVE it.
+ * This eliminates z-ordering races between deck.gl interleaved mode and MapLibre labels.
+ */
+export const LABEL_SENTINEL_LAYER_ID = "deck-label-divider";
+
 // Module-level WeakMap cache for turfArea results
 const _turfAreaCache = new WeakMap<Feature, number>();
 
@@ -168,7 +176,9 @@ export function useMapLabels({
     cache: Map<string, [number, number] | null>;
   }>({ data: null, cache: new Map() });
 
-  // Label layer creation — runs once when map loads
+  // Label layer creation — runs once when map loads.
+  // Creates the sentinel divider layer, then all label layers ABOVE it.
+  // deck.gl layers use `beforeId: LABEL_SENTINEL_LAYER_ID` to render below labels.
   useLayoutEffect(() => {
     if (!mapInstance || !isMapLoaded) {
       return;
@@ -181,6 +191,20 @@ export function useMapLabels({
     }
     const lp = labelPointsRef.current;
     const slp = statesLabelPointsRef.current;
+
+    // Create sentinel divider layer — deck.gl layers insert BEFORE this,
+    // label layers are added AFTER this (above it in the stack)
+    if (!map.getLayer(LABEL_SENTINEL_LAYER_ID)) {
+      try {
+        map.addLayer({
+          id: LABEL_SENTINEL_LAYER_ID,
+          type: "background",
+          paint: { "background-opacity": 0 },
+        });
+      } catch {
+        // Layer may already exist
+      }
+    }
 
     // Create label points source
     if (!map.getSource(ids.labelSourceId)) {
@@ -369,51 +393,6 @@ export function useMapLabels({
     }
   }, [mapInstance, isMapLoaded, layers, data, featureIndex, ids]);
 
-  // Stable ref for the label layer IDs so the per-render effect can read them
-  const labelLayerIdsRef = useRef<string[]>([]);
-  labelLayerIdsRef.current = [
-    ids.stateLabelLayerId,
-    ...Array.from({ length: 5 }, (_, i) => `${ids.labelLayerId}-${i + 1}`),
-    ids.areaLabelLayerId,
-  ];
-
-  // Ensure label layers stay above deck.gl interleaved layers.
-  // DeckGLOverlay calls overlay.setProps() during render, which may re-insert
-  // proxy custom layers above our labels. This effect runs AFTER every render
-  // (no deps) to move labels back to the top. The dirty check makes it cheap
-  // (~0.01ms) when labels are already correctly positioned.
-  useEffect(() => {
-    if (!mapInstance || !isMapLoaded) {
-      return;
-    }
-    try {
-      const style = mapInstance.getStyle();
-      const allLayers = style?.layers;
-      if (!allLayers) {
-        return;
-      }
-
-      const layerIds = labelLayerIdsRef.current;
-      const existingIds = layerIds.filter((id) => mapInstance.getLayer(id));
-      if (existingIds.length === 0) {
-        return;
-      }
-
-      // Dirty check: skip if labels are already the topmost layers
-      const labelIdSet = new Set(existingIds);
-      const topN = allLayers.slice(-existingIds.length);
-      if (topN.every((l) => labelIdSet.has(l.id))) {
-        return;
-      }
-
-      for (const id of existingIds) {
-        mapInstance.moveLayer(id);
-      }
-    } catch {
-      // Map may have been removed during navigation
-    }
-  });
-
   // Cleanup on unmount
   useEffect(
     () => () => {
@@ -435,6 +414,7 @@ export function useMapLabels({
         `${ids.labelLayerId}-2`,
         `${ids.labelLayerId}-1`,
         ids.stateLabelLayerId,
+        LABEL_SENTINEL_LAYER_ID,
       ];
 
       for (const id of layerIds) {
