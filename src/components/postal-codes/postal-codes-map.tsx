@@ -17,7 +17,6 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 
 interface PostalCodesMapProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
-  statesData: FeatureCollection<Polygon | MultiPolygon>;
   onSearch?: (plz: string) => void;
   granularity?: string;
   onGranularityChange?: (granularity: string) => void;
@@ -45,7 +44,6 @@ interface PostalCodesMapProps {
 
 export const PostalCodesMap = memo(function PostalCodesMap({
   data,
-  statesData,
   onSearch,
   granularity,
   onGranularityChange,
@@ -71,7 +69,6 @@ export const PostalCodesMap = memo(function PostalCodesMap({
       onSearch={onSearch}
       center={center}
       zoom={zoom}
-      statesData={statesData}
       granularity={granularity}
       onGranularityChange={onGranularityChange}
       layers={layers}

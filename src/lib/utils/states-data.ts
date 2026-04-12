@@ -34,13 +34,17 @@ export async function getStatesData(): Promise<
     );
     const features = rows.map((row) => {
       const typedRow = row as unknown as StateRow;
+      const parsedProperties =
+        typeof typedRow.properties === "string"
+          ? JSON.parse(typedRow.properties)
+          : (typedRow.properties ?? {});
       return {
         type: "Feature" as const,
         properties: {
           id: typedRow.id.toString(),
           code: typedRow.code,
           name: typedRow.name,
-          ...(typedRow.properties ?? {}),
+          ...parsedProperties,
         },
         geometry: JSON.parse(typedRow.geometry),
       };

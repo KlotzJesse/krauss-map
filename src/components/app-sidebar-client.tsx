@@ -89,7 +89,7 @@ export function AppSidebarClient({
                 className="data-[slot=sidebar-menu-button]:p-1.5!"
               >
                 <IconMapPin2 className="size-5!" />
-                <span className="text-base font-semibold">
+                <span className="truncate text-sm font-semibold">
                   KRAUSS Gebietsmanagement
                 </span>
                 <LinkPendingIndicator />

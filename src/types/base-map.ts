@@ -17,7 +17,6 @@ export interface BaseMapProps {
   onSearch?: (query: string) => void;
   center?: [number, number];
   zoom?: number;
-  statesData: FeatureCollection<Polygon | MultiPolygon> | null;
   granularity?: string;
   onGranularityChange?: (granularity: string) => void;
   layers: Layer[];

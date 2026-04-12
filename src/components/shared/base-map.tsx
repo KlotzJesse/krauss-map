@@ -26,6 +26,7 @@ import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
 import { useMapLabels } from "@/lib/hooks/use-map-labels";
 import { useMapOptimizations } from "@/lib/hooks/use-map-optimizations";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
+import { useStatesData } from "@/lib/hooks/use-states-data";
 import {
   useActiveLayerState,
   useSetMapCenterZoom,
@@ -134,7 +135,6 @@ class MapRecoveryBoundary extends Component<
 const MapInner = memo(function MapInner({
   data,
   layerId,
-  statesData,
   granularity,
   onGranularityChange,
   layers,
@@ -184,6 +184,9 @@ const MapInner = memo(function MapInner({
 
   // URL state management (narrow: only layer switching, not view state)
   const { setActiveLayer, isLayerPending } = useActiveLayerState();
+
+  // States data fetched client-side to avoid 246KB RSC payload bloat
+  const statesData = useStatesData();
 
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });
@@ -352,7 +355,6 @@ const BaseMapComponent = ({
   layerId,
   center = [10.4515, 51.1657],
   zoom = 5,
-  statesData,
   granularity,
   onGranularityChange,
   layers,
@@ -439,7 +441,6 @@ const BaseMapComponent = ({
             <MapInner
               data={data}
               layerId={layerId}
-              statesData={statesData}
               granularity={granularity}
               onGranularityChange={onGranularityChange}
               layers={layers}

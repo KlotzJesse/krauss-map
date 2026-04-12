@@ -82,7 +82,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { PostalCodeImportDialog } from "./postal-code-import-dialog";
 
 interface PostalCodesViewClientWithLayersProps {
-  statesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon>>;
   defaultGranularity: string;
   areaId: number;
   areaPromise: Promise<Area | null>;
@@ -355,7 +354,6 @@ function usePostalCodesLayerActions({
 }
 
 export function PostalCodesViewClientWithLayers({
-  statesDataPromise,
   defaultGranularity,
   areaPromise,
   areaId,
@@ -367,7 +365,6 @@ export function PostalCodesViewClientWithLayers({
   versionId,
 }: PostalCodesViewClientWithLayersProps) {
   // Client Component: use() to consume server-provided promises
-  const statesData = use(statesDataPromise);
   const initialLayers = use(layersPromise);
   const initialUndoRedoStatus = use(undoRedoStatusPromise);
   const versions = use(versionsPromise);
@@ -562,7 +559,6 @@ export function PostalCodesViewClientWithLayers({
         <MapErrorBoundary>
           <PostalCodesMap
             data={data}
-            statesData={statesData}
             onSearch={searchPostalCodes}
             granularity={defaultGranularity}
             onGranularityChange={handleGranularityChange}
