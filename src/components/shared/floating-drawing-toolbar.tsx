@@ -8,7 +8,9 @@ import {
   Square,
   Triangle,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import dynamic from "next/dynamic";
+import { memo, useCallback } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 
 // Floating undo/redo toolbar
@@ -86,6 +89,41 @@ const drawingModes = [
     category: "drawing",
   },
 ];
+
+const ToolbarButton = memo(function ToolbarButton({
+  modeId,
+  icon: Icon,
+  description,
+  isActive,
+  onClick,
+}: {
+  modeId: string;
+  icon: LucideIcon;
+  description: string;
+  isActive: boolean;
+  onClick: (modeId: string) => void;
+}) {
+  const handleClick = useCallback(() => onClick(modeId), [onClick, modeId]);
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant={isActive ? "default" : "outline"}
+            size="sm"
+            className="h-10 w-10 p-0 flex flex-col items-center gap-0.5"
+            onClick={handleClick}
+          />
+        }
+      >
+        <Icon className="h-4 w-4" />
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{description}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+});
 
 export function FloatingDrawingToolbar({
   currentMode,
@@ -158,17 +196,15 @@ export function FloatingDrawingToolbar({
     }
   };
 
-  const handleModeClick = (modeId: string) => {
+  const handleModeClick = useStableCallback((modeId: string) => {
     const terraDrawMode = drawingModeToTerraDrawMode(modeId);
     if (currentMode === terraDrawMode) {
-      // Deactivate current mode
       onModeChange(null);
       const modeInfo = drawingModes.find((m) => m.id === modeId);
       toast.success(`${modeInfo?.name || "Werkzeug"} deaktiviert`, {
         duration: 2000,
       });
     } else {
-      // Activate new mode
       onModeChange(terraDrawMode);
       const modeInfo = drawingModes.find((m) => m.id === modeId);
       toast.success(`${modeInfo?.name || "Werkzeug"} aktiviert`, {
@@ -176,7 +212,7 @@ export function FloatingDrawingToolbar({
         duration: 3000,
       });
     }
-  };
+  });
 
   return (
     <div className="absolute bottom-6 left-0 right-0 z-10 pointer-events-none">
@@ -184,28 +220,18 @@ export function FloatingDrawingToolbar({
         <div className="bg-white/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 pointer-events-auto">
           <div className="flex items-center gap-1">
             {drawingModes.map((mode) => {
-              const Icon = mode.icon;
               const isActive =
                 terraDrawModeToDrawingMode(currentMode) === mode.id ||
                 (currentMode === null && mode.id === "cursor");
               return (
-                <Tooltip key={mode.id}>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant={isActive ? "default" : "outline"}
-                        size="sm"
-                        className="h-10 w-10 p-0 flex flex-col items-center gap-0.5"
-                        onClick={() => handleModeClick(mode.id)}
-                      />
-                    }
-                  >
-                    <Icon className="h-4 w-4" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{mode.description}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <ToolbarButton
+                  key={mode.id}
+                  modeId={mode.id}
+                  icon={mode.icon}
+                  description={mode.description}
+                  isActive={isActive}
+                  onClick={handleModeClick}
+                />
               );
             })}
           </div>
