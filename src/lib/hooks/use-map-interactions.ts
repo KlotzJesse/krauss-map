@@ -2,7 +2,7 @@ import type { PickingInfo } from "@deck.gl/core";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import type { RefObject } from "react";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 import { useMapDrawingTools } from "@/lib/hooks/use-map-drawing-tools";
@@ -73,6 +73,27 @@ export function useMapInteractions({
     data,
   });
 
+  // Synchronous flag: set when TerraDraw fires select/deselect on the same
+  // click that deck.gl's onClick would also fire. Shape interactions always
+  // take priority over postal-code toggling.
+  const terraEventFiredRef = useRef(false);
+
+  const guardedFeatureSelect = useStableCallback((id: string) => {
+    terraEventFiredRef.current = true;
+    handleFeatureSelect(id);
+    requestAnimationFrame(() => {
+      terraEventFiredRef.current = false;
+    });
+  });
+
+  const guardedFeatureDeselect = useStableCallback(() => {
+    terraEventFiredRef.current = true;
+    handleFeatureDeselect();
+    requestAnimationFrame(() => {
+      terraEventFiredRef.current = false;
+    });
+  });
+
   // TerraDraw integration
   const terraDrawApi = useTerraDraw({
     mapRef,
@@ -80,8 +101,8 @@ export function useMapInteractions({
     isEnabled: isDrawingActive,
     mode: isDrawingActive ? currentDrawingMode : null,
     onSelectionChange: handleTerraDrawSelection,
-    onFeatureSelect: handleFeatureSelect,
-    onFeatureDeselect: handleFeatureDeselect,
+    onFeatureSelect: guardedFeatureSelect,
+    onFeatureDeselect: guardedFeatureDeselect,
   });
 
   // Always assign terraDrawRef for stability
@@ -113,6 +134,11 @@ export function useMapInteractions({
   // deck.gl click handler — replaces useMapClickInteraction
   const handleDeckClick = useCallback(
     async (info: PickingInfo) => {
+      // Shape interactions take priority over postal-code clicks
+      if (terraEventFiredRef.current || editingFeatureId) {
+        return;
+      }
+
       if (!isCursorMode || !info.object) {
         return;
       }
@@ -168,6 +194,7 @@ export function useMapInteractions({
     },
     [
       isCursorMode,
+      editingFeatureId,
       areaId,
       activeLayerId,
       layers,

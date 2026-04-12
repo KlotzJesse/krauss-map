@@ -369,34 +369,37 @@ export function useMapLabels({
     }
   }, [mapInstance, isMapLoaded, layers, data, featureIndex, ids]);
 
+  // Stable ref for the label layer IDs so the per-render effect can read them
+  const labelLayerIdsRef = useRef<string[]>([]);
+  labelLayerIdsRef.current = [
+    ids.stateLabelLayerId,
+    ...Array.from({ length: 5 }, (_, i) => `${ids.labelLayerId}-${i + 1}`),
+    ids.areaLabelLayerId,
+  ];
+
   // Ensure label layers stay above deck.gl interleaved layers.
-  // deck.gl MapboxOverlay inserts synthetic MapLibre layers that may end up above our labels.
+  // DeckGLOverlay calls overlay.setProps() during render, which may re-insert
+  // proxy custom layers above our labels. This effect runs AFTER every render
+  // (no deps) to move labels back to the top. The dirty check makes it cheap
+  // (~0.01ms) when labels are already correctly positioned.
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded || !mapInstance.getStyle()) {
+    if (!mapInstance || !isMapLoaded) {
       return;
     }
-
-    const labelLayerIds = [
-      ids.stateLabelLayerId,
-      ...Array.from({ length: 5 }, (_, i) => `${ids.labelLayerId}-${i + 1}`),
-      ids.areaLabelLayerId,
-    ];
-
-    const moveLabelsToTop = () => {
+    try {
       const style = mapInstance.getStyle();
       const allLayers = style?.layers;
       if (!allLayers) {
         return;
       }
 
-      const existingIds = labelLayerIds.filter((id) =>
-        mapInstance.getLayer(id)
-      );
+      const layerIds = labelLayerIdsRef.current;
+      const existingIds = layerIds.filter((id) => mapInstance.getLayer(id));
       if (existingIds.length === 0) {
         return;
       }
 
-      // Check if labels are already the topmost layers — skip to avoid infinite styledata loop
+      // Dirty check: skip if labels are already the topmost layers
       const labelIdSet = new Set(existingIds);
       const topN = allLayers.slice(-existingIds.length);
       if (topN.every((l) => labelIdSet.has(l.id))) {
@@ -406,15 +409,10 @@ export function useMapLabels({
       for (const id of existingIds) {
         mapInstance.moveLayer(id);
       }
-    };
-
-    moveLabelsToTop();
-    mapInstance.on("styledata", moveLabelsToTop);
-
-    return () => {
-      mapInstance.off("styledata", moveLabelsToTop);
-    };
-  }, [mapInstance, isMapLoaded, ids]);
+    } catch {
+      // Map may have been removed during navigation
+    }
+  });
 
   // Cleanup on unmount
   useEffect(
