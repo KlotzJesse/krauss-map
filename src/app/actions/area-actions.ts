@@ -65,6 +65,8 @@ export async function createAreaAction(data: {
 
   createdBy?: string;
 }) {
+  let redirectPath: string | null = null;
+
   try {
     const [area] = await db
 
@@ -104,11 +106,15 @@ export async function createAreaAction(data: {
 
     updateTag(`area-${area.id}-version-info`);
 
-    return { success: true, areaId: area.id };
+    redirectPath = `/postal-codes/${area.id}`;
   } catch (error) {
     console.error("Error creating area:", error);
 
     return { success: false, error: "Failed to create area" };
+  } finally {
+    if (redirectPath) {
+      redirect(redirectPath as Route);
+    }
   }
 }
 

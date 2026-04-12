@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition, useOptimistic } from "react";
 
 import { createAreaAction } from "@/app/actions/area-actions";
@@ -34,7 +33,6 @@ export function CreateAreaDialog({
   open,
   onOpenChange,
 }: CreateAreaDialogProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -52,7 +50,9 @@ export function CreateAreaDialog({
     startTransition(async () => {
       updateOptimisticCreating(true);
 
-      const result = await executeAction(
+      // Server action handles redirect automatically on success.
+      // executeAction + unstable_rethrow propagates NEXT_REDIRECT correctly.
+      await executeAction(
         createAreaAction({
           name,
           description,
@@ -66,15 +66,11 @@ export function CreateAreaDialog({
         }
       );
 
-      if (result && "areaId" in result && result.areaId) {
-        setName("");
-        setDescription("");
-        setGranularity("5digit");
-        onOpenChange(false);
-        router.push(`/postal-codes/${result.areaId}`);
-      } else {
-        updateOptimisticCreating(false);
-      }
+      // Only reached if action didn't redirect (i.e. error path)
+      setName("");
+      setDescription("");
+      setGranularity("5digit");
+      onOpenChange(false);
     });
   };
 

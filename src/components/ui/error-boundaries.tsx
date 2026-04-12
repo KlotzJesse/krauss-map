@@ -128,12 +128,15 @@ export function AddressAutocompleteErrorBoundary({
 export function FeatureErrorBoundary({
   children,
   fallbackMessage = "Ein Fehler ist aufgetreten",
+  resetKeys,
 }: {
   children: React.ReactNode;
   fallbackMessage?: string;
+  resetKeys?: unknown[];
 }) {
   return (
     <ErrorBoundary
+      resetKeys={resetKeys}
       fallback={
         <div className="p-4">
           <AlertError message={fallbackMessage} />
