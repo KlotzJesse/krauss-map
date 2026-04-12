@@ -11,7 +11,8 @@ import {
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
-import type { Dispatch, RefObject } from "react";
+import { memo } from 'react';
+import type { Dispatch, RefObject } from 'react';
 import {
   Suspense,
   useCallback,
@@ -987,7 +988,7 @@ interface LayerDialogsProps {
   confirmDeleteLayer: () => void;
 }
 
-function LayerDialogs({
+const LayerDialogs = memo(function LayerDialogs({
   areaId,
   ui,
   dispatchUI,
@@ -999,55 +1000,80 @@ function LayerDialogs({
   onLayerUpdate,
   confirmDeleteLayer,
 }: LayerDialogsProps) {
+  const handleConflictsOpenChange = useCallback(
+    (open: boolean) =>
+      dispatchUI(
+        open ? { type: "OPEN_CONFLICTS" } : { type: "CLOSE_CONFLICTS" }
+      ),
+    [dispatchUI]
+  );
+  const handleHistoryOpenChange = useCallback(
+    (open: boolean) =>
+      dispatchUI(open ? { type: "OPEN_HISTORY" } : { type: "CLOSE_HISTORY" }),
+    [dispatchUI]
+  );
+  const handleVersionOpenChange = useCallback(
+    (open: boolean) =>
+      dispatchUI(open ? { type: "OPEN_VERSION" } : { type: "CLOSE_VERSION" }),
+    [dispatchUI]
+  );
+  const handleMergeOpenChange = useCallback(
+    (open: boolean) =>
+      dispatchUI(open ? { type: "OPEN_MERGE" } : { type: "CLOSE_MERGE" }),
+    [dispatchUI]
+  );
+  const handleDeleteOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        dispatchForm({ type: "CLOSE_DELETE" });
+      }
+    },
+    [dispatchForm]
+  );
+  const handleVersionCreated = useCallback(
+    () => onLayerUpdate?.(),
+    [onLayerUpdate]
+  );
+  const handleMergeComplete = useCallback(
+    () => onLayerUpdate?.(),
+    [onLayerUpdate]
+  );
+  const handleCloseDelete = useCallback(
+    () => dispatchForm({ type: "CLOSE_DELETE" }),
+    [dispatchForm]
+  );
+
   return (
     <>
       <ConflictResolutionDialog
         open={ui.showConflicts}
-        onOpenChange={(open) =>
-          dispatchUI(
-            open ? { type: "OPEN_CONFLICTS" } : { type: "CLOSE_CONFLICTS" }
-          )
-        }
+        onOpenChange={handleConflictsOpenChange}
         areaId={areaId}
         layers={layers}
       />
       <EnhancedVersionHistoryDialog
         open={ui.showVersionHistory}
-        onOpenChange={(open) =>
-          dispatchUI(
-            open ? { type: "OPEN_HISTORY" } : { type: "CLOSE_HISTORY" }
-          )
-        }
+        onOpenChange={handleHistoryOpenChange}
         areaId={areaId}
         versions={versions}
         changes={changes}
       />
       <CreateVersionDialog
         open={ui.showCreateVersion}
-        onOpenChange={(open) =>
-          dispatchUI(
-            open ? { type: "OPEN_VERSION" } : { type: "CLOSE_VERSION" }
-          )
-        }
+        onOpenChange={handleVersionOpenChange}
         areaId={areaId}
-        onVersionCreated={() => onLayerUpdate?.()}
+        onVersionCreated={handleVersionCreated}
       />
       <LayerMergeDialog
         open={ui.showLayerMerge}
-        onOpenChange={(open) =>
-          dispatchUI(open ? { type: "OPEN_MERGE" } : { type: "CLOSE_MERGE" })
-        }
+        onOpenChange={handleMergeOpenChange}
         areaId={areaId}
         layers={layers}
-        onMergeComplete={() => onLayerUpdate?.()}
+        onMergeComplete={handleMergeComplete}
       />
       <AlertDialog
         open={form.showDeleteDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            dispatchForm({ type: "CLOSE_DELETE" });
-          }
-        }}
+        onOpenChange={handleDeleteOpenChange}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1058,9 +1084,7 @@ function LayerDialogs({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => dispatchForm({ type: "CLOSE_DELETE" })}
-            >
+            <AlertDialogCancel onClick={handleCloseDelete}>
               Abbrechen
             </AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteLayer}>
@@ -1071,7 +1095,8 @@ function LayerDialogs({
       </AlertDialog>
     </>
   );
-}
+});
+LayerDialogs.displayName = "LayerDialogs";
 
 function DrawingToolsImpl({
   currentMode,
