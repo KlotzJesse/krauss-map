@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition, useOptimistic } from "react";
 
 import { createAreaAction } from "@/app/actions/area-actions";
@@ -33,6 +34,7 @@ export function CreateAreaDialog({
   open,
   onOpenChange,
 }: CreateAreaDialogProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -48,44 +50,29 @@ export function CreateAreaDialog({
     e.preventDefault();
 
     startTransition(async () => {
-      try {
-        // Optimistically show creating state INSIDE transition
-        updateOptimisticCreating(true);
+      updateOptimisticCreating(true);
 
-        // Server action handles redirect automatically
-        await executeAction(
-          createAreaAction({
-            name,
-            description,
-            granularity,
-            createdBy: "user",
-          }),
-          {
-            loading: `Erstelle Gebiet "${name}"...`,
-            success: `Gebiet "${name}" erfolgreich erstellt`,
-            error: "Fehler beim Erstellen des Gebiets",
-          }
-        );
+      const result = await executeAction(
+        createAreaAction({
+          name,
+          description,
+          granularity,
+          createdBy: "user",
+        }),
+        {
+          loading: `Erstelle Gebiet "${name}"...`,
+          success: `Gebiet "${name}" erfolgreich erstellt`,
+          error: "Fehler beim Erstellen des Gebiets",
+        }
+      );
 
-        // These lines won't execute if redirect happens (which is expected)
+      if (result && "areaId" in result && result.areaId) {
         setName("");
         setDescription("");
         setGranularity("5digit");
         onOpenChange(false);
-      } catch (error) {
-        // Only catch real errors, not NEXT_REDIRECT
-        if (
-          error &&
-          typeof error === "object" &&
-          "digest" in error &&
-          typeof error.digest === "string" &&
-          error.digest.startsWith("NEXT_REDIRECT")
-        ) {
-          // This is a redirect, not an error - let it propagate
-          throw error;
-        }
-        // Only log actual errors
-        console.error("Error creating area:", error);
+        router.push(`/postal-codes/${result.areaId}`);
+      } else {
         updateOptimisticCreating(false);
       }
     });

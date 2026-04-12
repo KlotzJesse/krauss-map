@@ -65,11 +65,7 @@ export async function createAreaAction(data: {
 
   createdBy?: string;
 }) {
-  let redirectPath: string | null = null;
-
   try {
-    // Create the area first
-
     const [area] = await db
 
       .insert(areas)
@@ -84,8 +80,6 @@ export async function createAreaAction(data: {
 
       .returning();
 
-    // Create the first version automatically
-
     const versionResult = await createVersionAction(area.id, {
       name: "Erstversion",
 
@@ -95,8 +89,6 @@ export async function createAreaAction(data: {
     });
 
     if (!versionResult.success) {
-      // If version creation fails, we should clean up the area
-
       await db.delete(areas).where(eq(areas.id, area.id));
 
       throw new Error("Erstversion konnte nicht erstellt werden");
@@ -112,17 +104,11 @@ export async function createAreaAction(data: {
 
     updateTag(`area-${area.id}-version-info`);
 
-    // Set redirect path for finally block
-    redirectPath = `/postal-codes/${area.id}`;
+    return { success: true, areaId: area.id };
   } catch (error) {
     console.error("Error creating area:", error);
 
     return { success: false, error: "Failed to create area" };
-  } finally {
-    // Redirect in finally block for cleaner resource management
-    if (redirectPath) {
-      redirect(redirectPath as Route);
-    }
   }
 }
 
