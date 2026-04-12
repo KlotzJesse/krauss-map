@@ -11,8 +11,8 @@ import {
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
-import { memo } from 'react';
-import type { Dispatch, RefObject } from 'react';
+import { memo } from "react";
+import type { Dispatch, RefObject } from "react";
 import {
   Suspense,
   useCallback,

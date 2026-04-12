@@ -71,23 +71,13 @@ const PostalCodesMap = dynamic(
   }
 );
 
-const PostalCodeImportDialog = dynamic(
-  () =>
-    import("./postal-code-import-dialog").then((m) => ({
-      default: m.PostalCodeImportDialog,
-    })),
-
-  {
-    ssr: false,
-  }
-);
-
 import {
   useActiveLayerState,
   useSetMapCenterZoom,
 } from "@/lib/url-state/map-state";
 
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+import { PostalCodeImportDialog } from "./postal-code-import-dialog";
 
 interface PostalCodesViewClientWithLayersProps {
   postalCodesDataPromise: Promise<FeatureCollection<Polygon | MultiPolygon>>;

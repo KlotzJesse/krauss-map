@@ -2,7 +2,6 @@
 
 import { IconCheck, IconFolder, IconX } from "@tabler/icons-react";
 import type { Route } from "next";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { memo } from "react";
 import type { RefObject } from "react";
@@ -12,10 +11,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
 import type { Area } from "@/lib/types/area-types";
 
-const AreaItemMenu = dynamic(
-  () => import("./area-item-menu").then((m) => m.AreaItemMenu),
-  { ssr: false }
-);
+import { AreaItemMenu } from "./area-item-menu";
 
 interface AreaListItemProps {
   area: Area;
@@ -145,8 +141,8 @@ export const AreaListItem = memo(
     );
   },
   (prev, next) => {
-    // Custom comparator: skip edit-only props when not editing
-    if (prev.area !== next.area) {
+    // Compare by area identity (id + name), not reference — server data creates new objects
+    if (prev.area.id !== next.area.id || prev.area.name !== next.area.name) {
       return false;
     }
     if (prev.isCurrentRoute !== next.isCurrentRoute) {
@@ -161,25 +157,9 @@ export const AreaListItem = memo(
         return false;
       }
     }
-    // Callbacks are stabilized with useCallback in parent, but shallow check as fallback
-    if (prev.onStartRename !== next.onStartRename) {
-      return false;
-    }
-    if (prev.onStartDelete !== next.onStartDelete) {
-      return false;
-    }
-    if (prev.onAreaClick !== next.onAreaClick) {
-      return false;
-    }
-    if (prev.onConfirmRename !== next.onConfirmRename) {
-      return false;
-    }
-    if (prev.onCancelRename !== next.onCancelRename) {
-      return false;
-    }
-    if (prev.onEditNameChange !== next.onEditNameChange) {
-      return false;
-    }
+    // Callbacks use useCallback in parent — skip identity checks since
+    // handleConfirmRename depends on editingAreaName/areas which change frequently.
+    // The latest closure is always captured via the area.id passed as argument.
     return true;
   }
 );

@@ -32,6 +32,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { Area } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
@@ -191,52 +192,43 @@ export function NavAreas({
     dispatch({ type: "CANCEL_EDIT" });
   }, []);
 
-  const handleConfirmRename = useCallback(
-    async (areaId: number) => {
-      if (!editingAreaName.trim()) {
-        toast.error("Name darf nicht leer sein");
-        return;
-      }
+  const handleConfirmRename = useStableCallback(async (areaId: number) => {
+    if (!editingAreaName.trim()) {
+      toast.error("Name darf nicht leer sein");
+      return;
+    }
 
-      // Don't save if name hasn't changed
-      const area = areas.find((a) => a.id === areaId);
-      if (area && editingAreaName.trim() === area.name) {
-        handleCancelRename();
-        return;
-      }
+    // Don't save if name hasn't changed
+    const area = areas.find((a) => a.id === areaId);
+    if (area && editingAreaName.trim() === area.name) {
+      handleCancelRename();
+      return;
+    }
 
-      // Optimistic update for instant feedback
-      startTransition(async () => {
-        updateOptimisticAreas({
-          type: "rename",
-          id: areaId,
-          name: editingAreaName.trim(),
-        });
-
-        const result = await executeAction(
-          updateAreaAction(areaId, {
-            name: editingAreaName.trim(),
-          }),
-          {
-            loading: "Benenne Gebiet um...",
-            success: "Gebiet umbenannt",
-            error: "Umbenennen fehlgeschlagen",
-          }
-        );
-
-        if (result && "success" in result && result.success) {
-          dispatch({ type: "FINISH_EDIT" });
-        }
+    // Optimistic update for instant feedback
+    startTransition(async () => {
+      updateOptimisticAreas({
+        type: "rename",
+        id: areaId,
+        name: editingAreaName.trim(),
       });
-    },
-    [
-      editingAreaName,
-      areas,
-      handleCancelRename,
-      startTransition,
-      updateOptimisticAreas,
-    ]
-  );
+
+      const result = await executeAction(
+        updateAreaAction(areaId, {
+          name: editingAreaName.trim(),
+        }),
+        {
+          loading: "Benenne Gebiet um...",
+          success: "Gebiet umbenannt",
+          error: "Umbenennen fehlgeschlagen",
+        }
+      );
+
+      if (result && "success" in result && result.success) {
+        dispatch({ type: "FINISH_EDIT" });
+      }
+    });
+  });
 
   const handleEditNameChange = useCallback((name: string) => {
     dispatch({ type: "SET_EDIT_NAME", name });
