@@ -795,12 +795,29 @@ function LayerManagementSection({
     () => dispatchUI({ type: "OPEN_MERGE" }),
     [dispatchUI]
   );
+  const handleSetLayersOpen = useCallback(
+    (open: boolean) => dispatchUI({ type: "SET_LAYERS_OPEN", open }),
+    [dispatchUI]
+  );
+  const handleNewLayerNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      dispatchForm({ type: "SET_NEW_NAME", name: e.target.value }),
+    [dispatchForm]
+  );
+  const handleNewLayerKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        handleCreateLayer();
+      }
+    },
+    [handleCreateLayer]
+  );
 
   return (
     <>
       <Collapsible
         open={ui.layersOpen}
-        onOpenChange={(open) => dispatchUI({ type: "SET_LAYERS_OPEN", open })}
+        onOpenChange={handleSetLayersOpen}
       >
         <CollapsibleTrigger
           render={
@@ -895,20 +912,14 @@ function LayerManagementSection({
           <div className="flex gap-1">
             <Input
               value={form.newLayerName}
-              onChange={(e) =>
-                dispatchForm({ type: "SET_NEW_NAME", name: e.target.value })
-              }
+              onChange={handleNewLayerNameChange}
               placeholder={
                 isViewingVersion
                   ? "Neues Gebiet (neue Version)..."
                   : "Neues Gebiet..."
               }
               className="h-7 text-xs"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCreateLayer();
-                }
-              }}
+              onKeyDown={handleNewLayerKeyDown}
             />
             <Tooltip>
               <TooltipTrigger
@@ -1121,6 +1132,15 @@ function DrawingToolsImpl({
     postalCodesData,
   });
 
+  const handleSetRegionsOpen = useCallback(
+    (open: boolean) => dispatchUI({ type: "SET_REGIONS_OPEN", open }),
+    [dispatchUI]
+  );
+  const handleClearAllWithToast = useCallback(() => {
+    onClearAll();
+    toast.success("Zeichnungen gelöscht", { duration: 2000 });
+  }, [onClearAll]);
+
   return (
     <Card
       role="region"
@@ -1205,9 +1225,7 @@ function DrawingToolsImpl({
         <PendingRegionsSection
           pendingPostalCodes={pendingPostalCodes}
           regionsOpen={ui.regionsOpen}
-          onOpenChange={(open) =>
-            dispatchUI({ type: "SET_REGIONS_OPEN", open })
-          }
+          onOpenChange={handleSetRegionsOpen}
           canAdd={!!(areaId && activeLayerId && addPostalCodesToLayer)}
           canRemove={!!(areaId && activeLayerId && removePostalCodesFromLayer)}
           onAddPending={handleAddPendingToLayer}
@@ -1222,10 +1240,7 @@ function DrawingToolsImpl({
           areaId={areaId}
           isFilling={ui.isFilling}
           onFillHoles={handleFillHoles}
-          onClearAll={() => {
-            onClearAll();
-            toast.success("Zeichnungen gelöscht", { duration: 2000 });
-          }}
+          onClearAll={handleClearAllWithToast}
           onExportExcel={handleExportExcel}
           onExportPDF={handleExportPDF}
         />

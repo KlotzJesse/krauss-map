@@ -419,6 +419,27 @@ export function PostalCodesViewClientWithLayers({
     initialUndoRedoStatus,
   });
 
+  const handleBoundarySelect = useCallback(
+    (codes: string[]) => handleImport(codes),
+    [handleImport]
+  );
+
+  const handlePreviewSelect = useCallback(
+    (coords: [number, number] | null, _label: string, postalCode?: string) => {
+      if (postalCode) {
+        setPreviewPostalCode((prev) => {
+          const isClosing = prev === postalCode;
+          if (!isClosing && coords) {
+            setMapCenterZoom([coords[0], coords[1]], 11);
+          }
+          searchPostalCodes(postalCode);
+          return isClosing ? null : postalCode;
+        });
+      }
+    },
+    [setMapCenterZoom, searchPostalCodes]
+  );
+
   const handleGranularityChange = (newGranularity: string) => {
     if (newGranularity === defaultGranularity) {
       return;
@@ -442,18 +463,9 @@ export function PostalCodesViewClientWithLayers({
           <AddressAutocompleteErrorBoundary>
             <AddressAutocompleteEnhanced
               onAddressSelect={handleAddressSelect}
-              onBoundarySelect={(codes) => handleImport(codes)}
+              onBoundarySelect={handleBoundarySelect}
               onRadiusSelect={handleRadiusSelect}
-              onPreviewSelect={(coords, label, postalCode) => {
-                if (postalCode) {
-                  const isClosing = previewPostalCode === postalCode;
-                  setPreviewPostalCode(isClosing ? null : postalCode);
-                  if (!isClosing && coords) {
-                    setMapCenterZoom([coords[0], coords[1]], 11);
-                  }
-                  searchPostalCodes(postalCode);
-                }
-              }}
+              onPreviewSelect={handlePreviewSelect}
               performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}
               granularity={defaultGranularity}
               triggerClassName="truncate h-10"
