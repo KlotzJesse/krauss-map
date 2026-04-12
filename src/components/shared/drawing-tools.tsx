@@ -14,6 +14,7 @@ import { ChevronDown, ChevronUp, X } from "lucide-react";
 import type { Dispatch, RefObject } from "react";
 import {
   Suspense,
+  useCallback,
   useOptimistic,
   useReducer,
   useState,
@@ -777,6 +778,24 @@ function LayerManagementSection({
   handleColorChange,
   handleDeleteLayer,
 }: LayerManagementSectionProps) {
+  // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
+  const handleOpenConflicts = useCallback(
+    () => dispatchUI({ type: "OPEN_CONFLICTS" }),
+    [dispatchUI]
+  );
+  const handleOpenHistory = useCallback(
+    () => dispatchUI({ type: "OPEN_HISTORY" }),
+    [dispatchUI]
+  );
+  const handleOpenVersion = useCallback(
+    () => dispatchUI({ type: "OPEN_VERSION" }),
+    [dispatchUI]
+  );
+  const handleOpenMerge = useCallback(
+    () => dispatchUI({ type: "OPEN_MERGE" }),
+    [dispatchUI]
+  );
+
   return (
     <>
       <Collapsible
@@ -806,7 +825,7 @@ function LayerManagementSection({
               <TooltipTrigger
                 render={
                   <Button
-                    onClick={() => dispatchUI({ type: "OPEN_CONFLICTS" })}
+                    onClick={handleOpenConflicts}
                     variant="outline"
                     size="sm"
                     className="h-7 px-1.5"
@@ -823,7 +842,7 @@ function LayerManagementSection({
               <TooltipTrigger
                 render={
                   <Button
-                    onClick={() => dispatchUI({ type: "OPEN_HISTORY" })}
+                    onClick={handleOpenHistory}
                     variant="outline"
                     size="sm"
                     className="h-7 px-1.5"
@@ -840,7 +859,7 @@ function LayerManagementSection({
               <TooltipTrigger
                 render={
                   <Button
-                    onClick={() => dispatchUI({ type: "OPEN_VERSION" })}
+                    onClick={handleOpenVersion}
                     variant="outline"
                     size="sm"
                     className="h-7 px-1.5"
@@ -857,7 +876,7 @@ function LayerManagementSection({
               <TooltipTrigger
                 render={
                   <Button
-                    onClick={() => dispatchUI({ type: "OPEN_MERGE" })}
+                    onClick={handleOpenMerge}
                     variant="outline"
                     size="sm"
                     className="h-7 px-1.5"
