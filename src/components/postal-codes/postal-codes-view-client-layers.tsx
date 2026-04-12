@@ -44,6 +44,7 @@ import {
   AddressAutocompleteSkeleton,
   MapSkeleton,
 } from "@/components/ui/loading-skeletons";
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 
@@ -164,174 +165,172 @@ function usePostalCodesLayerActions({
   const { searchPostalCodes, selectPostalCode } = usePostalCodeSearch({ data });
   const { findPostalCodeByCoords } = usePostalCodeLookup({ data });
 
-  const addPostalCodesToLayer = async (
-    layerId: number,
-    postalCodes: string[]
-  ) => {
-    if (!areaId) {
-      toast.error("Kein Gebiet ausgewählt");
-      return;
-    }
-    startTransition(async () => {
-      updateOptimisticLayers({ type: "add", layerId, postalCodes });
-      updateOptimisticUndoRedo("increment");
-      try {
-        const result = await addPostalCodesToLayerAction(
-          areaId,
-          layerId,
-          postalCodes
-        );
-        if (!result.success) {
-          toast.error(result.error);
-        }
-      } catch (error) {
-        let message = "Fehler beim Hinzufügen der PLZ";
-        if (error instanceof Error) {
-          message = error.message;
-        }
-        toast.error(message);
+  const addPostalCodesToLayer = useStableCallback(
+    async (layerId: number, postalCodes: string[]) => {
+      if (!areaId) {
+        toast.error("Kein Gebiet ausgewählt");
+        return;
       }
-    });
-  };
-
-  const removePostalCodesFromLayer = async (
-    layerId: number,
-    postalCodes: string[]
-  ) => {
-    if (!areaId) {
-      toast.error("Kein Gebiet ausgewählt");
-      return;
-    }
-    startTransition(async () => {
-      updateOptimisticLayers({ type: "remove", layerId, postalCodes });
-      updateOptimisticUndoRedo("increment");
-      try {
-        const result = await removePostalCodesFromLayerAction(
-          areaId,
-          layerId,
-          postalCodes
-        );
-        if (!result.success) {
-          toast.error(result.error);
-        }
-      } catch (error) {
-        let message = "Fehler beim Entfernen der PLZ";
-        if (error instanceof Error) {
-          message = error.message;
-        }
-        toast.error(message);
-      }
-    });
-  };
-
-  const performRadiusSearch = async (searchData: {
-    latitude: number;
-    longitude: number;
-    radius: number;
-    granularity: string;
-  }) => {
-    const action = withCallbacks(
-      () => radiusSearchAction(searchData),
-      createToastCallbacks({
-        loadingMessage: `Suche PLZ im Radius ${searchData.radius}km...`,
-        successMessage: (data: unknown) => {
-          const d = data as {
-            success?: boolean;
-            data?: { postalCodes?: string[] };
-          };
-          if (d.success && d.data) {
-            const postalCodes = d.data.postalCodes;
-            return `${postalCodes?.length ?? 0} PLZ gefunden und hinzugefügt`;
+      startTransition(async () => {
+        updateOptimisticLayers({ type: "add", layerId, postalCodes });
+        updateOptimisticUndoRedo("increment");
+        try {
+          const result = await addPostalCodesToLayerAction(
+            areaId,
+            layerId,
+            postalCodes
+          );
+          if (!result.success) {
+            toast.error(result.error);
           }
-          return "Erfolgreich durchgeführt";
-        },
-        errorMessage: "Radiussuche fehlgeschlagen",
-      })
-    );
-    const result = await action();
-    if (result?.success && result.data) {
-      const postalCodes = result.data.postalCodes;
-      if (activeLayerId && areaId) {
-        addPostalCodesToLayer(activeLayerId, postalCodes);
-      } else {
-        toast.error("Bitte aktives Gebiet wählen");
-      }
-    }
-  };
-
-  const performDrivingRadiusSearchWrapper = async (
-    coordinates: [number, number],
-    radius: number,
-    granularity: string
-  ) => {
-    const action = withCallbacks(
-      () =>
-        drivingRadiusSearchAction({
-          latitude: coordinates[1],
-          longitude: coordinates[0],
-          maxDuration: radius,
-          granularity,
-        }),
-      createToastCallbacks({
-        loadingMessage: `Suche PLZ in ${radius}min Fahrzeit...`,
-        successMessage: (data: unknown) => {
-          const d = data as {
-            success?: boolean;
-            data?: { postalCodes?: string[] };
-          };
-          if (d.success && d.data) {
-            const postalCodes = d.data.postalCodes;
-            return `${postalCodes?.length ?? 0} PLZ gefunden und hinzugefügt`;
+        } catch (error) {
+          let message = "Fehler beim Hinzufügen der PLZ";
+          if (error instanceof Error) {
+            message = error.message;
           }
-          return "Erfolgreich durchgeführt";
-        },
-        errorMessage: "Fahrtzeitsuche fehlgeschlagen",
-      })
-    );
-    const result = await action();
-    if (result?.success && result.data) {
-      const postalCodes = result.data.postalCodes;
-      if (activeLayerId && areaId) {
-        addPostalCodesToLayer(activeLayerId, postalCodes);
-      } else {
-        toast.error("Bitte aktives Gebiet wählen");
+          toast.error(message);
+        }
+      });
+    }
+  );
+
+  const removePostalCodesFromLayer = useStableCallback(
+    async (layerId: number, postalCodes: string[]) => {
+      if (!areaId) {
+        toast.error("Kein Gebiet ausgewählt");
+        return;
+      }
+      startTransition(async () => {
+        updateOptimisticLayers({ type: "remove", layerId, postalCodes });
+        updateOptimisticUndoRedo("increment");
+        try {
+          const result = await removePostalCodesFromLayerAction(
+            areaId,
+            layerId,
+            postalCodes
+          );
+          if (!result.success) {
+            toast.error(result.error);
+          }
+        } catch (error) {
+          let message = "Fehler beim Entfernen der PLZ";
+          if (error instanceof Error) {
+            message = error.message;
+          }
+          toast.error(message);
+        }
+      });
+    }
+  );
+
+  const performRadiusSearch = useStableCallback(
+    async (searchData: {
+      latitude: number;
+      longitude: number;
+      radius: number;
+      granularity: string;
+    }) => {
+      const action = withCallbacks(
+        () => radiusSearchAction(searchData),
+        createToastCallbacks({
+          loadingMessage: `Suche PLZ im Radius ${searchData.radius}km...`,
+          successMessage: (data: unknown) => {
+            const d = data as {
+              success?: boolean;
+              data?: { postalCodes?: string[] };
+            };
+            if (d.success && d.data) {
+              const postalCodes = d.data.postalCodes;
+              return `${postalCodes?.length ?? 0} PLZ gefunden und hinzugefügt`;
+            }
+            return "Erfolgreich durchgeführt";
+          },
+          errorMessage: "Radiussuche fehlgeschlagen",
+        })
+      );
+      const result = await action();
+      if (result?.success && result.data) {
+        const postalCodes = result.data.postalCodes;
+        if (activeLayerId && areaId) {
+          addPostalCodesToLayer(activeLayerId, postalCodes);
+        } else {
+          toast.error("Bitte aktives Gebiet wählen");
+        }
       }
     }
-  };
+  );
 
-  const handleAddressSelect = async (
-    coords: [number, number],
-    _label: string,
-    postalCode?: string
-  ) => {
-    const code = postalCode || findPostalCodeByCoords(coords[0], coords[1]);
-    if (!code) {
-      toast.error("Keine PLZ für Adresse gefunden");
-      return;
+  const performDrivingRadiusSearchWrapper = useStableCallback(
+    async (
+      coordinates: [number, number],
+      radius: number,
+      granularity: string
+    ) => {
+      const action = withCallbacks(
+        () =>
+          drivingRadiusSearchAction({
+            latitude: coordinates[1],
+            longitude: coordinates[0],
+            maxDuration: radius,
+            granularity,
+          }),
+        createToastCallbacks({
+          loadingMessage: `Suche PLZ in ${radius}min Fahrzeit...`,
+          successMessage: (data: unknown) => {
+            const d = data as {
+              success?: boolean;
+              data?: { postalCodes?: string[] };
+            };
+            if (d.success && d.data) {
+              const postalCodes = d.data.postalCodes;
+              return `${postalCodes?.length ?? 0} PLZ gefunden und hinzugefügt`;
+            }
+            return "Erfolgreich durchgeführt";
+          },
+          errorMessage: "Fahrtzeitsuche fehlgeschlagen",
+        })
+      );
+      const result = await action();
+      if (result?.success && result.data) {
+        const postalCodes = result.data.postalCodes;
+        if (activeLayerId && areaId) {
+          addPostalCodesToLayer(activeLayerId, postalCodes);
+        } else {
+          toast.error("Bitte aktives Gebiet wählen");
+        }
+      }
     }
-    if (activeLayerId && areaId) {
-      await addPostalCodesToLayer(activeLayerId, [code]);
-      toast.success(`PLZ ${code} hinzugefügt`);
-    } else {
-      selectPostalCode(code);
-      toast.success(`PLZ ${code} gewählt`);
+  );
+
+  const handleAddressSelect = useStableCallback(
+    async (coords: [number, number], _label: string, postalCode?: string) => {
+      const code = postalCode || findPostalCodeByCoords(coords[0], coords[1]);
+      if (!code) {
+        toast.error("Keine PLZ für Adresse gefunden");
+        return;
+      }
+      if (activeLayerId && areaId) {
+        await addPostalCodesToLayer(activeLayerId, [code]);
+        toast.success(`PLZ ${code} hinzugefügt`);
+      } else {
+        selectPostalCode(code);
+        toast.success(`PLZ ${code} gewählt`);
+      }
     }
-  };
+  );
 
-  const handleRadiusSelect = async (
-    coords: [number, number],
-    radius: number,
-    granularity: string
-  ) => {
-    await performRadiusSearch({
-      latitude: coords[1],
-      longitude: coords[0],
-      radius,
-      granularity,
-    });
-  };
+  const handleRadiusSelect = useStableCallback(
+    async (coords: [number, number], radius: number, granularity: string) => {
+      await performRadiusSearch({
+        latitude: coords[1],
+        longitude: coords[0],
+        radius,
+        granularity,
+      });
+    }
+  );
 
-  const handleImport = async (postalCodes: string[]) => {
+  const handleImport = useStableCallback(async (postalCodes: string[]) => {
     if (activeLayerId && areaId) {
       await addPostalCodesToLayer(activeLayerId, postalCodes);
       toast.success(`${postalCodes.length} PLZ hinzugefügt`);
@@ -340,7 +339,7 @@ function usePostalCodesLayerActions({
         duration: 3000,
       });
     }
-  };
+  });
 
   return {
     optimisticLayers,
@@ -430,20 +429,23 @@ export function PostalCodesViewClientWithLayers({
     [setMapCenterZoom, searchPostalCodes]
   );
 
-  const handleGranularityChange = (newGranularity: string) => {
-    if (newGranularity === defaultGranularity) {
-      return;
-    }
+  const handleGranularityChange = useCallback(
+    (newGranularity: string) => {
+      if (newGranularity === defaultGranularity) {
+        return;
+      }
 
-    // Granularity changes are now handled through the GranularitySelector component
-    // which updates the area's granularity via server action and triggers a refresh
+      // Granularity changes are now handled through the GranularitySelector component
+      // which updates the area's granularity via server action and triggers a refresh
 
-    toast.info("Granularität wird aktualisiert", {
-      description: "Änderung wird gespeichert",
+      toast.info("Granularität wird aktualisiert", {
+        description: "Änderung wird gespeichert",
 
-      duration: 3000,
-    });
-  };
+        duration: 3000,
+      });
+    },
+    [defaultGranularity]
+  );
 
   return (
     <div className="h-full relative">
