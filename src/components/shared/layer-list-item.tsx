@@ -3,7 +3,7 @@
 import { IconPalette } from "@tabler/icons-react";
 import { Copy, Loader2, X } from "lucide-react";
 import type { RefObject } from "react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -135,7 +135,7 @@ function LayerColorPickerContent({
   );
 }
 
-export function LayerListItem({
+export const LayerListItem = memo(function LayerListItem({
   layer,
   activeLayerId,
   isLayerSwitchPending = false,
@@ -318,4 +318,4 @@ export function LayerListItem({
       </div>
     </div>
   );
-}
+});

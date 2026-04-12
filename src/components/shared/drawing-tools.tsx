@@ -815,10 +815,7 @@ function LayerManagementSection({
 
   return (
     <>
-      <Collapsible
-        open={ui.layersOpen}
-        onOpenChange={handleSetLayersOpen}
-      >
+      <Collapsible open={ui.layersOpen} onOpenChange={handleSetLayersOpen}>
         <CollapsibleTrigger
           render={
             <Button

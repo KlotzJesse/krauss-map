@@ -64,7 +64,12 @@ export function useSetMapCenterZoom() {
   });
 }
 
-// Hook for managing all map state (Optimized v4 - with layer support)
+/**
+ * @deprecated No consumers remain. Use narrow hooks instead:
+ * - useMapView() for center/zoom
+ * - useActiveLayerState() for active layer
+ * - useSetMapCenterZoom() for write-only center/zoom
+ */
 export function useMapState() {
   // --- Atomic map view state ---
   const [mapView, setMapView] = useMapView();
