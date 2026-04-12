@@ -93,10 +93,38 @@ export function useTerraDraw({
         map,
       });
 
+      // Shared selection flags for draggable features with editable coordinates
+      const draggableWithCoords = {
+        feature: {
+          draggable: true,
+          coordinates: {
+            midpoints: true,
+            draggable: true,
+            deletable: true,
+          },
+        },
+      };
+      // Simpler flags for shapes where coordinate editing isn't useful
+      const draggableOnly = {
+        feature: { draggable: true },
+      };
+
       const draw = new TerraDraw({
         adapter,
         modes: [
-          new TerraDrawSelectMode(),
+          // flags tell select mode which drawing modes' features are selectable
+          new TerraDrawSelectMode({
+            flags: {
+              freehand: draggableWithCoords,
+              polygon: draggableWithCoords,
+              linestring: draggableWithCoords,
+              circle: draggableOnly,
+              rectangle: draggableOnly,
+              "angled-rectangle": draggableOnly,
+              sector: draggableOnly,
+              point: draggableOnly,
+            },
+          }),
           new TerraDrawFreehandMode({
             pointerDistance: 40,
             minDistance: 10,

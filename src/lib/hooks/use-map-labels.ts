@@ -248,7 +248,7 @@ export function useMapLabels({
             paint: {
               "text-color": "#222",
               "text-halo-color": "#ffffff",
-              "text-halo-width": 2.5,
+              "text-halo-width": 3,
               "text-halo-blur": 0,
             },
           });
