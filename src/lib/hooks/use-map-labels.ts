@@ -30,6 +30,25 @@ type Layer = InferSelectModel<typeof areaLayers> & {
  */
 export const LABEL_SENTINEL_LAYER_ID = "deck-label-divider";
 
+/**
+ * Ensures the sentinel layer exists in the map style.
+ * Call this from Map's onStyleData callback so it runs BEFORE MapboxOverlay's
+ * styledata handler (which calls resolveLayers with beforeId).
+ */
+export function ensureLabelSentinel(map: MapLibreMap): void {
+  try {
+    if (map.isStyleLoaded() && !map.getLayer(LABEL_SENTINEL_LAYER_ID)) {
+      map.addLayer({
+        id: LABEL_SENTINEL_LAYER_ID,
+        type: "background",
+        paint: { "background-opacity": 0 },
+      });
+    }
+  } catch {
+    // Style may not be ready yet
+  }
+}
+
 // Module-level WeakMap cache for turfArea results
 const _turfAreaCache = new WeakMap<Feature, number>();
 
@@ -177,8 +196,9 @@ export function useMapLabels({
   }>({ data: null, cache: new Map() });
 
   // Label layer creation — runs once when map loads.
-  // Creates the sentinel divider layer, then all label layers ABOVE it.
-  // deck.gl layers use `beforeId: LABEL_SENTINEL_LAYER_ID` to render below labels.
+  // The sentinel divider layer is created via ensureLabelSentinel() from Map's
+  // onStyleData callback (fires before deck.gl's handler). Label layers are
+  // added above it in the style stack.
   useLayoutEffect(() => {
     if (!mapInstance || !isMapLoaded) {
       return;
@@ -192,19 +212,8 @@ export function useMapLabels({
     const lp = labelPointsRef.current;
     const slp = statesLabelPointsRef.current;
 
-    // Create sentinel divider layer — deck.gl layers insert BEFORE this,
-    // label layers are added AFTER this (above it in the stack)
-    if (!map.getLayer(LABEL_SENTINEL_LAYER_ID)) {
-      try {
-        map.addLayer({
-          id: LABEL_SENTINEL_LAYER_ID,
-          type: "background",
-          paint: { "background-opacity": 0 },
-        });
-      } catch {
-        // Layer may already exist
-      }
-    }
+    // Ensure sentinel exists (safety net if onStyleData didn't fire yet)
+    ensureLabelSentinel(map);
 
     // Create label points source
     if (!map.getSource(ids.labelSourceId)) {
