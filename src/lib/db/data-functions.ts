@@ -249,7 +249,7 @@ export async function getChangeHistory(
 export async function getUndoRedoStatus(areaId: number) {
   "use cache";
   cacheLife("seconds");
-  cacheTag("undo-redo", `area-${areaId}-undo-redo`);
+  cacheTag(`area-${areaId}-undo-redo`);
   try {
     const stack = await db.query.areaUndoStacks.findFirst({
       where: eq(areaUndoStacks.areaId, areaId),

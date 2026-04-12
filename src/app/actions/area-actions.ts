@@ -106,8 +106,6 @@ export async function createAreaAction(data: {
 
     updateTag(`area-${area.id}`);
 
-    updateTag("undo-redo");
-
     updateTag(`area-${area.id}-undo-redo`);
 
     updateTag("version-info");
@@ -187,8 +185,6 @@ export async function updateAreaAction(
     updateTag("areas");
 
     updateTag(`area-${id}`);
-
-    updateTag("undo-redo");
 
     updateTag(`area-${id}-undo-redo`);
 
@@ -327,8 +323,6 @@ export async function createLayerAction(
     updateTag(`area-${areaId}-layers`);
 
     updateTag(`area-${areaId}`);
-
-    updateTag("undo-redo");
 
     updateTag(`area-${areaId}-undo-redo`);
 
@@ -489,8 +483,6 @@ export async function updateLayerAction(
 
     updateTag(`area-${areaId}`);
 
-    updateTag("undo-redo");
-
     updateTag(`area-${areaId}-undo-redo`);
 
     return { success: true };
@@ -575,8 +567,6 @@ export async function deleteLayerAction(
 
     updateTag(`area-${areaId}`);
 
-    updateTag("undo-redo");
-
     updateTag(`area-${areaId}-undo-redo`);
 
     return { success: true };
@@ -651,7 +641,6 @@ export async function addPostalCodesToLayerAction(
     }
 
     updateTag(`area-${areaId}-layers`);
-    updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
     updateTag("change-history");
     updateTag(`area-${areaId}-change-history`);
@@ -733,7 +722,6 @@ export async function removePostalCodesFromLayerAction(
     }
 
     updateTag(`area-${areaId}-layers`);
-    updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
     updateTag("change-history");
     updateTag(`area-${areaId}-change-history`);

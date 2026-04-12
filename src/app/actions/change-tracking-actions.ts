@@ -172,7 +172,6 @@ export async function recordChangeAction(
       return { success: false, error: "Area not found" };
     }
 
-    updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
 
     if (options?.invalidateHistory !== false) {
@@ -290,7 +289,6 @@ export async function undoChangeAction(
       return changeKey;
     });
 
-    updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
     updateTag("change-history");
     updateTag(`area-${areaId}-change-history`);
@@ -403,7 +401,6 @@ export async function redoChangeAction(
       return changeKey;
     });
 
-    updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
     updateTag("change-history");
     updateTag(`area-${areaId}-change-history`);
@@ -713,7 +710,6 @@ export async function clearUndoRedoStacksAction(
         .where(eq(areaUndoStacks.id, stack.id));
     }
 
-    updateTag("undo-redo");
     updateTag(`area-${areaId}-undo-redo`);
     updateTag("change-history");
     updateTag(`area-${areaId}-change-history`);
