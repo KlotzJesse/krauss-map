@@ -83,14 +83,25 @@ export default async function PostalCodesPage({
     ? parseInt(search.versionId as string, 10)
     : null;
 
-  let granularity: string = "1digit";
+  // Guard against NaN areaId (can happen during redirect race conditions)
+  if (Number.isNaN(areaId) || areaId <= 0) {
+    return (
+      <>
+        <Suspense fallback={<SiteHeaderSkeleton />}>
+          <SiteHeader areaId={0} />
+        </Suspense>
+        <div className="h-full" data-layout="fullscreen">
+          <PostalCodesViewSkeleton />
+        </div>
+      </>
+    );
+  }
 
-  if (areaId && areaId > 0) {
-    try {
-      granularity = await resolveGranularity(areaId, versionId);
-    } catch (error) {
-      console.error("Failed to fetch granularity:", error);
-    }
+  let granularity: string = "1digit";
+  try {
+    granularity = await resolveGranularity(areaId, versionId);
+  } catch (error) {
+    console.error("Failed to fetch granularity:", error);
   }
 
   // Geodata is now fetched client-side via API routes to avoid

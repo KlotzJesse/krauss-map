@@ -25,6 +25,11 @@ export default async function ServerPostalCodesView({
   areaId,
   versionId,
 }: ServerPostalCodesViewProps) {
+  // Guard against NaN areaId (can happen during redirect race conditions)
+  if (!areaId || Number.isNaN(areaId)) {
+    return <PostalCodesViewSkeleton />;
+  }
+
   // Server Component: initiate all fetches as promises
   // Geodata (postal codes) is now fetched client-side via API route
   // to avoid serializing ~9.6MB of GeoJSON into the RSC payload
