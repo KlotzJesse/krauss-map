@@ -27,7 +27,13 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 
 import { FileUpIcon } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useState, useTransition, useOptimistic, use } from "react";
+import {
+  useState,
+  useTransition,
+  useOptimistic,
+  use,
+  useCallback,
+} from "react";
 import { toast } from "sonner";
 
 import {
@@ -390,6 +396,7 @@ export function PostalCodesViewClientWithLayers({
     useState<FeatureCollection<Polygon | MultiPolygon>>(initialData);
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const openImportDialog = useCallback(() => setImportDialogOpen(true), []);
   const [previewPostalCode, setPreviewPostalCode] = useState<string | null>(
     null
   );
@@ -531,7 +538,7 @@ export function PostalCodesViewClientWithLayers({
               render={
                 <Button
                   variant="secondary"
-                  onClick={() => setImportDialogOpen(true)}
+                  onClick={openImportDialog}
                   size="default"
                   className="h-10 px-4"
                   title="PLZ importieren"

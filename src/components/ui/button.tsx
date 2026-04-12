@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,7 @@ const buttonVariants = cva(
   }
 );
 
-function Button({
+const Button = memo(function Button({
   className,
   variant = "default",
   size = "default",
@@ -54,6 +55,6 @@ function Button({
       {...props}
     />
   );
-}
+});
 
 export { Button, buttonVariants };
