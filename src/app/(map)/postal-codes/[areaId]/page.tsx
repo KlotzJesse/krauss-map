@@ -1,20 +1,12 @@
 import type { Metadata } from "next";
-import nextDynamic from "next/dynamic";
 import { Suspense } from "react";
 
+import ServerPostalCodesView from "@/components/postal-codes/server-postal-codes-view";
 import { SiteHeader } from "@/components/site-header";
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { SiteHeaderSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import { getAreaGranularity, getVersion } from "@/lib/db/data-functions";
-
-const ServerPostalCodesView = nextDynamic(
-  () => import("@/components/postal-codes/server-postal-codes-view"),
-  {
-    loading: () => <PostalCodesViewSkeleton />,
-    ssr: true,
-  }
-);
 
 interface PostalCodesPageProps {
   params: Promise<{ areaId: string }>;
