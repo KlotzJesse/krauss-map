@@ -381,7 +381,7 @@ export function GranularitySelector({
                 Granularität ändern?
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
-                <div>
+                <span className="block">
                   <strong>Achtung:</strong> Der Wechsel zu einer niedrigeren
                   Granularität wird
                   <span className="text-destructive font-medium">
@@ -389,14 +389,14 @@ export function GranularitySelector({
                     alle {totalPostalCodes} Regionen
                   </span>{" "}
                   aus allen Gebieten löschen.
-                </div>
-                <div>
+                </span>
+                <span className="block">
                   Die PLZ-Daten auf der Karte bleiben erhalten, aber Ihre
                   gespeicherten Gebietsauswahlen gehen verloren.
-                </div>
-                <div className="text-sm text-muted-foreground">
+                </span>
+                <span className="block text-sm text-muted-foreground">
                   Dieser Vorgang kann nicht rückgängig gemacht werden.
-                </div>
+                </span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
