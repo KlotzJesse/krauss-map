@@ -59,25 +59,27 @@ export async function executeAction<T>(
 
     return result;
   } catch (error: unknown) {
-    // If it's a Next.js framework error containing NEXT_REDIRECT or NEXT_NOT_FOUND,
-    // unstable_rethrow prevents it from being swallowed by our try/catch
-    // and correctly propagates it to Next.js internals framework catchers.
-    if (
+    // Detect Next.js redirect (server action returned HTTP 303).
+    // The router already handles navigation at the transport layer,
+    // so we just show the success toast and return — no need to rethrow.
+    const isRedirect =
       error &&
       typeof error === "object" &&
       "digest" in error &&
       typeof (error as { digest?: unknown }).digest === "string" &&
-      (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
-    ) {
-      // It's a redirect, meaning the action completed and ordered navigation.
+      (error as { digest: string }).digest.startsWith("NEXT_REDIRECT");
+
+    if (isRedirect) {
       toast.success(
         typeof messages.success === "function"
           ? messages.success({} as T)
           : messages.success || "Erfolgreich",
         { id: toastId }
       );
+      return undefined as T;
     }
 
+    // Re-throw other Next.js internal errors (e.g. NEXT_NOT_FOUND)
     unstable_rethrow(error);
 
     let errorMsg: string;
