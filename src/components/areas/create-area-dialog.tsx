@@ -50,8 +50,7 @@ export function CreateAreaDialog({
     startTransition(async () => {
       updateOptimisticCreating(true);
 
-      // Server action handles redirect automatically on success.
-      // executeAction + unstable_rethrow propagates NEXT_REDIRECT correctly.
+      // Server action handles redirect on success.
       await executeAction(
         createAreaAction({
           name,

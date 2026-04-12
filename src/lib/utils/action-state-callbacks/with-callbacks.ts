@@ -50,6 +50,19 @@ export const withCallbacks =
 
       return result;
     } catch (error: unknown) {
+      // Detect Next.js redirect — already handled by the router via HTTP 303.
+      // Return early so it doesn't propagate to error boundaries.
+      if (
+        error &&
+        typeof error === "object" &&
+        "digest" in error &&
+        typeof (error as { digest?: unknown }).digest === "string" &&
+        (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        return undefined as T;
+      }
+
+      // Re-throw other Next.js internal errors (NEXT_NOT_FOUND, etc.)
       unstable_rethrow(error);
 
       callbacks.onError?.({
