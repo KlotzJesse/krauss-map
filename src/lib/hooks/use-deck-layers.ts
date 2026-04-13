@@ -167,11 +167,30 @@ export function useDeckLayers({
     [layers, activeLayerId]
   );
 
+  // Stable set of codes across all visible layers — independent of activeLayerId.
+  // Switching active layer changes styling but NOT which codes are in the set,
+  // so areaFeaturesData avoids unnecessary recomputation on layer switches.
+  const resolvedCodeSet = useMemo(() => {
+    const codes = new Set<string>();
+    if (!layers) {
+      return codes;
+    }
+    for (const layer of layers) {
+      if (layer.isVisible !== "true") {
+        continue;
+      }
+      const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
+      for (const code of postalCodes) {
+        codes.add(code);
+      }
+    }
+    return codes;
+  }, [layers]);
+
   // Pre-filtered area features (only features in any visible area layer)
   const areaFeaturesData = useMemo(
-    () =>
-      filterAreaFeatures(data, new Set(resolvedStyles.keys()), featureIndex),
-    [data, resolvedStyles, featureIndex]
+    () => filterAreaFeatures(data, resolvedCodeSet, featureIndex),
+    [data, resolvedCodeSet, featureIndex]
   );
 
   // Preview feature data

@@ -51,28 +51,13 @@ export function useMapTerraDrawSelection({
   const handleTerraDrawSelection = useStableCallback(
     (featureIds: (string | number)[]) => {
       if (!featureIds || featureIds.length === 0) {
-        console.log("[useMapTerraDrawSelection] No feature IDs provided");
         return;
       }
 
       const allDrawFeatures = terraDrawRef.current?.getSnapshot() ?? [];
-      console.log(
-        "[useMapTerraDrawSelection] All TerraDraw features:",
-        allDrawFeatures
-      );
-
-      // Process ALL feature IDs, not just the last one
       const allSelectedFeatures: string[] = [];
 
-      featureIds.forEach((featureId, index) => {
-        console.log(
-          `[useMapTerraDrawSelection] Processing feature ID ${index + 1}/${
-            featureIds.length
-          }:`,
-          featureId
-        );
-
-        // Inline type guard for drawFeature
+      for (const featureId of featureIds) {
         const drawFeature = allDrawFeatures.find(
           (
             f
@@ -88,11 +73,7 @@ export function useMapTerraDrawSelection({
         );
 
         if (!drawFeature) {
-          console.log(
-            "[useMapTerraDrawSelection] No valid draw feature found for ID:",
-            featureId
-          );
-          return;
+          continue;
         }
 
         // Handle polygon selection
@@ -101,28 +82,15 @@ export function useMapTerraDrawSelection({
           drawFeature.geometry.type === "Polygon" &&
           Array.isArray(drawFeature.geometry.coordinates[0])
         ) {
-          console.log(
-            "[useMapTerraDrawSelection] Processing polygon selection"
-          );
-
           const polygon = drawFeature.geometry.coordinates[0] as [
             number,
             number,
           ][];
-          console.log(
-            "[useMapTerraDrawSelection] Polygon coordinates:",
-            polygon
-          );
 
-          // Ensure polygon has at least 3 points
           if (polygon.length < 3) {
-            console.log(
-              "[useMapTerraDrawSelection] Polygon has less than 3 points, skipping"
-            );
-            return;
+            continue;
           }
 
-          // Ensure all coordinates are valid numbers
           const validPolygon = polygon.filter(
             (coord): coord is [number, number] =>
               Array.isArray(coord) &&
@@ -134,10 +102,7 @@ export function useMapTerraDrawSelection({
           );
 
           if (validPolygon.length < 3) {
-            console.log(
-              "[useMapTerraDrawSelection] Not enough valid coordinates"
-            );
-            return;
+            continue;
           }
 
           // Convert coordinates if needed (TerraDraw might use screen coordinates)
@@ -166,18 +131,9 @@ export function useMapTerraDrawSelection({
           drawFeature.properties?.radius &&
           drawFeature.geometry.coordinates
         ) {
-          console.log("[useMapTerraDrawSelection] Processing circle selection");
-
           const center = drawFeature.geometry.coordinates as [number, number];
           const pixelRadius = drawFeature.properties.radius;
-          console.log(
-            "[useMapTerraDrawSelection] Circle center:",
-            center,
-            "pixel radius:",
-            pixelRadius
-          );
 
-          // Ensure center coordinates are valid
           if (
             !Array.isArray(center) ||
             center.length !== 2 ||
@@ -186,10 +142,7 @@ export function useMapTerraDrawSelection({
             isNaN(center[0]) ||
             isNaN(center[1])
           ) {
-            console.log(
-              "[useMapTerraDrawSelection] Invalid center coordinates"
-            );
-            return;
+            continue;
           }
 
           // Convert coordinates if needed
@@ -215,13 +168,8 @@ export function useMapTerraDrawSelection({
             geographicRadius
           );
           allSelectedFeatures.push(...selectedFeatures);
-        } else if (drawFeature.geometry) {
-          console.log(
-            "[useMapTerraDrawSelection] Unsupported geometry type:",
-            drawFeature.geometry.type
-          );
         }
-      });
+      }
 
       // Remove duplicates and store as pending selection
       const uniqueSelectedFeatures = [...new Set(allSelectedFeatures)];
