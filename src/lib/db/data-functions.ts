@@ -306,4 +306,3 @@ export async function getUndoRedoStatus(areaId: number) {
     throw new Error("Failed to get undo/redo status", { cause: error });
   }
 }
-

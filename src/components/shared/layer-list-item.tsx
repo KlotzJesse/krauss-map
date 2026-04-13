@@ -1,7 +1,7 @@
 "use client";
 
 import { IconPalette } from "@tabler/icons-react";
-import { Copy, Loader2, X } from "lucide-react";
+import { Copy, CopyPlus, Loader2, X } from "lucide-react";
 import type { RefObject } from "react";
 import { memo, useState } from "react";
 import { toast } from "sonner";
@@ -61,6 +61,7 @@ interface LayerListItemProps {
   onEditNameChange: (name: string) => void;
   onColorChange: (layerId: number, color: string) => void;
   onDelete: (layerId: number) => void;
+  onDuplicateArea?: () => void;
 }
 
 function LayerColorPickerContent({
@@ -149,6 +150,7 @@ export const LayerListItem = memo(function LayerListItem({
   onEditNameChange,
   onColorChange,
   onDelete,
+  onDuplicateArea,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -292,6 +294,29 @@ export const LayerListItem = memo(function LayerListItem({
                 <p>Postleitzahlen als CSV kopieren</p>
               </TooltipContent>
             </Tooltip>
+
+            {onDuplicateArea && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDuplicateArea();
+                      }}
+                    />
+                  }
+                >
+                  <CopyPlus className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Gebiet duplizieren</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
 
             <Tooltip>
               <TooltipTrigger

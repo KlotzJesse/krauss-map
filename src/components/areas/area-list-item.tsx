@@ -24,6 +24,7 @@ interface AreaListItemProps {
   onCancelRename: () => void;
   onEditNameChange: (name: string) => void;
   onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
+  onDuplicate: (area: AreaSummary) => void;
   onAreaClick: (area: AreaSummary) => void;
 }
 
@@ -39,6 +40,7 @@ export const AreaListItem = memo(
     onCancelRename,
     onEditNameChange,
     onStartDelete,
+    onDuplicate,
     onAreaClick,
   }: AreaListItemProps) {
     if (isEditing) {
@@ -105,38 +107,40 @@ export const AreaListItem = memo(
 
     return (
       <SidebarMenuItem>
-        <div className="group/item relative flex items-center w-full">
-          <div
-            className={`flex items-center gap-2 w-full h-8 px-2 rounded-md transition-colors ${
-              isCurrentRoute
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-            }`}
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onStartRename(area, e);
-            }}
-          >
-            <IconFolder className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <Link
-              href={`/postal-codes/${area.id}` as Route}
-              onClick={(e) => {
+        <AreaItemMenu
+          area={area}
+          onStartRename={onStartRename}
+          onStartDelete={onStartDelete}
+          onDuplicate={onDuplicate}
+        >
+          <div className="group/item relative flex items-center w-full">
+            <div
+              className={`flex items-center gap-2 w-full h-8 px-2 rounded-md transition-colors ${
+                isCurrentRoute
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              }`}
+              onDoubleClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
-                onAreaClick(area);
+                onStartRename(area, e);
               }}
-              className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
             >
-              <span className="truncate">{area.name}</span>
-              <LinkPendingIndicator />
-            </Link>
-            <AreaItemMenu
-              area={area}
-              onStartRename={onStartRename}
-              onStartDelete={onStartDelete}
-            />
+              <IconFolder className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <Link
+                href={`/postal-codes/${area.id}` as Route}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAreaClick(area);
+                }}
+                className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
+              >
+                <span className="truncate">{area.name}</span>
+                <LinkPendingIndicator />
+              </Link>
+            </div>
           </div>
-        </div>
+        </AreaItemMenu>
       </SidebarMenuItem>
     );
   },

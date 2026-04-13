@@ -13,7 +13,11 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { updateAreaAction, deleteAreaAction } from "@/app/actions/area-actions";
+import {
+  updateAreaAction,
+  deleteAreaAction,
+  duplicateAreaAction,
+} from "@/app/actions/area-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -245,6 +249,19 @@ export function NavAreas({
     []
   );
 
+  const handleDuplicate = useCallback(
+    (area: AreaSummary) => {
+      startTransition(async () => {
+        await executeAction(duplicateAreaAction(area.id), {
+          loading: `Dupliziere "${area.name}"...`,
+          success: `"${area.name}" dupliziert`,
+          error: "Duplizieren fehlgeschlagen",
+        });
+      });
+    },
+    [startTransition]
+  );
+
   const handleConfirmDelete = async () => {
     if (!areaToDelete) {
       return;
@@ -315,6 +332,7 @@ export function NavAreas({
                   onCancelRename={handleCancelRename}
                   onEditNameChange={handleEditNameChange}
                   onStartDelete={handleStartDelete}
+                  onDuplicate={handleDuplicate}
                   onAreaClick={handleAreaClick}
                 />
               ))}

@@ -239,6 +239,88 @@ export async function deleteAreaAction(id: number) {
   }
 }
 
+export async function duplicateAreaAction(sourceAreaId: number) {
+  let redirectPath: string | null = null;
+
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Read source area
+      const [sourceArea] = await tx
+        .select()
+        .from(areas)
+        .where(eq(areas.id, sourceAreaId));
+
+      if (!sourceArea) {
+        throw new Error("Gebiet nicht gefunden");
+      }
+
+      // 2. Create new area
+      const [newArea] = await tx
+        .insert(areas)
+        .values({
+          name: `${sourceArea.name} (Kopie)`,
+          description: sourceArea.description,
+          granularity: sourceArea.granularity,
+        })
+        .returning();
+
+      // 3. Read source layers with postal codes
+      const sourceLayers = await tx
+        .select()
+        .from(areaLayers)
+        .where(eq(areaLayers.areaId, sourceAreaId))
+        .orderBy(areaLayers.orderIndex);
+
+      // 4. Copy each layer and its postal codes
+      for (const layer of sourceLayers) {
+        const [newLayer] = await tx
+          .insert(areaLayers)
+          .values({
+            areaId: newArea.id,
+            name: layer.name,
+            color: layer.color,
+            opacity: layer.opacity,
+            isVisible: layer.isVisible,
+            orderIndex: layer.orderIndex,
+          })
+          .returning();
+
+        const codes = await tx
+          .select({ postalCode: areaLayerPostalCodes.postalCode })
+          .from(areaLayerPostalCodes)
+          .where(eq(areaLayerPostalCodes.layerId, layer.id));
+
+        if (codes.length > 0) {
+          await tx.insert(areaLayerPostalCodes).values(
+            codes.map((c) => ({
+              layerId: newLayer.id,
+              postalCode: c.postalCode,
+            }))
+          );
+        }
+      }
+
+      // 5. Create initial version
+      const { createVersionAction } = await import("./version-actions");
+      await createVersionAction(newArea.id, {
+        name: "Erstversion",
+        description: `Dupliziert von "${sourceArea.name}"`,
+      });
+
+      updateTag("areas");
+      updateTag(`area-${newArea.id}`);
+      redirectPath = `/postal-codes/${newArea.id}`;
+    });
+  } catch (error) {
+    console.error("Error duplicating area:", error);
+    return { success: false, error: "Failed to duplicate area" };
+  } finally {
+    if (redirectPath) {
+      redirect(redirectPath as Route);
+    }
+  }
+}
+
 // ===============================
 
 // LAYER OPERATIONS

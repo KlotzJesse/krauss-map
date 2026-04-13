@@ -1,22 +1,23 @@
 "use client";
 
-import { IconDots, IconEdit, IconTrash } from "@tabler/icons-react";
+import { IconCopy, IconEdit, IconTrash } from "@tabler/icons-react";
 import { memo } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 interface AreaItemMenuProps {
   area: AreaSummary;
   onStartRename: (area: AreaSummary, e: React.MouseEvent) => void;
   onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
+  onDuplicate: (area: AreaSummary) => void;
+  children: React.ReactNode;
 }
 
 export const AreaItemMenu = memo(
@@ -24,44 +25,36 @@ export const AreaItemMenu = memo(
     area,
     onStartRename,
     onStartDelete,
+    onDuplicate,
+    children,
   }: AreaItemMenuProps) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 w-5 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0"
-              onClick={(e) => e.stopPropagation()}
-            />
-          }
-        >
-          <IconDots className="h-3.5 w-3.5" />
-          <span className="sr-only">Aktionen</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem
-            onClick={(e) => onStartRename(area, e)}
-            className="cursor-pointer"
-          >
+      <ContextMenu>
+        <ContextMenuTrigger className="w-full">{children}</ContextMenuTrigger>
+        <ContextMenuContent className="w-44">
+          <ContextMenuItem onClick={(e) => onStartRename(area, e)}>
             <IconEdit className="h-4 w-4 mr-2" />
             Umbenennen
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => onDuplicate(area)}>
+            <IconCopy className="h-4 w-4 mr-2" />
+            Duplizieren
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
             onClick={(e) => onStartDelete(area, e)}
-            className="cursor-pointer text-destructive focus:text-destructive"
+            variant="destructive"
           >
             <IconTrash className="h-4 w-4 mr-2" />
             Löschen
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     );
   },
   (prev, next) =>
     prev.area.id === next.area.id &&
     prev.onStartRename === next.onStartRename &&
-    prev.onStartDelete === next.onStartDelete
+    prev.onStartDelete === next.onStartDelete &&
+    prev.onDuplicate === next.onDuplicate
 );
