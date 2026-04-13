@@ -15,7 +15,7 @@ import type { SelectAreaChanges } from "../../lib/schema/schema";
 
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-import { updateTag, refresh } from "next/cache";
+import { updateTag } from "next/cache";
 
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
@@ -178,7 +178,6 @@ export async function recordChangeAction(
       updateTag(`area-${areaId}-change-history`);
     }
 
-    refresh();
     return { success: true, data: result };
   } catch (error) {
     console.error("Error recording change:", error);
@@ -291,7 +290,6 @@ export async function undoChangeAction(
     updateTag(`area-${areaId}-undo-redo`);
     updateTag(`area-${areaId}-change-history`);
 
-    refresh();
     return { success: true, data: result };
   } catch (error) {
     console.error("Error undoing change:", error);
@@ -402,7 +400,6 @@ export async function redoChangeAction(
     updateTag(`area-${areaId}-undo-redo`);
     updateTag(`area-${areaId}-change-history`);
 
-    refresh();
     return { success: true, data: result };
   } catch (error) {
     console.error("Error redoing change:", error);
@@ -710,7 +707,6 @@ export async function clearUndoRedoStacksAction(
     updateTag(`area-${areaId}-undo-redo`);
     updateTag(`area-${areaId}-change-history`);
 
-    refresh();
     return { success: true };
   } catch (error) {
     console.error("Error clearing undo/redo stacks:", error);

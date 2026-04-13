@@ -3,7 +3,7 @@
 import { eq, and, inArray, sql } from "drizzle-orm";
 import type { FeatureCollection, Geometry } from "geojson";
 import type { Route } from "next";
-import { refresh, updateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "../../lib/db";
@@ -635,7 +635,6 @@ export async function addPostalCodesToLayerAction(
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}-undo-redo`);
     updateTag(`area-${areaId}-change-history`);
-    refresh();
 
     return { success: true };
   } catch (error) {
@@ -715,7 +714,6 @@ export async function removePostalCodesFromLayerAction(
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}-undo-redo`);
     updateTag(`area-${areaId}-change-history`);
-    refresh();
 
     return { success: true };
   } catch (error) {

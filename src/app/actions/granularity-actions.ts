@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, and, like, or } from "drizzle-orm";
-import { updateTag, refresh } from "next/cache";
+import { updateTag } from "next/cache";
 
 import { getGranularityLevel } from "@/lib/utils/granularity-utils";
 
@@ -161,7 +161,6 @@ export async function changeAreaGranularityAction(
     updateTag(`area-${areaId}`);
     updateTag(`area-${areaId}-layers`);
 
-    refresh();
     return {
       success: true,
 
@@ -209,7 +208,6 @@ export async function getMatchingPostalCodesAction(
         )
       );
 
-    refresh();
     return {
       success: true,
 

@@ -273,41 +273,47 @@ export function useDeckLayers({
     }
   }, [isCursorMode]);
 
+  // State boundaries layer — isolated since statesData never changes after load
+  const stateBoundariesLayer = useMemo(
+    () =>
+      statesData
+        ? new GeoJsonLayer({
+            id: "state-boundaries",
+            data: statesData,
+            beforeId: LABEL_SENTINEL_LAYER_ID,
+            filled: true,
+            stroked: true,
+            getFillColor: (f) => {
+              const name = (f as Feature<Polygon | MultiPolygon>).properties
+                ?.name as string;
+              return STATE_FILL_COLORS[name] ?? DEFAULT_STATE_FILL;
+            },
+            getLineColor: (f) => {
+              const name = (f as Feature<Polygon | MultiPolygon>).properties
+                ?.name as string;
+              return STATE_LINE_COLORS[name] ?? DEFAULT_STATE_LINE;
+            },
+            getLineWidth: 2,
+            lineWidthUnits: "pixels" as const,
+            pickable: false,
+            updateTriggers: {
+              getFillColor: [],
+              getLineColor: [],
+            },
+          })
+        : null,
+    [statesData]
+  );
+
   // Build all deck.gl layers
   const deckLayers = useMemo(() => {
-    const result = [];
+    const result: GeoJsonLayer[] = [];
 
-    // 1. State boundaries fill + stroke (pre-computed RGBA lookups — no per-feature parsing)
-    if (statesData) {
-      result.push(
-        new GeoJsonLayer({
-          id: "state-boundaries",
-          data: statesData,
-          beforeId: LABEL_SENTINEL_LAYER_ID,
-          filled: true,
-          stroked: true,
-          getFillColor: (f) => {
-            const name = (f as Feature<Polygon | MultiPolygon>).properties
-              ?.name as string;
-            return STATE_FILL_COLORS[name] ?? DEFAULT_STATE_FILL;
-          },
-          getLineColor: (f) => {
-            const name = (f as Feature<Polygon | MultiPolygon>).properties
-              ?.name as string;
-            return STATE_LINE_COLORS[name] ?? DEFAULT_STATE_LINE;
-          },
-          getLineWidth: 2,
-          lineWidthUnits: "pixels" as const,
-          pickable: false,
-          updateTriggers: {
-            getFillColor: [],
-            getLineColor: [],
-          },
-        })
-      );
+    if (stateBoundariesLayer) {
+      result.push(stateBoundariesLayer);
     }
 
-    // 2. Base postal code layer — THE ONLY pickable layer
+    // Base postal code layer — THE ONLY pickable layer
     result.push(
       new GeoJsonLayer({
         id: "postal-codes",
@@ -327,7 +333,7 @@ export function useDeckLayers({
       })
     );
 
-    // 3. Combined area overlay layer — always present to avoid MapLibre add/remove churn
+    // Combined area overlay layer — always present to avoid MapLibre add/remove churn
     result.push(
       new GeoJsonLayer({
         id: "area-layers-combined",
@@ -363,7 +369,7 @@ export function useDeckLayers({
       })
     );
 
-    // 4. Preview layer — always present to avoid MapLibre add/remove churn
+    // Preview layer — always present to avoid MapLibre add/remove churn
     result.push(
       new GeoJsonLayer({
         id: "preview-layer",
@@ -379,7 +385,7 @@ export function useDeckLayers({
       })
     );
 
-    // 5. Hover outline layer — always present to avoid MapLibre add/remove churn
+    // Hover outline layer — always present to avoid MapLibre add/remove churn
     result.push(
       new GeoJsonLayer({
         id: "hover-outline",
@@ -396,8 +402,8 @@ export function useDeckLayers({
 
     return result;
   }, [
+    stateBoundariesLayer,
     data,
-    statesData,
     areaFeaturesData,
     resolvedStyles,
     resolvedStylesVersion,
