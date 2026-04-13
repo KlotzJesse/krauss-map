@@ -29,12 +29,11 @@ function createSafeOverlay(props: MapboxOverlayProps): MapboxOverlay {
     prevLayers: unknown[],
     newLayers: unknown[]
   ) => {
-    if (map) {
-      const ready = ensureLabelSentinel(
-        map as Parameters<typeof ensureLabelSentinel>[0]
-      );
-      if (!ready) return; // Style not ready — deck.gl retries on next styledata
-    }
+    if (!map) return; // Map destroyed (HMR / navigation) — deck.gl retries when re-attached
+    const ready = ensureLabelSentinel(
+      map as Parameters<typeof ensureLabelSentinel>[0]
+    );
+    if (!ready) return; // Style not ready — deck.gl retries on next styledata
     origResolveLayers(map, deck, prevLayers, newLayers);
   };
   return overlay;
@@ -49,10 +48,6 @@ function createSafeOverlay(props: MapboxOverlayProps): MapboxOverlay {
  */
 export function DeckGLOverlay(props: MapboxOverlayProps) {
   const overlay = useControl<MapboxOverlay>(() => createSafeOverlay(props));
-  try {
-    overlay.setProps({ ...props, interleaved: true });
-  } catch {
-    // Map may have been removed during navigation
-  }
+  overlay.setProps({ ...props, interleaved: true });
   return null;
 }
