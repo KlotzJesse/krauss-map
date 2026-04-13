@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useGeodata } from "@/lib/hooks/use-geodata";
 import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
-import { usePostalCodeSearch } from "@/lib/hooks/use-postal-code-search";
 import type {
   areaLayers,
   ChangeSummary,
@@ -158,7 +157,6 @@ function usePostalCodesLayerActions({
     })
   );
 
-  const { searchPostalCodes, selectPostalCode } = usePostalCodeSearch({ data });
   const { findPostalCodeByCoords } = usePostalCodeLookup({ data });
 
   const addPostalCodesToLayer = useStableCallback(
@@ -309,7 +307,6 @@ function usePostalCodesLayerActions({
         await addPostalCodesToLayer(activeLayerId, [code]);
         toast.success(`PLZ ${code} hinzugefügt`);
       } else {
-        selectPostalCode(code);
         toast.success(`PLZ ${code} gewählt`);
       }
     }
@@ -342,7 +339,6 @@ function usePostalCodesLayerActions({
     optimisticUndoRedo,
     addPostalCodesToLayer,
     removePostalCodesFromLayer,
-    searchPostalCodes,
     handleAddressSelect,
     handleRadiusSelect,
     handleImport,
@@ -387,7 +383,6 @@ export function PostalCodesViewClientWithLayers({
     optimisticUndoRedo,
     addPostalCodesToLayer,
     removePostalCodesFromLayer,
-    searchPostalCodes,
     handleAddressSelect,
     handleRadiusSelect,
     handleImport,
@@ -406,13 +401,11 @@ export function PostalCodesViewClientWithLayers({
         return;
       }
       setPreviewPostalCode((prev) => (prev === postalCode ? null : postalCode));
-      // Side effects outside state updater (React best practice)
       if (coords) {
         setMapCenterZoom([coords[0], coords[1]], 11);
       }
-      searchPostalCodes(postalCode);
     },
-    [setMapCenterZoom, searchPostalCodes]
+    [setMapCenterZoom]
   );
 
   const handleGranularityChange = useCallback(

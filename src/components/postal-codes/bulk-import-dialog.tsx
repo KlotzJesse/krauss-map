@@ -183,9 +183,7 @@ export function BulkImportDialog({
           error: (err) =>
             `Import fehlgeschlagen: ${err instanceof Error ? err.message : "Unbekannter Fehler"}`,
         });
-      } catch (error) {
-        console.error(error);
-      }
+      } catch {}
       setIsImporting(false);
       setImportProgress(0);
       updateOptimisticImportStatus({

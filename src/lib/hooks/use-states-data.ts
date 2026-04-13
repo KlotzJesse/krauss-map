@@ -26,7 +26,7 @@ export function useStatesData(): StatesData | null {
       })
       .catch((error: unknown) => {
         if (error instanceof Error && error.name !== "AbortError") {
-          console.error("Failed to fetch states data:", error);
+          // Network error — silently ignored (user sees no data)
         }
       });
 

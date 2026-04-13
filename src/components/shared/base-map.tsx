@@ -229,36 +229,22 @@ const MapInner = memo(function MapInner({
     featureIndex: optimizations.featureIndex,
   });
 
-  // Memoized toggle handlers with React 19 batching optimization
-  const handleShowTools = useStableCallback(() => {
-    startTransition(() => {
-      interactions.showTools();
-    });
-  });
-
-  const handleHideTools = useStableCallback(() => {
-    startTransition(() => {
-      interactions.hideTools();
-    });
-  });
-
-  const handleClearAll = useStableCallback(() => {
-    startTransition(() => {
-      interactions.clearAll();
-    });
-  });
-
-  const handleDeleteEditingFeature = useStableCallback(() => {
-    startTransition(() => {
-      interactions.deleteEditingFeature();
-    });
-  });
-
-  const handleDeselectEditingFeature = useStableCallback(() => {
-    startTransition(() => {
-      interactions.deselectEditingFeature();
-    });
-  });
+  // startTransition-wrapped handlers to defer heavy subtree re-renders
+  const handleShowTools = useStableCallback(() =>
+    startTransition(() => interactions.showTools())
+  );
+  const handleHideTools = useStableCallback(() =>
+    startTransition(() => interactions.hideTools())
+  );
+  const handleClearAll = useStableCallback(() =>
+    startTransition(() => interactions.clearAll())
+  );
+  const handleDeleteEditingFeature = useStableCallback(() =>
+    startTransition(() => interactions.deleteEditingFeature())
+  );
+  const handleDeselectEditingFeature = useStableCallback(() =>
+    startTransition(() => interactions.deselectEditingFeature())
+  );
 
   return (
     <>

@@ -55,7 +55,6 @@ export function useGeodata(granularity: string): {
       })
       .catch((error) => {
         if (error.name !== "AbortError") {
-          console.error("Geodata fetch error:", error);
           setIsLoading(false);
         }
       });

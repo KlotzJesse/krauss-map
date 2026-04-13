@@ -1,27 +1,12 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { useMemo } from "react";
 
+import { isPointInPolygon } from "@/lib/utils/map-data";
+
 import { useStableCallback } from "./use-stable-callback";
 
 interface UsePostalCodeLookupOptions {
   data: FeatureCollection<Polygon | MultiPolygon>;
-}
-
-// Ray-casting point-in-polygon test (module-level to avoid re-creation)
-function isPointInPolygon(
-  point: [number, number],
-  polygon: number[][]
-): boolean {
-  let inside = false;
-  const [x, y] = point;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const [xi, yi] = polygon[i];
-    const [xj, yj] = polygon[j];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-  }
-  return inside;
 }
 
 interface SpatialEntry {

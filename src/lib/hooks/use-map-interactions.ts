@@ -52,7 +52,6 @@ export function useMapInteractions({
     isCursorMode,
     isDrawingActive,
     handleDrawingModeChange,
-    toggleToolsVisibility,
     showTools,
     hideTools,
     editingFeatureId,
@@ -185,8 +184,7 @@ export function useMapInteractions({
             duration: 2000,
           });
         }
-      } catch (error) {
-        console.error("Error toggling postal code:", error);
+      } catch {
         toast.error(`Fehler beim Bearbeiten von PLZ ${code}`, {
           duration: 2000,
         });

@@ -355,9 +355,7 @@ async function fillRegions(
             : "eine Ebene";
 
       return `${count} Region${count === 1 ? "" : "en"} gefüllt (${modeText})`;
-    } catch (error) {
-      console.error(error);
-    }
+    } catch {}
     setIsFilling(false);
   };
 
@@ -532,8 +530,7 @@ function useDrawingToolsActions({
         `${pendingPostalCodes.length} Region${suffix} zu Gebiet hinzugefügt`,
         { duration: 2000 }
       );
-    } catch (error) {
-      console.error("Error adding pending codes to layer:", error);
+    } catch {
       toast.error("Fehler beim Hinzufügen der Regionen", { duration: 2000 });
     }
     onAddPending?.();
@@ -564,8 +561,7 @@ function useDrawingToolsActions({
         `${pendingPostalCodes.length} Region${removeSuffix} aus Gebiet entfernt`,
         { duration: 2000 }
       );
-    } catch (error) {
-      console.error("Error removing pending codes from layer:", error);
+    } catch {
       toast.error("Fehler beim Entfernen der Regionen", { duration: 2000 });
     }
     onRemovePending?.();
@@ -656,8 +652,7 @@ function useDrawingToolsActions({
       updateOptimisticLayers({ type: "update", id: layerId, layer: { color } });
       try {
         await updateLayer(layerId, { color });
-      } catch (error) {
-        console.error("Error updating layer color:", error);
+      } catch {
         toast.error("Fehler beim Ändern der Farbe - Bitte erneut versuchen");
       }
     });

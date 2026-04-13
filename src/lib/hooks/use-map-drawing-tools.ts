@@ -24,10 +24,6 @@ export function useMapDrawingTools() {
     }
   );
 
-  const toggleToolsVisibility = useStableCallback(() => {
-    setIsDrawingToolsVisible((prev) => !prev);
-  });
-
   const showTools = useStableCallback(() => {
     setIsDrawingToolsVisible(true);
   });
@@ -62,7 +58,6 @@ export function useMapDrawingTools() {
 
     // Actions
     handleDrawingModeChange,
-    toggleToolsVisibility,
     showTools,
     hideTools,
     handleFeatureSelect,

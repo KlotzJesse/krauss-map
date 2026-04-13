@@ -6,70 +6,56 @@ import type {
 } from "geojson";
 
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import { getLargestPolygonCentroid } from "@/lib/utils/map-data";
-
-// Point-in-polygon helper (ray-casting)
-export function usePointInPolygon() {
-  return useStableCallback(
-    (point: [number, number], polygon: [number, number][]): boolean => {
-      let inside = false;
-      const [x, y] = point;
-      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const [xi, yi] = polygon[i];
-        const [xj, yj] = polygon[j];
-        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
-          inside = !inside;
-        }
-      }
-      return inside;
-    }
-  );
-}
+import {
+  getLargestPolygonCentroid,
+  isPointInPolygon,
+} from "@/lib/utils/map-data";
+import type { MapLibreMap } from "@/types/map";
 
 // Find features whose centroid is inside a polygon
 export function useFindFeaturesInPolygon(
   data: FeatureCollection<Polygon | MultiPolygon>
 ) {
-  const isPointInPolygon = usePointInPolygon();
   return useStableCallback((polygon: number[][]): string[] => {
     if (!data || polygon.length < 3) {
       return [];
     }
     const selectedFeatures: string[] = [];
-    data.features.forEach((feature) => {
-      if (!feature || !feature.geometry) {
-        return;
+    for (const feature of data.features) {
+      if (!feature?.geometry) {
+        continue;
       }
       if (
         feature.geometry.type !== "Polygon" &&
         feature.geometry.type !== "MultiPolygon"
       ) {
-        return;
+        continue;
       }
       const featureCode = feature.properties?.code;
       if (!featureCode) {
-        return;
+        continue;
       }
       const centroid = getLargestPolygonCentroid(
         feature as Feature<Polygon | MultiPolygon>
       );
-      if (!centroid) {
-        return;
+      if (
+        !centroid ||
+        !Array.isArray(centroid) ||
+        centroid.length !== 2 ||
+        typeof centroid[0] !== "number" ||
+        typeof centroid[1] !== "number"
+      ) {
+        continue;
       }
-      const isInside =
-        Array.isArray(centroid) &&
-        centroid.length === 2 &&
-        typeof centroid[0] === "number" &&
-        typeof centroid[1] === "number"
-          ? isPointInPolygon(
-              centroid as [number, number],
-              polygon as [number, number][]
-            )
-          : false;
-      if (isInside) {
+      if (
+        isPointInPolygon(
+          centroid as [number, number],
+          polygon as [number, number][]
+        )
+      ) {
         selectedFeatures.push(featureCode);
       }
-    });
+    }
     return selectedFeatures;
   });
 }
@@ -84,43 +70,42 @@ export function useFindFeaturesInCircle(
         return [];
       }
       const selectedFeatures: string[] = [];
-      data.features.forEach((feature) => {
-        if (!feature || !feature.geometry) {
-          return;
+      for (const feature of data.features) {
+        if (!feature?.geometry) {
+          continue;
         }
         if (
           feature.geometry.type !== "Polygon" &&
           feature.geometry.type !== "MultiPolygon"
         ) {
-          return;
+          continue;
         }
         const featureCode = feature.properties?.code;
         if (!featureCode) {
-          return;
+          continue;
         }
         const centroid = getLargestPolygonCentroid(
           feature as Feature<Polygon | MultiPolygon>
         );
         if (!centroid) {
-          return;
+          continue;
         }
         const [lng1, lat1] = center;
         const [lng2, lat2] = centroid;
-        const dLat = Math.abs(lat2 - lat1);
-        const dLng = Math.abs(lng2 - lng1);
-        const distance = Math.hypot(dLat, dLng);
+        const distance = Math.hypot(
+          Math.abs(lat2 - lat1),
+          Math.abs(lng2 - lng1)
+        );
         if (distance <= radiusDegrees) {
           selectedFeatures.push(featureCode);
         }
-      });
+      }
       return selectedFeatures;
     }
   );
 }
 
 // Convert pixel radius to geographic radius (degrees)
-import type { MapLibreMap } from "@/types/map";
-
 export function useConvertRadiusToGeographic(
   mapRef: React.RefObject<MapLibreMap | null>
 ) {

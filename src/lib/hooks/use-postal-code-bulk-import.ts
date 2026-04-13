@@ -59,8 +59,7 @@ export function usePostalCodeBulkImport({
         count: uniqueMatches.length,
         matches: uniqueMatches,
       };
-    } catch (error) {
-      console.error("Error importing postal codes:", error);
+    } catch {
       toast.error("Fehler beim Importieren der PLZ");
       return { success: false, count: 0 };
     }
