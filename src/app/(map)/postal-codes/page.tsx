@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { PostalCodesOverview } from "@/components/postal-codes/postal-codes-overview";
+import { SiteHeader } from "@/components/site-header";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -15,5 +16,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PostalCodesPage() {
-  return <PostalCodesOverview />;
+  return (
+    <>
+      <SiteHeader />
+      <PostalCodesOverview />
+    </>
+  );
 }

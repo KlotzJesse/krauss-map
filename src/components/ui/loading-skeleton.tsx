@@ -81,20 +81,6 @@ export function VersionIndicatorSkeleton() {
   );
 }
 
-// Skeleton for site header
-export function SiteHeaderSkeleton() {
-  return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <Skeleton className="w-8 h-8 rounded" />
-        <div className="w-px h-4 bg-border mx-2" />
-        <Skeleton className="h-5 w-40" />
-        <div className="flex-1" />
-        <VersionIndicatorSkeleton />
-      </div>
-    </header>
-  );
-}
 
 // Generic loading skeleton
 export function LoadingSkeleton({ className }: { className?: string }) {

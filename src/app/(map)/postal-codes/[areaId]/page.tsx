@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
 import ServerPostalCodesView from "@/components/postal-codes/server-postal-codes-view";
 import { SiteHeader } from "@/components/site-header";
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
-import { SiteHeaderSkeleton } from "@/components/ui/loading-skeleton";
+import { VersionIndicatorSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import { getAreaGranularity, getVersion } from "@/lib/db/data-functions";
+
+const VersionIndicator = dynamic(() =>
+  import("@/components/shared/version-indicator").then((m) => ({
+    default: m.VersionIndicator,
+  }))
+);
 
 interface PostalCodesPageProps {
   params: Promise<{ areaId: string }>;
@@ -87,9 +94,7 @@ export default async function PostalCodesPage({
   if (Number.isNaN(areaId) || areaId <= 0) {
     return (
       <>
-        <Suspense fallback={<SiteHeaderSkeleton />}>
-          <SiteHeader areaId={0} />
-        </Suspense>
+        <SiteHeader />
         <div className="h-full" data-layout="fullscreen">
           <PostalCodesViewSkeleton />
         </div>
@@ -109,9 +114,11 @@ export default async function PostalCodesPage({
 
   return (
     <>
-      <Suspense fallback={<SiteHeaderSkeleton />}>
-        <SiteHeader areaId={areaId} />
-      </Suspense>
+      <SiteHeader>
+        <Suspense fallback={<VersionIndicatorSkeleton />}>
+          <VersionIndicator areaId={areaId} />
+        </Suspense>
+      </SiteHeader>
       <div className="h-full" data-layout="fullscreen">
         <PostalCodesErrorBoundary>
           <Suspense fallback={<PostalCodesViewSkeleton />}>
