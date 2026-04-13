@@ -1,7 +1,6 @@
 "use server";
 
 import { eq, and, inArray, sql } from "drizzle-orm";
-import type { FeatureCollection, Geometry } from "geojson";
 import type { Route } from "next";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
@@ -944,68 +943,6 @@ export async function drivingRadiusSearchAction(data: {
   }
 }
 
-export async function geocodeAction(address: string): ServerActionResponse<{
-  latitude: number;
-
-  longitude: number;
-
-  postalCode?: string;
-}> {
-  try {
-    // Use Nominatim for geocoding
-
-    const nominatimUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams(
-      {
-        format: "json",
-
-        q: address,
-
-        addressdetails: "1",
-
-        limit: "1",
-
-        countrycodes: "de",
-
-        "accept-language": "de,en",
-      }
-    )}`;
-
-    const response = await fetch(nominatimUrl, {
-      headers: {
-        "User-Agent": "KRAUSS Territory Management/1.0",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Geocoding service unavailable");
-    }
-
-    const results = await response.json();
-
-    if (results.length === 0) {
-      throw new Error("No results found for address");
-    }
-
-    const result = results[0];
-
-    return {
-      success: true,
-
-      data: {
-        latitude: parseFloat(result.lat),
-
-        longitude: parseFloat(result.lon),
-
-        postalCode: result.address?.postcode,
-      },
-    };
-  } catch (error) {
-    console.error("Error in geocoding:", error);
-
-    return { success: false, error: "Geocoding failed" };
-  }
-}
-
 export async function geocodeSearchAction(data: {
   query: string;
 
@@ -1130,118 +1067,6 @@ export async function geocodeSearchAction(data: {
     console.error("Error in geocoding search:", error);
 
     return { success: false, error: "Geocoding search failed" };
-  }
-}
-
-export async function searchPostalCodesByLocationAction(data: {
-  location: string;
-
-  granularity: string;
-
-  limit?: number;
-}): ServerActionResponse<{
-  location: string;
-
-  searchVariants: string[];
-
-  granularity: string;
-
-  postalCodes: string[];
-
-  count: number;
-
-  features: FeatureCollection;
-}> {
-  try {
-    const { location, granularity, limit = 50 } = data;
-
-    // Get search variants (simplified version)
-
-    const searchVariants = [location.toLowerCase()];
-
-    // Search in database using property fields
-
-    const searchConditions = searchVariants.map(
-      (variant) =>
-        sql`properties->>'name' ILIKE ${`%${variant}%`} OR
-          properties->>'city' ILIKE ${`%${variant}%`} OR
-          properties->>'stadt' ILIKE ${`%${variant}%`} OR
-          properties->>'state' ILIKE ${`%${variant}%`} OR
-          properties->>'bundesland' ILIKE ${`%${variant}%`} OR
-          properties->>'region' ILIKE ${`%${variant}%`} OR
-          properties->>'ort' ILIKE ${`%${variant}%`} OR
-          properties->>'gemeinde' ILIKE ${`%${variant}%`}`
-    );
-
-    const whereCondition = sql`(${searchConditions.reduce(
-      (acc, condition, index) =>
-        index === 0 ? condition : sql`${acc} OR ${condition}`
-    )}) AND granularity = ${granularity}`;
-    const results = (await db
-
-      .select({
-        code: postalCodes.code,
-
-        granularity: postalCodes.granularity,
-
-        geometry: sql<string>`ST_AsGeoJSON(${postalCodes.geometry})`,
-
-        properties: postalCodes.properties,
-      })
-
-      .from(postalCodes)
-
-      .where(whereCondition)
-
-      .limit(limit)) as {
-      code: string;
-
-      granularity: string;
-
-      geometry: string;
-
-      properties: unknown;
-    }[];
-    // Create features array
-
-    const features = results.map((result) => ({
-      type: "Feature" as const,
-
-      properties: {
-        code: result.code,
-
-        granularity: result.granularity,
-
-        ...((result.properties as object) || {}),
-      },
-
-      geometry: JSON.parse(result.geometry) as Geometry,
-    }));
-
-    return {
-      success: true,
-
-      data: {
-        location,
-
-        searchVariants,
-
-        granularity,
-
-        postalCodes: results.map((r) => r.code),
-
-        count: results.length,
-
-        features: {
-          type: "FeatureCollection" as const,
-          features,
-        },
-      },
-    };
-  } catch (error) {
-    console.error("Error in location search:", error);
-
-    return { success: false, error: "Location search failed" };
   }
 }
 

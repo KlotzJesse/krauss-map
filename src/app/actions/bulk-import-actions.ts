@@ -247,25 +247,3 @@ function generateLayerColor(index: number): string {
 
   return colors[index % colors.length];
 }
-
-/**
- * Validate postal codes in batch before import
- */
-export async function validatePostalCodesBatch(
-  postalCodes: string[],
-  _areaId: number
-): Promise<{ valid: string[]; invalid: string[] }> {
-  const valid: string[] = [];
-  const invalid: string[] = [];
-
-  for (const code of postalCodes) {
-    // Basic validation for German postal codes
-    if (/^\d{1,5}$/.test(code)) {
-      valid.push(code);
-    } else {
-      invalid.push(code);
-    }
-  }
-
-  return { valid, invalid };
-}
