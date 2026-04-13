@@ -175,7 +175,6 @@ export async function recordChangeAction(
     updateTag(`area-${areaId}-undo-redo`);
 
     if (options?.invalidateHistory !== false) {
-      updateTag("change-history");
       updateTag(`area-${areaId}-change-history`);
     }
 
@@ -290,7 +289,6 @@ export async function undoChangeAction(
     });
 
     updateTag(`area-${areaId}-undo-redo`);
-    updateTag("change-history");
     updateTag(`area-${areaId}-change-history`);
 
     refresh();
@@ -402,7 +400,6 @@ export async function redoChangeAction(
     });
 
     updateTag(`area-${areaId}-undo-redo`);
-    updateTag("change-history");
     updateTag(`area-${areaId}-change-history`);
 
     refresh();
@@ -711,7 +708,6 @@ export async function clearUndoRedoStacksAction(
     }
 
     updateTag(`area-${areaId}-undo-redo`);
-    updateTag("change-history");
     updateTag(`area-${areaId}-change-history`);
 
     refresh();

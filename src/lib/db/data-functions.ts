@@ -263,7 +263,7 @@ export async function getChangeHistory(
 ) {
   "use cache";
   cacheLife("seconds");
-  cacheTag("change-history", `area-${areaId}-change-history`);
+  cacheTag(`area-${areaId}-change-history`);
   try {
     let whereConditions = eq(areaChanges.areaId, areaId);
 
@@ -321,7 +321,7 @@ export async function getChangeSummaries(
 ) {
   "use cache";
   cacheLife("seconds");
-  cacheTag("change-history", `area-${areaId}-change-history`);
+  cacheTag(`area-${areaId}-change-history`);
   try {
     const conditions = [eq(areaChanges.areaId, areaId)];
 
