@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   FileText,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -29,7 +30,10 @@ import {
   parsePostalCodeInput,
 } from "@/lib/utils/postal-code-parser";
 
-import { BulkImportDialog } from "./bulk-import-dialog";
+const BulkImportDialog = dynamic(
+  () => import("./bulk-import-dialog").then((m) => m.BulkImportDialog),
+  { ssr: false }
+);
 
 interface PostalCodeImportDialogProps {
   open: boolean;

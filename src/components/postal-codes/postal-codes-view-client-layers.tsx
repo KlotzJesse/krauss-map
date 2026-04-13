@@ -75,7 +75,12 @@ import {
 } from "@/lib/url-state/map-state";
 
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
-import { PostalCodeImportDialog } from "./postal-code-import-dialog";
+
+const PostalCodeImportDialog = dynamic(
+  () =>
+    import("./postal-code-import-dialog").then((m) => m.PostalCodeImportDialog),
+  { ssr: false }
+);
 
 interface PostalCodesViewClientWithLayersProps {
   defaultGranularity: string;
