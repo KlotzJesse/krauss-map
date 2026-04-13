@@ -152,6 +152,7 @@ const MapInner = memo(function MapInner({
 }: Omit<BaseMapProps, "center" | "zoom">) {
   const { current: mapRef } = useMap();
   const rawMapRef = useRef<maplibregl.Map | null>(null);
+  const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
 
   // Get raw MapLibre instance for TerraDraw and labels
@@ -167,6 +168,7 @@ const MapInner = memo(function MapInner({
       return;
     }
     rawMapRef.current = raw;
+    mapCanvasRef.current = raw.getCanvas();
 
     const handleLoad = () => setIsMapLoaded(true);
 
@@ -203,8 +205,8 @@ const MapInner = memo(function MapInner({
     removePostalCodesFromLayer,
   });
 
-  // deck.gl layers (polygons, fills, hover, preview)
-  const { deckLayers, onHover, cursor } = useDeckLayers({
+  // deck.gl layers (polygons, fills, hover, preview) — cursor managed via direct DOM ref
+  const { deckLayers, onHover } = useDeckLayers({
     data,
     statesData,
     layers,
@@ -212,15 +214,8 @@ const MapInner = memo(function MapInner({
     previewPostalCode,
     featureIndex: optimizations.featureIndex,
     isCursorMode: interactions.isCursorMode,
+    mapCanvasRef,
   });
-
-  // Sync cursor state from deck.gl hover to map canvas
-  useEffect(() => {
-    const map = mapRef?.getMap();
-    if (map) {
-      map.getCanvas().style.cursor = cursor;
-    }
-  }, [mapRef, cursor]);
 
   // MapLibre native labels (hybrid escape hatch)
   useMapLabels({

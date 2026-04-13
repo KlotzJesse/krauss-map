@@ -400,11 +400,6 @@ export function PostalCodesViewClientWithLayers({
     initialUndoRedoStatus,
   });
 
-  const handleBoundarySelect = useCallback(
-    (codes: string[]) => handleImport(codes),
-    [handleImport]
-  );
-
   const handlePreviewSelect = useCallback(
     (coords: [number, number] | null, _label: string, postalCode?: string) => {
       if (!postalCode) {
@@ -446,7 +441,7 @@ export function PostalCodesViewClientWithLayers({
           <AddressAutocompleteErrorBoundary>
             <AddressAutocompleteEnhanced
               onAddressSelect={handleAddressSelect}
-              onBoundarySelect={handleBoundarySelect}
+              onBoundarySelect={handleImport}
               onRadiusSelect={handleRadiusSelect}
               onPreviewSelect={handlePreviewSelect}
               performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}

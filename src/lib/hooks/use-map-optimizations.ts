@@ -57,70 +57,9 @@ export function useMapOptimizations({
     return index;
   }, [data]);
 
-  // Memoize data extent for bounds calculations
-  const dataExtent = useMemo(() => {
-    if (!data.features.length) {
-      return null;
-    }
-
-    let minLng = Infinity;
-    let maxLng = -Infinity;
-    let minLat = Infinity;
-    let maxLat = -Infinity;
-
-    for (const feature of data.features) {
-      const geometry = feature.geometry;
-      if (!geometry) {
-        continue;
-      }
-      if (geometry.type === "Polygon") {
-        const coords = geometry.coordinates[0];
-        for (const coord of coords) {
-          const [lng, lat] = coord;
-          if (lng < minLng) {
-            minLng = lng;
-          }
-          if (lng > maxLng) {
-            maxLng = lng;
-          }
-          if (lat < minLat) {
-            minLat = lat;
-          }
-          if (lat > maxLat) {
-            maxLat = lat;
-          }
-        }
-      } else if (geometry.type === "MultiPolygon") {
-        for (const polygon of geometry.coordinates) {
-          const coords = polygon[0];
-          if (coords) {
-            for (const coord of coords) {
-              const [lng, lat] = coord;
-              if (lng < minLng) {
-                minLng = lng;
-              }
-              if (lng > maxLng) {
-                maxLng = lng;
-              }
-              if (lat < minLat) {
-                minLat = lat;
-              }
-              if (lat > maxLat) {
-                maxLat = lat;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return minLng !== Infinity ? { minLng, maxLng, minLat, maxLat } : null;
-  }, [data.features]);
-
   return {
     labelPoints,
     statesLabelPoints,
-    dataExtent,
     featureIndex,
   } as const;
 }

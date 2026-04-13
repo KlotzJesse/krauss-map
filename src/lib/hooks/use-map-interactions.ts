@@ -208,10 +208,8 @@ export function useMapInteractions({
     currentDrawingMode,
     isDrawingToolsVisible,
     isCursorMode,
-    isDrawingActive,
     // Drawing tools actions
     handleDrawingModeChange,
-    toggleToolsVisibility,
     showTools,
     hideTools,
     clearAll,
@@ -221,8 +219,6 @@ export function useMapInteractions({
     deselectEditingFeature,
     // deck.gl click handler
     handleDeckClick,
-    // TerraDraw API reference
-    terraDrawRef,
     // Pending postal codes from drawing
     pendingPostalCodes,
     addPendingToSelection,

@@ -8,6 +8,7 @@ import type {
   Polygon,
 } from "geojson";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
 
 import type { areaLayers } from "@/lib/schema/schema";
 import {
@@ -151,6 +152,7 @@ interface UseDeckLayersProps {
   previewPostalCode?: string | null;
   featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
   isCursorMode: boolean;
+  mapCanvasRef: RefObject<HTMLCanvasElement | null>;
 }
 
 /**
@@ -165,15 +167,13 @@ export function useDeckLayers({
   previewPostalCode,
   featureIndex,
   isCursorMode,
+  mapCanvasRef,
 }: UseDeckLayersProps) {
   // Hover state: store the currently hovered feature for the outline layer
   const [hoveredFeature, setHoveredFeature] = useState<Feature<
     Polygon | MultiPolygon
   > | null>(null);
   const hoveredCodeRef = useRef<string | null>(null);
-
-  // Cursor state for the Map component
-  const [cursor, setCursor] = useState("grab");
 
   // Resolve per-postal-code styles from all area layers
   const { map: resolvedStyles, version: resolvedStylesVersion } = useMemo(
@@ -240,28 +240,33 @@ export function useDeckLayers({
     [hoveredFeature]
   );
 
-  // Handle hover from deck.gl picking
+  // Handle hover from deck.gl picking — cursor set via direct DOM mutation (no React re-render)
   const onHover = useCallback(
     (info: PickingInfo) => {
       if (!isCursorMode) {
         return;
       }
 
+      const canvas = mapCanvasRef.current;
       if (info.object) {
         const feature = info.object as Feature<Polygon | MultiPolygon>;
         const code = getFeatureCode(feature);
         if (code && hoveredCodeRef.current !== code) {
           hoveredCodeRef.current = code;
           setHoveredFeature(feature);
-          setCursor("pointer");
+          if (canvas) {
+            canvas.style.cursor = "pointer";
+          }
         }
       } else if (hoveredCodeRef.current !== null) {
         hoveredCodeRef.current = null;
         setHoveredFeature(null);
-        setCursor("grab");
+        if (canvas) {
+          canvas.style.cursor = "grab";
+        }
       }
     },
-    [isCursorMode]
+    [isCursorMode, mapCanvasRef]
   );
 
   // Clear hover state when leaving cursor mode (e.g., switching to drawing)
@@ -269,9 +274,12 @@ export function useDeckLayers({
     if (!isCursorMode) {
       hoveredCodeRef.current = null;
       setHoveredFeature(null);
-      setCursor("grab");
+      const canvas = mapCanvasRef.current;
+      if (canvas) {
+        canvas.style.cursor = "grab";
+      }
     }
-  }, [isCursorMode]);
+  }, [isCursorMode, mapCanvasRef]);
 
   // State boundaries layer — isolated since statesData never changes after load
   const stateBoundariesLayer = useMemo(
@@ -415,7 +423,6 @@ export function useDeckLayers({
   return {
     deckLayers,
     onHover,
-    cursor,
     hoveredCodeRef,
   } as const;
 }
