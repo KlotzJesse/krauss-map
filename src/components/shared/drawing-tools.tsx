@@ -292,8 +292,6 @@ function drawingToolsUIReducer(
 async function fillRegions(
   mode: "all" | "holes" | "expand",
 
-  _postalCodesData: FeatureCollection<Polygon | MultiPolygon>,
-
   activeLayer: Layer,
 
   addPostalCodesToLayer: (layerId: number, codes: string[]) => Promise<void>,
@@ -711,7 +709,6 @@ function useDrawingToolsActions({
     if (postalCodesData && activeLayer) {
       fillRegions(
         "holes",
-        postalCodesData,
         activeLayer,
         addPostalCodesToLayer ?? (async () => {}),
         (v) => dispatchUI({ type: "SET_FILLING", value: v }),

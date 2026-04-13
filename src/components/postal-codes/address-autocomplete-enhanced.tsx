@@ -5,7 +5,7 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from "lucide-react";
-import { useRef, useReducer, useOptimistic, memo } from "react";
+import { useRef, useReducer, memo } from "react";
 import { toast } from "sonner";
 
 import {
@@ -206,11 +206,6 @@ function useAddressAutocomplete({
     initialAutocompleteState
   );
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [_optimisticSearching, _updateOptimisticSearching] = useOptimistic(
-    false,
-    (_state, searching: boolean) => searching
-  );
 
   const syncInputWithRadius = useStableCallback((newRadius: number) => {
     dispatch({ type: "SET_RADIUS", radius: newRadius });

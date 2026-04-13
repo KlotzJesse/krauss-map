@@ -131,73 +131,10 @@ export function FloatingDrawingToolbar({
   onModeChange,
   initialUndoRedoStatus,
 }: FloatingDrawingToolbarProps) {
-  // Map drawing mode IDs to TerraDrawModes
-  const drawingModeToTerraDrawMode = (modeId: string): TerraDrawMode | null => {
-    switch (modeId) {
-      case "cursor": {
-        return "cursor";
-      }
-      case "freehand": {
-        return "freehand";
-      }
-      case "circle": {
-        return "circle";
-      }
-      case "rectangle": {
-        return "rectangle";
-      }
-      case "angled-rectangle": {
-        return "angled-rectangle";
-      } // TerraDraw has a separate angled-rectangle mode
-      case "polygon": {
-        return "polygon";
-      }
-      default: {
-        return null;
-      }
-    }
-  };
-
-  // Map TerraDrawMode back to drawing mode ID for UI state
-  const terraDrawModeToDrawingMode = (
-    mode: TerraDrawMode | null
-  ): string | null => {
-    switch (mode) {
-      case "cursor": {
-        return "cursor";
-      }
-      case "freehand": {
-        return "freehand";
-      }
-      case "circle": {
-        return "circle";
-      }
-      case "rectangle": {
-        return "rectangle";
-      }
-      case "angled-rectangle": {
-        return "angled-rectangle";
-      } // Map back to the angled-rectangle UI button
-      case "polygon": {
-        return "polygon";
-      }
-      case null: {
-        return null;
-      }
-      case "linestring": {
-        return "linestring";
-      }
-      case "point": {
-        return "point";
-      }
-      default: {
-        return null;
-      }
-    }
-  };
-
   const handleModeClick = useStableCallback((modeId: string) => {
-    const terraDrawMode = drawingModeToTerraDrawMode(modeId);
+    const terraDrawMode = (
+      modeId === "cursor" ? "cursor" : modeId
+    ) as TerraDrawMode | null;
     if (currentMode === terraDrawMode) {
       onModeChange(null);
       const modeInfo = drawingModes.find((m) => m.id === modeId);
@@ -221,7 +158,7 @@ export function FloatingDrawingToolbar({
           <div className="flex items-center gap-1">
             {drawingModes.map((mode) => {
               const isActive =
-                terraDrawModeToDrawingMode(currentMode) === mode.id ||
+                currentMode === mode.id ||
                 (currentMode === null && mode.id === "cursor");
               return (
                 <ToolbarButton

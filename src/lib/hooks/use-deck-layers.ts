@@ -423,6 +423,5 @@ export function useDeckLayers({
   return {
     deckLayers,
     onHover,
-    hoveredCodeRef,
   } as const;
 }

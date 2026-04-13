@@ -13,7 +13,6 @@ import {
   TerraDrawSectorMode,
   TerraDrawSelectMode,
 } from "terra-draw";
-import type { GeoJSONStoreFeatures } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
@@ -201,13 +200,6 @@ export function useTerraDraw({
     return drawRef.current.getSnapshot();
   });
 
-  const addFeatures = useStableCallback((features: GeoJSONStoreFeatures[]) => {
-    if (!drawRef.current) {
-      return [];
-    }
-    return drawRef.current.addFeatures(features);
-  });
-
   const removeFeatures = useStableCallback((featureIds: string[]) => {
     if (!drawRef.current) {
       return;
@@ -215,25 +207,11 @@ export function useTerraDraw({
     drawRef.current.removeFeatures(featureIds);
   });
 
-  const selectFeature = useStableCallback((featureId: string) => {
-    if (!drawRef.current) {
-      return;
-    }
-    drawRef.current.selectFeature(featureId);
-  });
-
   const deselectFeature = useStableCallback((featureId: string) => {
     if (!drawRef.current) {
       return;
     }
     drawRef.current.deselectFeature(featureId);
-  });
-
-  const getModeState = useStableCallback(() => {
-    if (!drawRef.current) {
-      return null;
-    }
-    return drawRef.current.getModeState();
   });
 
   // Handle mode changes with stable callbacks
@@ -347,13 +325,9 @@ export function useTerraDraw({
   }, [mapRef]); // Include mapRef dependency for cleanup
 
   return {
-    isInitialized: isInitializedRef.current,
     clearAll,
     getSnapshot,
-    addFeatures,
     removeFeatures,
-    selectFeature,
     deselectFeature,
-    getModeState,
   };
 }

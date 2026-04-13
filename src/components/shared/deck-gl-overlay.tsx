@@ -41,12 +41,7 @@ function createSafeOverlay(props: MapboxOverlayProps): MapboxOverlay {
  * Interleaved mode renders deck.gl layers directly into MapLibre's WebGL context,
  * preserving z-ordering with basemap layers (e.g., city labels stay on top).
  */
-export function DeckGLOverlay(
-  props: MapboxOverlayProps & {
-    /** Called when cursor changes due to hover. */
-    onCursorChange?: (cursor: string) => void;
-  }
-) {
+export function DeckGLOverlay(props: MapboxOverlayProps) {
   const overlay = useControl<MapboxOverlay>(() => createSafeOverlay(props));
   try {
     overlay.setProps({ ...props, interleaved: true });
