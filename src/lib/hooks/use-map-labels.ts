@@ -189,11 +189,12 @@ export function useMapLabels({
   const statesLabelPointsRef = useRef(statesLabelPoints);
   statesLabelPointsRef.current = statesLabelPoints;
 
-  // Label center cache
+  // Label center cache — invalidated when data OR layers identity changes
   const labelCenterCacheRef = useRef<{
     data: FeatureCollection<Polygon | MultiPolygon> | null;
-    cache: Map<string, [number, number] | null>;
-  }>({ data: null, cache: new Map() });
+    layers: Layer[] | null;
+    cache: Map<number, [number, number] | null>;
+  }>({ data: null, layers: null, cache: new Map() });
 
   // Label layer creation — runs once when map loads.
   // The sentinel divider layer is created via ensureLabelSentinel() from Map's
@@ -361,9 +362,10 @@ export function useMapLabels({
     // Compute one label point per visible layer
     const labelFeatures: Feature<Point>[] = [];
 
-    // Invalidate cache if underlying data changed
-    if (labelCenterCacheRef.current.data !== data) {
-      labelCenterCacheRef.current = { data, cache: new Map() };
+    // Invalidate cache if underlying data or layers identity changed
+    const cacheState = labelCenterCacheRef.current;
+    if (cacheState.data !== data || cacheState.layers !== layers) {
+      labelCenterCacheRef.current = { data, layers, cache: new Map() };
     }
     const labelCache = labelCenterCacheRef.current.cache;
 
@@ -373,11 +375,10 @@ export function useMapLabels({
         continue;
       }
 
-      const cacheKey = `${layer.id}:${[...postalCodes].sort().join(",")}`;
-      let center = labelCache.get(cacheKey);
+      let center = labelCache.get(layer.id);
       if (center === undefined) {
         center = getLayerLabelCenter(data, postalCodes, featureIndex) ?? null;
-        labelCache.set(cacheKey, center);
+        labelCache.set(layer.id, center);
       }
 
       if (!center) {

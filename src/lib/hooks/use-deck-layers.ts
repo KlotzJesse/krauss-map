@@ -293,7 +293,7 @@ export function useDeckLayers({
         lineJointRounded: true,
         lineCapRounded: true,
         pickable: isCursorMode,
-        autoHighlight: true,
+        autoHighlight: isCursorMode,
         highlightColor: [37, 99, 235, 50],
       })
     );
@@ -336,40 +336,36 @@ export function useDeckLayers({
       );
     }
 
-    // 4. Preview layer
-    if (previewPostalCode) {
-      result.push(
-        new GeoJsonLayer({
-          id: "preview-layer",
-          data: previewData,
-          beforeId: LABEL_SENTINEL_LAYER_ID,
-          filled: true,
-          stroked: true,
-          getFillColor: [37, 99, 235, 80],
-          getLineColor: [37, 99, 235, 200],
-          getLineWidth: 2,
-          lineWidthUnits: "pixels" as const,
-          pickable: false,
-        })
-      );
-    }
+    // 4. Preview layer — always present to avoid MapLibre add/remove churn
+    result.push(
+      new GeoJsonLayer({
+        id: "preview-layer",
+        data: previewData,
+        beforeId: LABEL_SENTINEL_LAYER_ID,
+        filled: true,
+        stroked: true,
+        getFillColor: [37, 99, 235, 80],
+        getLineColor: [37, 99, 235, 200],
+        getLineWidth: 2,
+        lineWidthUnits: "pixels" as const,
+        pickable: false,
+      })
+    );
 
-    // 5. Hover outline layer (visual only, not pickable)
-    if (hoveredFeature) {
-      result.push(
-        new GeoJsonLayer({
-          id: "hover-outline",
-          data: hoverData,
-          beforeId: LABEL_SENTINEL_LAYER_ID,
-          filled: false,
-          stroked: true,
-          getLineColor: [37, 99, 235, 255],
-          getLineWidth: 3,
-          lineWidthUnits: "pixels" as const,
-          pickable: false,
-        })
-      );
-    }
+    // 5. Hover outline layer — always present to avoid MapLibre add/remove churn
+    result.push(
+      new GeoJsonLayer({
+        id: "hover-outline",
+        data: hoverData,
+        beforeId: LABEL_SENTINEL_LAYER_ID,
+        filled: false,
+        stroked: true,
+        getLineColor: [37, 99, 235, 255],
+        getLineWidth: 3,
+        lineWidthUnits: "pixels" as const,
+        pickable: false,
+      })
+    );
 
     return result;
   }, [
@@ -378,9 +374,7 @@ export function useDeckLayers({
     areaFeaturesData,
     resolvedStyles,
     resolvedStylesVersion,
-    previewPostalCode,
     previewData,
-    hoveredFeature,
     hoverData,
     isCursorMode,
   ]);
