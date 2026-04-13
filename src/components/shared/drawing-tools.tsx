@@ -1110,7 +1110,7 @@ const LayerDialogs = memo(function LayerDialogs({
             <AlertDialogCancel onClick={handleCloseDelete}>
               Abbrechen
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteLayer}>
+            <AlertDialogAction onClick={confirmDeleteLayer} variant="destructive">
               Löschen
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -409,7 +409,7 @@ export function GranularitySelector({
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmChange}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                variant="destructive"
               >
                 Trotzdem wechseln
               </AlertDialogAction>

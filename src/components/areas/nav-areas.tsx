@@ -379,7 +379,7 @@ export function NavAreas({
             <AlertDialogAction
               onClick={handleConfirmDelete}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {isDeleting ? "Lösche..." : "Löschen"}
             </AlertDialogAction>
