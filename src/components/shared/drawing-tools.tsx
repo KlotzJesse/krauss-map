@@ -11,6 +11,7 @@ import {
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
 import {
@@ -28,10 +29,6 @@ import {
   deleteLayerAction,
   updateLayerAction,
 } from "@/app/actions/area-actions";
-import { ConflictResolutionDialog } from "@/components/areas/conflict-resolution-dialog";
-import { CreateVersionDialog } from "@/components/areas/create-version-dialog";
-import { EnhancedVersionHistoryDialog } from "@/components/areas/enhanced-version-history-dialog";
-import { LayerMergeDialog } from "@/components/areas/layer-merge-dialog";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
 import {
@@ -82,6 +79,36 @@ import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action
 import { exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
 
 const EMPTY_ARRAY: never[] = [];
+
+// Lazy-load dialog components — only fetched when users open them
+const ConflictResolutionDialog = dynamic(
+  () =>
+    import("@/components/areas/conflict-resolution-dialog").then(
+      (m) => m.ConflictResolutionDialog
+    ),
+  { ssr: false }
+);
+const CreateVersionDialog = dynamic(
+  () =>
+    import("@/components/areas/create-version-dialog").then(
+      (m) => m.CreateVersionDialog
+    ),
+  { ssr: false }
+);
+const EnhancedVersionHistoryDialog = dynamic(
+  () =>
+    import("@/components/areas/enhanced-version-history-dialog").then(
+      (m) => m.EnhancedVersionHistoryDialog
+    ),
+  { ssr: false }
+);
+const LayerMergeDialog = dynamic(
+  () =>
+    import("@/components/areas/layer-merge-dialog").then(
+      (m) => m.LayerMergeDialog
+    ),
+  { ssr: false }
+);
 
 interface StatsSectionProps {
   layers: Layer[];

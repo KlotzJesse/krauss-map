@@ -53,14 +53,3 @@ export async function getPostalCodesDataForGranularity(
     throw error;
   }
 }
-
-export async function getPostalCodesDataForGranularityServer(
-  granularity: string
-): Promise<FeatureCollection<Polygon | MultiPolygon> | null> {
-  try {
-    return await getPostalCodesDataForGranularity(granularity);
-  } catch (error) {
-    console.error("Error in getPostalCodesDataForGranularityServer:", error);
-    return null;
-  }
-}

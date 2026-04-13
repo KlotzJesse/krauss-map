@@ -67,6 +67,10 @@ const FloatingDrawingEditBar = dynamic(
   }
 );
 
+// Static style objects — hoisted to avoid allocating new objects on every render
+const MAP_CONTAINER_STYLE = { minHeight: "400px" } as const;
+const MAP_STYLE = { width: "100%", height: "100%" } as const;
+
 // Memoized error message component to prevent re-renders
 const MapErrorMessage = memo(({ message }: MapErrorMessageProps) => (
   <div className="flex items-center justify-center w-full h-full min-h-[400px] text-destructive">
@@ -406,7 +410,7 @@ const BaseMapComponent = ({
     <MapErrorBoundary resetKeys={[areaId]}>
       <div
         className="relative w-full h-full"
-        style={{ minHeight: "400px" }}
+        style={MAP_CONTAINER_STYLE}
         role="region"
         aria-label="Interaktive Karte"
       >
@@ -415,7 +419,7 @@ const BaseMapComponent = ({
             {...viewState}
             onMove={handleMove}
             mapStyle="/versatilescolorful.json"
-            style={{ width: "100%", height: "100%" }}
+            style={MAP_STYLE}
             minZoom={3}
             maxZoom={18}
           >
