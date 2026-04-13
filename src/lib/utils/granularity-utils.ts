@@ -94,31 +94,6 @@ export function convertPostalCodeToGranularity(
 }
 
 /**
- * Check if a postal code from one granularity is compatible with another
- * Example: "1" (1digit) is compatible with "12345" (5digit) because "12345" starts with "1"
- */
-export function isPostalCodeCompatible(
-  sourceCode: string,
-  sourceGranularity: string,
-  targetGranularity: string
-): boolean {
-  const sourceLevel = getGranularityLevel(sourceGranularity);
-  const targetLevel = getGranularityLevel(targetGranularity);
-
-  // If target is lower granularity, check if source starts with target
-  if (targetLevel < sourceLevel) {
-    const targetCode = convertPostalCodeToGranularity(
-      sourceCode,
-      targetGranularity
-    );
-    return sourceCode.startsWith(targetCode);
-  }
-
-  // If target is higher granularity, they're always compatible
-  return true;
-}
-
-/**
  * Get granularity change description for user messaging
  */
 export function getGranularityChangeDescription(

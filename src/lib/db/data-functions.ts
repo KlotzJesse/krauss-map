@@ -1,7 +1,7 @@
 import "server-only";
 // Database functions for data loading - to be used directly in server components
 // These replace the server actions for GET operations
-import { eq, and, desc, like, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { cacheTag, cacheLife } from "next/cache";
 
 import { db } from "../db";
@@ -11,7 +11,6 @@ import {
   areaVersions,
   areaChanges,
   areaUndoStacks,
-  postalCodes,
 } from "../schema/schema";
 
 export async function getAreas() {
@@ -74,34 +73,6 @@ export async function getAreaName(id: number): Promise<string | null> {
   }
 }
 
-export async function getAreaById(id: number) {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("areas", `area-${id}`);
-  try {
-    const area = await db.query.areas.findFirst({
-      where: eq(areas.id, id),
-      with: {
-        layers: {
-          with: {
-            postalCodes: true,
-          },
-          orderBy: (layers, { asc }) => [asc(layers.orderIndex)],
-        },
-      },
-    });
-
-    if (!area) {
-      throw new Error("Area not found");
-    }
-
-    return area;
-  } catch (error) {
-    console.error("Error fetching area:", error);
-    throw new Error("Failed to fetch area", { cause: error });
-  }
-}
-
 export async function getLayers(areaId: number) {
   "use cache";
   cacheLife("minutes");
@@ -119,23 +90,6 @@ export async function getLayers(areaId: number) {
   } catch (error) {
     console.error("Error fetching layers:", error);
     throw new Error("Failed to fetch layers", { cause: error });
-  }
-}
-
-// Version-related functions
-export async function getVersions(areaId: number) {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("versions", `area-${areaId}-versions`);
-  try {
-    const versions = await db.query.areaVersions.findMany({
-      where: eq(areaVersions.areaId, areaId),
-      orderBy: (versions, { desc }) => [desc(versions.versionNumber)],
-    });
-    return versions;
-  } catch (error) {
-    console.error("Error fetching versions:", error);
-    throw new Error("Failed to fetch versions", { cause: error });
   }
 }
 
@@ -252,64 +206,6 @@ export async function getVersionIndicatorInfo(
   }
 }
 
-// Change history functions
-export async function getChangeHistory(
-  areaId: number,
-  options?: {
-    versionId?: number;
-    limit?: number;
-    includeUndone?: boolean;
-  }
-) {
-  "use cache";
-  cacheLife("seconds");
-  cacheTag(`area-${areaId}-change-history`);
-  try {
-    let whereConditions = eq(areaChanges.areaId, areaId);
-
-    if (options?.versionId) {
-      // For now, we'll need to get the version first to get the composite key
-      // This is a limitation of the current design - we might need to change this later
-      const version = await db.query.areaVersions.findFirst({
-        where: and(
-          eq(areaVersions.areaId, areaId),
-          eq(areaVersions.versionNumber, options.versionId)
-        ),
-      });
-      if (version) {
-        whereConditions = and(
-          whereConditions,
-          eq(areaChanges.versionAreaId, version.areaId),
-          eq(areaChanges.versionNumber, version.versionNumber)
-        )!;
-      }
-    }
-
-    if (!options?.includeUndone) {
-      whereConditions = and(
-        whereConditions,
-        eq(areaChanges.isUndone, "false")
-      )!;
-    }
-
-    let query = db
-      .select()
-      .from(areaChanges)
-      .where(whereConditions)
-      .orderBy(desc(areaChanges.sequenceNumber));
-
-    if (options?.limit) {
-      query = query.limit(options.limit) as unknown as typeof query;
-    }
-
-    const changes = await query;
-    return changes;
-  } catch (error) {
-    console.error("Error fetching change history:", error);
-    throw new Error("Failed to fetch change history", { cause: error });
-  }
-}
-
 // Lightweight change summaries — excludes heavy changeData/previousData JSONB
 export async function getChangeSummaries(
   areaId: number,
@@ -411,28 +307,3 @@ export async function getUndoRedoStatus(areaId: number) {
   }
 }
 
-// Granularity-related functions
-export async function getMatchingPostalCodes(
-  prefix: string,
-  targetGranularity: string
-) {
-  "use cache";
-  cacheLife("days");
-  cacheTag("postal-codes", `postal-codes-${targetGranularity}-${prefix}`);
-  try {
-    const matchingCodes = await db
-      .select({ code: postalCodes.code })
-      .from(postalCodes)
-      .where(
-        and(
-          eq(postalCodes.granularity, targetGranularity),
-          like(postalCodes.code, `${prefix}%`)
-        )
-      );
-
-    return matchingCodes.map((mc) => mc.code);
-  } catch (error) {
-    console.error("Error fetching matching postal codes:", error);
-    throw new Error("Failed to fetch matching postal codes", { cause: error });
-  }
-}

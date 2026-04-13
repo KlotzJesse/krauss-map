@@ -1,6 +1,6 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
-export interface ParsedPostalCode {
+interface ParsedPostalCode {
   original: string;
   normalized: string;
   countryCode?: string;

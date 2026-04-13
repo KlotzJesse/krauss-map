@@ -29,7 +29,11 @@ function createSafeOverlay(props: MapboxOverlayProps): MapboxOverlay {
     if (map) {
       ensureLabelSentinel(map as Parameters<typeof ensureLabelSentinel>[0]);
     }
-    origResolveLayers(map, deck, prevLayers, newLayers);
+    try {
+      origResolveLayers(map, deck, prevLayers, newLayers);
+    } catch {
+      // Sentinel may not exist yet during style changes — transient, resolves on next call
+    }
   };
   return overlay;
 }

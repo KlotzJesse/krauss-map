@@ -32,20 +32,22 @@ export const LABEL_SENTINEL_LAYER_ID = "deck-label-divider";
 
 /**
  * Ensures the sentinel layer exists in the map style.
- * Call this from Map's onStyleData callback so it runs BEFORE MapboxOverlay's
- * styledata handler (which calls resolveLayers with beforeId).
+ * Returns true if the sentinel exists (or was just created), false if the style
+ * isn't ready for layer manipulation yet.
  */
-export function ensureLabelSentinel(map: MapLibreMap): void {
+export function ensureLabelSentinel(map: MapLibreMap): boolean {
   try {
-    if (map.isStyleLoaded() && !map.getLayer(LABEL_SENTINEL_LAYER_ID)) {
-      map.addLayer({
-        id: LABEL_SENTINEL_LAYER_ID,
-        type: "background",
-        paint: { "background-opacity": 0 },
-      });
+    if (map.getLayer(LABEL_SENTINEL_LAYER_ID)) {
+      return true;
     }
+    map.addLayer({
+      id: LABEL_SENTINEL_LAYER_ID,
+      type: "background",
+      paint: { "background-opacity": 0 },
+    });
+    return true;
   } catch {
-    // Style may not be ready yet
+    return false;
   }
 }
 
