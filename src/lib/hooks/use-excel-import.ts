@@ -16,7 +16,7 @@ import type {
 } from "../utils/excel-parser";
 import { useStableCallback } from "./use-stable-callback";
 
-export interface ExcelImportState {
+interface ExcelImportState {
   fileData: ParsedFileData | null;
   columnMapping: ColumnMapping;
   processedRows: ProcessedImportRow[];

@@ -197,39 +197,6 @@ export async function exportLayersXLSX(
 }
 
 /**
- * Exports an array of postal codes as an XLSX file. Uses dynamic import for xlsx.
- * Ensures postal codes are formatted with leading zeros.
- * @param codes Array of postal codes (strings)
- */
-export async function exportPostalCodesXLSX(codes: string[]) {
-  const exportPromise = async () => {
-    const XLSX = await import("xlsx");
-    const formattedCodes = codes.map((code) => [formatPostalCode(code)]);
-    const ws = XLSX.utils.aoa_to_sheet([["Postleitzahl"], ...formattedCodes]);
-
-    // Set all data cells to text format to preserve leading zeros
-    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
-    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-      const cellAddress = XLSX.utils.encode_cell({ r: R, c: 0 });
-      if (ws[cellAddress]) {
-        ws[cellAddress].t = "s"; // Set cell type to string
-      }
-    }
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Postleitzahlen");
-    XLSX.writeFile(wb, "postleitzahlen.xlsx");
-    return `${codes.length} Postleitzahlen als XLSX exportiert`;
-  };
-
-  return executeAction(exportPromise(), {
-    loading: `📊 Exportiere ${codes.length} Postleitzahlen...`,
-    success: (message: string) => message,
-    error: "XLSX-Export fehlgeschlagen",
-  });
-}
-
-/**
  * Copies an array of postal codes as a CSV string to the clipboard.
  * Ensures postal codes are formatted with leading zeros.
  * @param codes Array of postal codes (strings)

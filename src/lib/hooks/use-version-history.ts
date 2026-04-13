@@ -7,7 +7,7 @@ import {
 } from "@/app/actions/version-actions";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
-export interface AreaVersion {
+interface AreaVersion {
   id: number;
   areaId: number;
   versionNumber: number;
