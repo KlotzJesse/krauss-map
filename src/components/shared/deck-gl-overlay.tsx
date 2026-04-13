@@ -14,6 +14,9 @@ import { ensureLabelSentinel } from "@/lib/hooks/use-map-labels";
  * THROWS if `beforeId` doesn't exist. By patching `_resolveLayers`,
  * we guarantee the sentinel is created before any resolution —
  * covering onAdd, setProps, and styledata paths.
+ *
+ * If the sentinel can't be created (style mid-transition), we skip
+ * the resolution entirely — deck.gl retries on the next styledata event.
  */
 function createSafeOverlay(props: MapboxOverlayProps): MapboxOverlay {
   const overlay = new MapboxOverlay({ ...props, interleaved: true });
@@ -27,13 +30,12 @@ function createSafeOverlay(props: MapboxOverlayProps): MapboxOverlay {
     newLayers: unknown[]
   ) => {
     if (map) {
-      ensureLabelSentinel(map as Parameters<typeof ensureLabelSentinel>[0]);
+      const ready = ensureLabelSentinel(
+        map as Parameters<typeof ensureLabelSentinel>[0]
+      );
+      if (!ready) return; // Style not ready — deck.gl retries on next styledata
     }
-    try {
-      origResolveLayers(map, deck, prevLayers, newLayers);
-    } catch {
-      // Sentinel may not exist yet during style changes — transient, resolves on next call
-    }
+    origResolveLayers(map, deck, prevLayers, newLayers);
   };
   return overlay;
 }
