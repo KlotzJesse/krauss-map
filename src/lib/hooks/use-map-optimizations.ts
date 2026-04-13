@@ -8,32 +8,19 @@ import { useMemo } from "react";
 
 import { makeLabelPoints } from "@/lib/utils/map-data";
 
-import { useStableCallback } from "./use-stable-callback";
-
 interface UseMapOptimizationsProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
   statesData?: FeatureCollection<Polygon | MultiPolygon> | null;
 }
 
 /**
- * Hook for optimized memoization of heavy computations
- * Prevents unnecessary re-renders and recalculations
- * Optimized for React 19 with stable references
- * Note: Selected regions are now managed per-layer, not globally
+ * Hook for optimized memoization of heavy computations.
+ * Prevents unnecessary re-renders and recalculations.
  */
 export function useMapOptimizations({
   data,
   statesData,
 }: UseMapOptimizationsProps) {
-  // Empty feature collection for compatibility
-  const selectedFeatureCollection = useMemo(
-    () => ({
-      type: "FeatureCollection" as const,
-      features: [] as Feature<Polygon | MultiPolygon>[],
-    }),
-    []
-  );
-
   // Memoize label points computation (expensive operation)
   const labelPoints = useMemo(
     () => makeLabelPoints(data) as FeatureCollection,
@@ -47,14 +34,7 @@ export function useMapOptimizations({
     [statesData]
   );
 
-  // Memoize feature count for performance monitoring
-  const featureCount = useMemo(
-    () => data.features.length,
-    [data.features.length]
-  );
-
   // Pre-built postal-code → feature index for O(k) label center lookups.
-  // Normalizes keys the same way getLayerLabelCenter does (code | plz | PLZ | postalCode).
   const featureIndex = useMemo(() => {
     const index = new Map<string, Feature<Polygon | MultiPolygon>[]>();
     for (const feature of data.features) {
@@ -77,10 +57,7 @@ export function useMapOptimizations({
     return index;
   }, [data]);
 
-  // Selected count is now managed per-layer
-  const selectedCount = 0;
-
-  // Memoize data extent for bounds calculations - optimized for performance
+  // Memoize data extent for bounds calculations
   const dataExtent = useMemo(() => {
     if (!data.features.length) {
       return null;
@@ -91,32 +68,31 @@ export function useMapOptimizations({
     let minLat = Infinity;
     let maxLat = -Infinity;
 
-    // Single optimized pass through features
     for (const feature of data.features) {
       const geometry = feature.geometry;
       if (!geometry) {
         continue;
       }
       if (geometry.type === "Polygon") {
-        // Only check outer ring for bounds - much faster
         const coords = geometry.coordinates[0];
         for (const coord of coords) {
           const [lng, lat] = coord;
-          minLng = Math.min(minLng, lng);
-          maxLng = Math.max(maxLng, lng);
-          minLat = Math.min(minLat, lat);
-          maxLat = Math.max(maxLat, lat);
+          if (lng < minLng) {minLng = lng;}
+          if (lng > maxLng) {maxLng = lng;}
+          if (lat < minLat) {minLat = lat;}
+          if (lat > maxLat) {maxLat = lat;}
         }
       } else if (geometry.type === "MultiPolygon") {
-        // Only check first polygon for bounds approximation (90%+ accuracy, much faster)
-        const coords = geometry.coordinates[0]?.[0];
-        if (coords) {
-          for (const coord of coords) {
-            const [lng, lat] = coord;
-            minLng = Math.min(minLng, lng);
-            maxLng = Math.max(maxLng, lng);
-            minLat = Math.min(minLat, lat);
-            maxLat = Math.max(maxLat, lat);
+        for (const polygon of geometry.coordinates) {
+          const coords = polygon[0];
+          if (coords) {
+            for (const coord of coords) {
+              const [lng, lat] = coord;
+              if (lng < minLng) {minLng = lng;}
+              if (lng > maxLng) {maxLng = lng;}
+              if (lat < minLat) {minLat = lat;}
+              if (lat > maxLat) {maxLat = lat;}
+            }
           }
         }
       }
@@ -125,27 +101,10 @@ export function useMapOptimizations({
     return minLng !== Infinity ? { minLng, maxLng, minLat, maxLat } : null;
   }, [data.features]);
 
-  // Stable callback functions for layer usage
-  // Note: Returns empty collection since selections are now per-layer
-  const getSelectedFeatureCollection = useStableCallback(() => ({
-    type: "FeatureCollection" as const,
-    features: [],
-  }));
-
-  const getLabelPoints = useStableCallback(
-    (d: FeatureCollection<Polygon | MultiPolygon>) =>
-      makeLabelPoints(d) as FeatureCollection
-  );
-
   return {
-    selectedFeatureCollection,
     labelPoints,
     statesLabelPoints,
-    featureCount,
-    selectedCount,
     dataExtent,
     featureIndex,
-    getSelectedFeatureCollection,
-    getLabelPoints,
   } as const;
 }

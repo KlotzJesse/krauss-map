@@ -22,8 +22,14 @@ type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
 
-// State name → brand color mapping
-const STATE_COLORS: Record<string, string> = {
+// Pre-computed RGBA arrays for state colors — avoids per-feature hexToRgba in accessors.
+// Fill colors at 10% opacity, line colors at full opacity.
+type RgbaColor = [number, number, number, number];
+
+const STATE_FILL_COLORS: Record<string, RgbaColor> = {};
+const STATE_LINE_COLORS: Record<string, RgbaColor> = {};
+
+const STATE_HEX_COLORS: Record<string, string> = {
   "Baden-Württemberg": "#e57373",
   Bayern: "#64b5f6",
   Berlin: "#81c784",
@@ -42,7 +48,13 @@ const STATE_COLORS: Record<string, string> = {
   Thüringen: "#d84315",
 };
 
-const DEFAULT_STATE_COLOR: [number, number, number, number] = [34, 34, 34, 255];
+for (const [name, hex] of Object.entries(STATE_HEX_COLORS)) {
+  STATE_FILL_COLORS[name] = hexToRgba(hex, 0.1);
+  STATE_LINE_COLORS[name] = hexToRgba(hex, 1);
+}
+
+const DEFAULT_STATE_FILL: RgbaColor = [34, 34, 34, 25];
+const DEFAULT_STATE_LINE: RgbaColor = [34, 34, 34, 255];
 
 interface ResolvedStyle {
   fillColor: [number, number, number, number];
@@ -114,7 +126,9 @@ function filterAreaFeatures(
     for (const code of codeSet) {
       const fts = featureIndex.get(code);
       if (fts) {
-        features.push(...fts);
+        for (const ft of fts) {
+          features.push(ft);
+        }
       }
     }
   } else {
@@ -263,7 +277,7 @@ export function useDeckLayers({
   const deckLayers = useMemo(() => {
     const result = [];
 
-    // 1. State boundaries fill + stroke
+    // 1. State boundaries fill + stroke (pre-computed RGBA lookups — no per-feature parsing)
     if (statesData) {
       result.push(
         new GeoJsonLayer({
@@ -275,16 +289,12 @@ export function useDeckLayers({
           getFillColor: (f) => {
             const name = (f as Feature<Polygon | MultiPolygon>).properties
               ?.name as string;
-            const color = STATE_COLORS[name];
-            return color
-              ? hexToRgba(color, 0.1)
-              : ([34, 34, 34, 25] as [number, number, number, number]);
+            return STATE_FILL_COLORS[name] ?? DEFAULT_STATE_FILL;
           },
           getLineColor: (f) => {
             const name = (f as Feature<Polygon | MultiPolygon>).properties
               ?.name as string;
-            const color = STATE_COLORS[name];
-            return color ? hexToRgba(color, 1) : DEFAULT_STATE_COLOR;
+            return STATE_LINE_COLORS[name] ?? DEFAULT_STATE_LINE;
           },
           getLineWidth: 2,
           lineWidthUnits: "pixels" as const,
@@ -317,43 +327,41 @@ export function useDeckLayers({
       })
     );
 
-    // 3. Combined area overlay layer (single resolved-style, pickable: false)
-    if (areaFeaturesData.features.length > 0) {
-      result.push(
-        new GeoJsonLayer({
-          id: "area-layers-combined",
-          data: areaFeaturesData,
-          beforeId: LABEL_SENTINEL_LAYER_ID,
-          filled: true,
-          stroked: true,
-          getFillColor: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code
-              ? (resolvedStyles.get(code)?.fillColor ?? [0, 0, 0, 0])
-              : [0, 0, 0, 0];
-          },
-          getLineColor: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code
-              ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
-              : [0, 0, 0, 0];
-          },
-          getLineWidth: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code ? (resolvedStyles.get(code)?.lineWidth ?? 1) : 1;
-          },
-          lineWidthUnits: "pixels" as const,
-          lineJointRounded: true,
-          lineCapRounded: true,
-          pickable: false,
-          updateTriggers: {
-            getFillColor: [resolvedStylesVersion],
-            getLineColor: [resolvedStylesVersion],
-            getLineWidth: [resolvedStylesVersion],
-          },
-        })
-      );
-    }
+    // 3. Combined area overlay layer — always present to avoid MapLibre add/remove churn
+    result.push(
+      new GeoJsonLayer({
+        id: "area-layers-combined",
+        data: areaFeaturesData,
+        beforeId: LABEL_SENTINEL_LAYER_ID,
+        filled: true,
+        stroked: true,
+        getFillColor: (f) => {
+          const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+          return code
+            ? (resolvedStyles.get(code)?.fillColor ?? [0, 0, 0, 0])
+            : [0, 0, 0, 0];
+        },
+        getLineColor: (f) => {
+          const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+          return code
+            ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+            : [0, 0, 0, 0];
+        },
+        getLineWidth: (f) => {
+          const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+          return code ? (resolvedStyles.get(code)?.lineWidth ?? 1) : 1;
+        },
+        lineWidthUnits: "pixels" as const,
+        lineJointRounded: true,
+        lineCapRounded: true,
+        pickable: false,
+        updateTriggers: {
+          getFillColor: [resolvedStylesVersion],
+          getLineColor: [resolvedStylesVersion],
+          getLineWidth: [resolvedStylesVersion],
+        },
+      })
+    );
 
     // 4. Preview layer — always present to avoid MapLibre add/remove churn
     result.push(

@@ -189,12 +189,13 @@ export function useMapLabels({
   const statesLabelPointsRef = useRef(statesLabelPoints);
   statesLabelPointsRef.current = statesLabelPoints;
 
-  // Label center cache — invalidated when data OR layers identity changes
+  // Label center cache — invalidated only when postal code MEMBERSHIP changes.
+  // Color/opacity/name changes do NOT affect label positions, so using layers
+  // identity (which changes on any property update) was too aggressive.
   const labelCenterCacheRef = useRef<{
-    data: FeatureCollection<Polygon | MultiPolygon> | null;
-    layers: Layer[] | null;
+    fingerprint: string;
     cache: Map<number, [number, number] | null>;
-  }>({ data: null, layers: null, cache: new Map() });
+  }>({ fingerprint: "", cache: new Map() });
 
   // Label layer creation — runs once when map loads.
   // The sentinel divider layer is created via ensureLabelSentinel() from Map's
@@ -362,10 +363,17 @@ export function useMapLabels({
     // Compute one label point per visible layer
     const labelFeatures: Feature<Point>[] = [];
 
-    // Invalidate cache if underlying data or layers identity changed
+    // Build a fingerprint from layer IDs + postal code counts.
+    // This only changes when postal code membership changes, NOT on color/opacity tweaks.
+    let fingerprint = "";
+    for (const layer of layers) {
+      const count = layer.postalCodes?.length ?? 0;
+      fingerprint += `${layer.id}:${count};`;
+    }
+
     const cacheState = labelCenterCacheRef.current;
-    if (cacheState.data !== data || cacheState.layers !== layers) {
-      labelCenterCacheRef.current = { data, layers, cache: new Map() };
+    if (cacheState.fingerprint !== fingerprint) {
+      labelCenterCacheRef.current = { fingerprint, cache: new Map() };
     }
     const labelCache = labelCenterCacheRef.current.cache;
 

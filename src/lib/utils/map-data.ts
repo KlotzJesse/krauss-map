@@ -12,33 +12,6 @@ import type {
 const centroidCache = new WeakMap();
 
 /**
- * Returns an empty GeoJSON FeatureCollection.
- */
-export function emptyFeatureCollection(): FeatureCollection {
-  return { type: "FeatureCollection", features: [] };
-}
-
-/**
- * Returns a FeatureCollection containing only features with the given IDs.
- */
-export function featureCollectionFromIds(
-  data: FeatureCollection,
-  codes: string[]
-): FeatureCollection {
-  if (!data || !Array.isArray(data.features)) {
-    return emptyFeatureCollection();
-  }
-  // Use Set for O(1) lookups instead of O(n) Array.includes per feature
-  const codeSet = new Set(codes);
-  return {
-    type: "FeatureCollection",
-    features: (data.features as Feature[]).filter((f) =>
-      codeSet.has(f.properties?.code)
-    ),
-  };
-}
-
-/**
  * Returns the centroid of the largest polygon in a feature - optimized with caching.
  */
 export function getLargestPolygonCentroid(
@@ -127,6 +100,7 @@ function largestPolygonCentroid(
  * Generates label points for all digit levels (1–5) derived from the data.
  * Each point has `_labelCode` (the truncated code) and `_labelLevel` (1–5).
  * One label per unique prefix, placed at the centroid of the largest polygon in that group.
+ * Single-pass: groups all levels simultaneously instead of iterating features 5× separately.
  */
 export function makeLabelPoints(features: FeatureCollection) {
   const validFeatures = (features.features as Feature[]).filter(
@@ -144,32 +118,37 @@ export function makeLabelPoints(features: FeatureCollection) {
   }
   const levels = Math.min(maxLen, 5);
 
+  // Single pass: build all prefix groups for all levels simultaneously.
+  // Key format: "level:prefix" → features array.
+  const allGroups = new Map<string, Feature<Polygon | MultiPolygon>[]>();
+
+  for (const f of validFeatures) {
+    const props = f.properties ?? {};
+    const raw = String(props.PLZ ?? props.plz ?? props.code ?? "");
+    const len = raw.length;
+
+    for (let level = 1; level <= Math.min(levels, len); level++) {
+      const prefix = raw.slice(0, level);
+      const key = `${level}:${prefix}`;
+      const existing = allGroups.get(key);
+      if (existing) {
+        existing.push(f as Feature<Polygon | MultiPolygon>);
+      } else {
+        allGroups.set(key, [f as Feature<Polygon | MultiPolygon>]);
+      }
+    }
+  }
+
   const labelFeatures: ReturnType<typeof point>[] = [];
 
-  // For each digit level, group by the prefix of that length and emit one label
-  for (let level = 1; level <= levels; level++) {
-    const prefixGroups = new Map<string, Feature<Polygon | MultiPolygon>[]>();
-
-    for (const f of validFeatures) {
-      const props = f.properties ?? {};
-      const raw = String(props.PLZ ?? props.plz ?? props.code ?? "");
-      // Only include features whose code is at least `level` digits
-      if (raw.length < level) {
-        continue;
-      }
-      const prefix = raw.slice(0, level);
-      if (!prefixGroups.has(prefix)) {
-        prefixGroups.set(prefix, []);
-      }
-      prefixGroups.get(prefix)?.push(f as Feature<Polygon | MultiPolygon>);
-    }
-
-    for (const [prefix, group] of prefixGroups) {
-      const coords = largestPolygonCentroid(group);
-      labelFeatures.push(
-        point(coords, { _labelCode: prefix, _labelLevel: level })
-      );
-    }
+  for (const [key, group] of allGroups) {
+    const colonIdx = key.indexOf(":");
+    const level = Number(key.slice(0, colonIdx));
+    const prefix = key.slice(colonIdx + 1);
+    const coords = largestPolygonCentroid(group);
+    labelFeatures.push(
+      point(coords, { _labelCode: prefix, _labelLevel: level })
+    );
   }
 
   return { type: "FeatureCollection", features: labelFeatures };
