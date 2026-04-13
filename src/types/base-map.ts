@@ -14,7 +14,6 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 export interface BaseMapProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
   layerId: string;
-  onSearch?: (query: string) => void;
   center?: [number, number];
   zoom?: number;
   granularity?: string;
@@ -22,7 +21,7 @@ export interface BaseMapProps {
   layers: Layer[];
   activeLayerId: number | null;
   areaId: number | null;
-  areaName?: string; // Optional area/project name for exports
+  areaName?: string;
   previewPostalCode?: string | null;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   removePostalCodesFromLayer?: (
@@ -41,13 +40,6 @@ export interface BaseMapProps {
   };
 }
 
-export interface MapConfig {
-  center: [number, number];
-  zoom: number;
-  style: string;
-  minHeight: string;
-}
-
 export interface MapErrorMessageProps {
   message: string;
 }
@@ -57,14 +49,4 @@ export interface ToggleButtonProps {
   title: string;
   ariaLabel: string;
   children: React.ReactNode;
-}
-
-export interface MapToolsProps {
-  currentMode: string;
-  onModeChange: (mode: string) => void;
-  onClearAll: () => void;
-  onToggleVisibility: () => void;
-  granularity?: string;
-  onGranularityChange?: (granularity: string) => void;
-  postalCodesData: FeatureCollection<Polygon | MultiPolygon>;
 }

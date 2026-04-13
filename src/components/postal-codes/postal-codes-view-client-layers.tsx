@@ -407,16 +407,15 @@ export function PostalCodesViewClientWithLayers({
 
   const handlePreviewSelect = useCallback(
     (coords: [number, number] | null, _label: string, postalCode?: string) => {
-      if (postalCode) {
-        setPreviewPostalCode((prev) => {
-          const isClosing = prev === postalCode;
-          if (!isClosing && coords) {
-            setMapCenterZoom([coords[0], coords[1]], 11);
-          }
-          searchPostalCodes(postalCode);
-          return isClosing ? null : postalCode;
-        });
+      if (!postalCode) {
+        return;
       }
+      setPreviewPostalCode((prev) => (prev === postalCode ? null : postalCode));
+      // Side effects outside state updater (React best practice)
+      if (coords) {
+        setMapCenterZoom([coords[0], coords[1]], 11);
+      }
+      searchPostalCodes(postalCode);
     },
     [setMapCenterZoom, searchPostalCodes]
   );
@@ -459,74 +458,6 @@ export function PostalCodesViewClientWithLayers({
           </AddressAutocompleteErrorBoundary>
         </div>
 
-        {/* Postal Code Dropdown - Commented out as Umkreis search already handles this /* <Popover open={postalCodeOpen} onOpenChange={setPostalCodeOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="secondary"
-              role="combobox"
-              aria-expanded={postalCodeOpen}
-              className="w-[100px] justify-between truncate"
-            >
-              <span className="truncate block w-full text-left">
-                {selectedPostalCode ? selectedPostalCode : "PLZ"}
-              </span>
-              <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[100px] p-0">
-            <Command>
-              <CommandInput
-                placeholder="PLZ"
-                value={postalCodeQuery}
-                onValueChange={(v) => {
-                  setPostalCodeQuery(v);
-                }}
-                autoFocus
-                autoComplete="off"
-              />
-              <CommandList>
-                {allPostalCodes
-
-                  .filter((code) =>
-                    code.toLowerCase().includes(postalCodeQuery.toLowerCase()),
-                  )
-
-                  .slice(0, 10)
-
-                  .map((code) => (
-                    <CommandItem
-                      key={code}
-                      value={code}
-                      onSelect={async () => {
-                        if (activeLayerId && areaId) {
-                          await addPostalCodesToLayer(activeLayerId, [code]);
-                        } else {
-                          selectPostalCode(code);
-                        }
-
-                        setSelectedPostalCode(code);
-
-                        setPostalCodeQuery("");
-
-                        setPostalCodeOpen(false);
-                      }}
-                      className="cursor-pointer truncate"
-                    >
-                        <span className="truncate block w-full text-left">
-                          {code || "Unbekannt"}
-                        </span>
-                      </CommandItem>
-                    ))}
-                {allPostalCodes.filter((code) =>
-                  code.toLowerCase().includes(postalCodeQuery.toLowerCase()),
-                ).length === 0 && (
-                  <CommandEmpty>Keine Ergebnisse</CommandEmpty>
-                )}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover> */}
-
         {/* Import Button - Opens the import dialog */}
         <div className="shrink-0">
           <Tooltip>
@@ -556,7 +487,6 @@ export function PostalCodesViewClientWithLayers({
         <MapErrorBoundary>
           <PostalCodesMap
             data={data}
-            onSearch={searchPostalCodes}
             granularity={defaultGranularity}
             onGranularityChange={handleGranularityChange}
             layers={optimisticLayers}

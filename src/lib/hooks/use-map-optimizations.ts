@@ -77,10 +77,18 @@ export function useMapOptimizations({
         const coords = geometry.coordinates[0];
         for (const coord of coords) {
           const [lng, lat] = coord;
-          if (lng < minLng) {minLng = lng;}
-          if (lng > maxLng) {maxLng = lng;}
-          if (lat < minLat) {minLat = lat;}
-          if (lat > maxLat) {maxLat = lat;}
+          if (lng < minLng) {
+            minLng = lng;
+          }
+          if (lng > maxLng) {
+            maxLng = lng;
+          }
+          if (lat < minLat) {
+            minLat = lat;
+          }
+          if (lat > maxLat) {
+            maxLat = lat;
+          }
         }
       } else if (geometry.type === "MultiPolygon") {
         for (const polygon of geometry.coordinates) {
@@ -88,10 +96,18 @@ export function useMapOptimizations({
           if (coords) {
             for (const coord of coords) {
               const [lng, lat] = coord;
-              if (lng < minLng) {minLng = lng;}
-              if (lng > maxLng) {maxLng = lng;}
-              if (lat < minLat) {minLat = lat;}
-              if (lat > maxLat) {maxLat = lat;}
+              if (lng < minLng) {
+                minLng = lng;
+              }
+              if (lng > maxLng) {
+                maxLng = lng;
+              }
+              if (lat < minLat) {
+                minLat = lat;
+              }
+              if (lat > maxLat) {
+                maxLat = lat;
+              }
             }
           }
         }
