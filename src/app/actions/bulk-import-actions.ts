@@ -182,6 +182,7 @@ export async function bulkImportPostalCodesAndLayers(
               id: 0,
               layerId: txResult.txLayerId,
               postalCode: code,
+              postalCodeId: null,
               createdAt: new Date().toISOString(),
             })),
           });

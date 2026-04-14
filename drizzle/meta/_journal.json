@@ -71,6 +71,13 @@
       "when": 1760221511355,
       "tag": "0009_fancy_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776204800341,
+      "tag": "0010_careful_crystal",
+      "breakpoints": true
     }
   ]
 }

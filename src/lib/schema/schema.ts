@@ -149,6 +149,12 @@ export const postalCodes = pgTable(
 
     granularity: varchar({ length: 20 }).notNull(),
 
+    country: varchar({ length: 2 }).notNull().default("DE"),
+
+    isActive: varchar("is_active", { length: 5 }).notNull().default("true"),
+
+    sourceRelease: varchar("source_release", { length: 50 }),
+
     geometry: multiPolygon("geometry").notNull(),
 
     properties: jsonb(),
@@ -192,6 +198,28 @@ export const postalCodes = pgTable(
 
       table.code.asc().nullsLast().op("text_ops")
     ),
+
+    index("idx_postal_codes_country").using(
+      "btree",
+
+      table.country.asc().nullsLast().op("text_ops")
+    ),
+
+    index("idx_postal_codes_country_granularity").using(
+      "btree",
+
+      table.country.asc().nullsLast().op("text_ops"),
+
+      table.granularity.asc().nullsLast().op("text_ops")
+    ),
+
+    unique("postal_codes_country_granularity_code_unique").on(
+      table.country,
+
+      table.granularity,
+
+      table.code
+    ),
   ]
 );
 
@@ -204,6 +232,8 @@ export const states = pgTable(
     name: varchar({ length: 255 }).notNull(),
 
     code: varchar({ length: 10 }).notNull(),
+
+    country: varchar({ length: 2 }).notNull().default("DE"),
 
     geometry: multiPolygon("geometry").notNull(),
 
@@ -241,7 +271,13 @@ export const states = pgTable(
       table.name.asc().nullsLast().op("text_ops")
     ),
 
-    unique("states_code_unique").on(table.code),
+    index("idx_states_country").using(
+      "btree",
+
+      table.country.asc().nullsLast().op("text_ops")
+    ),
+
+    unique("states_country_code_unique").on(table.country, table.code),
   ]
 );
 
@@ -258,6 +294,8 @@ export const areas = pgTable(
     description: text(),
 
     granularity: varchar({ length: 20 }).notNull().default("5digit"),
+
+    country: varchar({ length: 2 }).notNull().default("DE"),
 
     isArchived: varchar("is_archived", { length: 5 })
       .notNull()
@@ -300,6 +338,12 @@ export const areas = pgTable(
       "btree",
 
       table.currentVersionNumber.asc().nullsLast().op("int4_ops")
+    ),
+
+    index("idx_areas_country").using(
+      "btree",
+
+      table.country.asc().nullsLast().op("text_ops")
     ),
   ]
 );
@@ -427,6 +471,8 @@ export const areaLayerPostalCodes = pgTable(
 
     postalCode: varchar("postal_code", { length: 10 }).notNull(),
 
+    postalCodeId: integer("postal_code_id"),
+
     createdAt: timestamp("created_at", { mode: "string" })
       .defaultNow()
 
@@ -451,6 +497,14 @@ export const areaLayerPostalCodes = pgTable(
 
       table.postalCode
     ),
+
+    foreignKey({
+      columns: [table.postalCodeId],
+
+      foreignColumns: [postalCodes.id],
+
+      name: "fk_area_layer_postal_codes_postal_code_id",
+    }).onDelete("set null"),
   ]
 );
 

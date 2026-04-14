@@ -7,6 +7,7 @@ import {
   areaLayerPostalCodes,
   areaChanges,
   areaUndoStacks,
+  postalCodes,
 } from "./schema";
 
 export const areasRelations = relations(areas, ({ many, one }) => ({
@@ -56,6 +57,10 @@ export const areaLayerPostalCodesRelations = relations(
     layer: one(areaLayers, {
       fields: [areaLayerPostalCodes.layerId],
       references: [areaLayers.id],
+    }),
+    postalCode: one(postalCodes, {
+      fields: [areaLayerPostalCodes.postalCodeId],
+      references: [postalCodes.id],
     }),
   })
 );
