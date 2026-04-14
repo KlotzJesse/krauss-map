@@ -21,6 +21,7 @@ import {
   MapErrorBoundary,
 } from "@/components/ui/error-boundaries";
 import { DrawingToolsSkeleton } from "@/components/ui/loading-skeletons";
+import { COUNTRY_CONFIGS, DEFAULT_COUNTRY } from "@/lib/config/countries";
 import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
 import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
 import {
@@ -143,6 +144,7 @@ const MapInner = memo(function MapInner({
   data,
   layerId,
   granularity,
+  country,
   onGranularityChange,
   layers,
   activeLayerId,
@@ -195,7 +197,7 @@ const MapInner = memo(function MapInner({
   const { setActiveLayer, isLayerPending } = useActiveLayerState();
 
   // States data fetched client-side to avoid 246KB RSC payload bloat
-  const statesData = useStatesData();
+  const statesData = useStatesData(country);
 
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });
@@ -348,8 +350,9 @@ MapInner.displayName = "MapInner";
 const BaseMapComponent = ({
   data,
   layerId,
-  center = [10.4515, 51.1657],
-  zoom = 5,
+  center,
+  zoom,
+  country = DEFAULT_COUNTRY,
   granularity,
   onGranularityChange,
   layers,
@@ -365,25 +368,28 @@ const BaseMapComponent = ({
   changes,
   initialUndoRedoStatus,
 }: BaseMapProps) => {
+  const countryConfig = COUNTRY_CONFIGS[country];
+  const effectiveCenter = center ?? countryConfig.center;
+  const effectiveZoom = zoom ?? countryConfig.zoom;
   // Controlled view state for URL sync (narrow: only setter, no view subscription)
   const setMapCenterZoom = useSetMapCenterZoom();
   const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [viewState, setViewState] = useState({
-    longitude: center[0],
-    latitude: center[1],
-    zoom,
+    longitude: effectiveCenter[0],
+    latitude: effectiveCenter[1],
+    zoom: effectiveZoom,
   });
 
   // Sync from URL changes (back/forward, saved views)
   useEffect(() => {
     setViewState((prev) => ({
       ...prev,
-      longitude: center[0],
-      latitude: center[1],
-      zoom,
+      longitude: effectiveCenter[0],
+      latitude: effectiveCenter[1],
+      zoom: effectiveZoom,
     }));
-  }, [center, zoom]);
+  }, [effectiveCenter, effectiveZoom]);
 
   // Handle map movement with debounced URL sync
   const handleMove = useCallback(
@@ -436,6 +442,7 @@ const BaseMapComponent = ({
             <MapInner
               data={data}
               layerId={layerId}
+              country={country}
               granularity={granularity}
               onGranularityChange={onGranularityChange}
               layers={layers}

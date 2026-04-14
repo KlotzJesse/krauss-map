@@ -3,6 +3,7 @@ import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { memo } from "react";
 
 import { BaseMap } from "@/components/shared/base-map";
+import type { CountryCode } from "@/lib/config/countries";
 import type {
   ChangeSummary,
   VersionSummary,
@@ -18,6 +19,7 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 interface PostalCodesMapProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
   granularity?: string;
+  country?: CountryCode;
   onGranularityChange?: (granularity: string) => void;
   layers?: Layer[];
   activeLayerId?: number | null;
@@ -44,6 +46,7 @@ interface PostalCodesMapProps {
 export const PostalCodesMap = memo(function PostalCodesMap({
   data,
   granularity,
+  country,
   onGranularityChange,
   layers = EMPTY_ARRAY,
   activeLayerId = null,
@@ -66,6 +69,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
       layerId="postal-codes"
       center={center}
       zoom={zoom}
+      country={country}
       granularity={granularity}
       onGranularityChange={onGranularityChange}
       layers={layers}

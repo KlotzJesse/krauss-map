@@ -7,6 +7,8 @@ import type {
 } from "geojson";
 import { cacheTag, cacheLife } from "next/cache";
 
+import type { CountryCode } from "@/lib/config/countries";
+import { DEFAULT_COUNTRY } from "@/lib/config/countries";
 import { db } from "@/lib/db";
 
 // Define the type for a postal code DB row
@@ -21,16 +23,20 @@ interface PostalCodeRow {
   updated_at?: string;
 }
 
-// Fetch all postal codes for a given granularity from the Neon database as GeoJSON
+// Fetch all postal codes for a given granularity and country from the database as GeoJSON
 export async function getPostalCodesDataForGranularity(
-  granularity: string
+  granularity: string,
+  country: CountryCode = DEFAULT_COUNTRY
 ): Promise<FeatureCollection<Polygon | MultiPolygon>> {
   "use cache";
   cacheLife("hours");
-  cacheTag("postal-codes-geodata", `postal-codes-geodata-${granularity}`);
+  cacheTag(
+    "postal-codes-geodata",
+    `postal-codes-geodata-${country}-${granularity}`
+  );
   try {
     const { rows } = await db.execute(
-      sql`SELECT id, code, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity}`
+      sql`SELECT id, code, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
     );
     const features = rows.map((row) => {
       const typedRow = row as unknown as PostalCodeRow;

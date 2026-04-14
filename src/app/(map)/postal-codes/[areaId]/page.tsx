@@ -7,7 +7,13 @@ import { SiteHeader } from "@/components/site-header";
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { VersionIndicatorSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
-import { getAreaGranularity, getVersion } from "@/lib/db/data-functions";
+import type { CountryCode } from "@/lib/config/countries";
+import { DEFAULT_COUNTRY, isValidCountryCode } from "@/lib/config/countries";
+import {
+  getAreaGranularity,
+  getAreaCountry,
+  getVersion,
+} from "@/lib/db/data-functions";
 
 const VersionIndicator = dynamic(() =>
   import("@/components/shared/version-indicator").then((m) => ({
@@ -20,26 +26,34 @@ interface PostalCodesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/** Resolve granularity from area or version snapshot — parallel fetch both. */
-async function resolveGranularity(
+/** Resolve granularity and country from area or version snapshot — parallel fetch. */
+async function resolveAreaMeta(
   areaId: number,
   versionId: number | null
-): Promise<string> {
+): Promise<{ granularity: string; country: CountryCode }> {
   const isValidVersion =
     versionId !== null && versionId !== undefined && versionId > 0;
 
-  // Always prefetch area granularity (lightweight — no joins).
-  // Fire version fetch in parallel when applicable.
-  const [granularity, version] = await Promise.all([
+  const [granularity, country, version] = await Promise.all([
     getAreaGranularity(areaId),
+    getAreaCountry(areaId),
     isValidVersion ? getVersion(areaId, versionId) : Promise.resolve(null),
   ]);
 
+  const resolvedCountry: CountryCode =
+    country && isValidCountryCode(country) ? country : DEFAULT_COUNTRY;
+
   if (isValidVersion && version?.snapshot) {
     const snap = version.snapshot as { granularity?: string };
-    return snap.granularity ?? "1digit";
+    return {
+      granularity: snap.granularity ?? "1digit",
+      country: resolvedCountry,
+    };
   }
-  return granularity ?? "1digit";
+  return {
+    granularity: granularity ?? "1digit",
+    country: resolvedCountry,
+  };
 }
 
 export async function generateMetadata({
@@ -59,9 +73,10 @@ export async function generateMetadata({
         ? search.versionId[0]
         : search.versionId;
       const versionId = versionIdRaw ? parseInt(versionIdRaw, 10) : null;
-      granularity = await resolveGranularity(areaId, versionId);
+      const meta = await resolveAreaMeta(areaId, versionId);
+      granularity = meta.granularity;
     } catch (error) {
-      console.error("Failed to fetch granularity for metadata:", error);
+      console.error("Failed to fetch area metadata:", error);
     }
   }
 
@@ -102,11 +117,14 @@ export default async function PostalCodesPage({
     );
   }
 
-  let granularity: string = "1digit";
+  let granularity = "1digit";
+  let country: CountryCode = DEFAULT_COUNTRY;
   try {
-    granularity = await resolveGranularity(areaId, versionId);
+    const meta = await resolveAreaMeta(areaId, versionId);
+    granularity = meta.granularity;
+    country = meta.country;
   } catch (error) {
-    console.error("Failed to fetch granularity:", error);
+    console.error("Failed to fetch area metadata:", error);
   }
 
   // Geodata is now fetched client-side via API routes to avoid
@@ -124,6 +142,7 @@ export default async function PostalCodesPage({
           <Suspense fallback={<PostalCodesViewSkeleton />}>
             <ServerPostalCodesView
               defaultGranularity={granularity}
+              country={country}
               areaId={areaId}
               versionId={versionId!}
             />

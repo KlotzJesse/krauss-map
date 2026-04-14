@@ -2,6 +2,8 @@ import { Suspense } from "react";
 
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
+import type { CountryCode } from "@/lib/config/countries";
+import { DEFAULT_COUNTRY } from "@/lib/config/countries";
 import {
   getAreaName,
   getLayers,
@@ -14,14 +16,14 @@ import { PostalCodesViewClientWithLayers } from "./postal-codes-view-client-laye
 
 interface ServerPostalCodesViewProps {
   defaultGranularity: string;
-
+  country?: CountryCode;
   areaId: number;
-
   versionId: number;
 }
 
 export default async function ServerPostalCodesView({
   defaultGranularity,
+  country = DEFAULT_COUNTRY,
   areaId,
   versionId,
 }: ServerPostalCodesViewProps) {
@@ -45,6 +47,7 @@ export default async function ServerPostalCodesView({
       <Suspense fallback={<PostalCodesViewSkeleton />}>
         <PostalCodesViewClientWithLayers
           defaultGranularity={defaultGranularity}
+          country={country}
           areaId={areaId}
           areaNamePromise={areaNamePromise}
           layersPromise={layersPromise}

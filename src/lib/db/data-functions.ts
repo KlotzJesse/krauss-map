@@ -25,6 +25,7 @@ export async function getAreas() {
         granularity: true,
         isArchived: true,
         updatedAt: true,
+        country: true,
       },
       orderBy: (areas, { desc }) => [desc(areas.updatedAt)],
     });
@@ -52,6 +53,23 @@ export async function getAreaGranularity(id: number): Promise<string | null> {
     return row?.granularity ?? null;
   } catch (error) {
     console.error("Error fetching area granularity:", error);
+    return null;
+  }
+}
+
+/** Lightweight fetch — only reads the country column. */
+export async function getAreaCountry(id: number): Promise<string | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("areas", `area-${id}`);
+  try {
+    const row = await db.query.areas.findFirst({
+      where: eq(areas.id, id),
+      columns: { country: true },
+    });
+    return row?.country ?? null;
+  } catch (error) {
+    console.error("Error fetching area country:", error);
     return null;
   }
 }

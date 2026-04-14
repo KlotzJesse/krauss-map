@@ -1,6 +1,10 @@
 /**
- * Granularity management utilities for postal code operations
+ * Granularity management utilities for postal code operations.
+ * Country-aware: use getGranularityOptionsForCountry() for country-specific options.
  */
+
+import type { CountryCode } from "@/lib/config/countries";
+import { getCountryConfig } from "@/lib/config/countries";
 
 export interface GranularityOption {
   value: string;
@@ -8,19 +12,37 @@ export interface GranularityOption {
   level: number;
 }
 
-export const GRANULARITY_OPTIONS: GranularityOption[] = [
+/** All possible granularity options across DACH (superset). */
+export const ALL_GRANULARITY_OPTIONS: GranularityOption[] = [
   { value: "1digit", label: "1-stellig", level: 1 },
   { value: "2digit", label: "2-stellig", level: 2 },
   { value: "3digit", label: "3-stellig", level: 3 },
+  { value: "4digit", label: "4-stellig", level: 4 },
   { value: "5digit", label: "5-stellig", level: 5 },
 ];
+
+/** DE-only options (backwards compat — prefer getGranularityOptionsForCountry). */
+export const GRANULARITY_OPTIONS: GranularityOption[] =
+  ALL_GRANULARITY_OPTIONS.filter((o) => [1, 2, 3, 5].includes(o.level));
+
+/**
+ * Get granularity options filtered for a specific country.
+ */
+export function getGranularityOptionsForCountry(
+  country: CountryCode
+): GranularityOption[] {
+  const config = getCountryConfig(country);
+  return ALL_GRANULARITY_OPTIONS.filter((o) =>
+    config.granularityLevels.includes(o.level)
+  );
+}
 
 /**
  * Get granularity level (numeric value for comparison)
  */
 export function getGranularityLevel(granularity: string): number {
   return (
-    GRANULARITY_OPTIONS.find((opt) => opt.value === granularity)?.level || 1
+    ALL_GRANULARITY_OPTIONS.find((opt) => opt.value === granularity)?.level || 1
   );
 }
 
@@ -29,7 +51,7 @@ export function getGranularityLevel(granularity: string): number {
  */
 export function getGranularityLabel(granularity: string): string {
   return (
-    GRANULARITY_OPTIONS.find((opt) => opt.value === granularity)?.label ||
+    ALL_GRANULARITY_OPTIONS.find((opt) => opt.value === granularity)?.label ||
     granularity
   );
 }

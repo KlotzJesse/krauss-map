@@ -62,6 +62,8 @@ export async function createAreaAction(data: {
 
   granularity?: string;
 
+  country?: string;
+
   createdBy?: string;
 }) {
   let redirectPath: string | null = null;
@@ -77,6 +79,8 @@ export async function createAreaAction(data: {
         description: data.description,
 
         granularity: data.granularity || "5digit",
+
+        country: data.country || "DE",
       })
 
       .returning();
@@ -261,6 +265,7 @@ export async function duplicateAreaAction(sourceAreaId: number) {
           name: `${sourceArea.name} (Kopie)`,
           description: sourceArea.description,
           granularity: sourceArea.granularity,
+          country: sourceArea.country,
         })
         .returning();
 
@@ -1158,7 +1163,7 @@ export async function geocodeSearchAction(data: {
 
         limit: limit.toString(),
 
-        countrycodes: "de",
+        countrycodes: "de,at,ch",
 
         "accept-language": "de,en",
       }
@@ -1277,7 +1282,7 @@ export async function searchPostalCodesByBoundaryAction(data: {
 
         limit: "5",
 
-        countrycodes: "de",
+        countrycodes: "de,at,ch",
 
         "accept-language": "de,en",
       }

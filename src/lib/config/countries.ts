@@ -139,10 +139,7 @@ export function formatPostalCodeForCountry(
 /**
  * Format with country prefix (e.g., "D-01067", "A-1010", "CH-8001").
  */
-export function formatWithPrefix(
-  code: string,
-  country: CountryCode
-): string {
+export function formatWithPrefix(code: string, country: CountryCode): string {
   const config = getCountryConfig(country);
   const formatted = formatPostalCodeForCountry(code, country);
   return `${config.prefix}-${formatted}`;
@@ -159,9 +156,7 @@ export function detectCountryFromCode(input: string): {
   const trimmed = input.trim();
 
   // Try to match country prefix patterns: D-xxxxx, A-xxxx, CH-xxxx, AT-xxxx
-  const prefixMatch = trimmed.match(
-    /^(D|DE|A|AT|CH)-?\s*(\d+)$/i
-  );
+  const prefixMatch = trimmed.match(/^(D|DE|A|AT|CH)-?\s*(\d+)$/i);
   if (prefixMatch) {
     const prefix = prefixMatch[1].toUpperCase();
     const code = prefixMatch[2];

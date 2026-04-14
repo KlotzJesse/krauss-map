@@ -1,27 +1,32 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { useEffect, useRef, useState } from "react";
 
+import type { CountryCode } from "@/lib/config/countries";
+
 type StatesData = FeatureCollection<Polygon | MultiPolygon>;
 
-let cachedStatesData: StatesData | null = null;
+const statesCache = new Map<string, StatesData>();
 
-export function useStatesData(): StatesData | null {
-  const [data, setData] = useState<StatesData | null>(cachedStatesData);
+export function useStatesData(country: CountryCode = "DE"): StatesData | null {
+  const [data, setData] = useState<StatesData | null>(
+    statesCache.get(country) ?? null
+  );
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (cachedStatesData) {
-      setData(cachedStatesData);
+    const cached = statesCache.get(country);
+    if (cached) {
+      setData(cached);
       return;
     }
 
     const controller = new AbortController();
     abortRef.current = controller;
 
-    fetch("/api/states", { signal: controller.signal })
+    fetch(`/api/states?country=${country}`, { signal: controller.signal })
       .then((res) => res.json())
       .then((json: StatesData) => {
-        cachedStatesData = json;
+        statesCache.set(country, json);
         setData(json);
       })
       .catch((error: unknown) => {
@@ -33,7 +38,7 @@ export function useStatesData(): StatesData | null {
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [country]);
 
   return data;
 }

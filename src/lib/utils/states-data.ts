@@ -7,6 +7,8 @@ import type {
 } from "geojson";
 import { cacheTag, cacheLife } from "next/cache";
 
+import type { CountryCode } from "@/lib/config/countries";
+import { DEFAULT_COUNTRY } from "@/lib/config/countries";
 import { db } from "@/lib/db";
 
 // Define the type for a state DB row
@@ -21,16 +23,15 @@ interface StateRow {
   updated_at?: string;
 }
 
-export async function getStatesData(): Promise<
-  FeatureCollection<Polygon | MultiPolygon>
-> {
+export async function getStatesData(
+  country: CountryCode = DEFAULT_COUNTRY
+): Promise<FeatureCollection<Polygon | MultiPolygon>> {
   "use cache";
   cacheLife("days");
-  cacheTag("states-geodata");
+  cacheTag("states-geodata", `states-geodata-${country}`);
   try {
-    // Select all columns, but geometry as GeoJSON
     const { rows } = await db.execute(
-      sql`SELECT id, name, code, ST_AsGeoJSON(ST_Simplify(geometry, 0.005)) as geometry, properties, bbox, "created_at", "updated_at" FROM states`
+      sql`SELECT id, name, code, ST_AsGeoJSON(ST_Simplify(geometry, 0.005)) as geometry, properties, bbox, "created_at", "updated_at" FROM states WHERE country = ${country}`
     );
     const features = rows.map((row) => {
       const typedRow = row as unknown as StateRow;
@@ -59,11 +60,11 @@ export async function getStatesData(): Promise<
   }
 }
 
-export async function getStatesDataServer(): Promise<FeatureCollection<
-  Polygon | MultiPolygon
-> | null> {
+export async function getStatesDataServer(
+  country: CountryCode = DEFAULT_COUNTRY
+): Promise<FeatureCollection<Polygon | MultiPolygon> | null> {
   try {
-    return await getStatesData();
+    return await getStatesData(country);
   } catch (error) {
     console.error("Error in getStatesDataServer:", error);
     return null;

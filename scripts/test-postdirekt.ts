@@ -5,16 +5,22 @@ let total = 0;
 const allCodes = new Set<string>();
 
 // Test all 100 two-digit prefixes
-const prefixes = Array.from({ length: 100 }, (_, i) => i.toString().padStart(2, "0"));
+const prefixes = Array.from({ length: 100 }, (_, i) =>
+  i.toString().padStart(2, "0")
+);
 
 // Process in batches of 10 to be nice to the server
 for (let batch = 0; batch < 10; batch++) {
   const batchPrefixes = prefixes.slice(batch * 10, (batch + 1) * 10);
   const promises = batchPrefixes.map(async (prefix) => {
     try {
-      const resp = await fetch(`https://postdirekt.de/plzsuche-service/geocodes?postal_code=${prefix}`);
+      const resp = await fetch(
+        `https://postdirekt.de/plzsuche-service/geocodes?postal_code=${prefix}`
+      );
       if (!resp.ok) return { prefix, count: 0 };
-      const data = await resp.json() as { features?: { properties?: { code?: string } }[] };
+      const data = (await resp.json()) as {
+        features?: { properties?: { code?: string } }[];
+      };
       const features = data.features ?? [];
       for (const f of features) {
         const code = f.properties?.code;
@@ -25,7 +31,7 @@ for (let batch = 0; batch < 10; batch++) {
       return { prefix, count: 0 };
     }
   });
-  
+
   const batchResults = await Promise.all(promises);
   for (const r of batchResults) {
     if (r.count > 0) {
@@ -33,7 +39,9 @@ for (let batch = 0; batch < 10; batch++) {
       total += r.count;
     }
   }
-  console.log(`Batch ${batch + 1}/10: ${batchResults.reduce((s, r) => s + r.count, 0)} features`);
+  console.log(
+    `Batch ${batch + 1}/10: ${batchResults.reduce((s, r) => s + r.count, 0)} features`
+  );
 }
 
 console.log(`\nTotal features across all prefixes: ${total}`);

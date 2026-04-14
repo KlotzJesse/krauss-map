@@ -1,5 +1,11 @@
 import type { Content, PageSize } from "pdfmake/interfaces";
 
+import type { CountryCode } from "@/lib/config/countries";
+import {
+  formatWithPrefix,
+  formatPostalCodeForCountry,
+  getCountryConfig,
+} from "@/lib/config/countries";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
 interface LayerExportData {
@@ -9,14 +15,13 @@ interface LayerExportData {
 }
 
 /**
- * Formats a postal code to ensure it has leading zeros (5 digits).
- * Examples: "1900" -> "01900", "01900" -> "01900", "12345" -> "12345"
+ * Formats a postal code with leading zeros for the given country.
+ * Falls back to 5-digit DE format if no country specified.
  */
-function formatPostalCode(code: string): string {
-  // Remove D- prefix if present
-  const cleanCode = code.startsWith("D-") ? code.slice(2) : code;
-  // Pad with leading zeros to ensure 5 digits
-  return cleanCode.padStart(5, "0");
+function formatPostalCode(code: string, country: CountryCode = "DE"): string {
+  // Strip any existing prefix
+  const cleanCode = code.replace(/^(D|DE|A|AT|CH)-?\s*/i, "");
+  return formatPostalCodeForCountry(cleanCode, country);
 }
 
 /**
@@ -30,7 +35,12 @@ function formatPostalCode(code: string): string {
  * @param layers Array of layer data with postal codes
  * @param areaName Optional area/project name to include in filename
  */
-export function exportLayersPDF(layers: LayerExportData[], areaName?: string) {
+export function exportLayersPDF(
+  layers: LayerExportData[],
+  areaName?: string,
+  country: CountryCode = "DE"
+) {
+  const config = getCountryConfig(country);
   const exportPromise = async () => {
     // Use pdfmake for PDF generation without manual positioning
     const pdfMake = await import("pdfmake/build/pdfmake");
@@ -61,7 +71,7 @@ export function exportLayersPDF(layers: LayerExportData[], areaName?: string) {
 
       // Layer postal codes
       const formattedCodes = postalCodes
-        .map((code) => `D-${formatPostalCode(code)}`)
+        .map((code) => formatWithPrefix(code, country))
         .join(", ");
       content.push({
         text: formattedCodes,
@@ -129,8 +139,11 @@ export function exportLayersPDF(layers: LayerExportData[], areaName?: string) {
  */
 export async function exportLayersXLSX(
   layers: LayerExportData[],
-  areaName?: string
+  areaName?: string,
+  country: CountryCode = "DE"
 ) {
+  const config = getCountryConfig(country);
+  const prefix = config.prefix;
   const exportPromise = async () => {
     const XLSX = await import("xlsx");
 
@@ -141,16 +154,20 @@ export async function exportLayersXLSX(
     layers.forEach(({ layerName, postalCodes }) => {
       // Transform postal codes into the 3 required formats
       const sheetData = postalCodes.map((plz) => {
-        const plzFormatted = formatPostalCode(plz);
-        const plzWithD = `D-${plzFormatted}`;
-        const plzWithDAndComma = `${plzWithD},`;
+        const plzFormatted = formatPostalCode(plz, country);
+        const plzWithPrefix = `${prefix}-${plzFormatted}`;
+        const plzWithPrefixAndComma = `${plzWithPrefix},`;
 
-        return [plzFormatted, plzWithD, plzWithDAndComma];
+        return [plzFormatted, plzWithPrefix, plzWithPrefixAndComma];
       });
 
       // Add header row
       const wsData = [
-        ["PLZ ohne D-", "PLZ mit D-", "PLZ mit D- und Komma"],
+        [
+          `PLZ ohne ${prefix}-`,
+          `PLZ mit ${prefix}-`,
+          `PLZ mit ${prefix}- und Komma`,
+        ],
         ...sheetData,
       ];
 
@@ -201,17 +218,15 @@ export async function exportLayersXLSX(
  * Ensures postal codes are formatted with leading zeros.
  * @param codes Array of postal codes (strings)
  */
-export async function copyPostalCodesCSV(codes: string[]) {
+export async function copyPostalCodesCSV(
+  codes: string[],
+  country: CountryCode = "DE"
+) {
   const copyPromise = async () => {
-    // Format codes to ensure leading zeros are preserved
     const formattedCodes = codes.map((code) => {
-      // If code already has D- prefix, keep it and format the postal code part
-      if (code.startsWith("D-")) {
-        const postalPart = code.slice(2);
-        return `D-${formatPostalCode(postalPart)}`;
-      }
-      // Otherwise just format the code
-      return formatPostalCode(code);
+      // If code already has a prefix, strip it and reformat
+      const cleanCode = code.replace(/^(D|DE|A|AT|CH)-?\s*/i, "");
+      return formatPostalCode(cleanCode, country);
     });
     const csv = formattedCodes.join(",");
     await navigator.clipboard.writeText(csv);

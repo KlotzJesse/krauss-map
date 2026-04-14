@@ -1,6 +1,7 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
+import type { CountryCode } from "@/lib/config/countries";
 import type {
   VersionSummary,
   ChangeSummary,
@@ -16,6 +17,7 @@ export interface BaseMapProps {
   layerId: string;
   center?: [number, number];
   zoom?: number;
+  country?: CountryCode;
   granularity?: string;
   onGranularityChange?: (granularity: string) => void;
   layers: Layer[];

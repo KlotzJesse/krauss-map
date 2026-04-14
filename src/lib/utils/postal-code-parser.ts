@@ -1,5 +1,7 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
+import { detectCountryFromCode } from "@/lib/config/countries";
+
 interface ParsedPostalCode {
   original: string;
   normalized: string;
@@ -15,22 +17,19 @@ export interface PostalCodeMatch {
 }
 
 /**
- * Normalizes a postal code by removing country prefixes and formatting
+ * Normalizes a postal code by removing country prefixes and formatting.
+ * Supports DE (D-), AT (A-), CH (CH-) prefixes.
  */
 export function normalizePostalCode(input: string): string {
-  return input
-    .trim()
-    .replace(/^D-?/i, "") // Remove German country prefix
-    .replace(/\s+/g, "") // Remove spaces
-    .toUpperCase();
+  const { code } = detectCountryFromCode(input);
+  return code.toUpperCase();
 }
 
 /**
- * Validates if a string could be a German postal code
+ * Validates if a string could be a DACH postal code (1-5 digits).
  */
-function isValidGermanPostalCode(code: string): boolean {
+function isValidPostalCode(code: string): boolean {
   const normalized = normalizePostalCode(code);
-  // German postal codes are 1-5 digits (for different granularities)
   return /^\d{1,5}$/.test(normalized);
 }
 
@@ -52,15 +51,15 @@ export function parsePostalCodeInput(input: string): ParsedPostalCode[] {
 
   for (const original of codes) {
     const normalized = normalizePostalCode(original);
-    const countryMatch = original.match(/^([A-Z]{1,2})-?/i);
+    const { country } = detectCountryFromCode(original);
 
     results.push({
       original,
       normalized,
-      countryCode: countryMatch?.[1]?.toUpperCase(),
-      isValid: isValidGermanPostalCode(original),
-      error: !isValidGermanPostalCode(original)
-        ? `"${original}" ist keine gültige deutsche PLZ`
+      countryCode: country ?? undefined,
+      isValid: isValidPostalCode(original),
+      error: !isValidPostalCode(original)
+        ? `"${original}" ist keine gültige PLZ`
         : undefined,
     });
   }

@@ -1,14 +1,18 @@
 import { useQueryState } from "nuqs";
 import { useMemo, useRef, useTransition } from "react";
 
+import { COUNTRY_CONFIGS, DEFAULT_COUNTRY } from "../config/countries";
 import { useStableCallback } from "../hooks/use-stable-callback";
+
+const DEFAULT_CENTER = COUNTRY_CONFIGS[DEFAULT_COUNTRY].center;
+const DEFAULT_ZOOM = COUNTRY_CONFIGS[DEFAULT_COUNTRY].zoom;
 
 // Helper for atomic map view state
 export function useMapView() {
   const [mapView, setMapViewRaw] = useQueryState("mapView");
   const defaultView = {
-    center: [10.4515, 51.1657] as [number, number],
-    zoom: 5,
+    center: DEFAULT_CENTER as [number, number],
+    zoom: DEFAULT_ZOOM,
   };
   const parsed = mapView ? JSON.parse(mapView) : defaultView;
 
