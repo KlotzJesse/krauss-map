@@ -899,9 +899,12 @@ export async function geoprocessAction(data: {
   granularity: string;
 
   selectedCodes: string[];
+
+  country?: string;
 }): ServerActionResponse<{ resultCodes: string[] }> {
   try {
-    const { mode, granularity, selectedCodes } = data;
+    const { mode, granularity, selectedCodes, country } = data;
+    const countryFilter = country ? sql` AND country = ${country}` : sql``;
 
     if (!mode || !granularity || !Array.isArray(selectedCodes)) {
       return { success: false, error: "Missing required parameters" };
@@ -918,17 +921,17 @@ export async function geoprocessAction(data: {
 
       if (selectedCodes.length > 0) {
         const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity} AND code NOT IN (${sql.raw(
+          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter} AND code NOT IN (${sql.raw(
             selectedCodes.map(String).join(",")
-          )}) AND ST_Touches(geometry, (SELECT ST_Union(geometry) AS geom FROM postal_codes WHERE code IN (${sql.raw(
+          )}) AND ST_Touches(geometry, (SELECT ST_Union(geometry) AS geom FROM postal_codes WHERE granularity = ${granularity}${countryFilter} AND code IN (${sql.raw(
             selectedCodes.map(String).join(",")
-          )}))`
+          )})))`
         );
 
         expandRows = rows;
       } else {
         const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}`
+          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
         );
 
         expandRows = rows;
@@ -953,12 +956,12 @@ export async function geoprocessAction(data: {
           sql`WITH hull AS (
             SELECT ST_ConvexHull(ST_Collect(geometry)) AS geom
             FROM postal_codes
-            WHERE granularity = ${granularity} AND code IN (${sql.raw(
+            WHERE granularity = ${granularity}${countryFilter} AND code IN (${sql.raw(
               codeList
             )})
             )
             SELECT code FROM postal_codes, hull
-            WHERE granularity = ${granularity}
+            WHERE granularity = ${granularity}${countryFilter}
               AND code NOT IN (${sql.raw(codeList)})
               AND ST_Within(geometry, hull.geom)`
         );
@@ -974,17 +977,17 @@ export async function geoprocessAction(data: {
 
       if (selectedCodes.length > 0) {
         const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity} AND code NOT IN (${sql.raw(
+          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter} AND code NOT IN (${sql.raw(
             selectedCodes.map(String).join(",")
-          )}) AND ST_Intersects(geometry, (SELECT ST_Union(geometry) AS geom FROM postal_codes WHERE code IN (${sql.raw(
+          )}) AND ST_Intersects(geometry, (SELECT ST_Union(geometry) AS geom FROM postal_codes WHERE granularity = ${granularity}${countryFilter} AND code IN (${sql.raw(
             selectedCodes.map(String).join(",")
-          )}))`
+          )})))`
         );
 
         gapRows = rows;
       } else {
         const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}`
+          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
         );
 
         gapRows = rows;
