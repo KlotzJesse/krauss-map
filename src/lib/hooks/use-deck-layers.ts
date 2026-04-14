@@ -17,8 +17,6 @@ import {
   hexToRgba,
 } from "@/lib/utils/deck-gl-utils";
 
-import { LABEL_SENTINEL_LAYER_ID } from "./use-map-labels";
-
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
@@ -153,6 +151,8 @@ interface UseDeckLayersProps {
   featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
   isCursorMode: boolean;
   mapCanvasRef: RefObject<HTMLCanvasElement | null>;
+  /** ID of basemap symbol layer to insert deck.gl layers before (for z-ordering). */
+  beforeId?: string;
 }
 
 /**
@@ -168,6 +168,7 @@ export function useDeckLayers({
   featureIndex,
   isCursorMode,
   mapCanvasRef,
+  beforeId,
 }: UseDeckLayersProps) {
   // Hover state: store the currently hovered feature for the outline layer
   const [hoveredFeature, setHoveredFeature] = useState<Feature<
@@ -288,7 +289,7 @@ export function useDeckLayers({
         ? new GeoJsonLayer({
             id: "state-boundaries",
             data: statesData,
-            beforeId: LABEL_SENTINEL_LAYER_ID,
+            beforeId,
             filled: true,
             stroked: true,
             getFillColor: (f) => {
@@ -310,7 +311,7 @@ export function useDeckLayers({
             },
           })
         : null,
-    [statesData]
+    [statesData, beforeId]
   );
 
   // Build all deck.gl layers
@@ -326,7 +327,7 @@ export function useDeckLayers({
       new GeoJsonLayer({
         id: "postal-codes",
         data,
-        beforeId: LABEL_SENTINEL_LAYER_ID,
+        beforeId,
         filled: true,
         stroked: true,
         getFillColor: [98, 125, 152, 25],
@@ -346,7 +347,7 @@ export function useDeckLayers({
       new GeoJsonLayer({
         id: "area-layers-combined",
         data: areaFeaturesData,
-        beforeId: LABEL_SENTINEL_LAYER_ID,
+        beforeId,
         filled: true,
         stroked: true,
         getFillColor: (f) => {
@@ -382,7 +383,7 @@ export function useDeckLayers({
       new GeoJsonLayer({
         id: "preview-layer",
         data: previewData,
-        beforeId: LABEL_SENTINEL_LAYER_ID,
+        beforeId,
         filled: true,
         stroked: true,
         getFillColor: [37, 99, 235, 80],
@@ -398,7 +399,7 @@ export function useDeckLayers({
       new GeoJsonLayer({
         id: "hover-outline",
         data: hoverData,
-        beforeId: LABEL_SENTINEL_LAYER_ID,
+        beforeId,
         filled: false,
         stroked: true,
         getLineColor: [37, 99, 235, 255],
@@ -418,6 +419,7 @@ export function useDeckLayers({
     previewData,
     hoverData,
     isCursorMode,
+    beforeId,
   ]);
 
   return {

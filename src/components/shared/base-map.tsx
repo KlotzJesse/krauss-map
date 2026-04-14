@@ -23,7 +23,10 @@ import {
 import { DrawingToolsSkeleton } from "@/components/ui/loading-skeletons";
 import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
 import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
-import { useMapLabels } from "@/lib/hooks/use-map-labels";
+import {
+  getFirstSymbolLayerId,
+  useMapLabels,
+} from "@/lib/hooks/use-map-labels";
 import { useMapOptimizations } from "@/lib/hooks/use-map-optimizations";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useStatesData } from "@/lib/hooks/use-states-data";
@@ -209,6 +212,12 @@ const MapInner = memo(function MapInner({
     removePostalCodesFromLayer,
   });
 
+  // Resolve basemap symbol layer for deck.gl beforeId (survives style transitions)
+  const firstSymbolLayerId =
+    isMapLoaded && rawMapRef.current
+      ? getFirstSymbolLayerId(rawMapRef.current)
+      : undefined;
+
   // deck.gl layers (polygons, fills, hover, preview) — cursor managed via direct DOM ref
   const { deckLayers, onHover } = useDeckLayers({
     data,
@@ -219,6 +228,7 @@ const MapInner = memo(function MapInner({
     featureIndex: optimizations.featureIndex,
     isCursorMode: interactions.isCursorMode,
     mapCanvasRef,
+    beforeId: firstSymbolLayerId,
   });
 
   // MapLibre native labels (hybrid escape hatch)

@@ -23,32 +23,18 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 };
 
 /**
- * Sentinel layer ID used to separate deck.gl proxy layers from MapLibre label layers.
- * All deck.gl layers use `beforeId: LABEL_SENTINEL_LAYER_ID` to insert BELOW this layer,
- * and all label symbol layers are added ABOVE it.
- * This eliminates z-ordering races between deck.gl interleaved mode and MapLibre labels.
+ * Returns the ID of the first symbol layer in the basemap style.
+ * Used as `beforeId` for deck.gl layers to ensure proper z-ordering
+ * (polygons below labels). Basemap layers survive style transitions,
+ * eliminating timing issues that plagued the previous sentinel approach.
  */
-export const LABEL_SENTINEL_LAYER_ID = "deck-label-divider";
-
-/**
- * Ensures the sentinel layer exists in the map style.
- * Returns true if the sentinel exists (or was just created), false if the style
- * isn't ready for layer manipulation yet.
- */
-export function ensureLabelSentinel(map: MapLibreMap): boolean {
-  try {
-    if (map.getLayer(LABEL_SENTINEL_LAYER_ID)) {
-      return true;
-    }
-    map.addLayer({
-      id: LABEL_SENTINEL_LAYER_ID,
-      type: "background",
-      paint: { "background-opacity": 0 },
-    });
-    return true;
-  } catch {
-    return false;
+export function getFirstSymbolLayerId(map: MapLibreMap): string | undefined {
+  const style = map.getStyle();
+  if (!style?.layers) return undefined;
+  for (const layer of style.layers) {
+    if (layer.type === "symbol") return layer.id;
   }
+  return undefined;
 }
 
 // Module-level WeakMap cache for turfArea results
@@ -200,9 +186,8 @@ export function useMapLabels({
   }>({ fingerprint: "", cache: new Map() });
 
   // Label layer creation — runs once when map loads.
-  // The sentinel divider layer is created via ensureLabelSentinel() from Map's
-  // onStyleData callback (fires before deck.gl's handler). Label layers are
-  // added above it in the style stack.
+  // Label layers are added at the top of the style stack (above basemap symbols
+  // and deck.gl layers) to ensure they're always visible.
   useLayoutEffect(() => {
     if (!mapInstance || !isMapLoaded) {
       return;
@@ -215,9 +200,6 @@ export function useMapLabels({
     }
     const lp = labelPointsRef.current;
     const slp = statesLabelPointsRef.current;
-
-    // Ensure sentinel exists (safety net if onStyleData didn't fire yet)
-    ensureLabelSentinel(map);
 
     // Create label points source
     if (!map.getSource(ids.labelSourceId)) {
@@ -434,7 +416,6 @@ export function useMapLabels({
         `${ids.labelLayerId}-2`,
         `${ids.labelLayerId}-1`,
         ids.stateLabelLayerId,
-        LABEL_SENTINEL_LAYER_ID,
       ];
 
       for (const id of layerIds) {
