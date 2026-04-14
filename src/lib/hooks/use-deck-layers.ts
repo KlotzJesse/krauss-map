@@ -100,12 +100,14 @@ interface ResolvedStyle {
 }
 
 /**
- * Build a Map from postalCode → resolved visual style, merging all visible area layers.
- * The active layer gets stronger styling for emphasis.
+ * Build a Map from composite key (country:code) → resolved visual style.
+ * Keys match the featureIndex format from getFeatureCode().
+ * `country` is used to prefix raw DB postal codes (e.g. "01067" → "DE:01067").
  */
 function buildResolvedStyleMap(
   layers: Layer[] | undefined,
-  activeLayerId: number | null | undefined
+  activeLayerId: number | null | undefined,
+  country?: string
 ): { map: Map<string, ResolvedStyle>; version: string } {
   const result = new Map<string, ResolvedStyle>();
   if (!layers) {
@@ -131,10 +133,11 @@ function buildResolvedStyleMap(
 
     versionParts.push(`${layer.id}:${layer.color}:${opacity}:${isActive}`);
 
-    for (const code of postalCodes) {
+    for (const rawCode of postalCodes) {
+      const key = country ? `${country}:${rawCode}` : rawCode;
       // Last layer wins for overlap — active layer takes priority
-      if (!result.has(code) || isActive) {
-        result.set(code, { fillColor, lineColor, lineWidth });
+      if (!result.has(key) || isActive) {
+        result.set(key, { fillColor, lineColor, lineWidth });
       }
     }
   }
@@ -189,6 +192,8 @@ interface UseDeckLayersProps {
   featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
   isCursorMode: boolean;
   mapCanvasRef: RefObject<HTMLCanvasElement | null>;
+  /** Country code for the area — used to prefix raw postal codes for DACH matching. */
+  country?: string;
   /** ID of basemap symbol layer to insert deck.gl layers before (for z-ordering). */
   beforeId?: string;
 }
@@ -206,6 +211,7 @@ export function useDeckLayers({
   featureIndex,
   isCursorMode,
   mapCanvasRef,
+  country,
   beforeId,
 }: UseDeckLayersProps) {
   // Hover state: store the currently hovered feature for the outline layer
@@ -214,13 +220,13 @@ export function useDeckLayers({
   > | null>(null);
   const hoveredCodeRef = useRef<string | null>(null);
 
-  // Resolve per-postal-code styles from all area layers
+  // Resolve per-postal-code styles from all area layers (keyed by country:code)
   const { map: resolvedStyles, version: resolvedStylesVersion } = useMemo(
-    () => buildResolvedStyleMap(layers, activeLayerId),
-    [layers, activeLayerId]
+    () => buildResolvedStyleMap(layers, activeLayerId, country),
+    [layers, activeLayerId, country]
   );
 
-  // Stable set of codes across all visible layers — independent of activeLayerId.
+  // Stable set of composite keys (country:code) across all visible layers.
   // Switching active layer changes styling but NOT which codes are in the set,
   // so areaFeaturesData avoids unnecessary recomputation on layer switches.
   const resolvedCodeSet = useMemo(() => {
@@ -233,12 +239,12 @@ export function useDeckLayers({
         continue;
       }
       const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
-      for (const code of postalCodes) {
-        codes.add(code);
+      for (const rawCode of postalCodes) {
+        codes.add(country ? `${country}:${rawCode}` : rawCode);
       }
     }
     return codes;
-  }, [layers]);
+  }, [layers, country]);
 
   // Pre-filtered area features (only features in any visible area layer)
   const areaFeaturesData = useMemo(
@@ -246,14 +252,27 @@ export function useDeckLayers({
     [data, resolvedCodeSet, featureIndex]
   );
 
-  // Preview feature data
+  // Preview feature data — try composite key lookup (country:code) for DACH dedup
   const previewData = useMemo(() => {
     if (!previewPostalCode || !featureIndex) {
       return EMPTY_FEATURE_COLLECTION as FeatureCollection<
         Polygon | MultiPolygon
       >;
     }
-    const features = featureIndex.get(previewPostalCode);
+    // Try with area's country prefix first, then try all DACH prefixes
+    const prefixedKey = country
+      ? `${country}:${previewPostalCode}`
+      : previewPostalCode;
+    let features = featureIndex.get(prefixedKey);
+    if (!features) {
+      // Fallback: search all country prefixes for the code
+      for (const cc of ["DE", "AT", "CH"]) {
+        features = featureIndex.get(`${cc}:${previewPostalCode}`);
+        if (features) {
+          break;
+        }
+      }
+    }
     if (!features || features.length === 0) {
       return EMPTY_FEATURE_COLLECTION as FeatureCollection<
         Polygon | MultiPolygon
@@ -263,7 +282,7 @@ export function useDeckLayers({
       type: "FeatureCollection" as const,
       features,
     };
-  }, [previewPostalCode, featureIndex]);
+  }, [previewPostalCode, featureIndex, country]);
 
   // Hover outline data — single-feature FeatureCollection
   const hoverData = useMemo(

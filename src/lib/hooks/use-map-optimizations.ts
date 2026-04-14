@@ -6,6 +6,7 @@ import type {
 } from "geojson";
 import { useMemo } from "react";
 
+import { getFeatureCode } from "@/lib/utils/deck-gl-utils";
 import { makeLabelPoints } from "@/lib/utils/map-data";
 
 interface UseMapOptimizationsProps {
@@ -34,19 +35,18 @@ export function useMapOptimizations({
     [statesData]
   );
 
-  // Pre-built postal-code → feature index for O(k) label center lookups.
+  // Pre-built composite key (country:code) → feature index for O(k) lookups.
+  // Uses getFeatureCode which returns "DE:01067" / "AT:1010" for DACH dedup.
   const featureIndex = useMemo(() => {
     const index = new Map<string, Feature<Polygon | MultiPolygon>[]>();
     for (const feature of data.features) {
       if (!feature.geometry) {
         continue;
       }
-      const props = feature.properties ?? {};
-      const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
-      if (!code) {
+      const key = getFeatureCode(feature as Feature<Polygon | MultiPolygon>);
+      if (!key) {
         continue;
       }
-      const key = String(code);
       const existing = index.get(key);
       if (existing) {
         existing.push(feature as Feature<Polygon | MultiPolygon>);

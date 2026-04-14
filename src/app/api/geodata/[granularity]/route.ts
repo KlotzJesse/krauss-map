@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { type CountryCode, isValidCountryCode } from "@/lib/config/countries";
-import { getPostalCodesDataForGranularity } from "@/lib/utils/postal-codes-data";
+import {
+  getPostalCodesDataForGranularity,
+  getNativePostalCodesData,
+} from "@/lib/utils/postal-codes-data";
 
 const VALID_GRANULARITIES = new Set([
   "1digit",
@@ -9,6 +12,7 @@ const VALID_GRANULARITIES = new Set([
   "3digit",
   "4digit",
   "5digit",
+  "native",
 ]);
 
 export async function GET(
@@ -25,7 +29,11 @@ export async function GET(
     return NextResponse.json({ error: "Invalid granularity" }, { status: 400 });
   }
 
-  const data = await getPostalCodesDataForGranularity(granularity, country);
+  // "native" = each country at its full resolution (DE@5digit + AT@4digit + CH@4digit)
+  const data =
+    granularity === "native"
+      ? await getNativePostalCodesData()
+      : await getPostalCodesDataForGranularity(granularity, country);
 
   return NextResponse.json(data, {
     headers: {

@@ -1,8 +1,6 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { useEffect, useRef, useState } from "react";
 
-import type { CountryCode } from "@/lib/config/countries";
-
 const EMPTY_FC: FeatureCollection<Polygon | MultiPolygon> = {
   type: "FeatureCollection",
   features: [],
@@ -15,16 +13,14 @@ const geodataCache = new Map<
 
 /**
  * Client-side hook to fetch postal code geodata from the API route.
- * Unified DACH map: omit country to load all countries' data.
+ * Unified DACH map: loads all countries' data for the given granularity.
+ * Use "native" for full resolution (DE@5digit + AT@4digit + CH@4digit).
  */
-export function useGeodata(
-  granularity: string,
-  country?: CountryCode
-): {
+export function useGeodata(granularity: string): {
   data: FeatureCollection<Polygon | MultiPolygon>;
   isLoading: boolean;
 } {
-  const cacheKey = `postal-${country ?? "ALL"}-${granularity}`;
+  const cacheKey = `postal-${granularity}`;
   const [data, setData] = useState<FeatureCollection<Polygon | MultiPolygon>>(
     () => geodataCache.get(cacheKey) ?? EMPTY_FC
   );
@@ -44,9 +40,7 @@ export function useGeodata(
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const url = country
-      ? `/api/geodata/${granularity}?country=${country}`
-      : `/api/geodata/${granularity}`;
+    const url = `/api/geodata/${granularity}`;
 
     fetch(url, { signal: controller.signal })
       .then((res) => {
@@ -69,7 +63,7 @@ export function useGeodata(
     return () => {
       controller.abort();
     };
-  }, [granularity, country, cacheKey]);
+  }, [granularity, cacheKey]);
 
   return { data, isLoading };
 }

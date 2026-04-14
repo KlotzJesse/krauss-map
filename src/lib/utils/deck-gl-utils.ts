@@ -35,15 +35,41 @@ export function hexToRgba(
 }
 
 /**
- * Extract postal code from a GeoJSON feature's properties.
- * Handles the various property names used across the dataset.
+ * Extract a unique feature identifier from a GeoJSON feature's properties.
+ * Returns composite `country:code` when country is available (for DACH deduplication),
+ * falls back to raw code string for legacy data.
  */
 export function getFeatureCode(
   feature: Feature<Polygon | MultiPolygon>
 ): string | null {
   const props = feature.properties ?? {};
   const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
+  if (!code) {
+    return null;
+  }
+  const country = props.country;
+  return country ? `${country}:${code}` : String(code);
+}
+
+/**
+ * Extract the raw postal code string from a feature (without country prefix).
+ * Use this when interacting with DB operations that expect raw codes.
+ */
+export function getFeatureRawCode(
+  feature: Feature<Polygon | MultiPolygon>
+): string | null {
+  const props = feature.properties ?? {};
+  const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
   return code ? String(code) : null;
+}
+
+/**
+ * Extract the raw code portion from a composite key ("DE:01067" → "01067").
+ * Returns the input unchanged if no country prefix is present.
+ */
+export function rawCodeFromComposite(compositeKey: string): string {
+  const colonIdx = compositeKey.indexOf(":");
+  return colonIdx >= 0 ? compositeKey.slice(colonIdx + 1) : compositeKey;
 }
 
 /**

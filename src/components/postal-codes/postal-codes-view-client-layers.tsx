@@ -372,10 +372,8 @@ export function PostalCodesViewClientWithLayers({
   const areaName = use(areaNamePromise);
 
   // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)
-  const { data, isLoading: isGeodataLoading } = useGeodata(
-    defaultGranularity,
-    country
-  );
+  // "native" = all DACH countries at their full resolution
+  const { data, isLoading: isGeodataLoading } = useGeodata("native");
 
   // Read activeLayerId directly from URL state for instant switching
   const { activeLayerId: urlActiveLayerId } = useActiveLayerState();

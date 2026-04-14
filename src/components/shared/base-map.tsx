@@ -235,6 +235,7 @@ const MapInner = memo(function MapInner({
     featureIndex: optimizations.featureIndex,
     isCursorMode: interactions.isCursorMode,
     mapCanvasRef,
+    country,
     beforeId: firstSymbolLayerId,
   });
 
@@ -248,6 +249,7 @@ const MapInner = memo(function MapInner({
     statesLabelPoints: optimizations.statesLabelPoints,
     layers,
     featureIndex: optimizations.featureIndex,
+    country,
   });
 
   // startTransition-wrapped handlers to defer heavy subtree re-renders

@@ -141,6 +141,8 @@ interface UseMapLabelsProps {
   statesLabelPoints?: FeatureCollection | null;
   layers?: Layer[];
   featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
+  /** Country code for the area — used to prefix raw postal codes for featureIndex lookup. */
+  country?: string;
 }
 
 /**
@@ -157,6 +159,7 @@ export function useMapLabels({
   statesLabelPoints,
   layers,
   featureIndex,
+  country,
 }: UseMapLabelsProps) {
   // Memoize IDs for stable references
   const ids = useMemo(
@@ -362,7 +365,12 @@ export function useMapLabels({
     const labelCache = labelCenterCacheRef.current.cache;
 
     for (const layer of layers) {
-      const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
+      const rawPostalCodes =
+        layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
+      // Prefix raw codes with country for composite featureIndex lookup
+      const postalCodes = country
+        ? rawPostalCodes.map((c) => `${country}:${c}`)
+        : rawPostalCodes;
       if (postalCodes.length === 0 || layer.isVisible !== "true") {
         continue;
       }
@@ -393,7 +401,7 @@ export function useMapLabels({
     if (src && typeof src.setData === "function") {
       src.setData({ type: "FeatureCollection", features: labelFeatures });
     }
-  }, [mapInstance, isMapLoaded, layers, data, featureIndex, ids]);
+  }, [mapInstance, isMapLoaded, layers, data, featureIndex, ids, country]);
 
   // Cleanup on unmount
   useEffect(

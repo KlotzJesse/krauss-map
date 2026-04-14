@@ -10,7 +10,7 @@ import { useMapTerraDrawSelection } from "@/lib/hooks/use-map-terradraw-selectio
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useTerraDraw } from "@/lib/hooks/use-terradraw";
 import type { SelectAreaLayers } from "@/lib/schema/schema";
-import { getFeatureCode } from "@/lib/utils/deck-gl-utils";
+import { getFeatureCode, getFeatureRawCode } from "@/lib/utils/deck-gl-utils";
 
 type LayerWithPostalCodes = SelectAreaLayers & {
   postalCodes?: { postalCode: string }[];
@@ -142,14 +142,15 @@ export function useMapInteractions({
         return;
       }
 
-      const code = getFeatureCode(info.object);
-      if (!code) {
+      // Use raw code (without country prefix) for DB operations and display
+      const rawCode = getFeatureRawCode(info.object);
+      if (!rawCode) {
         return;
       }
 
       if (!areaId || !activeLayerId || areaId <= 0) {
         toast.info(
-          `PLZ ${code} - Bitte wählen Sie einen Bereich und aktiven Layer aus`,
+          `PLZ ${rawCode} - Bitte wählen Sie einen Bereich und aktiven Layer aus`,
           { duration: 3000 }
         );
         return;
@@ -172,20 +173,22 @@ export function useMapInteractions({
       const existingCodesSet = new Set(
         activeLayer.postalCodes?.map((pc) => pc.postalCode)
       );
-      const codeExists = existingCodesSet.has(code);
+      const codeExists = existingCodesSet.has(rawCode);
 
       try {
         if (codeExists) {
-          await removePostalCodesFromLayer(activeLayerId, [code]);
-          toast.success(`PLZ ${code} aus Gebiet entfernt`, { duration: 2000 });
+          await removePostalCodesFromLayer(activeLayerId, [rawCode]);
+          toast.success(`PLZ ${rawCode} aus Gebiet entfernt`, {
+            duration: 2000,
+          });
         } else {
-          await addPostalCodesToLayer(activeLayerId, [code]);
-          toast.success(`PLZ ${code} zu Gebiet hinzugefügt`, {
+          await addPostalCodesToLayer(activeLayerId, [rawCode]);
+          toast.success(`PLZ ${rawCode} zu Gebiet hinzugefügt`, {
             duration: 2000,
           });
         }
       } catch {
-        toast.error(`Fehler beim Bearbeiten von PLZ ${code}`, {
+        toast.error(`Fehler beim Bearbeiten von PLZ ${rawCode}`, {
           duration: 2000,
         });
       }
