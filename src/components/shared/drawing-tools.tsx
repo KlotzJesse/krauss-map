@@ -193,6 +193,8 @@ export interface DrawingToolsProps {
 
   granularity?: string;
 
+  country?: import("@/lib/config/countries").CountryCode;
+
   onGranularityChange?: (granularity: string) => void;
 
   postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
@@ -326,7 +328,9 @@ async function fillRegions(
 
   setIsFilling: (b: boolean) => void,
 
-  granularity?: string
+  granularity?: string,
+
+  country?: string
 ) {
   if (!granularity) {
     toast.error("Granularität ist erforderlich für die Geoverarbeitung");
@@ -357,6 +361,8 @@ async function fillRegions(
         granularity,
 
         selectedCodes: layerCodes,
+
+        country,
       });
 
       if (!result.success) {
@@ -407,6 +413,7 @@ interface UseDrawingToolsActionsProps {
   onAddPending: DrawingToolsProps["onAddPending"];
   onRemovePending: DrawingToolsProps["onRemovePending"];
   granularity: DrawingToolsProps["granularity"];
+  country: DrawingToolsProps["country"];
   postalCodesData: DrawingToolsProps["postalCodesData"];
 }
 
@@ -423,6 +430,7 @@ function useDrawingToolsActions({
   onAddPending,
   onRemovePending,
   granularity,
+  country,
   postalCodesData,
 }: UseDrawingToolsActionsProps) {
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
@@ -740,7 +748,8 @@ function useDrawingToolsActions({
         activeLayer,
         addPostalCodesToLayer ?? (async () => {}),
         (v) => dispatchUI({ type: "SET_FILLING", value: v }),
-        granularity
+        granularity,
+        country
       );
     }
   };
@@ -1144,6 +1153,7 @@ function DrawingToolsImpl({
   removePostalCodesFromLayer,
   isViewingVersion = false,
   isLayerSwitchPending = false,
+  country,
   versions = EMPTY_ARRAY,
   changes = EMPTY_ARRAY,
 }: DrawingToolsProps) {
@@ -1177,6 +1187,7 @@ function DrawingToolsImpl({
     onAddPending,
     onRemovePending,
     granularity,
+    country,
     postalCodesData,
   });
 

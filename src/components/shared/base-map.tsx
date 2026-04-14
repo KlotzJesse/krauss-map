@@ -320,6 +320,7 @@ const MapInner = memo(function MapInner({
                 removePostalCodesFromLayer={removePostalCodesFromLayer}
                 layers={layers}
                 isViewingVersion={isViewingVersion}
+                country={country}
                 versionId={versionId}
                 versions={versions}
                 changes={changes}
