@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
 import type { AreaSummary } from "@/lib/types/area-types";
 
-import { AreaItemMenu } from "./area-item-menu";
+import { AreaItemDropdown, AreaItemMenu } from "./area-item-menu";
 
 interface AreaListItemProps {
   area: AreaSummary;
@@ -138,6 +138,14 @@ export const AreaListItem = memo(
                 <span className="truncate">{area.name}</span>
                 <LinkPendingIndicator />
               </Link>
+              <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                <AreaItemDropdown
+                  area={area}
+                  onStartRename={onStartRename}
+                  onStartDelete={onStartDelete}
+                  onDuplicate={onDuplicate}
+                />
+              </div>
             </div>
           </div>
         </AreaItemMenu>

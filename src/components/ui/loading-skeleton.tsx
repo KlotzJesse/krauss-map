@@ -81,7 +81,6 @@ export function VersionIndicatorSkeleton() {
   );
 }
 
-
 // Generic loading skeleton
 export function LoadingSkeleton({ className }: { className?: string }) {
   return (

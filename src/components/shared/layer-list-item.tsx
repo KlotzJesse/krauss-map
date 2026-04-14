@@ -61,7 +61,7 @@ interface LayerListItemProps {
   onEditNameChange: (name: string) => void;
   onColorChange: (layerId: number, color: string) => void;
   onDelete: (layerId: number) => void;
-  onDuplicateArea?: () => void;
+  onDuplicateLayer?: (layerId: number) => void;
 }
 
 function LayerColorPickerContent({
@@ -150,7 +150,7 @@ export const LayerListItem = memo(function LayerListItem({
   onEditNameChange,
   onColorChange,
   onDelete,
-  onDuplicateArea,
+  onDuplicateLayer,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -295,7 +295,7 @@ export const LayerListItem = memo(function LayerListItem({
               </TooltipContent>
             </Tooltip>
 
-            {onDuplicateArea && (
+            {onDuplicateLayer && (
               <Tooltip>
                 <TooltipTrigger
                   render={
@@ -305,7 +305,7 @@ export const LayerListItem = memo(function LayerListItem({
                       className="h-6 w-6"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDuplicateArea();
+                        onDuplicateLayer(layer.id);
                       }}
                     />
                   }
@@ -313,7 +313,7 @@ export const LayerListItem = memo(function LayerListItem({
                   <CopyPlus className="h-3.5 w-3.5" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Gebiet duplizieren</p>
+                  <p>Layer duplizieren</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -335,7 +335,7 @@ export const LayerListItem = memo(function LayerListItem({
                 <X className="h-3.5 w-3.5" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Gebiet löschen</p>
+                <p>Layer löschen</p>
               </TooltipContent>
             </Tooltip>
           </div>

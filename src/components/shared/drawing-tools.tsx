@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import {
   createLayerAction,
   deleteLayerAction,
-  duplicateAreaAction,
+  duplicateLayerAction,
   updateLayerAction,
 } from "@/app/actions/area-actions";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
@@ -781,7 +781,7 @@ interface LayerManagementSectionProps {
   handleRenameLayer: (layerId: number, newName: string) => void;
   handleColorChange: (layerId: number, color: string) => void;
   handleDeleteLayer: (layerId: number) => void;
-  handleDuplicateArea: () => void;
+  handleDuplicateLayer: (layerId: number) => void;
 }
 
 function LayerManagementSection({
@@ -799,7 +799,7 @@ function LayerManagementSection({
   handleRenameLayer,
   handleColorChange,
   handleDeleteLayer,
-  handleDuplicateArea,
+  handleDuplicateLayer,
 }: LayerManagementSectionProps) {
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
   const handleOpenConflicts = useCallback(
@@ -987,7 +987,7 @@ function LayerManagementSection({
                 }
                 onColorChange={handleColorChange}
                 onDelete={handleDeleteLayer}
-                onDuplicateArea={handleDuplicateArea}
+                onDuplicateLayer={handleDuplicateLayer}
               />
             ))}
           </div>
@@ -1110,7 +1110,10 @@ const LayerDialogs = memo(function LayerDialogs({
             <AlertDialogCancel onClick={handleCloseDelete}>
               Abbrechen
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteLayer} variant="destructive">
+            <AlertDialogAction
+              onClick={confirmDeleteLayer}
+              variant="destructive"
+            >
               Löschen
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1186,14 +1189,17 @@ function DrawingToolsImpl({
     toast.success("Zeichnungen gelöscht", { duration: 2000 });
   }, [onClearAll]);
 
-  const handleDuplicateArea = useCallback(() => {
-    if (!areaId) return;
-    executeAction(duplicateAreaAction(areaId), {
-      loading: "Dupliziere Gebiet...",
-      success: "Gebiet dupliziert",
-      error: "Duplizieren fehlgeschlagen",
-    });
-  }, [areaId]);
+  const handleDuplicateLayer = useCallback(
+    (layerId: number) => {
+      if (!areaId) return;
+      executeAction(duplicateLayerAction(areaId, layerId), {
+        loading: "Dupliziere Layer...",
+        success: "Layer dupliziert",
+        error: "Duplizieren fehlgeschlagen",
+      });
+    },
+    [areaId]
+  );
 
   return (
     <Card
@@ -1272,7 +1278,7 @@ function DrawingToolsImpl({
             handleRenameLayer={handleRenameLayer}
             handleColorChange={handleColorChange}
             handleDeleteLayer={handleDeleteLayer}
-            handleDuplicateArea={handleDuplicateArea}
+            handleDuplicateLayer={handleDuplicateLayer}
           />
         )}
 

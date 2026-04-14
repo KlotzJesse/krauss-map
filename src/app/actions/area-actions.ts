@@ -650,6 +650,81 @@ export async function deleteLayerAction(
   }
 }
 
+export async function duplicateLayerAction(
+  areaId: number,
+  layerId: number,
+  createdBy?: string
+): ServerActionResponse<{ id: number }> {
+  try {
+    const sourceLayer = await db.query.areaLayers.findFirst({
+      where: eq(areaLayers.id, layerId),
+      with: { postalCodes: true },
+    });
+
+    if (!sourceLayer) {
+      return { success: false, error: "Layer not found" };
+    }
+
+    // Get max orderIndex for the area to place copy at end
+    const [maxOrder] = await db
+      .select({ max: sql<number>`coalesce(max(${areaLayers.orderIndex}), 0)` })
+      .from(areaLayers)
+      .where(eq(areaLayers.areaId, areaId));
+
+    const newLayerId = await db.transaction(async (tx) => {
+      const [newLayer] = await tx
+        .insert(areaLayers)
+        .values({
+          areaId,
+          name: `${sourceLayer.name} (Kopie)`,
+          color: sourceLayer.color,
+          opacity: sourceLayer.opacity,
+          isVisible: sourceLayer.isVisible,
+          orderIndex: (maxOrder?.max ?? 0) + 1,
+        })
+        .returning();
+
+      const codes = sourceLayer.postalCodes ?? [];
+      if (codes.length > 0) {
+        await tx.insert(areaLayerPostalCodes).values(
+          codes.map((c) => ({
+            layerId: newLayer.id,
+            postalCode: c.postalCode,
+          }))
+        );
+      }
+
+      await recordChangeWithTx(tx, areaId, {
+        changeType: "create_layer",
+        entityType: "layer",
+        entityId: newLayer.id,
+        changeData: {
+          layer: {
+            areaId,
+            name: newLayer.name,
+            color: newLayer.color,
+            opacity: newLayer.opacity,
+            isVisible: newLayer.isVisible,
+            orderIndex: newLayer.orderIndex,
+          },
+        },
+        createdBy,
+      });
+
+      return newLayer.id;
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}`);
+    updateTag(`area-${areaId}-undo-redo`);
+
+    return { success: true, data: { id: newLayerId } };
+  } catch (error) {
+    console.error("Error duplicating layer:", error);
+    return { success: false, error: "Failed to duplicate layer" };
+  }
+}
+
 export async function addPostalCodesToLayerAction(
   areaId: number,
 
