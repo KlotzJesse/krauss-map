@@ -29,6 +29,7 @@ const STATE_FILL_COLORS: Record<string, RgbaColor> = {};
 const STATE_LINE_COLORS: Record<string, RgbaColor> = {};
 
 const STATE_HEX_COLORS: Record<string, string> = {
+  // Germany (16 Bundesländer)
   "Baden-Württemberg": "#e57373",
   Bayern: "#64b5f6",
   Berlin: "#81c784",
@@ -45,6 +46,43 @@ const STATE_HEX_COLORS: Record<string, string> = {
   "Sachsen-Anhalt": "#388e3c",
   "Schleswig-Holstein": "#0288d1",
   Thüringen: "#d84315",
+  // Austria (9 Bundesländer)
+  Burgenland: "#ef5350",
+  Kärnten: "#42a5f5",
+  Niederösterreich: "#66bb6a",
+  Oberösterreich: "#ffa726",
+  Salzburg: "#ab47bc",
+  Steiermark: "#26c6da",
+  Tirol: "#ec407a",
+  Vorarlberg: "#8d6e63",
+  Wien: "#78909c",
+  // Switzerland (26 Kantone)
+  Zürich: "#e53935",
+  Bern: "#1e88e5",
+  Luzern: "#43a047",
+  Uri: "#fb8c00",
+  Schwyz: "#8e24aa",
+  Obwalden: "#00acc1",
+  Nidwalden: "#d81b60",
+  Glarus: "#6d4c41",
+  Zug: "#546e7a",
+  Freiburg: "#c62828",
+  Solothurn: "#1565c0",
+  "Basel-Stadt": "#2e7d32",
+  "Basel-Landschaft": "#ef6c00",
+  Schaffhausen: "#6a1b9a",
+  "Appenzell Ausserrhoden": "#00838f",
+  "Appenzell Innerrhoden": "#ad1457",
+  "St. Gallen": "#4e342e",
+  Graubünden: "#37474f",
+  Aargau: "#ff7043",
+  Thurgau: "#5c6bc0",
+  Tessin: "#7cb342",
+  Waadt: "#fdd835",
+  Wallis: "#ce93d8",
+  Neuenburg: "#4db6ac",
+  Genf: "#ff8a65",
+  Jura: "#9fa8da",
 };
 
 for (const [name, hex] of Object.entries(STATE_HEX_COLORS)) {

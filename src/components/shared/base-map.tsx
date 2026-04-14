@@ -21,7 +21,11 @@ import {
   MapErrorBoundary,
 } from "@/components/ui/error-boundaries";
 import { DrawingToolsSkeleton } from "@/components/ui/loading-skeletons";
-import { COUNTRY_CONFIGS, DEFAULT_COUNTRY } from "@/lib/config/countries";
+import {
+  COUNTRY_CONFIGS,
+  DACH_CENTER,
+  DACH_ZOOM,
+} from "@/lib/config/countries";
 import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
 import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
 import {
@@ -197,7 +201,8 @@ const MapInner = memo(function MapInner({
   const { setActiveLayer, isLayerPending } = useActiveLayerState();
 
   // States data fetched client-side to avoid 246KB RSC payload bloat
-  const statesData = useStatesData(country);
+  // Unified DACH map: load all states regardless of area country
+  const statesData = useStatesData();
 
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });
@@ -352,7 +357,7 @@ const BaseMapComponent = ({
   layerId,
   center,
   zoom,
-  country = DEFAULT_COUNTRY,
+  country,
   granularity,
   onGranularityChange,
   layers,
@@ -368,9 +373,9 @@ const BaseMapComponent = ({
   changes,
   initialUndoRedoStatus,
 }: BaseMapProps) => {
-  const countryConfig = COUNTRY_CONFIGS[country];
-  const effectiveCenter = center ?? countryConfig.center;
-  const effectiveZoom = zoom ?? countryConfig.zoom;
+  const countryConfig = country ? COUNTRY_CONFIGS[country] : undefined;
+  const effectiveCenter = center ?? countryConfig?.center ?? DACH_CENTER;
+  const effectiveZoom = zoom ?? countryConfig?.zoom ?? DACH_ZOOM;
   // Controlled view state for URL sync (narrow: only setter, no view subscription)
   const setMapCenterZoom = useSetMapCenterZoom();
   const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

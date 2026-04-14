@@ -8,7 +8,6 @@ import type {
 import { cacheTag, cacheLife } from "next/cache";
 
 import type { CountryCode } from "@/lib/config/countries";
-import { DEFAULT_COUNTRY } from "@/lib/config/countries";
 import { db } from "@/lib/db";
 
 // Define the type for a postal code DB row
@@ -23,21 +22,24 @@ interface PostalCodeRow {
   updated_at?: string;
 }
 
-// Fetch all postal codes for a given granularity and country from the database as GeoJSON
+/**
+ * Fetch postal code geodata. Pass country to filter, or omit for all DACH data.
+ */
 export async function getPostalCodesDataForGranularity(
   granularity: string,
-  country: CountryCode = DEFAULT_COUNTRY
+  country?: CountryCode
 ): Promise<FeatureCollection<Polygon | MultiPolygon>> {
   "use cache";
   cacheLife("hours");
-  cacheTag(
-    "postal-codes-geodata",
-    `postal-codes-geodata-${country}-${granularity}`
-  );
+  const tag = country
+    ? `postal-codes-geodata-${country}-${granularity}`
+    : `postal-codes-geodata-all-${granularity}`;
+  cacheTag("postal-codes-geodata", tag);
   try {
-    const { rows } = await db.execute(
-      sql`SELECT id, code, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
-    );
+    const query = country
+      ? sql`SELECT id, code, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
+      : sql`SELECT id, code, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox, "created_at", "updated_at" FROM postal_codes WHERE granularity = ${granularity} AND is_active = 'true'`;
+    const { rows } = await db.execute(query);
     const features = rows.map((row) => {
       const typedRow = row as unknown as PostalCodeRow;
       return {

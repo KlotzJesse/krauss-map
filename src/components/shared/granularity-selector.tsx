@@ -39,7 +39,7 @@ import type { Layer } from "@/lib/types/area-types";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import {
-  GRANULARITY_OPTIONS,
+  ALL_GRANULARITY_OPTIONS,
   getGranularityLabel,
   isGranularityChangeCompatible,
   wouldGranularityChangeCauseDataLoss,
@@ -287,14 +287,14 @@ export function GranularitySelector({
           onValueChange={(val) => val && handleGranularitySelect(val)}
           disabled={isPending}
           items={Object.fromEntries(
-            GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
+            ALL_GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
           )}
         >
           <SelectTrigger className="w-full h-8 text-xs">
             <SelectValue placeholder="Granularität wählen" />
           </SelectTrigger>
           <SelectContent>
-            {GRANULARITY_OPTIONS.map((option) => {
+            {ALL_GRANULARITY_OPTIONS.map((option) => {
               const status = getSelectItemStatus(
                 option.value,
                 currentGranularity,

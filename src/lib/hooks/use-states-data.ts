@@ -7,14 +7,18 @@ type StatesData = FeatureCollection<Polygon | MultiPolygon>;
 
 const statesCache = new Map<string, StatesData>();
 
-export function useStatesData(country: CountryCode = "DE"): StatesData | null {
+/**
+ * Fetches state boundary data. Pass a country code to filter, or omit for all DACH states.
+ */
+export function useStatesData(country?: CountryCode): StatesData | null {
+  const cacheKey = country ?? "ALL";
   const [data, setData] = useState<StatesData | null>(
-    statesCache.get(country) ?? null
+    statesCache.get(cacheKey) ?? null
   );
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const cached = statesCache.get(country);
+    const cached = statesCache.get(cacheKey);
     if (cached) {
       setData(cached);
       return;
@@ -23,10 +27,11 @@ export function useStatesData(country: CountryCode = "DE"): StatesData | null {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    fetch(`/api/states?country=${country}`, { signal: controller.signal })
+    const url = country ? `/api/states?country=${country}` : "/api/states";
+    fetch(url, { signal: controller.signal })
       .then((res) => res.json())
       .then((json: StatesData) => {
-        statesCache.set(country, json);
+        statesCache.set(cacheKey, json);
         setData(json);
       })
       .catch((error: unknown) => {
@@ -38,7 +43,7 @@ export function useStatesData(country: CountryCode = "DE"): StatesData | null {
     return () => {
       controller.abort();
     };
-  }, [country]);
+  }, [cacheKey, country]);
 
   return data;
 }

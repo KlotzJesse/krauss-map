@@ -172,6 +172,12 @@ export function detectCountryFromCode(input: string): {
 }
 
 /**
+ * DACH-wide default center/zoom (shows all of DE/AT/CH).
+ */
+export const DACH_CENTER: [number, number] = [10.5, 48.5];
+export const DACH_ZOOM = 5;
+
+/**
  * DACH-wide geocoding country codes string for Nominatim.
  */
 export const DACH_COUNTRY_CODES = "de,at,ch";

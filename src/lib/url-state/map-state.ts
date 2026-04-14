@@ -1,11 +1,11 @@
 import { useQueryState } from "nuqs";
 import { useMemo, useRef, useTransition } from "react";
 
-import { COUNTRY_CONFIGS, DEFAULT_COUNTRY } from "../config/countries";
+import { DACH_CENTER, DACH_ZOOM } from "../config/countries";
 import { useStableCallback } from "../hooks/use-stable-callback";
 
-const DEFAULT_CENTER = COUNTRY_CONFIGS[DEFAULT_COUNTRY].center;
-const DEFAULT_ZOOM = COUNTRY_CONFIGS[DEFAULT_COUNTRY].zoom;
+const DEFAULT_CENTER = DACH_CENTER;
+const DEFAULT_ZOOM = DACH_ZOOM;
 
 // Helper for atomic map view state
 export function useMapView() {

@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 
-import {
-  type CountryCode,
-  DEFAULT_COUNTRY,
-  isValidCountryCode,
-} from "@/lib/config/countries";
+import { type CountryCode, isValidCountryCode } from "@/lib/config/countries";
 import { getPostalCodesDataForGranularity } from "@/lib/utils/postal-codes-data";
 
 const VALID_GRANULARITIES = new Set([
@@ -21,10 +17,9 @@ export async function GET(
 ) {
   const { granularity } = await params;
   const { searchParams } = new URL(request.url);
-  const countryParam = searchParams.get("country") ?? DEFAULT_COUNTRY;
-  const country: CountryCode = isValidCountryCode(countryParam)
-    ? countryParam
-    : DEFAULT_COUNTRY;
+  const countryParam = searchParams.get("country");
+  const country: CountryCode | undefined =
+    countryParam && isValidCountryCode(countryParam) ? countryParam : undefined;
 
   if (!VALID_GRANULARITIES.has(granularity)) {
     return NextResponse.json({ error: "Invalid granularity" }, { status: 400 });

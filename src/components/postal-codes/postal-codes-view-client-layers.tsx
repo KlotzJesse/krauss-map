@@ -354,7 +354,7 @@ function usePostalCodesLayerActions({
 
 export function PostalCodesViewClientWithLayers({
   defaultGranularity,
-  country = "DE",
+  country,
   areaNamePromise,
   areaId,
   layersPromise,

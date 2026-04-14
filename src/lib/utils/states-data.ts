@@ -8,7 +8,6 @@ import type {
 import { cacheTag, cacheLife } from "next/cache";
 
 import type { CountryCode } from "@/lib/config/countries";
-import { DEFAULT_COUNTRY } from "@/lib/config/countries";
 import { db } from "@/lib/db";
 
 // Define the type for a state DB row
@@ -23,16 +22,21 @@ interface StateRow {
   updated_at?: string;
 }
 
+/**
+ * Fetch state boundary data. Pass a country to filter, or omit for all DACH states.
+ */
 export async function getStatesData(
-  country: CountryCode = DEFAULT_COUNTRY
+  country?: CountryCode
 ): Promise<FeatureCollection<Polygon | MultiPolygon>> {
   "use cache";
   cacheLife("days");
-  cacheTag("states-geodata", `states-geodata-${country}`);
+  const tag = country ? `states-geodata-${country}` : "states-geodata-all";
+  cacheTag("states-geodata", tag);
   try {
-    const { rows } = await db.execute(
-      sql`SELECT id, name, code, ST_AsGeoJSON(ST_Simplify(geometry, 0.005)) as geometry, properties, bbox, "created_at", "updated_at" FROM states WHERE country = ${country}`
-    );
+    const query = country
+      ? sql`SELECT id, name, code, ST_AsGeoJSON(ST_Simplify(geometry, 0.005)) as geometry, properties, bbox, "created_at", "updated_at" FROM states WHERE country = ${country}`
+      : sql`SELECT id, name, code, ST_AsGeoJSON(ST_Simplify(geometry, 0.005)) as geometry, properties, bbox, "created_at", "updated_at" FROM states`;
+    const { rows } = await db.execute(query);
     const features = rows.map((row) => {
       const typedRow = row as unknown as StateRow;
       const parsedProperties =
@@ -61,7 +65,7 @@ export async function getStatesData(
 }
 
 export async function getStatesDataServer(
-  country: CountryCode = DEFAULT_COUNTRY
+  country?: CountryCode
 ): Promise<FeatureCollection<Polygon | MultiPolygon> | null> {
   try {
     return await getStatesData(country);

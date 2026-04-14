@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
+import { ALL_GRANULARITY_OPTIONS } from "@/lib/utils/granularity-utils";
 
 interface CreateAreaDialogProps {
   open: boolean;
@@ -109,21 +110,19 @@ export function CreateAreaDialog({
               <Select
                 value={granularity}
                 onValueChange={(val) => val && setGranularity(val)}
-                items={{
-                  "1digit": "1-stellig",
-                  "2digit": "2-stellig",
-                  "3digit": "3-stellig",
-                  "5digit": "5-stellig",
-                }}
+                items={Object.fromEntries(
+                  ALL_GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
+                )}
               >
                 <SelectTrigger id="granularity">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1digit">1-stellig</SelectItem>
-                  <SelectItem value="2digit">2-stellig</SelectItem>
-                  <SelectItem value="3digit">3-stellig</SelectItem>
-                  <SelectItem value="5digit">5-stellig</SelectItem>
+                  {ALL_GRANULARITY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

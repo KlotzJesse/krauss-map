@@ -9,6 +9,8 @@ import type { RefObject } from "react";
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
+import { COUNTRY_CONFIGS } from "@/lib/config/countries";
+import type { CountryCode } from "@/lib/config/countries";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 import { AreaItemDropdown, AreaItemMenu } from "./area-item-menu";
@@ -135,7 +137,12 @@ export const AreaListItem = memo(
                 }}
                 className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
               >
-                <span className="truncate">{area.name}</span>
+                <span className="truncate">
+                  {area.country && COUNTRY_CONFIGS[area.country as CountryCode]
+                    ? `${COUNTRY_CONFIGS[area.country as CountryCode].flag} `
+                    : ""}
+                  {area.name}
+                </span>
                 <LinkPendingIndicator />
               </Link>
               <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
@@ -154,7 +161,11 @@ export const AreaListItem = memo(
   },
   (prev, next) => {
     // Compare by area identity (id + name), not reference — server data creates new objects
-    if (prev.area.id !== next.area.id || prev.area.name !== next.area.name) {
+    if (
+      prev.area.id !== next.area.id ||
+      prev.area.name !== next.area.name ||
+      prev.area.country !== next.area.country
+    ) {
       return false;
     }
     if (prev.isCurrentRoute !== next.isCurrentRoute) {

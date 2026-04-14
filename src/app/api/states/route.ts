@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
 
-import {
-  type CountryCode,
-  DEFAULT_COUNTRY,
-  isValidCountryCode,
-} from "@/lib/config/countries";
+import { type CountryCode, isValidCountryCode } from "@/lib/config/countries";
 import { getStatesData } from "@/lib/utils/states-data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const countryParam = searchParams.get("country") ?? DEFAULT_COUNTRY;
-  const country: CountryCode = isValidCountryCode(countryParam)
-    ? countryParam
-    : DEFAULT_COUNTRY;
+  const countryParam = searchParams.get("country");
+  const country: CountryCode | undefined =
+    countryParam && isValidCountryCode(countryParam) ? countryParam : undefined;
 
   const data = await getStatesData(country);
   return NextResponse.json(data, {
