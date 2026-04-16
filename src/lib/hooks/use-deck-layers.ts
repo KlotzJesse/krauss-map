@@ -1,4 +1,5 @@
 import type { PickingInfo } from "@deck.gl/core";
+import { FillStyleExtension } from "@deck.gl/extensions";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import type { InferSelectModel } from "drizzle-orm";
 import type {
@@ -16,6 +17,10 @@ import {
   getFeatureCode,
   hexToRgba,
 } from "@/lib/utils/deck-gl-utils";
+import {
+  createStripePatternAtlas,
+  hexColorsAreSimilar,
+} from "@/lib/utils/stripe-pattern";
 
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
@@ -97,6 +102,10 @@ interface ResolvedStyle {
   fillColor: [number, number, number, number];
   lineColor: [number, number, number, number];
   lineWidth: number;
+  /** Number of visible layers that include this postal code. */
+  count: number;
+  /** True when all contributing layers have the same or very similar color. */
+  isSameColor: boolean;
 }
 
 interface StyleAccumulator {
@@ -105,14 +114,19 @@ interface StyleAccumulator {
   weightSum: number;
   hasActive: boolean;
   count: number;
+  /** Hex colors of all contributing layers (for same-color detection). */
+  layerColors: string[];
 }
 
-const COUNTRY_BORDER_COLORS: Record<string, [number, number, number, number]> = {
-  DE: [30, 41, 59, 230],
-  AT: [127, 29, 29, 230],
-  CH: [120, 53, 15, 230],
-};
-const DEFAULT_COUNTRY_BORDER_COLOR: [number, number, number, number] = [17, 24, 39, 230];
+const COUNTRY_BORDER_COLORS: Record<string, [number, number, number, number]> =
+  {
+    DE: [30, 41, 59, 230],
+    AT: [127, 29, 29, 230],
+    CH: [120, 53, 15, 230],
+  };
+const DEFAULT_COUNTRY_BORDER_COLOR: [number, number, number, number] = [
+  17, 24, 39, 230,
+];
 
 function toAccumulator(): StyleAccumulator {
   return {
@@ -121,6 +135,7 @@ function toAccumulator(): StyleAccumulator {
     weightSum: 0,
     hasActive: false,
     count: 0,
+    layerColors: [],
   };
 }
 
@@ -139,18 +154,35 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
     255,
   ];
 
+  // Detect same-color conflict: all contributing layers share similar hue
+  let isSameColor = false;
+  if (acc.count >= 2 && acc.layerColors.length >= 2) {
+    isSameColor = acc.layerColors.every((c) =>
+      hexColorsAreSimilar(acc.layerColors[0], c, 60)
+    );
+  }
+
   if (acc.count <= 1) {
     return {
       fillColor: avgFill,
       lineColor: avgLine,
       lineWidth: acc.hasActive ? 2.5 : 1.5,
+      count: acc.count,
+      isSameColor: false,
     };
   }
 
   return {
-    fillColor: [avgFill[0], avgFill[1], avgFill[2], Math.min(210, avgFill[3] + 45)],
+    fillColor: [
+      avgFill[0],
+      avgFill[1],
+      avgFill[2],
+      Math.min(210, avgFill[3] + 45),
+    ],
     lineColor: [avgLine[0], avgLine[1], avgLine[2], 255],
     lineWidth: (acc.hasActive ? 3 : 2.2) + Math.min(2, (acc.count - 1) * 0.7),
+    count: acc.count,
+    isSameColor,
   };
 }
 
@@ -158,15 +190,26 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
  * Build a Map from composite key (country:code) → resolved visual style.
  * Keys match the featureIndex format from getFeatureCode().
  * `country` is used to prefix raw DB postal codes (e.g. "01067" → "DE:01067").
+ *
+ * Also returns `multiLayerCodes` (codes in 2+ visible layers) and
+ * `sameColorCodes` (subset where all contributing layers share a similar color).
  */
 function buildResolvedStyleMap(
   layers: Layer[] | undefined,
   activeLayerId: number | null | undefined,
   country?: string
-): { map: Map<string, ResolvedStyle>; version: string } {
+): {
+  map: Map<string, ResolvedStyle>;
+  version: string;
+  multiLayerCodes: Set<string>;
+  sameColorCodes: Set<string>;
+} {
   const result = new Map<string, ResolvedStyle>();
+  const multiLayerCodes = new Set<string>();
+  const sameColorCodes = new Set<string>();
+
   if (!layers) {
-    return { map: result, version: "" };
+    return { map: result, version: "", multiLayerCodes, sameColorCodes };
   }
   const byCode = new Map<string, StyleAccumulator>();
   const versionParts: string[] = [];
@@ -206,6 +249,7 @@ function buildResolvedStyleMap(
       existing.weightSum += weight;
       existing.hasActive = existing.hasActive || isActive;
       existing.count += 1;
+      existing.layerColors.push(layer.color);
       byCode.set(key, existing);
     }
   }
@@ -219,9 +263,21 @@ function buildResolvedStyleMap(
     // Keep a soft minimum for visibility.
     style.lineWidth = Math.max(style.lineWidth, 1.5);
     result.set(code, style);
+
+    if (acc.count >= 2) {
+      multiLayerCodes.add(code);
+      if (style.isSameColor) {
+        sameColorCodes.add(code);
+      }
+    }
   }
 
-  return { map: result, version: versionParts.join("|") };
+  return {
+    map: result,
+    version: versionParts.join("|"),
+    multiLayerCodes,
+    sameColorCodes,
+  };
 }
 
 /**
@@ -301,8 +357,16 @@ export function useDeckLayers({
   > | null>(null);
   const hoveredCodeRef = useRef<string | null>(null);
 
+  // Stripe pattern texture atlas — created once per browser session (client-only)
+  const stripeAtlas = useMemo(() => createStripePatternAtlas(), []);
+
   // Resolve per-postal-code styles from all area layers (keyed by country:code)
-  const { map: resolvedStyles, version: resolvedStylesVersion } = useMemo(
+  const {
+    map: resolvedStyles,
+    version: resolvedStylesVersion,
+    multiLayerCodes,
+    sameColorCodes,
+  } = useMemo(
     () => buildResolvedStyleMap(layers, activeLayerId, country),
     [layers, activeLayerId, country]
   );
@@ -327,10 +391,26 @@ export function useDeckLayers({
     return codes;
   }, [layers, country]);
 
-  // Pre-filtered area features (only features in any visible area layer)
-  const areaFeaturesData = useMemo(
-    () => filterAreaFeatures(data, resolvedCodeSet, featureIndex),
-    [data, resolvedCodeSet, featureIndex]
+  // Single-layer code set (codes in exactly one visible layer)
+  const singleLayerCodeSet = useMemo(() => {
+    const codes = new Set<string>();
+    for (const code of resolvedCodeSet) {
+      if (!multiLayerCodes.has(code)) {
+        codes.add(code);
+      }
+    }
+    return codes;
+  }, [resolvedCodeSet, multiLayerCodes]);
+
+  // Pre-filtered area features split by single vs multi-layer membership
+  const singleLayerFeaturesData = useMemo(
+    () => filterAreaFeatures(data, singleLayerCodeSet, featureIndex),
+    [data, singleLayerCodeSet, featureIndex]
+  );
+
+  const multiLayerFeaturesData = useMemo(
+    () => filterAreaFeatures(data, multiLayerCodes, featureIndex),
+    [data, multiLayerCodes, featureIndex]
   );
 
   // Preview feature data — try composite key lookup (country:code) for DACH dedup
@@ -442,6 +522,8 @@ export function useDeckLayers({
             },
             getLineWidth: 2,
             lineWidthUnits: "pixels" as const,
+            lineWidthMinPixels: 1,
+            lineWidthMaxPixels: 4,
             pickable: false,
             updateTriggers: {
               getFillColor: [],
@@ -466,8 +548,10 @@ export function useDeckLayers({
                 ?.country as string;
               return COUNTRY_BORDER_COLORS[cc] ?? DEFAULT_COUNTRY_BORDER_COLOR;
             },
-            getLineWidth: 4,
+            getLineWidth: 5,
             lineWidthUnits: "pixels" as const,
+            lineWidthMinPixels: 3,
+            lineWidthMaxPixels: 8,
             lineJointRounded: true,
             lineCapRounded: true,
             pickable: false,
@@ -511,11 +595,11 @@ export function useDeckLayers({
       })
     );
 
-    // Combined area overlay layer — always present to avoid MapLibre add/remove churn
+    // Solid area overlay — postal codes in exactly one visible layer
     result.push(
       new GeoJsonLayer({
-        id: "area-layers-combined",
-        data: areaFeaturesData,
+        id: "area-layers-solid",
+        data: singleLayerFeaturesData,
         beforeId,
         filled: true,
         stroked: true,
@@ -546,6 +630,106 @@ export function useDeckLayers({
         },
       })
     );
+
+    // Stripe area overlay — postal codes shared by 2+ visible layers.
+    // Uses FillStyleExtension for a diagonal hatch pattern when the atlas is available,
+    // otherwise falls back to the blended solid fill.
+    if (stripeAtlas) {
+      result.push(
+        new GeoJsonLayer({
+          id: "area-layers-stripe",
+          data: multiLayerFeaturesData,
+          beforeId,
+          filled: true,
+          stroked: true,
+          getFillColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            if (!code) return [0, 0, 0, 0];
+            const style = resolvedStyles.get(code);
+            if (!style) return [0, 0, 0, 0];
+            // Boost alpha for stripe fill so it reads clearly through the pattern gaps
+            return [
+              style.fillColor[0],
+              style.fillColor[1],
+              style.fillColor[2],
+              Math.min(255, style.fillColor[3] * 2 + 80),
+            ] as [number, number, number, number];
+          },
+          getLineColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code
+              ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+              : [0, 0, 0, 0];
+          },
+          getLineWidth: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            // Stripe borders always get extra width for clear delineation
+            return code
+              ? Math.max(resolvedStyles.get(code)?.lineWidth ?? 2, 2.5)
+              : 2.5;
+          },
+          lineWidthUnits: "pixels" as const,
+          lineJointRounded: true,
+          lineCapRounded: true,
+          pickable: false,
+          // FillStyleExtension: use crosshatch for same-color conflicts, diagonal stripe otherwise
+          extensions: [new FillStyleExtension({ pattern: true })],
+          fillPatternAtlas: stripeAtlas.canvas,
+          fillPatternMapping: stripeAtlas.mapping,
+          getFillPattern: (f: unknown) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code && sameColorCodes.has(code) ? "cross" : "stripe";
+          },
+          // Scale ~2500 gives ~10-15 visible stripes across a typical postal code area
+          getFillPatternScale: 2500,
+          getFillPatternOffset: [0, 0],
+          updateTriggers: {
+            getFillColor: [resolvedStylesVersion],
+            getLineColor: [resolvedStylesVersion],
+            getLineWidth: [resolvedStylesVersion],
+            getFillPattern: [resolvedStylesVersion],
+          },
+        })
+      );
+    } else {
+      // Fallback when canvas is unavailable (SSR): use solid blended fill
+      result.push(
+        new GeoJsonLayer({
+          id: "area-layers-stripe",
+          data: multiLayerFeaturesData,
+          beforeId,
+          filled: true,
+          stroked: true,
+          getFillColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code
+              ? (resolvedStyles.get(code)?.fillColor ?? [0, 0, 0, 0])
+              : [0, 0, 0, 0];
+          },
+          getLineColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code
+              ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+              : [0, 0, 0, 0];
+          },
+          getLineWidth: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code
+              ? Math.max(resolvedStyles.get(code)?.lineWidth ?? 2, 2.5)
+              : 2.5;
+          },
+          lineWidthUnits: "pixels" as const,
+          lineJointRounded: true,
+          lineCapRounded: true,
+          pickable: false,
+          updateTriggers: {
+            getFillColor: [resolvedStylesVersion],
+            getLineColor: [resolvedStylesVersion],
+            getLineWidth: [resolvedStylesVersion],
+          },
+        })
+      );
+    }
 
     // Preview layer — always present to avoid MapLibre add/remove churn
     result.push(
@@ -583,9 +767,12 @@ export function useDeckLayers({
     stateBoundariesLayer,
     countryBordersLayer,
     data,
-    areaFeaturesData,
+    singleLayerFeaturesData,
+    multiLayerFeaturesData,
     resolvedStyles,
     resolvedStylesVersion,
+    sameColorCodes,
+    stripeAtlas,
     previewData,
     hoverData,
     isCursorMode,
