@@ -26,6 +26,7 @@ import {
   DACH_CENTER,
   DACH_ZOOM,
 } from "@/lib/config/countries";
+import { useCountryShapesData } from "@/lib/hooks/use-country-shapes-data";
 import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
 import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
 import {
@@ -203,6 +204,7 @@ const MapInner = memo(function MapInner({
   // States data fetched client-side to avoid 246KB RSC payload bloat
   // Unified DACH map: load all states regardless of area country
   const statesData = useStatesData();
+  const countryShapesData = useCountryShapesData();
 
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });
@@ -229,6 +231,7 @@ const MapInner = memo(function MapInner({
   const { deckLayers, onHover } = useDeckLayers({
     data,
     statesData,
+    countryShapesData,
     layers,
     activeLayerId,
     previewPostalCode,

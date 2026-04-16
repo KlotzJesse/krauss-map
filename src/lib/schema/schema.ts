@@ -281,6 +281,62 @@ export const states = pgTable(
   ]
 );
 
+export const countryShapes = pgTable(
+  "country_shapes",
+
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity().notNull(),
+
+    country: varchar({ length: 2 }).notNull(),
+
+    name: varchar({ length: 255 }).notNull(),
+
+    iso3: varchar({ length: 3 }),
+
+    isActive: varchar("is_active", { length: 5 }).notNull().default("true"),
+
+    sourceRelease: varchar("source_release", { length: 50 }),
+
+    geometry: multiPolygon("geometry").notNull(),
+
+    properties: jsonb(),
+
+    bbox: jsonb(),
+
+    createdAt: timestamp("created_at", { mode: "string" })
+      .defaultNow()
+
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", { mode: "string" })
+      .defaultNow()
+
+      .notNull(),
+  },
+
+  (table) => [
+    index("idx_country_shapes_country").using(
+      "btree",
+
+      table.country.asc().nullsLast().op("text_ops")
+    ),
+
+    index("idx_country_shapes_geometry").using(
+      "gist",
+
+      table.geometry.asc().nullsLast().op("gist_geometry_ops_2d")
+    ),
+
+    index("idx_country_shapes_is_active").using(
+      "btree",
+
+      table.isActive.asc().nullsLast().op("text_ops")
+    ),
+
+    unique("country_shapes_country_unique").on(table.country),
+  ]
+);
+
 // Area management tables for versioning and multi-layer support
 
 export const areas = pgTable(
@@ -647,6 +703,10 @@ export type InsertPostalCodes = typeof postalCodes.$inferInsert;
 export type SelectStates = typeof states.$inferSelect;
 
 export type InsertStates = typeof states.$inferInsert;
+
+export type SelectCountryShapes = typeof countryShapes.$inferSelect;
+
+export type InsertCountryShapes = typeof countryShapes.$inferInsert;
 
 export type SelectAreas = typeof areas.$inferSelect;
 

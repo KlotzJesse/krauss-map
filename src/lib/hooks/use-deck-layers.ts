@@ -99,6 +99,61 @@ interface ResolvedStyle {
   lineWidth: number;
 }
 
+interface StyleAccumulator {
+  fillWeighted: [number, number, number, number];
+  lineWeighted: [number, number, number, number];
+  weightSum: number;
+  hasActive: boolean;
+  count: number;
+}
+
+const COUNTRY_BORDER_COLORS: Record<string, [number, number, number, number]> = {
+  DE: [30, 41, 59, 230],
+  AT: [127, 29, 29, 230],
+  CH: [120, 53, 15, 230],
+};
+const DEFAULT_COUNTRY_BORDER_COLOR: [number, number, number, number] = [17, 24, 39, 230];
+
+function toAccumulator(): StyleAccumulator {
+  return {
+    fillWeighted: [0, 0, 0, 0],
+    lineWeighted: [0, 0, 0, 0],
+    weightSum: 0,
+    hasActive: false,
+    count: 0,
+  };
+}
+
+function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
+  const weight = Math.max(acc.weightSum, 1);
+  const avgFill: [number, number, number, number] = [
+    Math.round(acc.fillWeighted[0] / weight),
+    Math.round(acc.fillWeighted[1] / weight),
+    Math.round(acc.fillWeighted[2] / weight),
+    Math.round(acc.fillWeighted[3] / weight),
+  ];
+  const avgLine: [number, number, number, number] = [
+    Math.round(acc.lineWeighted[0] / weight),
+    Math.round(acc.lineWeighted[1] / weight),
+    Math.round(acc.lineWeighted[2] / weight),
+    255,
+  ];
+
+  if (acc.count <= 1) {
+    return {
+      fillColor: avgFill,
+      lineColor: avgLine,
+      lineWidth: acc.hasActive ? 2.5 : 1.5,
+    };
+  }
+
+  return {
+    fillColor: [avgFill[0], avgFill[1], avgFill[2], Math.min(210, avgFill[3] + 45)],
+    lineColor: [avgLine[0], avgLine[1], avgLine[2], 255],
+    lineWidth: (acc.hasActive ? 3 : 2.2) + Math.min(2, (acc.count - 1) * 0.7),
+  };
+}
+
 /**
  * Build a Map from composite key (country:code) → resolved visual style.
  * Keys match the featureIndex format from getFeatureCode().
@@ -113,7 +168,7 @@ function buildResolvedStyleMap(
   if (!layers) {
     return { map: result, version: "" };
   }
-
+  const byCode = new Map<string, StyleAccumulator>();
   const versionParts: string[] = [];
 
   for (const layer of layers) {
@@ -129,17 +184,41 @@ function buildResolvedStyleMap(
     const opacity = layer.opacity / 100;
     const fillColor = hexToRgba(layer.color, opacity * 0.6);
     const lineColor = hexToRgba(layer.color, isActive ? 0.9 : 0.7);
-    const lineWidth = isActive ? 2.5 : 1.5;
 
     versionParts.push(`${layer.id}:${layer.color}:${opacity}:${isActive}`);
 
     for (const rawCode of postalCodes) {
       const key = country ? `${country}:${rawCode}` : rawCode;
-      // Last layer wins for overlap — active layer takes priority
-      if (!result.has(key) || isActive) {
-        result.set(key, { fillColor, lineColor, lineWidth });
-      }
+      const existing = byCode.get(key) ?? toAccumulator();
+      const weight = isActive ? 2 : 1;
+      existing.fillWeighted = [
+        existing.fillWeighted[0] + fillColor[0] * weight,
+        existing.fillWeighted[1] + fillColor[1] * weight,
+        existing.fillWeighted[2] + fillColor[2] * weight,
+        existing.fillWeighted[3] + fillColor[3] * weight,
+      ];
+      existing.lineWeighted = [
+        existing.lineWeighted[0] + lineColor[0] * weight,
+        existing.lineWeighted[1] + lineColor[1] * weight,
+        existing.lineWeighted[2] + lineColor[2] * weight,
+        existing.lineWeighted[3] + lineColor[3] * weight,
+      ];
+      existing.weightSum += weight;
+      existing.hasActive = existing.hasActive || isActive;
+      existing.count += 1;
+      byCode.set(key, existing);
     }
+  }
+
+  for (const [code, acc] of byCode) {
+    const style = blendAccumulator(acc);
+    // Preserve existing behavior where single-layer width follows active state.
+    if (acc.count <= 1) {
+      style.lineWidth = acc.hasActive ? 2.5 : 1.5;
+    }
+    // Keep a soft minimum for visibility.
+    style.lineWidth = Math.max(style.lineWidth, 1.5);
+    result.set(code, style);
   }
 
   return { map: result, version: versionParts.join("|") };
@@ -186,6 +265,7 @@ function filterAreaFeatures(
 interface UseDeckLayersProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
   statesData?: FeatureCollection<Polygon | MultiPolygon> | null;
+  countryShapesData?: FeatureCollection<Polygon | MultiPolygon> | null;
   layers?: Layer[];
   activeLayerId?: number | null;
   previewPostalCode?: string | null;
@@ -205,6 +285,7 @@ interface UseDeckLayersProps {
 export function useDeckLayers({
   data,
   statesData,
+  countryShapesData,
   layers,
   activeLayerId,
   previewPostalCode,
@@ -371,12 +452,43 @@ export function useDeckLayers({
     [statesData, beforeId]
   );
 
+  const countryBordersLayer = useMemo(
+    () =>
+      countryShapesData
+        ? new GeoJsonLayer({
+            id: "country-borders",
+            data: countryShapesData,
+            beforeId,
+            filled: false,
+            stroked: true,
+            getLineColor: (f) => {
+              const cc = (f as Feature<Polygon | MultiPolygon>).properties
+                ?.country as string;
+              return COUNTRY_BORDER_COLORS[cc] ?? DEFAULT_COUNTRY_BORDER_COLOR;
+            },
+            getLineWidth: 4,
+            lineWidthUnits: "pixels" as const,
+            lineJointRounded: true,
+            lineCapRounded: true,
+            pickable: false,
+            updateTriggers: {
+              getLineColor: [],
+            },
+          })
+        : null,
+    [countryShapesData, beforeId]
+  );
+
   // Build all deck.gl layers
   const deckLayers = useMemo(() => {
     const result: GeoJsonLayer[] = [];
 
     if (stateBoundariesLayer) {
       result.push(stateBoundariesLayer);
+    }
+
+    if (countryBordersLayer) {
+      result.push(countryBordersLayer);
     }
 
     // Base postal code layer — THE ONLY pickable layer
@@ -469,6 +581,7 @@ export function useDeckLayers({
     return result;
   }, [
     stateBoundariesLayer,
+    countryBordersLayer,
     data,
     areaFeaturesData,
     resolvedStyles,
