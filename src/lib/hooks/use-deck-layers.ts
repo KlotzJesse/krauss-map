@@ -370,6 +370,8 @@ interface UseDeckLayersProps {
   country?: string;
   /** ID of basemap symbol layer to insert deck.gl layers before (for z-ordering). */
   beforeId?: string;
+  /** Set of composite postal codes (e.g. "DE:12345") to highlight on the map. */
+  highlightedCodes?: Set<string> | null;
 }
 
 /**
@@ -388,6 +390,7 @@ export function useDeckLayers({
   mapCanvasRef,
   country,
   beforeId,
+  highlightedCodes,
 }: UseDeckLayersProps) {
   // Hover state: store the currently hovered feature for the outline layer
   const [hoveredFeature, setHoveredFeature] = useState<Feature<
@@ -601,6 +604,17 @@ export function useDeckLayers({
     [countryShapesData, beforeId]
   );
 
+  // Conflict-highlight feature collection (memoized on codes + data)
+  const highlightData = useMemo(
+    () =>
+      highlightedCodes && highlightedCodes.size > 0
+        ? filterAreaFeatures(data, highlightedCodes, featureIndex)
+        : (EMPTY_FEATURE_COLLECTION as FeatureCollection<
+            Polygon | MultiPolygon
+          >),
+    [highlightedCodes, data, featureIndex]
+  );
+
   // Build all deck.gl layers
   const deckLayers = useMemo(() => {
     const result: GeoJsonLayer[] = [];
@@ -804,6 +818,24 @@ export function useDeckLayers({
       })
     );
 
+    // Conflict-highlight outline layer
+    if (highlightData.features.length > 0) {
+      result.push(
+        new GeoJsonLayer({
+          id: "conflict-highlight",
+          data: highlightData,
+          beforeId,
+          filled: true,
+          stroked: true,
+          getFillColor: [255, 165, 0, 50],
+          getLineColor: [255, 165, 0, 255],
+          getLineWidth: 3,
+          lineWidthUnits: "pixels" as const,
+          pickable: false,
+        })
+      );
+    }
+
     return result;
   }, [
     stateBoundariesLayer,
@@ -817,6 +849,7 @@ export function useDeckLayers({
     stripeAtlas,
     previewData,
     hoverData,
+    highlightData,
     isCursorMode,
     beforeId,
   ]);

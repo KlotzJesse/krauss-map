@@ -83,13 +83,6 @@ import { exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
 const EMPTY_ARRAY: never[] = [];
 
 // Lazy-load dialog components — only fetched when users open them
-const ConflictResolutionDialog = dynamic(
-  () =>
-    import("@/components/areas/conflict-resolution-dialog").then(
-      (m) => m.ConflictResolutionDialog
-    ),
-  { ssr: false }
-);
 const CreateVersionDialog = dynamic(
   () =>
     import("@/components/areas/create-version-dialog").then(
@@ -243,6 +236,9 @@ export interface DrawingToolsProps {
   versions: VersionSummary[];
 
   changes: ChangeSummary[];
+
+  /** Callback to open the conflict resolution panel (managed by parent). */
+  onOpenConflicts?: () => void;
 }
 
 // --- UI state reducer ---
@@ -250,7 +246,6 @@ export interface DrawingToolsProps {
 interface DrawingToolsUIState {
   layersOpen: boolean;
   regionsOpen: boolean;
-  showConflicts: boolean;
   showVersionHistory: boolean;
   showCreateVersion: boolean;
   showLayerMerge: boolean;
@@ -260,8 +255,6 @@ interface DrawingToolsUIState {
 type DrawingToolsUIAction =
   | { type: "SET_LAYERS_OPEN"; open: boolean }
   | { type: "SET_REGIONS_OPEN"; open: boolean }
-  | { type: "OPEN_CONFLICTS" }
-  | { type: "CLOSE_CONFLICTS" }
   | { type: "OPEN_HISTORY" }
   | { type: "CLOSE_HISTORY" }
   | { type: "OPEN_VERSION" }
@@ -284,12 +277,6 @@ function drawingToolsUIReducer(
     }
     case "AUTO_OPEN_REGIONS": {
       return { ...state, regionsOpen: true };
-    }
-    case "OPEN_CONFLICTS": {
-      return { ...state, showConflicts: true };
-    }
-    case "CLOSE_CONFLICTS": {
-      return { ...state, showConflicts: false };
     }
     case "OPEN_HISTORY": {
       return { ...state, showVersionHistory: true };
@@ -464,7 +451,6 @@ function useDrawingToolsActions({
   const [ui, dispatchUI] = useReducer(drawingToolsUIReducer, {
     layersOpen: !!areaId,
     regionsOpen: false,
-    showConflicts: false,
     showVersionHistory: false,
     showCreateVersion: false,
     showLayerMerge: false,
@@ -856,6 +842,7 @@ interface LayerManagementSectionProps {
   handleToggleVisibility: (layerId: number, visible: boolean) => void;
   handleSoloLayer: (layerId: number) => void;
   handleShowAllLayers: () => void;
+  onOpenConflicts?: () => void;
 }
 
 function LayerManagementSection({
@@ -877,11 +864,12 @@ function LayerManagementSection({
   handleToggleVisibility,
   handleSoloLayer,
   handleShowAllLayers,
+  onOpenConflicts,
 }: LayerManagementSectionProps) {
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
   const handleOpenConflicts = useCallback(
-    () => dispatchUI({ type: "OPEN_CONFLICTS" }),
-    [dispatchUI]
+    () => onOpenConflicts?.(),
+    [onOpenConflicts]
   );
   const handleOpenHistory = useCallback(
     () => dispatchUI({ type: "OPEN_HISTORY" }),
@@ -913,9 +901,7 @@ function LayerManagementSection({
     [handleCreateLayer]
   );
 
-  const hasHiddenLayers = optimisticLayers.some(
-    (l) => l.isVisible === "false"
-  );
+  const hasHiddenLayers = optimisticLayers.some((l) => l.isVisible === "false");
 
   return (
     <>
@@ -1127,13 +1113,6 @@ const LayerDialogs = memo(function LayerDialogs({
   onLayerUpdate,
   confirmDeleteLayer,
 }: LayerDialogsProps) {
-  const handleConflictsOpenChange = useCallback(
-    (open: boolean) =>
-      dispatchUI(
-        open ? { type: "OPEN_CONFLICTS" } : { type: "CLOSE_CONFLICTS" }
-      ),
-    [dispatchUI]
-  );
   const handleHistoryOpenChange = useCallback(
     (open: boolean) =>
       dispatchUI(open ? { type: "OPEN_HISTORY" } : { type: "CLOSE_HISTORY" }),
@@ -1172,12 +1151,6 @@ const LayerDialogs = memo(function LayerDialogs({
 
   return (
     <>
-      <ConflictResolutionDialog
-        open={ui.showConflicts}
-        onOpenChange={handleConflictsOpenChange}
-        areaId={areaId}
-        layers={layers}
-      />
       <EnhancedVersionHistoryDialog
         open={ui.showVersionHistory}
         onOpenChange={handleHistoryOpenChange}
@@ -1251,6 +1224,7 @@ function DrawingToolsImpl({
   country,
   versions = EMPTY_ARRAY,
   changes = EMPTY_ARRAY,
+  onOpenConflicts,
 }: DrawingToolsProps) {
   const {
     optimisticLayers,
@@ -1391,6 +1365,7 @@ function DrawingToolsImpl({
             handleToggleVisibility={handleToggleVisibility}
             handleSoloLayer={handleSoloLayer}
             handleShowAllLayers={handleShowAllLayers}
+            onOpenConflicts={onOpenConflicts}
           />
         )}
 

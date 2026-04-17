@@ -8,22 +8,21 @@ import {
   IconLoader,
   IconWand,
 } from "@tabler/icons-react";
+import { X } from "lucide-react";
 import { useState, useEffect, useCallback, Activity } from "react";
 
 import { updateLayerAction } from "@/app/actions/layer-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -43,19 +42,39 @@ import { cn } from "@/lib/utils";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 
-interface ConflictResolutionDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface ConflictResolutionPanelProps {
+  onClose: () => void;
+  onHighlightCodes: (codes: Set<string> | null) => void;
   areaId: number;
   layers: Layer[];
+  /** Country code for composite postal code keys (e.g. "DE"). */
+  country?: string;
 }
 
-export function ConflictResolutionDialog({
-  open,
-  onOpenChange,
+export function ConflictResolutionPanel({
+  onClose,
+  onHighlightCodes,
   areaId,
   layers,
-}: ConflictResolutionDialogProps) {
+  country,
+}: ConflictResolutionPanelProps) {
+  // Convert raw postal codes to composite keys for feature-index lookup
+  const toCompositeSet = useCallback(
+    (codes: Set<string>) => {
+      if (!country) return codes;
+      const composite = new Set<string>();
+      for (const code of codes) {
+        composite.add(`${country}:${code}`);
+      }
+      return composite;
+    },
+    [country]
+  );
+  const highlightCodes = useCallback(
+    (codes: Set<string> | null) =>
+      onHighlightCodes(codes ? toCompositeSet(codes) : null),
+    [onHighlightCodes, toCompositeSet]
+  );
   const { conflicts, conflictGroups, detectConflicts, isDetecting } =
     useLayerConflicts(layers);
 
@@ -65,12 +84,13 @@ export function ConflictResolutionDialog({
   const [resolveProgress, setResolveProgress] = useState(0);
 
   useEffect(() => {
-    if (open) {
-      detectConflicts();
-      setSelectedCodes(new Set());
-      setExpandedGroups(new Set());
-    }
-  }, [open, detectConflicts]);
+    detectConflicts();
+    setSelectedCodes(new Set());
+    setExpandedGroups(new Set());
+  }, [detectConflicts]);
+
+  // Clear highlights when panel unmounts
+  useEffect(() => () => onHighlightCodes(null), [onHighlightCodes]);
 
   const toggleGroup = (groupKey: string) => {
     setExpandedGroups((prev) => {
@@ -222,214 +242,212 @@ export function ConflictResolutionDialog({
     group.postalCodes.filter((c) => selectedCodes.has(c)).length;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <IconAlertTriangle className="h-5 w-5 text-amber-500" />
-            Konflikte auflösen
-          </DialogTitle>
-          <DialogDescription>
-            Überlappende PLZ in verschiedenen Gebieten finden und beheben.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 min-h-0 space-y-3">
-          {/* Scanning state */}
-          <Activity mode={isDetecting ? "visible" : "hidden"}>
-            <div className="flex items-center justify-center gap-2 p-8">
-              <IconLoader className="h-5 w-5 animate-spin" />
-              <span className="text-sm text-muted-foreground">
-                Scanne nach Konflikten...
-              </span>
-            </div>
-          </Activity>
-
-          {/* No conflicts */}
-          <Activity
-            mode={!isDetecting && conflicts.length === 0 ? "visible" : "hidden"}
+    <Card className="flex flex-col max-h-full min-h-0 w-80">
+      <CardHeader className="pb-2 shrink-0">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <IconAlertTriangle className="h-4 w-4 text-amber-500" />
+          Konflikte auflösen
+        </CardTitle>
+        <CardAction>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded hover:bg-muted"
           >
-            <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950 rounded-lg">
-              <IconCheck className="h-5 w-5 text-green-600" />
-              <span className="text-sm text-green-700 dark:text-green-300">
-                Keine Konflikte gefunden
-              </span>
-            </div>
-          </Activity>
+            <X className="h-4 w-4" />
+          </button>
+        </CardAction>
+      </CardHeader>
 
-          {/* Conflicts found */}
-          <Activity
-            mode={!isDetecting && conflicts.length > 0 ? "visible" : "hidden"}
-          >
-            <div className="space-y-3">
-              {/* Summary bar */}
-              <div className="flex items-center justify-between gap-2 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg">
-                <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                  {conflicts.length} PLZ-Konflikt
-                  {conflicts.length !== 1 ? "e" : ""} in {conflictGroups.length}{" "}
-                  Gruppe
-                  {conflictGroups.length !== 1 ? "n" : ""}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={
-                      selectedCodes.size === conflicts.length
-                        ? deselectAll
-                        : selectAll
-                    }
-                  >
-                    {selectedCodes.size === conflicts.length ? "Keine" : "Alle"}{" "}
-                    auswählen
-                  </Button>
+      <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-2 text-xs">
+        {/* Scanning state */}
+        <Activity mode={isDetecting ? "visible" : "hidden"}>
+          <div className="flex items-center justify-center gap-2 p-4">
+            <IconLoader className="h-4 w-4 animate-spin" />
+            <span className="text-muted-foreground">
+              Scanne nach Konflikten...
+            </span>
+          </div>
+        </Activity>
+
+        {/* No conflicts */}
+        <Activity
+          mode={!isDetecting && conflicts.length === 0 ? "visible" : "hidden"}
+        >
+          <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950 rounded">
+            <IconCheck className="h-4 w-4 text-green-600" />
+            <span className="text-green-700 dark:text-green-300">
+              Keine Konflikte gefunden
+            </span>
+          </div>
+        </Activity>
+
+        {/* Conflicts found */}
+        <Activity
+          mode={!isDetecting && conflicts.length > 0 ? "visible" : "hidden"}
+        >
+          <div className="space-y-2">
+            {/* Summary bar */}
+            <div className="flex items-center justify-between gap-1 p-2 bg-amber-50 dark:bg-amber-950 rounded-lg">
+              <span className="font-medium text-amber-700 dark:text-amber-300">
+                {conflicts.length} Konflikt
+                {conflicts.length !== 1 ? "e" : ""} in {conflictGroups.length}{" "}
+                Gruppe
+                {conflictGroups.length !== 1 ? "n" : ""}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 text-xs px-1"
+                onClick={
+                  selectedCodes.size === conflicts.length
+                    ? deselectAll
+                    : selectAll
+                }
+              >
+                {selectedCodes.size === conflicts.length ? "Keine" : "Alle"}
+              </Button>
+            </div>
+
+            {/* Resolve progress */}
+            <Activity mode={resolving ? "visible" : "hidden"}>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <IconLoader className="h-3 w-3 animate-spin" />
+                  Auflösen...
                 </div>
+                <Progress value={resolveProgress} />
               </div>
+            </Activity>
 
-              {/* Resolve progress */}
-              <Activity mode={resolving ? "visible" : "hidden"}>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <IconLoader className="h-4 w-4 animate-spin" />
-                    Konflikte werden aufgelöst...
-                  </div>
-                  <Progress value={resolveProgress} />
-                </div>
-              </Activity>
+            {/* Grouped conflict list */}
+            <div className="space-y-1.5">
+              {conflictGroups.map((group) => {
+                const isExpanded = expandedGroups.has(group.key);
+                const groupSelected = selectedInGroup(group);
+                const groupCodes = new Set(group.postalCodes);
 
-              {/* Grouped conflict list */}
-              <ScrollArea className="max-h-[45vh]">
-                <div className="space-y-2 pr-3">
-                  {conflictGroups.map((group) => {
-                    const isExpanded = expandedGroups.has(group.key);
-                    const groupSelected = selectedInGroup(group);
-
-                    return (
-                      <div
-                        key={group.key}
-                        className="border rounded-lg overflow-hidden"
+                return (
+                  <div
+                    key={group.key}
+                    className="border rounded overflow-hidden"
+                    onMouseEnter={() => highlightCodes(groupCodes)}
+                    onMouseLeave={() => highlightCodes(null)}
+                  >
+                    {/* Group header */}
+                    <div className="flex items-center gap-1.5 p-1.5 bg-muted/50 hover:bg-muted transition-colors">
+                      <Checkbox
+                        checked={isGroupFullySelected(group)}
+                        indeterminate={
+                          !isGroupFullySelected(group) &&
+                          isGroupPartiallySelected(group)
+                        }
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            selectAllInGroup(group);
+                          } else {
+                            deselectAllInGroup(group);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="flex-1 flex items-center gap-1 text-left min-w-0"
+                        onClick={() => toggleGroup(group.key)}
                       >
-                        {/* Group header */}
-                        <div className="flex items-center gap-2 p-2 bg-muted/50 hover:bg-muted transition-colors">
-                          <Checkbox
-                            checked={isGroupFullySelected(group)}
-                            indeterminate={
-                              !isGroupFullySelected(group) &&
-                              isGroupPartiallySelected(group)
-                            }
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                selectAllInGroup(group);
-                              } else {
-                                deselectAllInGroup(group);
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="flex-1 flex items-center gap-2 text-left"
-                            onClick={() => toggleGroup(group.key)}
-                          >
-                            {isExpanded ? (
-                              <IconChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            ) : (
-                              <IconChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            )}
-                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                              {group.layers.map((layer, i) => (
-                                <span
-                                  key={layer.id}
-                                  className="flex items-center gap-1"
-                                >
-                                  {i > 0 && (
-                                    <span className="text-xs text-muted-foreground">
-                                      ↔
-                                    </span>
-                                  )}
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs px-1.5 py-0"
-                                    style={{
-                                      borderColor: layer.color,
-                                      color: layer.color,
-                                    }}
-                                  >
-                                    {layer.name}
-                                  </Badge>
-                                </span>
-                              ))}
-                            </div>
-                            <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
-                              {group.postalCodes.length} PLZ
-                              {groupSelected > 0 && (
-                                <span className="text-primary">
-                                  {" "}
-                                  ({groupSelected} ✓)
-                                </span>
-                              )}
-                            </span>
-                          </button>
-
-                          {/* Inline group action */}
-                          <GroupResolveDropdown
-                            group={group}
-                            layers={layers}
-                            disabled={resolving}
-                            onResolve={(targetLayerId) =>
-                              handleBatchResolve(
-                                targetLayerId,
-                                new Set(group.postalCodes)
-                              )
-                            }
-                          />
-                        </div>
-
-                        {/* Expanded postal code pills */}
-                        {isExpanded && (
-                          <div className="p-2 flex flex-wrap gap-1 border-t bg-background">
-                            {group.postalCodes.map((code) => (
-                              <button
-                                key={code}
-                                type="button"
-                                onClick={() => toggleCode(code)}
-                                className={cn(
-                                  "px-2 py-0.5 text-xs rounded-full border transition-colors cursor-pointer",
-                                  selectedCodes.has(code)
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
-                                )}
-                              >
-                                {code}
-                              </button>
-                            ))}
-                          </div>
+                        {isExpanded ? (
+                          <IconChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <IconChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            </div>
-          </Activity>
-        </div>
+                        <div className="flex items-center gap-1 flex-wrap min-w-0">
+                          {group.layers.map((layer, i) => (
+                            <span
+                              key={layer.id}
+                              className="flex items-center gap-0.5"
+                            >
+                              {i > 0 && (
+                                <span className="text-muted-foreground">↔</span>
+                              )}
+                              <Badge
+                                variant="outline"
+                                className="px-1 py-0 text-[10px] leading-4"
+                                style={{
+                                  borderColor: layer.color,
+                                  color: layer.color,
+                                }}
+                              >
+                                {layer.name}
+                              </Badge>
+                            </span>
+                          ))}
+                        </div>
+                        <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
+                          {group.postalCodes.length}
+                          {groupSelected > 0 && (
+                            <span className="text-primary">
+                              {" "}
+                              ({groupSelected}✓)
+                            </span>
+                          )}
+                        </span>
+                      </button>
 
-        <DialogFooter className="flex-shrink-0 gap-2 sm:gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={resolving}
-          >
-            Schließen
-          </Button>
+                      {/* Inline group action */}
+                      <GroupResolveDropdown
+                        group={group}
+                        layers={layers}
+                        disabled={resolving}
+                        onResolve={(targetLayerId) =>
+                          handleBatchResolve(
+                            targetLayerId,
+                            new Set(group.postalCodes)
+                          )
+                        }
+                      />
+                    </div>
+
+                    {/* Expanded postal code pills */}
+                    {isExpanded && (
+                      <div className="p-1.5 flex flex-wrap gap-0.5 border-t bg-background">
+                        {group.postalCodes.map((code) => (
+                          <button
+                            key={code}
+                            type="button"
+                            onClick={() => toggleCode(code)}
+                            onMouseEnter={() => highlightCodes(new Set([code]))}
+                            onMouseLeave={() => highlightCodes(groupCodes)}
+                            className={cn(
+                              "px-1.5 py-0 text-[10px] rounded-full border transition-colors cursor-pointer",
+                              selectedCodes.has(code)
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+                            )}
+                          >
+                            {code}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Activity>
+
+        {/* Action buttons — compact row */}
+        <div className="flex flex-wrap gap-1 pt-1">
           <Button
             onClick={() => detectConflicts()}
             variant="secondary"
+            size="sm"
+            className="h-6 text-xs"
             disabled={isDetecting || resolving}
           >
             {isDetecting ? (
               <>
-                <IconLoader className="h-4 w-4 mr-1 animate-spin" />
+                <IconLoader className="h-3 w-3 mr-1 animate-spin" />
                 Scannen...
               </>
             ) : (
@@ -442,14 +460,16 @@ export function ConflictResolutionDialog({
                 render={
                   <Button
                     variant="secondary"
+                    size="sm"
+                    className="h-6 text-xs"
                     onClick={handleAutoResolve}
                     disabled={resolving || isDetecting}
-                  >
-                    <IconWand className="h-4 w-4 mr-1" />
-                    Auto
-                  </Button>
+                  />
                 }
-              />
+              >
+                <IconWand className="h-3 w-3 mr-1" />
+                Auto
+              </TooltipTrigger>
               <TooltipContent>
                 Alle Konflikte automatisch auflösen — PLZ im größten Gebiet
                 behalten
@@ -466,9 +486,9 @@ export function ConflictResolutionDialog({
               }
             />
           </Activity>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

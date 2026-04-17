@@ -49,6 +49,15 @@ import type {
 import { Button } from "../ui/button";
 import { DeckGLOverlay } from "./deck-gl-overlay";
 
+// Lazy-loaded conflict resolution panel (side panel, not modal)
+const ConflictResolutionPanel = dynamic(
+  () =>
+    import("../areas/conflict-resolution-dialog").then(
+      (m) => m.ConflictResolutionPanel
+    ),
+  { ssr: false }
+);
+
 // Memoized drawing tools component with lazy loading for performance
 const DrawingTools = dynamic(
   () => import("./drawing-tools").then((m) => m.DrawingTools),
@@ -169,6 +178,17 @@ const MapInner = memo(function MapInner({
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
 
+  // Conflict resolution panel state (lifted from DrawingTools)
+  const [showConflicts, setShowConflicts] = useState(false);
+  const [highlightedConflictCodes, setHighlightedConflictCodes] =
+    useState<Set<string> | null>(null);
+
+  const handleOpenConflicts = useCallback(() => setShowConflicts(true), []);
+  const handleCloseConflicts = useCallback(() => {
+    setShowConflicts(false);
+    setHighlightedConflictCodes(null);
+  }, []);
+
   // Get raw MapLibre instance for TerraDraw and labels
   useEffect(() => {
     if (!mapRef) {
@@ -240,6 +260,7 @@ const MapInner = memo(function MapInner({
     mapCanvasRef,
     country,
     beforeId: firstSymbolLayerId,
+    highlightedCodes: highlightedConflictCodes,
   });
 
   // MapLibre native labels (hybrid escape hatch)
@@ -329,6 +350,7 @@ const MapInner = memo(function MapInner({
                 versionId={versionId}
                 versions={versions}
                 changes={changes}
+                onOpenConflicts={handleOpenConflicts}
               />
             </Suspense>
           </DrawingToolsErrorBoundary>
@@ -350,6 +372,19 @@ const MapInner = memo(function MapInner({
           >
             <PlusIcon width={24} height={24} />
           </ToggleButton>
+        </div>
+      </Activity>
+
+      {/* Conflict resolution panel — right side, next to the map */}
+      <Activity mode={showConflicts ? "visible" : "hidden"}>
+        <div className="absolute top-20 right-4 bottom-4 z-10 w-80">
+          <ConflictResolutionPanel
+            onClose={handleCloseConflicts}
+            onHighlightCodes={setHighlightedConflictCodes}
+            areaId={areaId!}
+            layers={layers ?? []}
+            country={country}
+          />
         </div>
       </Activity>
     </>
