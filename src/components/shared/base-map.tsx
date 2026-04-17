@@ -207,8 +207,8 @@ const MapInner = memo(function MapInner({
   const statesData = useStatesData();
   const countryShapesData = useCountryShapesData();
 
-  // Dissolved outer outlines per visible layer — computed client-side via @turf/union
-  const layerOutlines = useLayerOutlines(data, layers);
+  // Dissolved outer outlines per visible layer — PostGIS ST_Union, cached by exact code set
+  const layerOutlines = useLayerOutlines(areaId ?? 0, layers);
 
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });

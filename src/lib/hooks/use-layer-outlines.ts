@@ -1,12 +1,5 @@
-import union from "@turf/union";
-import type {
-  Feature,
-  FeatureCollection,
-  Geometry,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
-import { useEffect, useState } from "react";
+import type { FeatureCollection, Geometry, MultiPolygon, Polygon } from "geojson";
+import { useEffect, useRef, useState } from "react";
 
 export interface LayerOutline {
   layerId: number;
@@ -23,70 +16,92 @@ type LayerWithCodes = {
   postalCodes?: { postalCode: string }[];
 };
 
+const outlineCache = new Map<string, LayerOutline[]>();
+
+/** Stable key from the actual sorted postal codes per visible layer. */
+function buildCacheKey(
+  areaId: number,
+  layers: LayerWithCodes[] | undefined
+): string {
+  if (!layers?.length) return `${areaId}:empty`;
+  const parts = layers
+    .filter((l) => l.isVisible === "true" && l.postalCodes?.length)
+    .map((l) => {
+      const codes = (l.postalCodes ?? [])
+        .map((pc) => pc.postalCode)
+        .sort()
+        .join(",");
+      return `${l.id}:${codes}`;
+    })
+    .sort()
+    .join("|");
+  return `${areaId}:${parts || "empty"}`;
+}
+
 /**
- * Computes dissolved outer outlines per visible layer entirely client-side.
+ * Fetches PostGIS-dissolved layer outlines for an area.
+ * Each visible layer's postal codes are ST_Union'd server-side into one outer silhouette.
  *
- * Uses @turf/union on the already-loaded geodata FeatureCollection — no
- * network round-trips. Runs asynchronously so it never blocks a render frame.
- * Cancelled immediately on the next change via a `cancelled` flag.
+ * - Cache keyed by actual sorted postal codes — exact hits, no stale results.
+ * - Previous outlines stay visible while the next fetch completes (no flash).
+ * - 100ms debounce to batch rapid selection clicks; AbortController cancels stale fetches.
  */
 export function useLayerOutlines(
-  geodata: FeatureCollection<Polygon | MultiPolygon>,
+  areaId: number,
   layers: LayerWithCodes[] | undefined
 ): LayerOutline[] {
-  const [outlines, setOutlines] = useState<LayerOutline[]>([]);
+  const cacheKey = buildCacheKey(areaId, layers);
+  const [outlines, setOutlines] = useState<LayerOutline[]>(
+    () => outlineCache.get(cacheKey) ?? []
+  );
+
+  const abortRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!layers?.length || !geodata.features.length) {
-      setOutlines([]);
+    if (!areaId) return;
+
+    const cached = outlineCache.get(cacheKey);
+    if (cached) {
+      setOutlines(cached);
       return;
     }
 
-    let cancelled = false;
+    // Clear previous timer; abort previous fetch
+    if (timerRef.current) clearTimeout(timerRef.current);
 
-    // Build code → feature lookup once per geodata reference
-    const featureByCode = new Map<string, Feature<Polygon | MultiPolygon>>();
-    for (const feature of geodata.features) {
-      const code = feature.properties?.code as string | undefined;
-      if (code) featureByCode.set(code, feature);
-    }
+    timerRef.current = setTimeout(() => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-    const computed: LayerOutline[] = [];
-
-    for (const layer of layers) {
-      if (layer.isVisible !== "true") continue;
-      if (!layer.postalCodes?.length) continue;
-
-      const features = layer.postalCodes
-        .map((pc) => featureByCode.get(pc.postalCode))
-        .filter(
-          (f): f is Feature<Polygon | MultiPolygon> =>
-            f !== undefined && f.geometry != null
-        );
-      if (!features.length) continue;
-
-      // Compute union via @turf/union (v7 takes a FeatureCollection)
-      const merged = union({
-        type: "FeatureCollection" as const,
-        features: features as Feature<Polygon | MultiPolygon>[],
-      });
-
-      if (merged) {
-        computed.push({
-          layerId: layer.id,
-          color: layer.color,
-          opacity: layer.opacity,
-          outline: merged.geometry,
+      fetch(`/api/areas/${areaId}/layer-outlines`, {
+        signal: controller.signal,
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json() as Promise<LayerOutline[]>;
+        })
+        .then((data) => {
+          outlineCache.set(cacheKey, data);
+          setOutlines(data);
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            // keep previous outlines on error
+          }
         });
-      }
-    }
-
-    if (!cancelled) setOutlines(computed);
+    }, 100);
 
     return () => {
-      cancelled = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      abortRef.current?.abort();
     };
-  }, [geodata, layers]);
+  }, [cacheKey, areaId]);
 
   return outlines;
 }
+
+// Re-export geodata hook type for base-map compatibility (unused but keeps imports clean)
+export type { FeatureCollection, Geometry, MultiPolygon, Polygon };
+
