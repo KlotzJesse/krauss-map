@@ -382,7 +382,7 @@ export function ConflictResolutionPanel({
                                   <span className="text-muted-foreground">↔</span>
                                 )}
                                 <Badge
-                                  className="px-1 py-0 text-[10px] leading-4 max-w-[90px] truncate border-0"
+                                  className="px-1.5 py-0 text-[10px] leading-4 border-0 whitespace-nowrap"
                                   style={{
                                     backgroundColor: layer.color,
                                     color: isLightColor(layer.color) ? "#1a1a1a" : "#fff",
