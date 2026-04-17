@@ -31,7 +31,8 @@ function buildCacheKey(
  * Each visible layer's postal codes are unioned server-side into a single
  * outer silhouette — no internal borders between postal codes.
  *
- * Debounces fetches (300ms) so rapid selection changes don't hammer the API.
+ * Fires immediately on key change; any in-flight request for a previous key
+ * is aborted via AbortController before the new fetch starts.
  * Results are cached in a module-level Map keyed by areaId + visible layer set.
  */
 export function useLayerOutlines(
@@ -50,15 +51,8 @@ export function useLayerOutlines(
   );
 
   const abortRef = useRef<AbortController | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevKeyRef = useRef<string>(cacheKey);
 
   useEffect(() => {
-    if (cacheKey === prevKeyRef.current && outlineCache.has(cacheKey)) {
-      return;
-    }
-    prevKeyRef.current = cacheKey;
-
     const cached = outlineCache.get(cacheKey);
     if (cached) {
       setOutlines(cached);
@@ -66,40 +60,33 @@ export function useLayerOutlines(
       return;
     }
 
-    // Debounce: wait for rapid changes to settle before hitting the API
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
+    // Abort any in-flight request for a previous key before starting a new one
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setIsLoading(true);
 
-    timerRef.current = setTimeout(() => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      fetch(`/api/areas/${areaId}/layer-outlines`, {
-        signal: controller.signal,
+    fetch(`/api/areas/${areaId}/layer-outlines`, {
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<LayerOutline[]>;
       })
-        .then((res) => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json() as Promise<LayerOutline[]>;
-        })
-        .then((data) => {
-          outlineCache.set(cacheKey, data);
-          setOutlines(data);
+      .then((data) => {
+        outlineCache.set(cacheKey, data);
+        setOutlines(data);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
           setIsLoading(false);
-        })
-        .catch((err) => {
-          if (err.name !== "AbortError") {
-            setIsLoading(false);
-          }
-        });
-    }, 300);
+        }
+      });
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      abortRef.current?.abort();
+      controller.abort();
     };
   }, [cacheKey, areaId]);
 
