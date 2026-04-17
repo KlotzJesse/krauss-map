@@ -10,7 +10,7 @@ import {
 } from "@tabler/icons-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -731,6 +731,26 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleShowAllLayers = () => {
+    startTransition(async () => {
+      const updates: { layerId: number; isVisible: boolean }[] = [];
+      for (const layer of optimisticLayers) {
+        if (layer.isVisible === "false") {
+          updates.push({ layerId: layer.id, isVisible: true });
+          updateOptimisticLayers({
+            type: "update",
+            id: layer.id,
+            layer: { isVisible: "true" },
+          });
+        }
+      }
+      if (areaId && updates.length > 0) {
+        const result = await batchUpdateVisibilityAction(areaId, updates);
+        if (result.success) onLayerUpdate?.();
+      }
+    });
+  };
+
   const handleDeleteLayer = (layerId: number) => {
     dispatchForm({ type: "OPEN_DELETE", layerId });
   };
@@ -812,6 +832,7 @@ function useDrawingToolsActions({
     handleFillHoles,
     handleToggleVisibility,
     handleSoloLayer,
+    handleShowAllLayers,
   };
 }
 
@@ -834,6 +855,7 @@ interface LayerManagementSectionProps {
   handleDuplicateLayer: (layerId: number) => void;
   handleToggleVisibility: (layerId: number, visible: boolean) => void;
   handleSoloLayer: (layerId: number) => void;
+  handleShowAllLayers: () => void;
 }
 
 function LayerManagementSection({
@@ -854,6 +876,7 @@ function LayerManagementSection({
   handleDuplicateLayer,
   handleToggleVisibility,
   handleSoloLayer,
+  handleShowAllLayers,
 }: LayerManagementSectionProps) {
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
   const handleOpenConflicts = useCallback(
@@ -890,25 +913,50 @@ function LayerManagementSection({
     [handleCreateLayer]
   );
 
+  const hasHiddenLayers = optimisticLayers.some(
+    (l) => l.isVisible === "false"
+  );
+
   return (
     <>
       <Collapsible open={ui.layersOpen} onOpenChange={handleSetLayersOpen}>
-        <CollapsibleTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-between h-7 px-2 text-xs font-semibold"
-            />
-          }
-        >
-          <span>Gebiete ({optimisticLayers.length})</span>
-          {ui.layersOpen ? (
-            <ChevronUp className="h-3 w-3" />
-          ) : (
-            <ChevronDown className="h-3 w-3" />
+        <div className="flex items-center gap-0.5">
+          <CollapsibleTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1 justify-between h-7 px-2 text-xs font-semibold"
+              />
+            }
+          >
+            <span>Gebiete ({optimisticLayers.length})</span>
+            {ui.layersOpen ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+          </CollapsibleTrigger>
+          {hasHiddenLayers && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={handleShowAllLayers}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0"
+                  />
+                }
+              >
+                <Eye className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Alle Gebiete einblenden</p>
+              </TooltipContent>
+            </Tooltip>
           )}
-        </CollapsibleTrigger>
+        </div>
         <CollapsibleContent className="space-y-2 pt-2">
           {/* Layer action buttons */}
           <div className="grid grid-cols-4 gap-1">
@@ -1223,6 +1271,7 @@ function DrawingToolsImpl({
     handleFillHoles,
     handleToggleVisibility,
     handleSoloLayer,
+    handleShowAllLayers,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -1341,6 +1390,7 @@ function DrawingToolsImpl({
             handleDuplicateLayer={handleDuplicateLayer}
             handleToggleVisibility={handleToggleVisibility}
             handleSoloLayer={handleSoloLayer}
+            handleShowAllLayers={handleShowAllLayers}
           />
         )}
 
