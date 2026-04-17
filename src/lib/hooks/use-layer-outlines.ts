@@ -59,7 +59,10 @@ export function useLayerOutlines(
 
       const features = layer.postalCodes
         .map((pc) => featureByCode.get(pc.postalCode))
-        .filter((f): f is Feature<Polygon | MultiPolygon> => f !== undefined);
+        .filter(
+          (f): f is Feature<Polygon | MultiPolygon> =>
+            f !== undefined && f.geometry != null
+        );
       if (!features.length) continue;
 
       // Compute union via @turf/union (v7 takes a FeatureCollection)
