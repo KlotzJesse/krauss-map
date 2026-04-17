@@ -23,14 +23,26 @@ type Layer = InferSelectModel<typeof areaLayers> & {
 };
 
 /**
- * Returns the ID of the first symbol layer in the basemap style.
- * Used as `beforeId` for deck.gl layers to ensure proper z-ordering
- * (polygons below labels). Basemap layers survive style transitions,
- * eliminating timing issues that plagued the previous sentinel approach.
+ * Returns the ID of the first label/symbol layer AFTER basemap boundary lines.
+ * Used as `beforeId` for deck.gl layers to ensure proper z-ordering:
+ * our polygon/line layers render above basemap boundary lines but below labels.
  */
 export function getFirstSymbolLayerId(map: MapLibreMap): string | undefined {
   const style = map.getStyle();
   if (!style?.layers) return undefined;
+  // Find the last boundary line layer, then return the next layer's ID
+  let lastBoundaryIdx = -1;
+  for (let i = 0; i < style.layers.length; i++) {
+    const layer = style.layers[i];
+    if (layer.id.startsWith("boundary-") && layer.type === "line") {
+      lastBoundaryIdx = i;
+    }
+  }
+  // If boundary lines found, insert after them
+  if (lastBoundaryIdx >= 0 && lastBoundaryIdx + 1 < style.layers.length) {
+    return style.layers[lastBoundaryIdx + 1].id;
+  }
+  // Fallback: first symbol layer
   for (const layer of style.layers) {
     if (layer.type === "symbol") return layer.id;
   }

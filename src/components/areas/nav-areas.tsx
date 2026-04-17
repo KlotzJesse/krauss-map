@@ -1,7 +1,7 @@
 "use client";
 
 import { IconPlus } from "@tabler/icons-react";
-import { useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   useOptimistic,
   useReducer,
@@ -154,8 +154,10 @@ export function NavAreas({
       editInputRef.current?.focus();
     }
   }, [editingAreaId]);
-  const params = useParams();
-  const currentAreaIdFromRoute = params?.areaId ? String(params.areaId) : null;
+  const pathname = usePathname();
+  const currentAreaIdFromRoute = pathname?.match(/\/postal-codes\/(\d+)/)?.[1] ?? null;
+  // biome-ignore lint: debug log to verify re-render on client-side nav
+  console.log("[NavAreas] pathname:", pathname, "currentAreaIdFromRoute:", currentAreaIdFromRoute);
 
   // Optimistic state for areas
   const [optimisticAreas, updateOptimisticAreas] = useOptimistic(
