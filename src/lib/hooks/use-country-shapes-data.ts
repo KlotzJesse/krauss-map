@@ -11,7 +11,9 @@ const countryShapesCache = new Map<string, CountryShapesData>();
  * Fetches country shape boundaries for DE/AT/CH. Pass a country code to filter,
  * or omit for all available country shapes.
  */
-export function useCountryShapesData(country?: CountryCode): CountryShapesData | null {
+export function useCountryShapesData(
+  country?: CountryCode
+): CountryShapesData | null {
   const cacheKey = country ?? "ALL";
   const [data, setData] = useState<CountryShapesData | null>(
     countryShapesCache.get(cacheKey) ?? null
@@ -28,7 +30,9 @@ export function useCountryShapesData(country?: CountryCode): CountryShapesData |
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const url = country ? `/api/countries?country=${country}` : "/api/countries";
+    const url = country
+      ? `/api/countries?country=${country}`
+      : "/api/countries";
     fetch(url, { signal: controller.signal })
       .then((res) => res.json())
       .then((json: CountryShapesData) => {

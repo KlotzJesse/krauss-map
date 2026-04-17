@@ -181,20 +181,14 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
     };
   }
 
-  // Primary: active layer's color (or first layer if none active)
+  // Primary: active layer's color (or first layer if none active) — same alpha as single-layer fills
   const primaryEntry =
     acc.layerFillEntries.find((e) => e.isActive) ?? acc.layerFillEntries[0];
-  const boostAlpha = (c: RgbaColor): RgbaColor => [
-    c[0],
-    c[1],
-    c[2],
-    Math.min(255, c[3] * 2 + 80),
-  ];
   const primaryFillColor: RgbaColor = primaryEntry
-    ? boostAlpha(primaryEntry.color)
-    : boostAlpha(avgFill);
+    ? primaryEntry.color
+    : avgFill;
 
-  // Secondary: blend of all other layers' fill colors
+  // Secondary: blend of all other layers' fill colors — same alpha as single-layer fills
   const secondaryEntries = acc.layerFillEntries.filter(
     (e) => e !== primaryEntry
   );
@@ -202,15 +196,15 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
   if (secondaryEntries.length === 0) {
     secondaryFillColor = primaryFillColor;
   } else if (secondaryEntries.length === 1) {
-    secondaryFillColor = boostAlpha(secondaryEntries[0].color);
+    secondaryFillColor = secondaryEntries[0].color;
   } else {
     const n = secondaryEntries.length;
-    secondaryFillColor = boostAlpha([
+    secondaryFillColor = [
       Math.round(secondaryEntries.reduce((s, e) => s + e.color[0], 0) / n),
       Math.round(secondaryEntries.reduce((s, e) => s + e.color[1], 0) / n),
       Math.round(secondaryEntries.reduce((s, e) => s + e.color[2], 0) / n),
       Math.round(secondaryEntries.reduce((s, e) => s + e.color[3], 0) / n),
-    ]);
+    ];
   }
 
   return {
@@ -223,7 +217,7 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
     primaryFillColor,
     secondaryFillColor,
     lineColor: [avgLine[0], avgLine[1], avgLine[2], 255],
-    lineWidth: (acc.hasActive ? 3 : 2.2) + Math.min(2, (acc.count - 1) * 0.7),
+    lineWidth: acc.hasActive ? 2.5 : 1.5,
     count: acc.count,
     isSameColor,
   };
@@ -725,8 +719,8 @@ export function useDeckLayers({
           getLineWidth: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
-              ? Math.max(resolvedStyles.get(code)?.lineWidth ?? 2, 2.5)
-              : 2.5;
+              ? (resolvedStyles.get(code)?.lineWidth ?? 1)
+              : 1;
           },
           lineWidthUnits: "pixels" as const,
           lineJointRounded: true,
@@ -773,8 +767,8 @@ export function useDeckLayers({
           getLineWidth: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
-              ? Math.max(resolvedStyles.get(code)?.lineWidth ?? 2, 2.5)
-              : 2.5;
+              ? (resolvedStyles.get(code)?.lineWidth ?? 1)
+              : 1;
           },
           lineWidthUnits: "pixels" as const,
           lineJointRounded: true,
