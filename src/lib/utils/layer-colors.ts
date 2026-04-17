@@ -3,6 +3,15 @@
  * evenly-spaced hues in HSL space with perceptual adjustments.
  */
 
+/** Returns true if the hex color is "light" (needs dark text for contrast). */
+export function isLightColor(hex: string): boolean {
+  const c = hex.replace("#", "");
+  const r = Number.parseInt(c.substring(0, 2), 16);
+  const g = Number.parseInt(c.substring(2, 4), 16);
+  const b = Number.parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+}
+
 function hexToHsl(hex: string): [number, number, number] {
   const r = Number.parseInt(hex.slice(1, 3), 16) / 255;
   const g = Number.parseInt(hex.slice(3, 5), 16) / 255;

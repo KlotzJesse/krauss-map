@@ -30,6 +30,7 @@ import {
   useOptimistic,
   use,
   useCallback,
+  useMemo,
 } from "react";
 import { toast } from "sonner";
 
@@ -42,6 +43,7 @@ import {
   MapSkeleton,
 } from "@/components/ui/loading-skeletons";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
+import { isLightColor } from "@/lib/utils/layer-colors";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 
@@ -75,6 +77,7 @@ import {
 } from "@/lib/url-state/map-state";
 
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+import { Badge } from "../ui/badge";
 
 const PostalCodeImportDialog = dynamic(
   () =>
@@ -434,6 +437,36 @@ export function PostalCodesViewClientWithLayers({
     [defaultGranularity]
   );
 
+  const activeLayer = useMemo(
+    () => optimisticLayers.find((l) => l.id === activeLayerId),
+    [optimisticLayers, activeLayerId]
+  );
+
+  // Per-layer duplicate postal code counts
+  const duplicateCountByLayer = useMemo(() => {
+    const counts = new Map<number, number>();
+    const codeToLayers = new Map<string, number[]>();
+    for (const layer of optimisticLayers) {
+      if (!layer.postalCodes) continue;
+      for (const pc of layer.postalCodes) {
+        const existing = codeToLayers.get(pc.postalCode);
+        if (existing) {
+          existing.push(layer.id);
+        } else {
+          codeToLayers.set(pc.postalCode, [layer.id]);
+        }
+      }
+    }
+    for (const [, layerIds] of codeToLayers) {
+      if (layerIds.length > 1) {
+        for (const id of layerIds) {
+          counts.set(id, (counts.get(id) ?? 0) + 1);
+        }
+      }
+    }
+    return counts;
+  }, [optimisticLayers]);
+
   return (
     <div className="h-full relative">
       {/* Address and Postal Code Tools - horizontal, top right */}
@@ -453,6 +486,22 @@ export function PostalCodesViewClientWithLayers({
             />
           </AddressAutocompleteErrorBoundary>
         </div>
+
+        {/* Active layer indicator */}
+        {activeLayer && (
+          <div
+            className="shrink-0 flex items-center h-10 px-3 rounded-md shadow-sm text-xs font-semibold select-none"
+            style={{
+              backgroundColor: activeLayer.color,
+              color: isLightColor(activeLayer.color) ? "#1a1a1a" : "#fff",
+            }}
+          >
+            <span className="truncate max-w-[140px]">{activeLayer.name}</span>
+            <span className="ml-1.5 opacity-75">
+              {activeLayer.postalCodes?.length ?? 0}
+            </span>
+          </div>
+        )}
 
         {/* Import Button - Opens the import dialog */}
         <div className="shrink-0">

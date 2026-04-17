@@ -17,6 +17,7 @@ import type { Dispatch, RefObject } from "react";
 import {
   Suspense,
   useCallback,
+  useMemo,
   useOptimistic,
   useReducer,
   useState,
@@ -921,6 +922,31 @@ function LayerManagementSection({
 
   const hasHiddenLayers = optimisticLayers.some((l) => l.isVisible === "false");
 
+  // Per-layer duplicate postal code counts
+  const duplicateCountByLayer = useMemo(() => {
+    const counts = new Map<number, number>();
+    const codeToLayers = new Map<string, number[]>();
+    for (const layer of optimisticLayers) {
+      if (!layer.postalCodes) continue;
+      for (const pc of layer.postalCodes) {
+        const existing = codeToLayers.get(pc.postalCode);
+        if (existing) {
+          existing.push(layer.id);
+        } else {
+          codeToLayers.set(pc.postalCode, [layer.id]);
+        }
+      }
+    }
+    for (const [, layerIds] of codeToLayers) {
+      if (layerIds.length > 1) {
+        for (const id of layerIds) {
+          counts.set(id, (counts.get(id) ?? 0) + 1);
+        }
+      }
+    }
+    return counts;
+  }, [optimisticLayers]);
+
   return (
     <>
       <Collapsible open={ui.layersOpen} onOpenChange={handleSetLayersOpen}>
@@ -1099,6 +1125,7 @@ function LayerManagementSection({
                 layer={layer}
                 activeLayerId={activeLayerId}
                 isLayerSwitchPending={isLayerSwitchPending}
+                duplicateCount={duplicateCountByLayer.get(layer.id) ?? 0}
                 editingLayerId={form.editingLayerId}
                 editingLayerName={form.editingLayerName}
                 editLayerInputRef={editLayerInputRef}

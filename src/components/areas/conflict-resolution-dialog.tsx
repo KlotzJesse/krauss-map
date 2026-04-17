@@ -39,16 +39,7 @@ import type { ConflictGroup } from "@/lib/hooks/use-layer-conflicts";
 import { useLayerConflicts } from "@/lib/hooks/use-layer-conflicts";
 import type { Layer } from "@/lib/types/area-types";
 import { cn } from "@/lib/utils";
-
-/** Returns true if the hex color is "light" (needs dark text for contrast). */
-function isLightColor(hex: string): boolean {
-  const c = hex.replace("#", "");
-  const r = Number.parseInt(c.substring(0, 2), 16);
-  const g = Number.parseInt(c.substring(2, 4), 16);
-  const b = Number.parseInt(c.substring(4, 6), 16);
-  // W3C relative luminance threshold
-  return (r * 299 + g * 587 + b * 114) / 1000 > 150;
-}
+import { isLightColor } from "@/lib/utils/layer-colors";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 

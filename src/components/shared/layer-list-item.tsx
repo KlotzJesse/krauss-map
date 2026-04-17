@@ -1,7 +1,7 @@
 "use client";
 
 import { IconPalette } from "@tabler/icons-react";
-import { Copy, CopyPlus, Eye, EyeOff, Focus, Loader2, X } from "lucide-react";
+import { Copy, CopyPlus, Eye, EyeOff, Focus, Loader2, TriangleAlert, X } from "lucide-react";
 import type { RefObject } from "react";
 import { memo, useState } from "react";
 import { toast } from "sonner";
@@ -45,6 +45,7 @@ interface LayerListItemProps {
   layer: LayerListItemLayer;
   activeLayerId?: number | null;
   isLayerSwitchPending?: boolean;
+  duplicateCount?: number;
   editingLayerId: number | null;
   editingLayerName: string;
   editLayerInputRef: RefObject<HTMLInputElement | null>;
@@ -136,6 +137,7 @@ export const LayerListItem = memo(function LayerListItem({
   layer,
   activeLayerId,
   isLayerSwitchPending = false,
+  duplicateCount = 0,
   editingLayerId,
   editingLayerName,
   editLayerInputRef,
@@ -249,6 +251,21 @@ export const LayerListItem = memo(function LayerListItem({
             <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
               {layer.postalCodes?.length ?? 0}
             </Badge>
+            {duplicateCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 border-0 gap-0.5" />
+                  }
+                >
+                  <TriangleAlert className="h-2.5 w-2.5" />
+                  {duplicateCount}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{duplicateCount} PLZ in mehreren Gebieten</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {isLayerSwitchPending && activeLayerId === layer.id && (
               <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
             )}
