@@ -370,8 +370,6 @@ interface UseDeckLayersProps {
   country?: string;
   /** ID of basemap symbol layer to insert deck.gl layers before (for z-ordering). */
   beforeId?: string;
-  /** Dissolved per-layer outlines from PostGIS ST_Union — one outer silhouette per layer. */
-  layerOutlines?: { layerId: number; color: string; opacity: number; outline: import("geojson").Geometry }[];
 }
 
 /**
@@ -390,7 +388,6 @@ export function useDeckLayers({
   mapCanvasRef,
   country,
   beforeId,
-  layerOutlines,
 }: UseDeckLayersProps) {
   // Hover state: store the currently hovered feature for the outline layer
   const [hoveredFeature, setHoveredFeature] = useState<Feature<
@@ -636,24 +633,36 @@ export function useDeckLayers({
       })
     );
 
-    // Solid area overlay — postal codes in exactly one visible layer (no stroke — outline drawn separately)
+    // Solid area overlay — postal codes in exactly one visible layer
     result.push(
       new GeoJsonLayer({
         id: "area-layers-solid",
         data: singleLayerFeaturesData,
         beforeId,
         filled: true,
-        stroked: false,
+        stroked: true,
         getFillColor: (f) => {
           const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
           return code
             ? (resolvedStyles.get(code)?.fillColor ?? [0, 0, 0, 0])
             : [0, 0, 0, 0];
         },
+        getLineColor: (f) => {
+          const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+          return code
+            ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+            : [0, 0, 0, 0];
+        },
+        getLineWidth: (f) => {
+          const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+          return code ? (resolvedStyles.get(code)?.lineWidth ?? 1.5) : 1.5;
+        },
         lineWidthUnits: "pixels" as const,
         pickable: false,
         updateTriggers: {
           getFillColor: [resolvedStylesVersion],
+          getLineColor: [resolvedStylesVersion],
+          getLineWidth: [resolvedStylesVersion],
         },
       })
     );
@@ -664,28 +673,40 @@ export function useDeckLayers({
     //   top:  secondary color through a stripe/crosshatch pattern on top
     // Together these produce true alternating two-color stripes.
     if (stripeAtlas) {
-      // Base pass — solid fill with primary (active/first) layer color, no stroke
+      // Base pass — solid fill with primary (active/first) layer color
       result.push(
         new GeoJsonLayer({
           id: "area-layers-stripe-base",
           data: multiLayerFeaturesData,
           beforeId,
           filled: true,
-          stroked: false,
+          stroked: true,
           getFillColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
               ? (resolvedStyles.get(code)?.primaryFillColor ?? [0, 0, 0, 0])
               : [0, 0, 0, 0];
           },
+          getLineColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code
+              ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+              : [0, 0, 0, 0];
+          },
+          getLineWidth: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code ? (resolvedStyles.get(code)?.lineWidth ?? 1.5) : 1.5;
+          },
           lineWidthUnits: "pixels" as const,
           pickable: false,
           updateTriggers: {
             getFillColor: [resolvedStylesVersion],
+            getLineColor: [resolvedStylesVersion],
+            getLineWidth: [resolvedStylesVersion],
           },
         })
       );
-      // Top pass — secondary color masked through stripe/crosshatch pattern, no stroke (outline drawn separately)
+      // Top pass — secondary color masked through stripe/crosshatch pattern, no stroke (base handles it)
       result.push(
         new GeoJsonLayer({
           id: "area-layers-stripe-top",
@@ -717,24 +738,36 @@ export function useDeckLayers({
         })
       );
     } else {
-      // Fallback when canvas is unavailable (SSR): solid blended fill, no stroke
+      // Fallback when canvas is unavailable (SSR): solid blended fill with stroke
       result.push(
         new GeoJsonLayer({
           id: "area-layers-stripe-base",
           data: multiLayerFeaturesData,
           beforeId,
           filled: true,
-          stroked: false,
+          stroked: true,
           getFillColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
               ? (resolvedStyles.get(code)?.fillColor ?? [0, 0, 0, 0])
               : [0, 0, 0, 0];
           },
+          getLineColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code
+              ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+              : [0, 0, 0, 0];
+          },
+          getLineWidth: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code ? (resolvedStyles.get(code)?.lineWidth ?? 1.5) : 1.5;
+          },
           lineWidthUnits: "pixels" as const,
           pickable: false,
           updateTriggers: {
             getFillColor: [resolvedStylesVersion],
+            getLineColor: [resolvedStylesVersion],
+            getLineWidth: [resolvedStylesVersion],
           },
         })
       );
@@ -755,34 +788,6 @@ export function useDeckLayers({
         pickable: false,
       })
     );
-
-    // Dissolved layer outlines — one outer silhouette per visible layer (PostGIS ST_Union).
-    // Rendered on top of fills so each layer's group boundary is clearly visible.
-    if (layerOutlines) {
-      for (const lo of layerOutlines) {
-        const opacity = lo.opacity / 100;
-        const lineRgba = hexToRgba(lo.color, opacity);
-        result.push(
-          new GeoJsonLayer({
-            id: `layer-outline-${lo.layerId}`,
-            data: {
-              type: "Feature" as const,
-              geometry: lo.outline,
-              properties: {},
-            },
-            beforeId,
-            filled: false,
-            stroked: true,
-            getLineColor: lineRgba,
-            getLineWidth: lo.layerId === activeLayerId ? 2.5 : 1.5,
-            lineWidthUnits: "pixels" as const,
-            lineJointRounded: true,
-            lineCapRounded: true,
-            pickable: false,
-          })
-        );
-      }
-    }
 
     // Hover outline layer — always present to avoid MapLibre add/remove churn
     result.push(
@@ -814,8 +819,6 @@ export function useDeckLayers({
     hoverData,
     isCursorMode,
     beforeId,
-    layerOutlines,
-    activeLayerId,
   ]);
 
   return {
