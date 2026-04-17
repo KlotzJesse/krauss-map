@@ -694,43 +694,41 @@ function useDrawingToolsActions({
   };
 
   const handleToggleVisibility = (layerId: number, visible: boolean) => {
-    // Optimistic update immediately — no startTransition blocking
-    updateOptimisticLayers({
-      type: "update",
-      id: layerId,
-      layer: { isVisible: visible ? "true" : "false" },
-    });
-    // Single DB call, single revalidation, fire-and-forget
-    if (areaId) {
-      batchUpdateVisibilityAction(areaId, [
-        { layerId, isVisible: visible },
-      ]).then((result) => {
-        if (result.success) onLayerUpdate?.();
+    startTransition(async () => {
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { isVisible: visible ? "true" : "false" },
       });
-    }
+      if (areaId) {
+        const result = await batchUpdateVisibilityAction(areaId, [
+          { layerId, isVisible: visible },
+        ]);
+        if (result.success) onLayerUpdate?.();
+      }
+    });
   };
 
   const handleSoloLayer = (soloId: number) => {
-    // Collect which layers actually need toggling
-    const updates: { layerId: number; isVisible: boolean }[] = [];
-    for (const layer of optimisticLayers) {
-      const shouldBeVisible = layer.id === soloId;
-      const currentlyVisible = layer.isVisible !== "false";
-      if (currentlyVisible !== shouldBeVisible) {
-        updates.push({ layerId: layer.id, isVisible: shouldBeVisible });
-        updateOptimisticLayers({
-          type: "update",
-          id: layer.id,
-          layer: { isVisible: shouldBeVisible ? "true" : "false" },
-        });
+    startTransition(async () => {
+      const updates: { layerId: number; isVisible: boolean }[] = [];
+      for (const layer of optimisticLayers) {
+        const shouldBeVisible = layer.id === soloId;
+        const currentlyVisible = layer.isVisible !== "false";
+        if (currentlyVisible !== shouldBeVisible) {
+          updates.push({ layerId: layer.id, isVisible: shouldBeVisible });
+          updateOptimisticLayers({
+            type: "update",
+            id: layer.id,
+            layer: { isVisible: shouldBeVisible ? "true" : "false" },
+          });
+        }
       }
-    }
-    // One batch DB call + one revalidation instead of N×(DB + revalidate)
-    if (areaId && updates.length > 0) {
-      batchUpdateVisibilityAction(areaId, updates).then((result) => {
+      if (areaId && updates.length > 0) {
+        const result = await batchUpdateVisibilityAction(areaId, updates);
         if (result.success) onLayerUpdate?.();
-      });
-    }
+      }
+    });
   };
 
   const handleDeleteLayer = (layerId: number) => {
