@@ -12,6 +12,7 @@ import { DEFAULT_COUNTRY, isValidCountryCode } from "@/lib/config/countries";
 import {
   getAreaGranularity,
   getAreaCountry,
+  getAreaName,
   getVersion,
 } from "@/lib/db/data-functions";
 
@@ -26,17 +27,18 @@ interface PostalCodesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/** Resolve granularity and country from area or version snapshot — parallel fetch. */
+/** Resolve granularity, country, and name from area or version snapshot — parallel fetch. */
 async function resolveAreaMeta(
   areaId: number,
   versionId: number | null
-): Promise<{ granularity: string; country: CountryCode }> {
+): Promise<{ granularity: string; country: CountryCode; areaName: string | null }> {
   const isValidVersion =
     versionId !== null && versionId !== undefined && versionId > 0;
 
-  const [granularity, country, version] = await Promise.all([
+  const [granularity, country, areaName, version] = await Promise.all([
     getAreaGranularity(areaId),
     getAreaCountry(areaId),
+    getAreaName(areaId),
     isValidVersion ? getVersion(areaId, versionId) : Promise.resolve(null),
   ]);
 
@@ -48,11 +50,13 @@ async function resolveAreaMeta(
     return {
       granularity: snap.granularity ?? "1digit",
       country: resolvedCountry,
+      areaName,
     };
   }
   return {
     granularity: granularity ?? "1digit",
     country: resolvedCountry,
+    areaName,
   };
 }
 
@@ -119,10 +123,12 @@ export default async function PostalCodesPage({
 
   let granularity = "1digit";
   let country: CountryCode = DEFAULT_COUNTRY;
+  let areaName: string | null = null;
   try {
     const meta = await resolveAreaMeta(areaId, versionId);
     granularity = meta.granularity;
     country = meta.country;
+    areaName = meta.areaName;
   } catch (error) {
     console.error("Failed to fetch area metadata:", error);
   }
@@ -132,7 +138,7 @@ export default async function PostalCodesPage({
 
   return (
     <>
-      <SiteHeader>
+      <SiteHeader title={areaName ?? "Gebietsmanagement"}>
         <Suspense fallback={<VersionIndicatorSkeleton />}>
           <VersionIndicator areaId={areaId} />
         </Suspense>

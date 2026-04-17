@@ -9,8 +9,6 @@ import type { RefObject } from "react";
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
-import { COUNTRY_CONFIGS } from "@/lib/config/countries";
-import type { CountryCode } from "@/lib/config/countries";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 import { AreaItemDropdown, AreaItemMenu } from "./area-item-menu";
@@ -138,9 +136,6 @@ export const AreaListItem = memo(
                 className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
               >
                 <span className="truncate">
-                  {area.country && COUNTRY_CONFIGS[area.country as CountryCode]
-                    ? `${COUNTRY_CONFIGS[area.country as CountryCode].flag} `
-                    : ""}
                   {area.name}
                 </span>
                 <LinkPendingIndicator />
