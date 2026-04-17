@@ -762,11 +762,11 @@ export const AddressAutocompleteEnhanced = memo(
           <PopoverTrigger
             render={
               <Button
-                variant="secondary"
+                variant="outline"
                 role="combobox"
                 aria-expanded={open}
                 aria-controls="address-search-listbox"
-                className={`w-full justify-between ${triggerClassName}`}
+                className={`w-full justify-between shadow-sm bg-background ${triggerClassName}`}
               />
             }
           >

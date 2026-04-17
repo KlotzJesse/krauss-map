@@ -470,7 +470,7 @@ export function PostalCodesViewClientWithLayers({
   return (
     <div className="h-full relative">
       {/* Address and Postal Code Tools - horizontal, top right */}
-      <div className="absolute top-4 right-4 z-30 flex flex-row gap-3 w-auto">
+      <div className="absolute top-4 right-4 z-30 flex flex-row items-center gap-2 w-auto">
         <div className="w-80">
           <AddressAutocompleteErrorBoundary>
             <AddressAutocompleteEnhanced
@@ -480,7 +480,7 @@ export function PostalCodesViewClientWithLayers({
               onPreviewSelect={handlePreviewSelect}
               performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}
               granularity={defaultGranularity}
-              triggerClassName="truncate h-10"
+              triggerClassName="truncate"
               previewPostalCode={previewPostalCode}
               layers={optimisticLayers}
             />
@@ -490,7 +490,7 @@ export function PostalCodesViewClientWithLayers({
         {/* Active layer indicator */}
         {activeLayer && (
           <div
-            className="shrink-0 flex items-center h-10 px-3 rounded-md shadow-sm text-xs font-semibold select-none"
+            className="shrink-0 flex items-center px-2.5 py-1 rounded-md shadow-sm text-xs font-semibold select-none"
             style={{
               backgroundColor: activeLayer.color,
               color: isLightColor(activeLayer.color) ? "#1a1a1a" : "#fff",
@@ -509,10 +509,10 @@ export function PostalCodesViewClientWithLayers({
             <TooltipTrigger
               render={
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   onClick={openImportDialog}
                   size="default"
-                  className="h-10 px-4"
+                  className="shadow-sm bg-background"
                   title="PLZ importieren"
                   disabled={isGeodataLoading}
                 />
