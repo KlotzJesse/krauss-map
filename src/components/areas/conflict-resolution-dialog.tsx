@@ -39,6 +39,16 @@ import type { ConflictGroup } from "@/lib/hooks/use-layer-conflicts";
 import { useLayerConflicts } from "@/lib/hooks/use-layer-conflicts";
 import type { Layer } from "@/lib/types/area-types";
 import { cn } from "@/lib/utils";
+
+/** Returns true if the hex color is "light" (needs dark text for contrast). */
+function isLightColor(hex: string): boolean {
+  const c = hex.replace("#", "");
+  const r = Number.parseInt(c.substring(0, 2), 16);
+  const g = Number.parseInt(c.substring(2, 4), 16);
+  const b = Number.parseInt(c.substring(4, 6), 16);
+  // W3C relative luminance threshold
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+}
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 
@@ -335,76 +345,80 @@ export function ConflictResolutionPanel({
                     onMouseLeave={() => highlightCodes(null)}
                   >
                     {/* Group header */}
-                    <div className="flex items-center gap-1.5 p-1.5 bg-muted/50 hover:bg-muted transition-colors">
-                      <Checkbox
-                        checked={isGroupFullySelected(group)}
-                        indeterminate={
-                          !isGroupFullySelected(group) &&
-                          isGroupPartiallySelected(group)
-                        }
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            selectAllInGroup(group);
-                          } else {
-                            deselectAllInGroup(group);
+                    <div className="flex flex-col gap-1 p-1.5 bg-muted/50 hover:bg-muted transition-colors">
+                      {/* Top row: checkbox + layer names + count */}
+                      <div className="flex items-center gap-1.5">
+                        <Checkbox
+                          checked={isGroupFullySelected(group)}
+                          indeterminate={
+                            !isGroupFullySelected(group) &&
+                            isGroupPartiallySelected(group)
                           }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="flex-1 flex items-center gap-1 text-left min-w-0"
-                        onClick={() => toggleGroup(group.key)}
-                      >
-                        {isExpanded ? (
-                          <IconChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        ) : (
-                          <IconChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        )}
-                        <div className="flex items-center gap-1 flex-wrap min-w-0">
-                          {group.layers.map((layer, i) => (
-                            <span
-                              key={layer.id}
-                              className="flex items-center gap-0.5"
-                            >
-                              {i > 0 && (
-                                <span className="text-muted-foreground">↔</span>
-                              )}
-                              <Badge
-                                variant="outline"
-                                className="px-1 py-0 text-[10px] leading-4"
-                                style={{
-                                  borderColor: layer.color,
-                                  color: layer.color,
-                                }}
-                              >
-                                {layer.name}
-                              </Badge>
-                            </span>
-                          ))}
-                        </div>
-                        <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
-                          {group.postalCodes.length}
-                          {groupSelected > 0 && (
-                            <span className="text-primary">
-                              {" "}
-                              ({groupSelected}✓)
-                            </span>
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              selectAllInGroup(group);
+                            } else {
+                              deselectAllInGroup(group);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="flex-1 flex items-center gap-1 text-left min-w-0"
+                          onClick={() => toggleGroup(group.key)}
+                        >
+                          {isExpanded ? (
+                            <IconChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <IconChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           )}
-                        </span>
-                      </button>
+                          <div className="flex items-center gap-1 flex-wrap min-w-0">
+                            {group.layers.map((layer, i) => (
+                              <span
+                                key={layer.id}
+                                className="flex items-center gap-0.5"
+                              >
+                                {i > 0 && (
+                                  <span className="text-muted-foreground">↔</span>
+                                )}
+                                <Badge
+                                  className="px-1 py-0 text-[10px] leading-4 max-w-[90px] truncate border-0"
+                                  style={{
+                                    backgroundColor: layer.color,
+                                    color: isLightColor(layer.color) ? "#1a1a1a" : "#fff",
+                                  }}
+                                >
+                                  {layer.name}
+                                </Badge>
+                              </span>
+                            ))}
+                          </div>
+                          <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
+                            {group.postalCodes.length}
+                            {groupSelected > 0 && (
+                              <span className="text-primary">
+                                {" "}
+                                ({groupSelected}✓)
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      </div>
 
-                      {/* Inline group action */}
-                      <GroupResolveDropdown
-                        group={group}
-                        layers={layers}
-                        disabled={resolving}
-                        onResolve={(targetLayerId) =>
-                          handleBatchResolve(
-                            targetLayerId,
-                            new Set(group.postalCodes)
-                          )
-                        }
-                      />
+                      {/* Bottom row: resolve dropdown */}
+                      <div className="flex justify-end pl-6">
+                        <GroupResolveDropdown
+                          group={group}
+                          layers={layers}
+                          disabled={resolving}
+                          onResolve={(targetLayerId) =>
+                            handleBatchResolve(
+                              targetLayerId,
+                              new Set(group.postalCodes)
+                            )
+                          }
+                        />
+                      </div>
                     </div>
 
                     {/* Expanded postal code pills */}
@@ -523,7 +537,7 @@ function GroupResolveDropdown({
   return (
     <Select value={strategy} onValueChange={handleChange}>
       <SelectTrigger
-        className="h-7 w-auto min-w-[110px] text-xs gap-1"
+        className="h-6 w-auto text-xs gap-1"
         disabled={disabled}
       >
         <SelectValue placeholder="Auflösen →" />
