@@ -418,7 +418,7 @@ const BaseMapComponent = ({
           [evt.viewState.longitude, evt.viewState.latitude],
           evt.viewState.zoom
         );
-      }, 500);
+      }, 750);
     },
     [setMapCenterZoom]
   );

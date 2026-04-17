@@ -60,10 +60,14 @@ export function useActiveLayerState() {
   return { activeLayerId: parsedActiveLayerId, isLayerPending, setActiveLayer };
 }
 
-// Narrow hook: only map center/zoom setter (no subscription to view changes)
+// Narrow hook: only map center/zoom setter — bypasses useMapView subscription
+// to avoid re-renders when the URL updates during continuous zoom/pan
 export function useSetMapCenterZoom() {
-  const [, setMapView] = useMapView();
+  const [, setMapViewRaw] = useQueryState("mapView", {
+    shallow: true,
+    history: "replace",
+  });
   return useStableCallback((center: [number, number], zoom: number) => {
-    setMapView({ center, zoom });
+    setMapViewRaw(JSON.stringify({ center, zoom }));
   });
 }

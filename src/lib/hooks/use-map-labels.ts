@@ -319,7 +319,7 @@ export function useMapLabels({
       });
     }
 
-    // Ensure the symbol layer exists
+    // Ensure the symbol layer exists — uses variable-anchor for collision avoidance
     if (!map.getLayer(ids.areaLabelLayerId)) {
       try {
         map.addLayer({
@@ -329,11 +329,36 @@ export function useMapLabels({
           layout: {
             "text-field": ["get", "name"],
             "text-font": ["noto_sans_bold"],
-            "text-size": 14,
-            "text-anchor": "center",
-            "text-allow-overlap": true,
-            "text-ignore-placement": true,
+            "text-size": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              4,
+              11,
+              7,
+              14,
+              10,
+              16,
+            ],
+            // Let MapLibre pick the best anchor to avoid overlap
+            "text-variable-anchor": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right",
+              "top-left",
+              "top-right",
+              "bottom-left",
+              "bottom-right",
+            ],
+            "text-radial-offset": 0.8,
+            "text-justify": "auto",
+            "text-allow-overlap": false,
+            "text-ignore-placement": false,
             "text-max-width": 14,
+            "text-padding": 8,
+            "symbol-sort-key": ["get", "sortKey"],
           },
           paint: {
             "text-color": ["coalesce", ["get", "color"], "#1a1a1a"],
@@ -348,7 +373,13 @@ export function useMapLabels({
     }
 
     // Compute one label point per visible layer
-    const labelFeatures: Feature<Point>[] = [];
+    const rawLabelFeatures: {
+      center: [number, number];
+      name: string;
+      color: string;
+      layerId: number;
+      codeCount: number;
+    }[] = [];
 
     // Build a fingerprint from layer IDs + postal code counts.
     // This only changes when postal code membership changes, NOT on color/opacity tweaks.
@@ -384,13 +415,55 @@ export function useMapLabels({
       if (!center) {
         continue;
       }
+      rawLabelFeatures.push({
+        center,
+        name: layer.name,
+        color: layer.color,
+        layerId: layer.id,
+        codeCount: postalCodes.length,
+      });
+    }
+
+    // Apply radial offsets when labels would collide (centers within threshold)
+    const COLLISION_THRESHOLD_DEG = 0.15; // ~15km at mid-latitudes
+    const OFFSET_DEG = 0.12;
+    const labelFeatures: Feature<Point>[] = [];
+
+    for (let i = 0; i < rawLabelFeatures.length; i++) {
+      const item = rawLabelFeatures[i];
+      let [lng, lat] = item.center;
+
+      // Find all labels within collision threshold
+      const neighbors: number[] = [];
+      for (let j = 0; j < rawLabelFeatures.length; j++) {
+        if (i === j) continue;
+        const other = rawLabelFeatures[j];
+        const dx = lng - other.center[0];
+        const dy = lat - other.center[1];
+        if (Math.sqrt(dx * dx + dy * dy) < COLLISION_THRESHOLD_DEG) {
+          neighbors.push(j);
+        }
+      }
+
+      if (neighbors.length > 0) {
+        // Distribute labels radially around the shared center
+        const allIndices = [i, ...neighbors].sort((a, b) => a - b);
+        const rank = allIndices.indexOf(i);
+        const total = allIndices.length;
+        const angle = (rank / total) * 2 * Math.PI - Math.PI / 2;
+        lng += Math.cos(angle) * OFFSET_DEG;
+        lat += Math.sin(angle) * OFFSET_DEG;
+      }
+
       labelFeatures.push({
         type: "Feature",
-        geometry: { type: "Point", coordinates: center },
+        geometry: { type: "Point", coordinates: [lng, lat] },
         properties: {
-          name: layer.name,
-          color: layer.color,
-          layerId: layer.id,
+          name: item.name,
+          color: item.color,
+          layerId: item.layerId,
+          // Larger layers get higher priority (lower sort key = rendered first)
+          sortKey: -item.codeCount,
         },
       });
     }

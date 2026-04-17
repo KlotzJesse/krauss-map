@@ -1,14 +1,24 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 import type { Layer } from "../types/area-types";
 
-interface ConflictingPostalCode {
+interface ConflictLayerInfo {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface ConflictingPostalCode {
   postalCode: string;
-  layers: {
-    id: number;
-    name: string;
-    color: string;
-  }[];
+  layers: ConflictLayerInfo[];
+}
+
+/** A group of conflicts sharing the same set of layers (by sorted IDs). */
+export interface ConflictGroup {
+  /** Stable key derived from sorted layer IDs, e.g. "12-45" */
+  key: string;
+  layers: ConflictLayerInfo[];
+  postalCodes: string[];
 }
 
 export function useLayerConflicts(layers: Layer[]) {
@@ -22,19 +32,20 @@ export function useLayerConflicts(layers: Layer[]) {
     setTimeout(() => {
       const postalCodeMap = new Map<string, Layer[]>();
 
-      // Build map of postal codes to layers
-      layers.forEach((layer) => {
-        layer.postalCodes?.forEach((pc) => {
-          if (!postalCodeMap.has(pc.postalCode)) {
-            postalCodeMap.set(pc.postalCode, []);
+      for (const layer of layers) {
+        if (!layer.postalCodes) continue;
+        for (const pc of layer.postalCodes) {
+          const existing = postalCodeMap.get(pc.postalCode);
+          if (existing) {
+            existing.push(layer);
+          } else {
+            postalCodeMap.set(pc.postalCode, [layer]);
           }
-          postalCodeMap.get(pc.postalCode)!.push(layer);
-        });
-      });
+        }
+      }
 
-      // Find conflicts (postal codes in multiple layers)
       const conflictsList: ConflictingPostalCode[] = [];
-      postalCodeMap.forEach((layerList, postalCode) => {
+      for (const [postalCode, layerList] of postalCodeMap) {
         if (layerList.length > 1) {
           conflictsList.push({
             postalCode,
@@ -45,16 +56,41 @@ export function useLayerConflicts(layers: Layer[]) {
             })),
           });
         }
-      });
+      }
 
       setConflicts(conflictsList);
       setIsDetecting(false);
-      return conflictsList;
     }, 100);
   }, [layers]);
 
+  /** Conflicts grouped by their exact layer-pair (or layer-set). Sorted largest group first. */
+  const conflictGroups = useMemo<ConflictGroup[]>(() => {
+    const groupMap = new Map<string, ConflictGroup>();
+
+    for (const conflict of conflicts) {
+      const sortedIds = conflict.layers.map((l) => l.id).sort((a, b) => a - b);
+      const key = sortedIds.join("-");
+
+      const existing = groupMap.get(key);
+      if (existing) {
+        existing.postalCodes.push(conflict.postalCode);
+      } else {
+        groupMap.set(key, {
+          key,
+          layers: conflict.layers,
+          postalCodes: [conflict.postalCode],
+        });
+      }
+    }
+
+    return [...groupMap.values()].sort(
+      (a, b) => b.postalCodes.length - a.postalCodes.length
+    );
+  }, [conflicts]);
+
   return {
     conflicts,
+    conflictGroups,
     detectConflicts,
     hasConflicts: conflicts.length > 0,
     isDetecting,
