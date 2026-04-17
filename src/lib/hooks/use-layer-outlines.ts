@@ -1,4 +1,9 @@
-import type { FeatureCollection, Geometry, MultiPolygon, Polygon } from "geojson";
+import type {
+  FeatureCollection,
+  Geometry,
+  MultiPolygon,
+  Polygon,
+} from "geojson";
 import { useEffect, useRef, useState } from "react";
 
 export interface LayerOutline {
@@ -104,4 +109,3 @@ export function useLayerOutlines(
 
 // Re-export geodata hook type for base-map compatibility (unused but keeps imports clean)
 export type { FeatureCollection, Geometry, MultiPolygon, Polygon };
-
