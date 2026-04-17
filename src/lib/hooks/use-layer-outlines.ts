@@ -1,5 +1,12 @@
-import type { Geometry } from "geojson";
-import { useEffect, useRef, useState } from "react";
+import union from "@turf/union";
+import type {
+  Feature,
+  FeatureCollection,
+  Geometry,
+  MultiPolygon,
+  Polygon,
+} from "geojson";
+import { useEffect, useState } from "react";
 
 export interface LayerOutline {
   layerId: number;
@@ -8,87 +15,75 @@ export interface LayerOutline {
   outline: Geometry;
 }
 
-const outlineCache = new Map<string, LayerOutline[]>();
-
-/** Stable key derived from visible layers + their postal code counts. */
-function buildCacheKey(
-  areaId: number,
-  layers:
-    | { id: number; isVisible: string; postalCodes?: { postalCode: string }[] }[]
-    | undefined
-): string {
-  if (!layers) return `${areaId}-empty`;
-  const parts = layers
-    .filter((l) => l.isVisible === "true")
-    .map((l) => `${l.id}:${(l.postalCodes?.length ?? 0)}`)
-    .sort()
-    .join(",");
-  return `${areaId}-${parts}`;
-}
+type LayerWithCodes = {
+  id: number;
+  color: string;
+  opacity: number;
+  isVisible: string;
+  postalCodes?: { postalCode: string }[];
+};
 
 /**
- * Fetches PostGIS-dissolved layer outlines for an area.
- * Each visible layer's postal codes are unioned server-side into a single
- * outer silhouette — no internal borders between postal codes.
+ * Computes dissolved outer outlines per visible layer entirely client-side.
  *
- * Fires immediately on key change; any in-flight request for a previous key
- * is aborted via AbortController before the new fetch starts.
- * Results are cached in a module-level Map keyed by areaId + visible layer set.
+ * Uses @turf/union on the already-loaded geodata FeatureCollection — no
+ * network round-trips. Runs asynchronously so it never blocks a render frame.
+ * Cancelled immediately on the next change via a `cancelled` flag.
  */
 export function useLayerOutlines(
-  areaId: number,
-  layers:
-    | { id: number; isVisible: string; postalCodes?: { postalCode: string }[] }[]
-    | undefined
-): { outlines: LayerOutline[]; isLoading: boolean } {
-  const cacheKey = buildCacheKey(areaId, layers);
-
-  const [outlines, setOutlines] = useState<LayerOutline[]>(
-    () => outlineCache.get(cacheKey) ?? []
-  );
-  const [isLoading, setIsLoading] = useState(
-    () => !outlineCache.has(cacheKey)
-  );
-
-  const abortRef = useRef<AbortController | null>(null);
+  geodata: FeatureCollection<Polygon | MultiPolygon>,
+  layers: LayerWithCodes[] | undefined
+): LayerOutline[] {
+  const [outlines, setOutlines] = useState<LayerOutline[]>([]);
 
   useEffect(() => {
-    const cached = outlineCache.get(cacheKey);
-    if (cached) {
-      setOutlines(cached);
-      setIsLoading(false);
+    if (!layers?.length || !geodata.features.length) {
+      setOutlines([]);
       return;
     }
 
-    // Abort any in-flight request for a previous key before starting a new one
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+    let cancelled = false;
 
-    setIsLoading(true);
+    // Build code → feature lookup once per geodata reference
+    const featureByCode = new Map<string, Feature<Polygon | MultiPolygon>>();
+    for (const feature of geodata.features) {
+      const code = feature.properties?.code as string | undefined;
+      if (code) featureByCode.set(code, feature);
+    }
 
-    fetch(`/api/areas/${areaId}/layer-outlines`, {
-      signal: controller.signal,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<LayerOutline[]>;
-      })
-      .then((data) => {
-        outlineCache.set(cacheKey, data);
-        setOutlines(data);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
-          setIsLoading(false);
-        }
+    const computed: LayerOutline[] = [];
+
+    for (const layer of layers) {
+      if (layer.isVisible !== "true") continue;
+      if (!layer.postalCodes?.length) continue;
+
+      const features = layer.postalCodes
+        .map((pc) => featureByCode.get(pc.postalCode))
+        .filter((f): f is Feature<Polygon | MultiPolygon> => f !== undefined);
+      if (!features.length) continue;
+
+      // Compute union via @turf/union (v7 takes a FeatureCollection)
+      const merged = union({
+        type: "FeatureCollection" as const,
+        features: features as Feature<Polygon | MultiPolygon>[],
       });
 
-    return () => {
-      controller.abort();
-    };
-  }, [cacheKey, areaId]);
+      if (merged) {
+        computed.push({
+          layerId: layer.id,
+          color: layer.color,
+          opacity: layer.opacity,
+          outline: merged.geometry,
+        });
+      }
+    }
 
-  return { outlines, isLoading };
+    if (!cancelled) setOutlines(computed);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [geodata, layers]);
+
+  return outlines;
 }
