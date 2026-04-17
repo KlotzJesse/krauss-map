@@ -1,7 +1,7 @@
 "use client";
 
 import { IconPalette } from "@tabler/icons-react";
-import { Copy, CopyPlus, Loader2, X } from "lucide-react";
+import { Copy, CopyPlus, Eye, EyeOff, Focus, Loader2, X } from "lucide-react";
 import type { RefObject } from "react";
 import { memo, useState } from "react";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { copyPostalCodesCSV } from "@/lib/utils/export-utils";
 
 export const DEFAULT_LAYER_COLORS = [
@@ -44,6 +45,7 @@ interface LayerListItemLayer {
   id: number;
   name: string;
   color: string;
+  isVisible?: string;
   postalCodes?: { postalCode: string }[];
 }
 
@@ -62,6 +64,8 @@ interface LayerListItemProps {
   onColorChange: (layerId: number, color: string) => void;
   onDelete: (layerId: number) => void;
   onDuplicateLayer?: (layerId: number) => void;
+  onToggleVisibility?: (layerId: number, visible: boolean) => void;
+  onSoloLayer?: (layerId: number) => void;
 }
 
 function LayerColorPickerContent({
@@ -151,22 +155,28 @@ export const LayerListItem = memo(function LayerListItem({
   onColorChange,
   onDelete,
   onDuplicateLayer,
+  onToggleVisibility,
+  onSoloLayer,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const isVisible = layer.isVisible !== "false";
 
   return (
     <div
-      className={`group relative rounded-lg border transition-all ${
+      className={cn(
+        "group relative rounded-md border transition-all",
         activeLayerId === layer.id
           ? "border-primary bg-accent shadow-sm"
-          : "border-border hover:border-primary/50 hover:bg-accent/50"
-      } ${isOptimistic ? "opacity-60 pointer-events-none" : ""}`}
+          : "border-border hover:border-primary/50 hover:bg-accent/50",
+        isOptimistic && "opacity-60 pointer-events-none",
+        !isVisible && "opacity-50"
+      )}
     >
       <div
         role="button"
         tabIndex={0}
-        className="px-3 py-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-lg"
+        className="px-2 py-1 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-md"
         onClick={() => {
           if (!isOptimistic) {
             onSelect(layer.id);
@@ -181,10 +191,31 @@ export const LayerListItem = memo(function LayerListItem({
           }
         }}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            {/* Visibility toggle — always visible */}
+            {onToggleVisibility && (
+              <button
+                type="button"
+                className={cn(
+                  "shrink-0 p-0.5 rounded hover:bg-muted transition-colors",
+                  !isVisible && "text-muted-foreground"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleVisibility(layer.id, !isVisible);
+                }}
+                title={isVisible ? "Ausblenden" : "Einblenden"}
+              >
+                {isVisible ? (
+                  <Eye className="h-3.5 w-3.5" />
+                ) : (
+                  <EyeOff className="h-3.5 w-3.5" />
+                )}
+              </button>
+            )}
             <div
-              className="w-3 h-3 rounded-sm shrink-0 border border-border"
+              className="w-2.5 h-2.5 rounded-sm shrink-0 border border-border"
               style={{ backgroundColor: layer.color }}
             />
             {editingLayerId === layer.id ? (
@@ -192,7 +223,7 @@ export const LayerListItem = memo(function LayerListItem({
                 ref={editLayerInputRef}
                 value={editingLayerName}
                 onChange={(e) => onEditNameChange(e.target.value)}
-                className="h-6 text-sm flex-1"
+                className="h-5 text-xs flex-1"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => {
                   e.stopPropagation();
@@ -212,7 +243,7 @@ export const LayerListItem = memo(function LayerListItem({
               />
             ) : (
               <span
-                className="font-medium text-sm truncate"
+                className="text-xs font-medium truncate"
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   onStartEdit(layer.id, layer.name);
@@ -222,7 +253,7 @@ export const LayerListItem = memo(function LayerListItem({
                 {layer.name}
               </span>
             )}
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
               {layer.postalCodes?.length ?? 0}
             </Badge>
             {isLayerSwitchPending && activeLayerId === layer.id && (
@@ -230,7 +261,30 @@ export const LayerListItem = memo(function LayerListItem({
             )}
           </div>
 
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Solo — show only this layer */}
+            {onSoloLayer && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSoloLayer(layer.id);
+                      }}
+                    />
+                  }
+                >
+                  <Focus className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Nur dieses Gebiet anzeigen</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
             <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
               <Tooltip>
                 <TooltipTrigger
@@ -240,17 +294,17 @@ export const LayerListItem = memo(function LayerListItem({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-6 w-6"
+                          className="h-5 w-5"
                           onClick={(e) => e.stopPropagation()}
                         />
                       }
                     />
                   }
                 >
-                  <IconPalette className="h-3.5 w-3.5" />
+                  <IconPalette className="h-3 w-3" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Gebiet-Farbe ändern</p>
+                  <p>Farbe ändern</p>
                 </TooltipContent>
               </Tooltip>
               <PopoverContent
@@ -273,7 +327,7 @@ export const LayerListItem = memo(function LayerListItem({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-6 w-6"
+                    className="h-5 w-5"
                     onClick={async (e) => {
                       e.stopPropagation();
                       const codes =
@@ -288,10 +342,10 @@ export const LayerListItem = memo(function LayerListItem({
                   />
                 }
               >
-                <Copy className="h-3.5 w-3.5" />
+                <Copy className="h-3 w-3" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Postleitzahlen als CSV kopieren</p>
+                <p>PLZ als CSV kopieren</p>
               </TooltipContent>
             </Tooltip>
 
@@ -302,7 +356,7 @@ export const LayerListItem = memo(function LayerListItem({
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-5 w-5"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDuplicateLayer(layer.id);
@@ -310,7 +364,7 @@ export const LayerListItem = memo(function LayerListItem({
                     />
                   }
                 >
-                  <CopyPlus className="h-3.5 w-3.5" />
+                  <CopyPlus className="h-3 w-3" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Layer duplizieren</p>
@@ -324,7 +378,7 @@ export const LayerListItem = memo(function LayerListItem({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(layer.id);
@@ -332,7 +386,7 @@ export const LayerListItem = memo(function LayerListItem({
                   />
                 }
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Layer löschen</p>

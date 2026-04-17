@@ -692,6 +692,45 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleToggleVisibility = async (layerId: number, visible: boolean) => {
+    startTransition(async () => {
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { isVisible: visible ? "true" : "false" },
+      });
+      try {
+        await updateLayer(layerId, { isVisible: visible });
+      } catch {
+        toast.error("Fehler beim Ändern der Sichtbarkeit");
+      }
+    });
+  };
+
+  const handleSoloLayer = async (soloId: number) => {
+    startTransition(async () => {
+      for (const layer of optimisticLayers) {
+        const shouldBeVisible = layer.id === soloId;
+        if ((layer.isVisible !== "false") !== shouldBeVisible) {
+          updateOptimisticLayers({
+            type: "update",
+            id: layer.id,
+            layer: { isVisible: shouldBeVisible ? "true" : "false" },
+          });
+        }
+      }
+      try {
+        await Promise.all(
+          optimisticLayers.map((layer) =>
+            updateLayer(layer.id, { isVisible: layer.id === soloId })
+          )
+        );
+      } catch {
+        toast.error("Fehler beim Umschalten der Sichtbarkeit");
+      }
+    });
+  };
+
   const handleDeleteLayer = (layerId: number) => {
     dispatchForm({ type: "OPEN_DELETE", layerId });
   };
@@ -771,6 +810,8 @@ function useDrawingToolsActions({
     confirmDeleteLayer,
     handleRenameLayer,
     handleFillHoles,
+    handleToggleVisibility,
+    handleSoloLayer,
   };
 }
 
@@ -791,6 +832,8 @@ interface LayerManagementSectionProps {
   handleColorChange: (layerId: number, color: string) => void;
   handleDeleteLayer: (layerId: number) => void;
   handleDuplicateLayer: (layerId: number) => void;
+  handleToggleVisibility: (layerId: number, visible: boolean) => void;
+  handleSoloLayer: (layerId: number) => void;
 }
 
 function LayerManagementSection({
@@ -809,6 +852,8 @@ function LayerManagementSection({
   handleColorChange,
   handleDeleteLayer,
   handleDuplicateLayer,
+  handleToggleVisibility,
+  handleSoloLayer,
 }: LayerManagementSectionProps) {
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
   const handleOpenConflicts = useCallback(
@@ -975,7 +1020,7 @@ function LayerManagementSection({
           </div>
 
           {/* Layer list */}
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
             {optimisticLayers.map((layer) => (
               <LayerListItem
                 key={layer.id}
@@ -997,6 +1042,8 @@ function LayerManagementSection({
                 onColorChange={handleColorChange}
                 onDelete={handleDeleteLayer}
                 onDuplicateLayer={handleDuplicateLayer}
+                onToggleVisibility={handleToggleVisibility}
+                onSoloLayer={handleSoloLayer}
               />
             ))}
           </div>
@@ -1174,6 +1221,8 @@ function DrawingToolsImpl({
     confirmDeleteLayer,
     handleRenameLayer,
     handleFillHoles,
+    handleToggleVisibility,
+    handleSoloLayer,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -1290,6 +1339,8 @@ function DrawingToolsImpl({
             handleColorChange={handleColorChange}
             handleDeleteLayer={handleDeleteLayer}
             handleDuplicateLayer={handleDuplicateLayer}
+            handleToggleVisibility={handleToggleVisibility}
+            handleSoloLayer={handleSoloLayer}
           />
         )}
 
