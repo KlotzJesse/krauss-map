@@ -30,6 +30,7 @@ import {
   duplicateLayerAction,
   updateLayerAction,
 } from "@/app/actions/area-actions";
+import { batchUpdateVisibilityAction } from "@/app/actions/layer-actions";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
 import {
@@ -692,43 +693,44 @@ function useDrawingToolsActions({
     });
   };
 
-  const handleToggleVisibility = async (layerId: number, visible: boolean) => {
-    startTransition(async () => {
-      updateOptimisticLayers({
-        type: "update",
-        id: layerId,
-        layer: { isVisible: visible ? "true" : "false" },
-      });
-      try {
-        await updateLayer(layerId, { isVisible: visible });
-      } catch {
-        toast.error("Fehler beim Ändern der Sichtbarkeit");
-      }
+  const handleToggleVisibility = (layerId: number, visible: boolean) => {
+    // Optimistic update immediately — no startTransition blocking
+    updateOptimisticLayers({
+      type: "update",
+      id: layerId,
+      layer: { isVisible: visible ? "true" : "false" },
     });
+    // Single DB call, single revalidation, fire-and-forget
+    if (areaId) {
+      batchUpdateVisibilityAction(areaId, [
+        { layerId, isVisible: visible },
+      ]).then((result) => {
+        if (result.success) onLayerUpdate?.();
+      });
+    }
   };
 
-  const handleSoloLayer = async (soloId: number) => {
-    startTransition(async () => {
-      for (const layer of optimisticLayers) {
-        const shouldBeVisible = layer.id === soloId;
-        if ((layer.isVisible !== "false") !== shouldBeVisible) {
-          updateOptimisticLayers({
-            type: "update",
-            id: layer.id,
-            layer: { isVisible: shouldBeVisible ? "true" : "false" },
-          });
-        }
+  const handleSoloLayer = (soloId: number) => {
+    // Collect which layers actually need toggling
+    const updates: { layerId: number; isVisible: boolean }[] = [];
+    for (const layer of optimisticLayers) {
+      const shouldBeVisible = layer.id === soloId;
+      const currentlyVisible = layer.isVisible !== "false";
+      if (currentlyVisible !== shouldBeVisible) {
+        updates.push({ layerId: layer.id, isVisible: shouldBeVisible });
+        updateOptimisticLayers({
+          type: "update",
+          id: layer.id,
+          layer: { isVisible: shouldBeVisible ? "true" : "false" },
+        });
       }
-      try {
-        await Promise.all(
-          optimisticLayers.map((layer) =>
-            updateLayer(layer.id, { isVisible: layer.id === soloId })
-          )
-        );
-      } catch {
-        toast.error("Fehler beim Umschalten der Sichtbarkeit");
-      }
-    });
+    }
+    // One batch DB call + one revalidation instead of N×(DB + revalidate)
+    if (areaId && updates.length > 0) {
+      batchUpdateVisibilityAction(areaId, updates).then((result) => {
+        if (result.success) onLayerUpdate?.();
+      });
+    }
   };
 
   const handleDeleteLayer = (layerId: number) => {

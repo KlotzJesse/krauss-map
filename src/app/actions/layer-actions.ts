@@ -177,6 +177,30 @@ export async function updateLayerAction(
   }
 }
 
+/** Batch-update visibility for multiple layers in a single transaction + one revalidation. */
+export async function batchUpdateVisibilityAction(
+  areaId: number,
+  updates: { layerId: number; isVisible: boolean }[]
+) {
+  try {
+    await db.transaction(async (tx) => {
+      for (const { layerId, isVisible } of updates) {
+        await tx
+          .update(areaLayers)
+          .set({ isVisible: isVisible ? "true" : "false" })
+          .where(eq(areaLayers.id, layerId));
+      }
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error batch-updating visibility:", error);
+    return { success: false, error: "Failed to update visibility" };
+  }
+}
+
 export async function deleteLayerAction(
   areaId: number,
   layerId: number,
