@@ -28,6 +28,7 @@ import {
 } from "@/lib/config/countries";
 import { useCountryShapesData } from "@/lib/hooks/use-country-shapes-data";
 import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
+import { useLayerOutlines } from "@/lib/hooks/use-layer-outlines";
 import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
 import {
   getFirstSymbolLayerId,
@@ -206,6 +207,9 @@ const MapInner = memo(function MapInner({
   const statesData = useStatesData();
   const countryShapesData = useCountryShapesData();
 
+  // Dissolved outer outlines per visible layer (PostGIS ST_Union, debounced)
+  const { outlines: layerOutlines } = useLayerOutlines(areaId ?? 0, layers);
+
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });
 
@@ -240,6 +244,7 @@ const MapInner = memo(function MapInner({
     mapCanvasRef,
     country,
     beforeId: firstSymbolLayerId,
+    layerOutlines,
   });
 
   // MapLibre native labels (hybrid escape hatch)
