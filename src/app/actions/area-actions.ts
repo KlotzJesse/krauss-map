@@ -12,6 +12,7 @@ import {
   areaLayerPostalCodes,
   postalCodes,
 } from "../../lib/schema/schema";
+import { generateNextColor } from "../../lib/utils/layer-colors";
 import {
   recordChangeAction,
   recordChangeWithTx,
@@ -676,13 +677,20 @@ export async function duplicateLayerAction(
       .from(areaLayers)
       .where(eq(areaLayers.areaId, areaId));
 
+    // Generate a contrasting color based on all sibling layers
+    const siblingLayers = await db
+      .select({ color: areaLayers.color })
+      .from(areaLayers)
+      .where(eq(areaLayers.areaId, areaId));
+    const newColor = generateNextColor(siblingLayers.map((l) => l.color));
+
     const newLayerId = await db.transaction(async (tx) => {
       const [newLayer] = await tx
         .insert(areaLayers)
         .values({
           areaId,
           name: `${sourceLayer.name} (Kopie)`,
-          color: sourceLayer.color,
+          color: newColor,
           opacity: sourceLayer.opacity,
           isVisible: sourceLayer.isVisible,
           orderIndex: (maxOrder?.max ?? 0) + 1,

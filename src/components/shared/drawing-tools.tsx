@@ -10,7 +10,7 @@ import {
 } from "@tabler/icons-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ChevronDown, ChevronUp, Eye, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, Palette, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -33,10 +33,8 @@ import {
 import { batchUpdateVisibilityAction } from "@/app/actions/layer-actions";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
-import {
-  DEFAULT_LAYER_COLORS,
-  LayerListItem,
-} from "@/components/shared/layer-list-item";
+import { LayerListItem } from "@/components/shared/layer-list-item";
+import { generateNextColor, reassignAllColors } from "@/lib/utils/layer-colors";
 import { PendingRegionsSection } from "@/components/shared/pending-regions-section";
 import {
   AlertDialog,
@@ -630,10 +628,8 @@ function useDrawingToolsActions({
     }
     dispatchForm({ type: "START_CREATING" });
     startTransition(async () => {
-      const nextColor =
-        DEFAULT_LAYER_COLORS[
-          optimisticLayers.length % DEFAULT_LAYER_COLORS.length
-        ];
+      const existingColors = optimisticLayers.map((l) => l.color);
+      const nextColor = generateNextColor(existingColors);
       const createdLayerName = form.newLayerName;
       updateOptimisticLayers({
         type: "create",
@@ -800,6 +796,24 @@ function useDrawingToolsActions({
     }
   };
 
+  const handleReassignColors = () => {
+    startTransition(async () => {
+      const colorMap = reassignAllColors(optimisticLayers);
+      for (const [id, color] of colorMap) {
+        updateOptimisticLayers({ type: "update", id, layer: { color } });
+      }
+      try {
+        await Promise.all(
+          [...colorMap].map(([id, color]) => updateLayer(id, { color }))
+        );
+        toast.success("Farben optimiert");
+        onLayerUpdate?.();
+      } catch {
+        toast.error("Fehler beim Zuweisen der Farben");
+      }
+    });
+  };
+
   return {
     optimisticLayers,
     ui,
@@ -820,6 +834,7 @@ function useDrawingToolsActions({
     handleToggleVisibility,
     handleSoloLayer,
     handleShowAllLayers,
+    handleReassignColors,
   };
 }
 
@@ -843,6 +858,7 @@ interface LayerManagementSectionProps {
   handleToggleVisibility: (layerId: number, visible: boolean) => void;
   handleSoloLayer: (layerId: number) => void;
   handleShowAllLayers: () => void;
+  handleReassignColors: () => void;
   onOpenConflicts?: () => void;
 }
 
@@ -865,6 +881,7 @@ function LayerManagementSection({
   handleToggleVisibility,
   handleSoloLayer,
   handleShowAllLayers,
+  handleReassignColors,
   onOpenConflicts,
 }: LayerManagementSectionProps) {
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
@@ -940,6 +957,25 @@ function LayerManagementSection({
               </TooltipTrigger>
               <TooltipContent>
                 <p>Alle Gebiete einblenden</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {optimisticLayers.length >= 2 && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={handleReassignColors}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0"
+                  />
+                }
+              >
+                <Palette className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Farben für maximalen Kontrast optimieren</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -1248,6 +1284,7 @@ function DrawingToolsImpl({
     handleToggleVisibility,
     handleSoloLayer,
     handleShowAllLayers,
+    handleReassignColors,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -1367,6 +1404,7 @@ function DrawingToolsImpl({
             handleToggleVisibility={handleToggleVisibility}
             handleSoloLayer={handleSoloLayer}
             handleShowAllLayers={handleShowAllLayers}
+            handleReassignColors={handleReassignColors}
             onOpenConflicts={onOpenConflicts}
           />
         )}
