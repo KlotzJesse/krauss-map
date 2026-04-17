@@ -762,7 +762,8 @@ function useDrawingToolsActions({
   };
 
   const handleRenameLayer = async (layerId: number, newName: string) => {
-    if (!newName.trim()) {
+    const trimmed = newName.trim().slice(0, 31);
+    if (!trimmed) {
       toast.error("Gebiets-Name darf nicht leer sein");
       return;
     }
@@ -770,11 +771,11 @@ function useDrawingToolsActions({
       updateOptimisticLayers({
         type: "update",
         id: layerId,
-        layer: { name: newName.trim() },
+        layer: { name: trimmed },
       });
       dispatchForm({ type: "CANCEL_EDIT" });
       try {
-        await executeAction(updateLayer(layerId, { name: newName.trim() }), {
+        await executeAction(updateLayer(layerId, { name: trimmed }), {
           loading: "Benenne Gebiet um...",
           success: "Gebiet umbenannt",
           error: "Fehler beim Umbenennen - Bitte erneut versuchen",
@@ -1021,6 +1022,7 @@ function LayerManagementSection({
             <Input
               value={form.newLayerName}
               onChange={handleNewLayerNameChange}
+              maxLength={31}
               placeholder={
                 isViewingVersion
                   ? "Neues Gebiet (neue Version)..."

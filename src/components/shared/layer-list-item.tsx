@@ -223,6 +223,7 @@ export const LayerListItem = memo(function LayerListItem({
                 ref={editLayerInputRef}
                 value={editingLayerName}
                 onChange={(e) => onEditNameChange(e.target.value)}
+                maxLength={31}
                 className="h-5 text-xs flex-1"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => {

@@ -184,7 +184,7 @@ export async function exportLayersXLSX(
         }
       }
 
-      XLSX.utils.book_append_sheet(wb, ws, layerName);
+      XLSX.utils.book_append_sheet(wb, ws, layerName.slice(0, 31));
     });
 
     // Generate filename with timestamp

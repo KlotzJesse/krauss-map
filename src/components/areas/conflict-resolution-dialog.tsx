@@ -252,7 +252,7 @@ export function ConflictResolutionPanel({
     group.postalCodes.filter((c) => selectedCodes.has(c)).length;
 
   return (
-    <Card className="flex flex-col max-h-full min-h-0 w-80">
+    <Card className="flex flex-col max-h-full min-h-0 w-96">
       <CardHeader className="pb-2 shrink-0">
         <CardTitle className="text-sm flex items-center gap-2">
           <IconAlertTriangle className="h-4 w-4 text-amber-500" />

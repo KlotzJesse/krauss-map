@@ -377,7 +377,7 @@ const MapInner = memo(function MapInner({
 
       {/* Conflict resolution panel — right side, next to the map */}
       <Activity mode={showConflicts ? "visible" : "hidden"}>
-        <div className="absolute top-20 right-4 bottom-4 z-10 w-80">
+        <div className="absolute top-20 right-4 bottom-4 z-10 w-96">
           <ConflictResolutionPanel
             onClose={handleCloseConflicts}
             onHighlightCodes={setHighlightedConflictCodes}

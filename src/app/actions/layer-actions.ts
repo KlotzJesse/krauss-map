@@ -26,7 +26,7 @@ export async function createLayerAction(
       .insert(areaLayers)
       .values({
         areaId,
-        name: data.name,
+        name: data.name.slice(0, 31),
         color: data.color || "#3b82f6",
         opacity: data.opacity ?? 80,
         isVisible: isVisibleStr,
@@ -87,7 +87,7 @@ export async function updateLayerAction(
       // Update layer properties
       const updates: Record<string, string | number> = {};
       if (data.name !== undefined) {
-        updates.name = data.name;
+        updates.name = data.name.slice(0, 31);
       }
       if (data.color !== undefined) {
         updates.color = data.color;
