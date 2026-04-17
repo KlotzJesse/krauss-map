@@ -100,6 +100,10 @@ const DEFAULT_STATE_LINE: RgbaColor = [34, 34, 34, 255];
 
 interface ResolvedStyle {
   fillColor: [number, number, number, number];
+  /** Primary stripe color (active layer, or first layer). Used as solid base for multi-layer codes. */
+  primaryFillColor: [number, number, number, number];
+  /** Secondary stripe color (blended remaining layers). Pattern-masked on top of primary. */
+  secondaryFillColor: [number, number, number, number];
   lineColor: [number, number, number, number];
   lineWidth: number;
   /** Number of visible layers that include this postal code. */
@@ -116,6 +120,8 @@ interface StyleAccumulator {
   count: number;
   /** Hex colors of all contributing layers (for same-color detection). */
   layerColors: string[];
+  /** Per-layer fill colors with active flag, in accumulation order. */
+  layerFillEntries: { color: RgbaColor; isActive: boolean }[];
 }
 
 const COUNTRY_BORDER_COLORS: Record<string, [number, number, number, number]> =
@@ -136,6 +142,7 @@ function toAccumulator(): StyleAccumulator {
     hasActive: false,
     count: 0,
     layerColors: [],
+    layerFillEntries: [],
   };
 }
 
@@ -165,11 +172,45 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
   if (acc.count <= 1) {
     return {
       fillColor: avgFill,
+      primaryFillColor: avgFill,
+      secondaryFillColor: avgFill,
       lineColor: avgLine,
       lineWidth: acc.hasActive ? 2.5 : 1.5,
       count: acc.count,
       isSameColor: false,
     };
+  }
+
+  // Primary: active layer's color (or first layer if none active)
+  const primaryEntry =
+    acc.layerFillEntries.find((e) => e.isActive) ?? acc.layerFillEntries[0];
+  const boostAlpha = (c: RgbaColor): RgbaColor => [
+    c[0],
+    c[1],
+    c[2],
+    Math.min(255, c[3] * 2 + 80),
+  ];
+  const primaryFillColor: RgbaColor = primaryEntry
+    ? boostAlpha(primaryEntry.color)
+    : boostAlpha(avgFill);
+
+  // Secondary: blend of all other layers' fill colors
+  const secondaryEntries = acc.layerFillEntries.filter(
+    (e) => e !== primaryEntry
+  );
+  let secondaryFillColor: RgbaColor;
+  if (secondaryEntries.length === 0) {
+    secondaryFillColor = primaryFillColor;
+  } else if (secondaryEntries.length === 1) {
+    secondaryFillColor = boostAlpha(secondaryEntries[0].color);
+  } else {
+    const n = secondaryEntries.length;
+    secondaryFillColor = boostAlpha([
+      Math.round(secondaryEntries.reduce((s, e) => s + e.color[0], 0) / n),
+      Math.round(secondaryEntries.reduce((s, e) => s + e.color[1], 0) / n),
+      Math.round(secondaryEntries.reduce((s, e) => s + e.color[2], 0) / n),
+      Math.round(secondaryEntries.reduce((s, e) => s + e.color[3], 0) / n),
+    ]);
   }
 
   return {
@@ -179,6 +220,8 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
       avgFill[2],
       Math.min(210, avgFill[3] + 45),
     ],
+    primaryFillColor,
+    secondaryFillColor,
     lineColor: [avgLine[0], avgLine[1], avgLine[2], 255],
     lineWidth: (acc.hasActive ? 3 : 2.2) + Math.min(2, (acc.count - 1) * 0.7),
     count: acc.count,
@@ -250,6 +293,7 @@ function buildResolvedStyleMap(
       existing.hasActive = existing.hasActive || isActive;
       existing.count += 1;
       existing.layerColors.push(layer.color);
+      existing.layerFillEntries.push({ color: fillColor, isActive });
       byCode.set(key, existing);
     }
   }
@@ -632,28 +676,45 @@ export function useDeckLayers({
     );
 
     // Stripe area overlay — postal codes shared by 2+ visible layers.
-    // Uses FillStyleExtension for a diagonal hatch pattern when the atlas is available,
-    // otherwise falls back to the blended solid fill.
+    // Rendered as two passes:
+    //   base: solid primary color fill (active/first layer's color)
+    //   top:  secondary color through a stripe/crosshatch pattern on top
+    // Together these produce true alternating two-color stripes.
     if (stripeAtlas) {
+      // Base pass — solid fill with primary (active/first) layer color, no stroke
       result.push(
         new GeoJsonLayer({
-          id: "area-layers-stripe",
+          id: "area-layers-stripe-base",
+          data: multiLayerFeaturesData,
+          beforeId,
+          filled: true,
+          stroked: false,
+          getFillColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            return code
+              ? (resolvedStyles.get(code)?.primaryFillColor ?? [0, 0, 0, 0])
+              : [0, 0, 0, 0];
+          },
+          lineWidthUnits: "pixels" as const,
+          pickable: false,
+          updateTriggers: {
+            getFillColor: [resolvedStylesVersion],
+          },
+        })
+      );
+      // Top pass — secondary color masked through stripe/crosshatch pattern + border
+      result.push(
+        new GeoJsonLayer({
+          id: "area-layers-stripe-top",
           data: multiLayerFeaturesData,
           beforeId,
           filled: true,
           stroked: true,
           getFillColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            if (!code) return [0, 0, 0, 0];
-            const style = resolvedStyles.get(code);
-            if (!style) return [0, 0, 0, 0];
-            // Boost alpha for stripe fill so it reads clearly through the pattern gaps
-            return [
-              style.fillColor[0],
-              style.fillColor[1],
-              style.fillColor[2],
-              Math.min(255, style.fillColor[3] * 2 + 80),
-            ] as [number, number, number, number];
+            return code
+              ? (resolvedStyles.get(code)?.secondaryFillColor ?? [0, 0, 0, 0])
+              : [0, 0, 0, 0];
           },
           getLineColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
@@ -663,7 +724,6 @@ export function useDeckLayers({
           },
           getLineWidth: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            // Stripe borders always get extra width for clear delineation
             return code
               ? Math.max(resolvedStyles.get(code)?.lineWidth ?? 2, 2.5)
               : 2.5;
@@ -672,7 +732,6 @@ export function useDeckLayers({
           lineJointRounded: true,
           lineCapRounded: true,
           pickable: false,
-          // FillStyleExtension: use crosshatch for same-color conflicts, diagonal stripe otherwise
           extensions: [new FillStyleExtension({ pattern: true })],
           fillPatternAtlas: stripeAtlas.canvas,
           fillPatternMapping: stripeAtlas.mapping,
@@ -680,7 +739,6 @@ export function useDeckLayers({
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code && sameColorCodes.has(code) ? "cross" : "stripe";
           },
-          // Scale ~2500 gives ~10-15 visible stripes across a typical postal code area
           getFillPatternScale: 2500,
           getFillPatternOffset: [0, 0],
           updateTriggers: {
@@ -692,10 +750,10 @@ export function useDeckLayers({
         })
       );
     } else {
-      // Fallback when canvas is unavailable (SSR): use solid blended fill
+      // Fallback when canvas is unavailable (SSR): solid blended fill
       result.push(
         new GeoJsonLayer({
-          id: "area-layers-stripe",
+          id: "area-layers-stripe-base",
           data: multiLayerFeaturesData,
           beforeId,
           filled: true,
