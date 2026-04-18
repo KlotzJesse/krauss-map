@@ -2270,3 +2270,61 @@ export async function searchAreasByPostalCodeAction(
     return { success: false, error: String(err) };
   }
 }
+
+export interface AreaLayerExportRow {
+  areaId: number;
+  areaName: string;
+  layerId: number;
+  layerName: string;
+  postalCodes: string[];
+}
+
+export async function getAllAreasWithLayersForExportAction(): ServerActionResponse<AreaLayerExportRow[]> {
+  try {
+    const rows = await db
+      .select({
+        areaId: areas.id,
+        areaName: areas.name,
+        layerId: areaLayers.id,
+        layerName: areaLayers.name,
+      })
+      .from(areas)
+      .innerJoin(areaLayers, eq(areaLayers.areaId, areas.id))
+      .where(
+        and(
+          sql`${areas.isArchived} = 'false'`,
+          sql`EXISTS (SELECT 1 FROM area_layer_postal_codes alpc WHERE alpc.layer_id = ${areaLayers.id})`
+        )
+      )
+      .orderBy(areas.name, areaLayers.orderIndex, areaLayers.name);
+
+    const layerIds = rows.map((r) => r.layerId);
+    if (!layerIds.length) return { success: true, data: [] };
+
+    const postalRows = await db
+      .select({
+        layerId: areaLayerPostalCodes.layerId,
+        postalCode: areaLayerPostalCodes.postalCode,
+      })
+      .from(areaLayerPostalCodes)
+      .where(inArray(areaLayerPostalCodes.layerId, layerIds))
+      .orderBy(areaLayerPostalCodes.postalCode);
+
+    const codesByLayer = new Map<number, string[]>();
+    for (const r of postalRows) {
+      const list = codesByLayer.get(r.layerId) ?? [];
+      list.push(r.postalCode);
+      codesByLayer.set(r.layerId, list);
+    }
+
+    const result: AreaLayerExportRow[] = rows.map((r) => ({
+      ...r,
+      postalCodes: codesByLayer.get(r.layerId) ?? [],
+    }));
+
+    return { success: true, data: result };
+  } catch (err) {
+    console.error("Error fetching areas for export:", err);
+    return { success: false, error: String(err) };
+  }
+}

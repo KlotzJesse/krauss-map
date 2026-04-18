@@ -3,6 +3,7 @@
 import {
   IconArchive,
   IconCheckbox,
+  IconDownload,
   IconPlus,
   IconSearch,
   IconSquare,
@@ -29,7 +30,9 @@ import {
   archiveAreaAction,
   bulkAssignTagToAreasAction,
   bulkRemoveTagFromAreasAction,
-} from "@/app/actions/area-actions";import {
+  getAllAreasWithLayersForExportAction,
+} from "@/app/actions/area-actions";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -60,6 +63,7 @@ import { useAreaPins } from "@/lib/hooks/use-area-pins";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { AreaSummary } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
+import { exportAllAreasXLSX } from "@/lib/utils/export-utils";
 
 import { AreaListItem } from "./area-list-item";
 import { CreateAreaDialog } from "./create-area-dialog";
@@ -440,6 +444,15 @@ export function NavAreas({
     setNotesArea(null);
   };
 
+  const handleBulkExport = useCallback(async () => {
+    const res = await getAllAreasWithLayersForExportAction();
+    if (!res.success || !res.data?.length) {
+      toast.warning("Keine Gebiete zum Exportieren");
+      return;
+    }
+    await exportAllAreasXLSX(res.data);
+  }, []);
+
   const handleConfirmDelete = async () => {
     if (!areaToDelete) {
       return;
@@ -491,6 +504,14 @@ export function NavAreas({
                   )}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={handleBulkExport}
+                className="hover:bg-sidebar-accent rounded p-0.5 text-muted-foreground"
+                title="Alle Gebiete als Excel exportieren"
+              >
+                <IconDownload className="h-3.5 w-3.5" />
+              </button>
               <button
                 type="button"
                 onClick={handleToggleSelectMode}

@@ -239,3 +239,72 @@ export async function copyPostalCodesCSV(
     error: "Kopieren in Zwischenablage fehlgeschlagen",
   });
 }
+
+interface MultiAreaExportRow {
+  areaName: string;
+  layerName: string;
+  postalCodes: string[];
+}
+
+/**
+ * Exports all areas + layers as a single XLSX workbook.
+ * One worksheet per area, rows: Layer | PLZ | DE-PLZ | DE-PLZ,
+ * Each layer is separated by a blank row + layer header.
+ */
+export async function exportAllAreasXLSX(
+  rows: MultiAreaExportRow[],
+  country: CountryCode = "DE"
+) {
+  const config = getCountryConfig(country);
+  const prefix = config.prefix;
+
+  const exportPromise = async () => {
+    const XLSX = await import("xlsx");
+    const wb = XLSX.utils.book_new();
+
+    // Group by area
+    const byArea = new Map<string, MultiAreaExportRow[]>();
+    for (const row of rows) {
+      const list = byArea.get(row.areaName) ?? [];
+      list.push(row);
+      byArea.set(row.areaName, list);
+    }
+
+    let totalCodes = 0;
+    for (const [areaName, layers] of byArea) {
+      const wsData: (string | null)[][] = [
+        ["Ebene", "PLZ", `${prefix}-PLZ`, `${prefix}-PLZ,`],
+      ];
+      for (const layer of layers) {
+        if (wsData.length > 1) wsData.push([null, null, null, null]);
+        wsData.push([`[${layer.layerName}]`, null, null, null]);
+        for (const code of layer.postalCodes) {
+          const fmt = formatWithPrefix(code, country);
+          const raw = code.replace(/^[A-Z]{1,2}-?/i, "");
+          wsData.push([null, raw, fmt, `${fmt},`]);
+          totalCodes++;
+        }
+      }
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      // Force text type for PLZ columns to preserve leading zeros
+      const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        for (let C = 1; C <= 3; ++C) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          if (ws[addr]) ws[addr].t = "s";
+        }
+      }
+      XLSX.utils.book_append_sheet(wb, ws, areaName.slice(0, 31));
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `alle-gebiete-${timestamp}.xlsx`);
+    return `${totalCodes} PLZ in ${byArea.size} Gebieten exportiert`;
+  };
+
+  return executeAction(exportPromise(), {
+    loading: "📊 Exportiere alle Gebiete...",
+    success: (msg: string) => msg,
+    error: "Gesamt-Export fehlgeschlagen",
+  });
+}
