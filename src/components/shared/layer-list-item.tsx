@@ -23,6 +23,7 @@ import {
   ColorPickerOutput,
   ColorPickerSelection,
 } from "@/components/kibo-ui/color-picker";
+import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ interface LayerListItemLayer {
   id: number;
   name: string;
   color: string;
+  opacity?: number | null;
   isVisible?: string;
   postalCodes?: { postalCode: string }[];
 }
@@ -64,6 +66,7 @@ interface LayerListItemProps {
   onCancelEdit: () => void;
   onEditNameChange: (name: string) => void;
   onColorChange: (layerId: number, color: string) => void;
+  onOpacityChange?: (layerId: number, opacity: number) => void;
   onDelete: (layerId: number) => void;
   onDuplicateLayer?: (layerId: number) => void;
   onToggleVisibility?: (layerId: number, visible: boolean) => void;
@@ -72,13 +75,18 @@ interface LayerListItemProps {
 
 function LayerColorPickerContent({
   currentColor,
+  currentOpacity,
   onConfirm,
+  onOpacityChange,
 }: {
   currentColor: string;
+  currentOpacity: number;
   onConfirm: (hex: string) => void;
+  onOpacityChange?: (opacity: number) => void;
 }) {
   const [pending, setPending] = useState(currentColor);
   const [pickerKey, setPickerKey] = useState(0);
+  const [opacity, setOpacity] = useState(currentOpacity);
 
   return (
     <div className="w-60 space-y-3">
@@ -86,7 +94,7 @@ function LayerColorPickerContent({
       <div className="flex items-center gap-2">
         <div
           className="h-7 w-7 rounded border border-border shadow-sm shrink-0"
-          style={{ backgroundColor: pending }}
+          style={{ backgroundColor: pending, opacity: opacity / 100 }}
         />
         <span className="font-mono text-xs text-muted-foreground">
           {pending.toUpperCase()}
@@ -135,6 +143,29 @@ function LayerColorPickerContent({
         </div>
       </ColorPicker>
 
+      {/* Opacity slider */}
+      {onOpacityChange && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Transparenz</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {opacity}%
+            </span>
+          </div>
+          <Slider
+            min={10}
+            max={100}
+            step={5}
+            value={[opacity]}
+            onValueChange={(values) => {
+              const v = Array.isArray(values) ? values[0] : values;
+              setOpacity(v);
+              onOpacityChange(v);
+            }}
+          />
+        </div>
+      )}
+
       <Button size="sm" className="w-full" onClick={() => onConfirm(pending)}>
         Farbe übernehmen
       </Button>
@@ -156,6 +187,7 @@ export const LayerListItem = memo(function LayerListItem({
   onCancelEdit,
   onEditNameChange,
   onColorChange,
+  onOpacityChange,
   onDelete,
   onDuplicateLayer,
   onToggleVisibility,
@@ -164,6 +196,7 @@ export const LayerListItem = memo(function LayerListItem({
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const isVisible = layer.isVisible !== "false";
+  const currentOpacity = layer.opacity ?? 70;
 
   return (
     <div
@@ -332,10 +365,16 @@ export const LayerListItem = memo(function LayerListItem({
               >
                 <LayerColorPickerContent
                   currentColor={layer.color}
+                  currentOpacity={currentOpacity}
                   onConfirm={(hex) => {
                     onColorChange(layer.id, hex);
                     setColorPickerOpen(false);
                   }}
+                  onOpacityChange={
+                    onOpacityChange
+                      ? (opacity) => onOpacityChange(layer.id, opacity)
+                      : undefined
+                  }
                 />
               </PopoverContent>
             </Popover>

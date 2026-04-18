@@ -485,7 +485,7 @@ function useDrawingToolsActions({
     const result = await createLayerAction(areaId, {
       name: data.name,
       color: data.color,
-      opacity: 100,
+      opacity: 70,
       isVisible: true,
       orderIndex: data.orderIndex,
     });
@@ -637,7 +637,7 @@ function useDrawingToolsActions({
         layer: {
           name: createdLayerName,
           color: nextColor,
-          opacity: 100,
+          opacity: 70,
           isVisible: "true",
           orderIndex: optimisticLayers.length,
           areaId: areaId!,
@@ -672,6 +672,23 @@ function useDrawingToolsActions({
         await updateLayer(layerId, { color });
       } catch {
         toast.error("Fehler beim Ändern der Farbe - Bitte erneut versuchen");
+      }
+    });
+  };
+
+  const handleOpacityChange = (layerId: number, opacity: number) => {
+    startTransition(async () => {
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { opacity },
+      });
+      try {
+        await updateLayer(layerId, { opacity });
+      } catch {
+        toast.error(
+          "Fehler beim Ändern der Transparenz - Bitte erneut versuchen"
+        );
       }
     });
   };
@@ -836,6 +853,7 @@ function useDrawingToolsActions({
     handleSoloLayer,
     handleShowAllLayers,
     handleReassignColors,
+    handleOpacityChange,
   };
 }
 
@@ -854,6 +872,7 @@ interface LayerManagementSectionProps {
   handleCreateLayer: () => void;
   handleRenameLayer: (layerId: number, newName: string) => void;
   handleColorChange: (layerId: number, color: string) => void;
+  handleOpacityChange: (layerId: number, opacity: number) => void;
   handleDeleteLayer: (layerId: number) => void;
   handleDuplicateLayer: (layerId: number) => void;
   handleToggleVisibility: (layerId: number, visible: boolean) => void;
@@ -877,6 +896,7 @@ function LayerManagementSection({
   handleCreateLayer,
   handleRenameLayer,
   handleColorChange,
+  handleOpacityChange,
   handleDeleteLayer,
   handleDuplicateLayer,
   handleToggleVisibility,
@@ -1172,6 +1192,7 @@ function LayerManagementSection({
                     dispatchForm({ type: "SET_EDIT_NAME", name })
                   }
                   onColorChange={handleColorChange}
+                  onOpacityChange={handleOpacityChange}
                   onDelete={handleDeleteLayer}
                   onDuplicateLayer={handleDuplicateLayer}
                   onToggleVisibility={handleToggleVisibility}
@@ -1338,6 +1359,7 @@ function DrawingToolsImpl({
     handleExportPDF,
     handleCreateLayer,
     handleColorChange,
+    handleOpacityChange,
     handleDeleteLayer,
     confirmDeleteLayer,
     handleRenameLayer,
@@ -1460,6 +1482,7 @@ function DrawingToolsImpl({
             handleCreateLayer={handleCreateLayer}
             handleRenameLayer={handleRenameLayer}
             handleColorChange={handleColorChange}
+            handleOpacityChange={handleOpacityChange}
             handleDeleteLayer={handleDeleteLayer}
             handleDuplicateLayer={handleDuplicateLayer}
             handleToggleVisibility={handleToggleVisibility}
