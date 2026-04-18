@@ -29,7 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { CheckSquare, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, HelpCircle, Palette, Search, Square, Trash2, Upload, X } from "lucide-react";
+import { ArrowDownUp, CheckSquare, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, HelpCircle, Palette, Search, Square, Trash2, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -945,6 +945,25 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleSortByCount = () => {
+    startTransition(async () => {
+      const sorted = [...optimisticLayers].sort(
+        (a, b) => (b.postalCodes?.length ?? 0) - (a.postalCodes?.length ?? 0)
+      );
+      const withNewIndices = sorted.map((l, i) => ({ ...l, orderIndex: i }));
+      updateOptimisticLayers({ type: "reorder", layers: withNewIndices });
+      try {
+        await Promise.all(
+          withNewIndices.map((l) => updateLayer(l.id, { orderIndex: l.orderIndex }))
+        );
+        onLayerUpdate?.();
+        toast.success("Gebiete nach PLZ-Anzahl sortiert");
+      } catch {
+        toast.error("Fehler beim Sortieren");
+      }
+    });
+  };
+
   const handleRemovePostalCodeFromLayer = (layerId: number, postalCode: string) => {
     if (!removePostalCodesFromLayer) return;
     startTransition(async () => {
@@ -1036,6 +1055,7 @@ function useDrawingToolsActions({
     handleReassignColors,
     handleOpacityChange,
     handleReorderLayers,
+    handleSortByCount,
     handleRemovePostalCodeFromLayer,
     handleNotesChange,
     handleExportGeoJSON,
@@ -1096,6 +1116,7 @@ interface LayerManagementSectionProps {
   handleShowAllLayers: () => void;
   handleReassignColors: () => void;
   handleReorderLayers: (oldIndex: number, newIndex: number) => void;
+  handleSortByCount: () => void;
   handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
   handleNotesChange?: (layerId: number, notes: string) => void;
   handleBulkDelete: (layerIds: number[]) => void;
@@ -1126,6 +1147,7 @@ function LayerManagementSection({
   handleShowAllLayers,
   handleReassignColors,
   handleReorderLayers,
+  handleSortByCount,
   handleRemovePostalCodeFromLayer,
   handleNotesChange,
   handleBulkDelete,
@@ -1387,6 +1409,25 @@ function LayerManagementSection({
               </TooltipTrigger>
               <TooltipContent>
                 <p>Farben für maximalen Kontrast optimieren</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {optimisticLayers.length >= 2 && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={handleSortByCount}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0"
+                  />
+                }
+              >
+                <ArrowDownUp className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Nach PLZ-Anzahl sortieren</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -2012,6 +2053,7 @@ function DrawingToolsImpl({
     handleShowAllLayers,
     handleReassignColors,
     handleReorderLayers,
+    handleSortByCount,
     handleRemovePostalCodeFromLayer,
     handleNotesChange,
     handleExportGeoJSON,
@@ -2200,6 +2242,7 @@ function DrawingToolsImpl({
             handleShowAllLayers={handleShowAllLayers}
             handleReassignColors={handleReassignColors}
             handleReorderLayers={handleReorderLayers}
+            handleSortByCount={handleSortByCount}
             handleRemovePostalCodeFromLayer={handleRemovePostalCodeFromLayer}
             handleNotesChange={handleNotesChange}
             addPostalCodesToLayer={addPostalCodesToLayer}
