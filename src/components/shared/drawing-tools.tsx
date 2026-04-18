@@ -29,7 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ChevronDown, ChevronUp, Eye, GripVertical, Palette, Search, Upload, X } from "lucide-react";
+import { CheckSquare, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Palette, Search, Square, Trash2, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -936,6 +936,42 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleBulkDelete = (layerIds: number[]) => {
+    if (!layerIds.length) return;
+    startTransition(async () => {
+      for (const id of layerIds) {
+        updateOptimisticLayers({ type: "delete", id });
+      }
+      try {
+        await Promise.all(layerIds.map((id) => deleteLayer(id)));
+        toast.success(`${layerIds.length} Gebiete gelöscht`);
+      } catch {
+        toast.error("Fehler beim Löschen");
+      }
+    });
+  };
+
+  const handleBulkVisibility = (layerIds: number[], visible: boolean) => {
+    if (!layerIds.length || !areaId) return;
+    startTransition(async () => {
+      for (const id of layerIds) {
+        updateOptimisticLayers({
+          type: "update",
+          id,
+          layer: { isVisible: visible ? "true" : "false" },
+        });
+      }
+      try {
+        await batchUpdateVisibilityAction(
+          areaId,
+          layerIds.map((id) => ({ layerId: id, isVisible: visible }))
+        );
+      } catch {
+        toast.error("Fehler beim Ändern der Sichtbarkeit");
+      }
+    });
+  };
+
   return {
     optimisticLayers,
     ui,
@@ -962,6 +998,8 @@ function useDrawingToolsActions({
     handleRemovePostalCodeFromLayer,
     handleNotesChange,
     handleExportGeoJSON,
+    handleBulkDelete,
+    handleBulkVisibility,
   };
 }
 
@@ -1018,6 +1056,8 @@ interface LayerManagementSectionProps {
   handleReorderLayers: (oldIndex: number, newIndex: number) => void;
   handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
   handleNotesChange?: (layerId: number, notes: string) => void;
+  handleBulkDelete: (layerIds: number[]) => void;
+  handleBulkVisibility: (layerIds: number[], visible: boolean) => void;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   onOpenConflicts?: () => void;
 }
@@ -1046,6 +1086,8 @@ function LayerManagementSection({
   handleReorderLayers,
   handleRemovePostalCodeFromLayer,
   handleNotesChange,
+  handleBulkDelete,
+  handleBulkVisibility,
   addPostalCodesToLayer,
   onOpenConflicts,
 }: LayerManagementSectionProps) {
@@ -1093,6 +1135,38 @@ function LayerManagementSection({
   }, [optimisticLayers, layerSearch]);
 
   const isDragDisabled = !!layerSearch.trim();
+
+  // Bulk select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const toggleSelectMode = useCallback(() => {
+    setSelectMode((v) => !v);
+    setSelectedIds(new Set());
+  }, []);
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(filteredLayers.map((l) => l.id)));
+  }, [filteredLayers]);
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  const handleBulkDeleteSelected = useCallback(() => {
+    const ids = [...selectedIds];
+    clearSelection();
+    setSelectMode(false);
+    handleBulkDelete(ids);
+  }, [selectedIds, clearSelection, handleBulkDelete]);
+  const handleBulkShowSelected = useCallback(() => {
+    handleBulkVisibility([...selectedIds], true);
+  }, [selectedIds, handleBulkVisibility]);
+  const handleBulkHideSelected = useCallback(() => {
+    handleBulkVisibility([...selectedIds], false);
+  }, [selectedIds, handleBulkVisibility]);
 
   // CSV import dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -1256,8 +1330,71 @@ function LayerManagementSection({
               </TooltipContent>
             </Tooltip>
           )}
+          {optimisticLayers.length >= 2 && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={toggleSelectMode}
+                    variant="ghost"
+                    size="sm"
+                    className={`h-7 w-7 p-0 shrink-0 ${selectMode ? "text-primary bg-primary/10" : ""}`}
+                  />
+                }
+              >
+                {selectMode ? (
+                  <CheckSquare className="h-3 w-3" />
+                ) : (
+                  <Square className="h-3 w-3" />
+                )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{selectMode ? "Auswahl beenden" : "Mehrfachauswahl"}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
         <CollapsibleContent className="space-y-2 pt-2">
+          {/* Bulk action bar */}
+          {selectMode && (
+            <div className="flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs">
+              <button
+                type="button"
+                onClick={selectedIds.size === filteredLayers.length ? clearSelection : selectAll}
+                className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+              >
+                {selectedIds.size === filteredLayers.length ? (
+                  <CheckSquare className="h-3 w-3 text-primary" />
+                ) : (
+                  <Square className="h-3 w-3" />
+                )}
+                <span className="font-medium">{selectedIds.size > 0 ? `${selectedIds.size} ausgewählt` : "Alle"}</span>
+              </button>
+              {selectedIds.size > 0 && (
+                <>
+                  <span className="text-border mx-1">|</span>
+                  <Tooltip>
+                    <TooltipTrigger render={<button type="button" onClick={handleBulkShowSelected} className="p-0.5 rounded hover:bg-muted" />}>
+                      <Eye className="h-3 w-3" />
+                    </TooltipTrigger>
+                    <TooltipContent><p>Einblenden</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger render={<button type="button" onClick={handleBulkHideSelected} className="p-0.5 rounded hover:bg-muted" />}>
+                      <EyeOff className="h-3 w-3" />
+                    </TooltipTrigger>
+                    <TooltipContent><p>Ausblenden</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger render={<button type="button" onClick={handleBulkDeleteSelected} className="p-0.5 rounded hover:bg-muted text-destructive" />}>
+                      <Trash2 className="h-3 w-3" />
+                    </TooltipTrigger>
+                    <TooltipContent><p>{selectedIds.size} Gebiete löschen</p></TooltipContent>
+                  </Tooltip>
+                </>
+              )}
+            </div>
+          )}
           {/* Layer action buttons */}
           <div className="grid grid-cols-4 gap-1">
             <Tooltip>
@@ -1407,7 +1544,7 @@ function LayerManagementSection({
                   editingLayerId={form.editingLayerId}
                   editingLayerName={form.editingLayerName}
                   editLayerInputRef={editLayerInputRef}
-                  onSelect={(id) => onLayerSelect?.(id)}
+                  onSelect={(id) => { if (!selectMode) onLayerSelect?.(id); }}
                   onStartEdit={(id, name) =>
                     dispatchForm({ type: "START_EDIT", layerId: id, name })
                   }
@@ -1425,6 +1562,8 @@ function LayerManagementSection({
                    onRemovePostalCode={handleRemovePostalCodeFromLayer}
                    onImportCSV={addPostalCodesToLayer ? openImportDialog : undefined}
                    onNotesChange={handleNotesChange}
+                   isSelected={selectMode ? selectedIds.has(layer.id) : undefined}
+                   onToggleSelect={selectMode ? toggleSelect : undefined}
                  />
                ))
              ) : (
@@ -1448,7 +1587,7 @@ function LayerManagementSection({
                       editingLayerId={form.editingLayerId}
                       editingLayerName={form.editingLayerName}
                       editLayerInputRef={editLayerInputRef}
-                      onSelect={(id) => onLayerSelect?.(id)}
+                      onSelect={(id) => { if (!selectMode) onLayerSelect?.(id); }}
                       onStartEdit={(id, name) =>
                         dispatchForm({ type: "START_EDIT", layerId: id, name })
                       }
@@ -1466,6 +1605,8 @@ function LayerManagementSection({
                       onRemovePostalCode={handleRemovePostalCodeFromLayer}
                       onImportCSV={addPostalCodesToLayer ? openImportDialog : undefined}
                       onNotesChange={handleNotesChange}
+                      isSelected={selectMode ? selectedIds.has(layer.id) : undefined}
+                      onToggleSelect={selectMode ? toggleSelect : undefined}
                     />
                   ))}
                 </SortableContext>
@@ -1701,6 +1842,8 @@ function DrawingToolsImpl({
     handleRemovePostalCodeFromLayer,
     handleNotesChange,
     handleExportGeoJSON,
+    handleBulkDelete,
+    handleBulkVisibility,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -1827,6 +1970,8 @@ function DrawingToolsImpl({
             handleNotesChange={handleNotesChange}
             addPostalCodesToLayer={addPostalCodesToLayer}
             onOpenConflicts={onOpenConflicts}
+            handleBulkDelete={handleBulkDelete}
+            handleBulkVisibility={handleBulkVisibility}
           />
         )}
 

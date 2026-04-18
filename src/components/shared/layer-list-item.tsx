@@ -2,6 +2,7 @@
 
 import { IconPalette } from "@tabler/icons-react";
 import {
+  CheckSquare,
   Copy,
   CopyPlus,
   Eye,
@@ -10,6 +11,7 @@ import {
   GripVertical,
   List,
   Loader2,
+  Square,
   StickyNote,
   TriangleAlert,
   Upload,
@@ -79,6 +81,8 @@ interface LayerListItemProps {
   onRemovePostalCode?: (layerId: number, postalCode: string) => void;
   onImportCSV?: (layerId: number) => void;
   onNotesChange?: (layerId: number, notes: string) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (layerId: number) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }
 
@@ -204,6 +208,8 @@ export const LayerListItem = memo(function LayerListItem({
   onRemovePostalCode,
   onImportCSV,
   onNotesChange,
+  isSelected,
+  onToggleSelect,
   dragHandleProps,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
@@ -253,6 +259,24 @@ export const LayerListItem = memo(function LayerListItem({
       >
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            {/* Select checkbox — shown in select mode */}
+            {onToggleSelect !== undefined && (
+              <button
+                type="button"
+                className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground"
+                aria-label="Gebiet auswählen"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSelect(layer.id);
+                }}
+              >
+                {isSelected ? (
+                  <CheckSquare className="h-3 w-3 text-primary" />
+                ) : (
+                  <Square className="h-3 w-3" />
+                )}
+              </button>
+            )}
             {/* Drag handle — shown when draggable */}
             {dragHandleProps && (
               <button
