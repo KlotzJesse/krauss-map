@@ -480,6 +480,12 @@ export const LayerListItem = memo(function LayerListItem({
             {isLayerSwitchPending && activeLayerId === layer.id && (
               <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
             )}
+            {isLocked && (
+              <Lock
+                className="h-3 w-3 shrink-0 text-amber-500"
+                aria-label="Ebene gesperrt"
+              />
+            )}
           </div>
 
           <div

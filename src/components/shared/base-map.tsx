@@ -35,6 +35,7 @@ import {
 
 import "maplibre-gl/dist/maplibre-gl.css";
 import { DrawingToolsSkeleton } from "@/components/ui/loading-skeletons";
+import { useSidebar } from "@/components/ui/sidebar";
 import {
   COUNTRY_CONFIGS,
   DACH_CENTER,
@@ -388,6 +389,7 @@ const MapInner = memo(function MapInner({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const setMapCenterZoom = useSetMapCenterZoom();
   const [isGeolocating, setIsGeolocating] = useState(false);
+  const { toggleSidebar } = useSidebar();
 
   const handleRecenter = useCallback(() => {
     const config = country ? COUNTRY_CONFIGS[country] : undefined;
@@ -603,6 +605,24 @@ const MapInner = memo(function MapInner({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleFitAllLayers]);
+
+  // H key: toggle sidebar visibility
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "h" && e.key !== "H") return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
+      toggleSidebar();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleSidebar]);
 
   // startTransition-wrapped handlers to defer heavy subtree re-renders
   const handleShowTools = useStableCallback(() =>
