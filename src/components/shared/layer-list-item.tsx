@@ -127,6 +127,7 @@ interface LayerListItemProps {
   existingGroups?: string[];
   layerIndex?: number; // 0-based position in layer list (for F-key shortcut badge)
   maxLayerPLZ?: number; // max PLZ count across all layers — used for relative coverage bar
+  onHighlightCodes?: (codes: Set<string> | null) => void;
 }
 
 function LayerColorPickerContent({
@@ -299,6 +300,7 @@ export const LayerListItem = memo(function LayerListItem({
   onMergeLayer,
   layerIndex,
   maxLayerPLZ,
+  onHighlightCodes,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -418,6 +420,12 @@ export const LayerListItem = memo(function LayerListItem({
         !isVisible && "opacity-50",
         isLocked && "ring-1 ring-amber-400/50"
       )}
+      onMouseEnter={() => {
+        if (onHighlightCodes && postalCodes.length > 0) {
+          onHighlightCodes(new Set(postalCodes.map((pc) => pc.postalCode)));
+        }
+      }}
+      onMouseLeave={() => onHighlightCodes?.(null)}
     >
       <div
         role="button"

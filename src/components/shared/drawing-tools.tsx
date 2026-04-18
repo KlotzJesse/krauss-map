@@ -2979,6 +2979,7 @@ function LayerManagementSection({
                         existingGroups={existingGroups}
                         layerIndex={layerIndex}
                         maxLayerPLZ={maxLayerPLZ}
+                        onHighlightCodes={onHighlightCodes}
                       />
                     ))),
               ])
@@ -3179,6 +3180,7 @@ function LayerManagementSection({
                             existingGroups={existingGroups}
                             layerIndex={layerIndex}
                             maxLayerPLZ={maxLayerPLZ}
+                            onHighlightCodes={onHighlightCodes}
                           />
                         ))),
                   ])}
