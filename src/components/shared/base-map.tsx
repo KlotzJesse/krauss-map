@@ -11,6 +11,8 @@ import {
   EyeOff,
   Search,
   X,
+  MoveRight,
+  Copy,
 } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import dynamic from "next/dynamic";
@@ -43,7 +45,10 @@ import {
 } from "@/lib/config/countries";
 import { useCountryShapesData } from "@/lib/hooks/use-country-shapes-data";
 import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
-import { useMapInteractions } from "@/lib/hooks/use-map-interactions";
+import {
+  useMapInteractions,
+  type PlzReassignInfo,
+} from "@/lib/hooks/use-map-interactions";
 import {
   getFirstSymbolLayerId,
   useMapLabels,
@@ -450,6 +455,24 @@ const MapInner = memo(function MapInner({
     useState<Set<string> | null>(null);
   const [showUnassigned, setShowUnassigned] = useState(false);
 
+  // PLZ reassign popup — shown when clicking a PLZ that belongs to a different layer
+  const [reassignPopup, setReassignPopup] = useState<PlzReassignInfo | null>(
+    null
+  );
+  const handleNeedsReassign = useCallback((info: PlzReassignInfo) => {
+    setReassignPopup(info);
+  }, []);
+
+  // Close reassign popup on ESC
+  useEffect(() => {
+    if (!reassignPopup) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setReassignPopup(null);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [reassignPopup]);
+
   const handleOpenConflicts = useCallback(() => setShowConflicts(true), []);
   const handleCloseConflicts = useCallback(() => {
     setShowConflicts(false);
@@ -516,6 +539,7 @@ const MapInner = memo(function MapInner({
     layers,
     addPostalCodesToLayer,
     removePostalCodesFromLayer,
+    onNeedsReassign: handleNeedsReassign,
   });
 
   // Resolve basemap symbol layer for deck.gl beforeId (survives style transitions)
@@ -988,6 +1012,143 @@ const MapInner = memo(function MapInner({
             )}
           </div>
         </div>
+      )}
+
+      {/* PLZ Reassign popup — click a PLZ that belongs to a different layer */}
+      {reassignPopup && (
+        <div
+          className="absolute z-30"
+          style={{
+            left: Math.min(reassignPopup.x + 8, window.innerWidth - 260),
+            top: Math.min(reassignPopup.y - 8, window.innerHeight - 200),
+          }}
+        >
+          <div className="bg-popover border border-border rounded-lg shadow-xl p-3 w-56">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-mono font-bold text-sm text-foreground">
+                {reassignPopup.code}
+              </span>
+              <button
+                type="button"
+                onClick={() => setReassignPopup(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors rounded p-0.5 hover:bg-muted"
+                aria-label="Schließen"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+
+            <div className="text-[11px] text-muted-foreground mb-2">
+              Bereits in:
+            </div>
+            {reassignPopup.containingLayers.map((src) => (
+              <div
+                key={src.id}
+                className="flex items-center gap-1.5 text-[11px] mb-1"
+              >
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-sm shrink-0 border border-black/10"
+                  style={{ backgroundColor: src.color }}
+                />
+                <span className="truncate flex-1 text-foreground">
+                  {src.name}
+                </span>
+              </div>
+            ))}
+
+            {activeLayerId &&
+              layers?.find((l) => l.id === activeLayerId) &&
+              (() => {
+                const activeLayer = layers.find((l) => l.id === activeLayerId);
+                if (!activeLayer) return null;
+                return (
+                  <div className="mt-2.5 space-y-1.5 border-t border-border pt-2.5">
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-1.5 text-[11px] font-medium px-2 py-1.5 rounded hover:bg-primary/10 hover:text-primary transition-colors text-left"
+                      onClick={async () => {
+                        if (
+                          !addPostalCodesToLayer ||
+                          !removePostalCodesFromLayer
+                        )
+                          return;
+                        setReassignPopup(null);
+                        try {
+                          // Remove from all other layers
+                          await Promise.all(
+                            reassignPopup.containingLayers.map((src) =>
+                              removePostalCodesFromLayer(src.id, [
+                                reassignPopup.code,
+                              ])
+                            )
+                          );
+                          // Add to active layer
+                          await addPostalCodesToLayer(activeLayerId, [
+                            reassignPopup.code,
+                          ]);
+                          const { toast: t } = await import("sonner");
+                          t.success(
+                            `PLZ ${reassignPopup.code} verschoben nach ${activeLayer.name}`,
+                            { duration: 2000 }
+                          );
+                        } catch {
+                          const { toast: t } = await import("sonner");
+                          t.error("Fehler beim Verschieben", {
+                            duration: 2000,
+                          });
+                        }
+                      }}
+                    >
+                      <MoveRight className="h-3 w-3 shrink-0" />
+                      <span className="truncate">
+                        Verschieben nach{" "}
+                        <span
+                          className="font-semibold"
+                          style={{ color: activeLayer.color ?? undefined }}
+                        >
+                          {activeLayer.name}
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-1.5 text-[11px] text-muted-foreground px-2 py-1.5 rounded hover:bg-muted transition-colors text-left"
+                      onClick={async () => {
+                        if (!addPostalCodesToLayer) return;
+                        setReassignPopup(null);
+                        try {
+                          await addPostalCodesToLayer(activeLayerId, [
+                            reassignPopup.code,
+                          ]);
+                          const { toast: t } = await import("sonner");
+                          t.success(
+                            `PLZ ${reassignPopup.code} auch zu ${activeLayer.name} hinzugefügt`,
+                            { duration: 2000 }
+                          );
+                        } catch {
+                          const { toast: t } = await import("sonner");
+                          t.error("Fehler beim Hinzufügen", { duration: 2000 });
+                        }
+                      }}
+                    >
+                      <Copy className="h-3 w-3 shrink-0" />
+                      <span>Auch hinzufügen (Duplikat)</span>
+                    </button>
+                  </div>
+                );
+              })()}
+          </div>
+        </div>
+      )}
+
+      {/* Close reassign popup on Escape */}
+      {reassignPopup && (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: ESC handler via window
+        <div
+          className="fixed inset-0 z-[29]"
+          onClick={() => setReassignPopup(null)}
+          aria-hidden="true"
+        />
       )}
     </>
   );

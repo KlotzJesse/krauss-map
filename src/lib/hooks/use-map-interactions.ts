@@ -16,6 +16,13 @@ type LayerWithPostalCodes = SelectAreaLayers & {
   postalCodes?: { postalCode: string }[];
 };
 
+export interface PlzReassignInfo {
+  x: number;
+  y: number;
+  code: string;
+  containingLayers: { id: number; name: string; color: string }[];
+}
+
 interface UseMapInteractionsProps {
   mapRef: RefObject<MapLibreMap | null>;
   data: FeatureCollection<Polygon | MultiPolygon>;
@@ -28,6 +35,8 @@ interface UseMapInteractionsProps {
     layerId: number,
     codes: string[]
   ) => Promise<void>;
+  /** Called instead of auto-adding when the PLZ already belongs to a different layer. */
+  onNeedsReassign?: (info: PlzReassignInfo) => void;
 }
 
 /**
@@ -44,6 +53,7 @@ export function useMapInteractions({
   layers,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
+  onNeedsReassign,
 }: UseMapInteractionsProps) {
   // Drawing tools state management
   const {
@@ -175,13 +185,34 @@ export function useMapInteractions({
       );
       const codeExists = existingCodesSet.has(rawCode);
 
+      // Find layers (other than active) that also contain this PLZ
+      const otherLayersWithCode = (layers ?? []).filter(
+        (l) =>
+          l.id !== activeLayerId &&
+          l.postalCodes?.some((pc) => pc.postalCode === rawCode)
+      );
+
       try {
         if (codeExists) {
+          // PLZ is in the active layer → remove it
           await removePostalCodesFromLayer(activeLayerId, [rawCode]);
           toast.success(`PLZ ${rawCode} aus Gebiet entfernt`, {
             duration: 2000,
           });
+        } else if (otherLayersWithCode.length > 0 && onNeedsReassign) {
+          // PLZ belongs to a different layer → ask user to reassign or duplicate
+          onNeedsReassign({
+            x: info.x ?? 0,
+            y: info.y ?? 0,
+            code: rawCode,
+            containingLayers: otherLayersWithCode.map((l) => ({
+              id: l.id,
+              name: l.name,
+              color: l.color ?? "#888",
+            })),
+          });
         } else {
+          // PLZ not in any layer → add to active layer
           await addPostalCodesToLayer(activeLayerId, [rawCode]);
           toast.success(`PLZ ${rawCode} zu Gebiet hinzugefügt`, {
             duration: 2000,
@@ -201,6 +232,7 @@ export function useMapInteractions({
       layers,
       addPostalCodesToLayer,
       removePostalCodesFromLayer,
+      onNeedsReassign,
     ]
   );
 
