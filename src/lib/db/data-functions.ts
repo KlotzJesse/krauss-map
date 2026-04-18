@@ -32,6 +32,11 @@ export async function getAreas() {
           INNER JOIN area_layers al ON al.id = alpc.layer_id
           WHERE al.area_id = "areas"."id"
         )`.as("postalCodeCount"),
+        layerCount: sql<number>`(
+          SELECT COUNT(*)::int
+          FROM area_layers al
+          WHERE al.area_id = "areas"."id"
+        )`.as("layerCount"),
       })
       .from(areas)
       .orderBy(desc(areas.updatedAt));

@@ -12,6 +12,7 @@ export type AreaSummary = Pick<
   "id" | "name" | "granularity" | "isArchived" | "updatedAt" | "country"
 > & {
   postalCodeCount?: number | null;
+  layerCount?: number | null;
 };
 
 export type Layer = InferSelectModel<typeof areaLayers> & {

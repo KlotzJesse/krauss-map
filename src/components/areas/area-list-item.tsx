@@ -151,8 +151,13 @@ export const AreaListItem = memo(
                 <LinkPendingIndicator />
               </Link>
               {!!area.postalCodeCount && (
-                <span className="shrink-0 text-[9px] font-medium text-muted-foreground bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity">
+                <span className="shrink-0 text-[9px] font-medium text-muted-foreground bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity" title={`${area.postalCodeCount} PLZ`}>
                   {area.postalCodeCount}
+                </span>
+              )}
+              {!!area.layerCount && (
+                <span className="shrink-0 text-[9px] font-medium text-muted-foreground/60 bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity" title={`${area.layerCount} Gebiete`}>
+                  {area.layerCount}L
                 </span>
               )}
               {isPinned && (
