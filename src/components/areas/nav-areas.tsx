@@ -1,6 +1,6 @@
 "use client";
 
-import { IconArchive, IconPlus } from "@tabler/icons-react";
+import { IconArchive, IconPlus, IconSearch, IconX } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
 import {
   useOptimistic,
@@ -9,6 +9,8 @@ import {
   useEffect,
   useTransition,
   useCallback,
+  useState,
+  useMemo,
 } from "react";
 import { toast } from "sonner";
 
@@ -181,10 +183,18 @@ export function NavAreas({
   );
 
   const [showArchived, setShowArchived] = useReducer((v: boolean) => !v, false);
+  const [areaSearch, setAreaSearch] = useState("");
 
-  const visibleAreas = showArchived
+  const baseVisibleAreas = showArchived
     ? optimisticAreas
     : optimisticAreas.filter((a) => a.isArchived !== "true");
+
+  const visibleAreas = useMemo(() => {
+    const q = areaSearch.trim().toLowerCase();
+    if (!q) return baseVisibleAreas;
+    return baseVisibleAreas.filter((a) => a.name.toLowerCase().includes(q));
+  }, [baseVisibleAreas, areaSearch]);
+
   const archivedCount = optimisticAreas.filter((a) => a.isArchived === "true").length;
 
   const [_isPending, startTransition] = useTransition();
@@ -345,6 +355,30 @@ export function NavAreas({
             </div>
           </div>
         </SidebarGroupLabel>
+        {optimisticAreas.length >= 5 && (
+          <div className="px-2 pb-1">
+            <div className="relative flex items-center">
+              <IconSearch className="absolute left-2 h-3 w-3 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={areaSearch}
+                onChange={(e) => setAreaSearch(e.target.value)}
+                placeholder="Gebiete filtern…"
+                className="w-full h-6 pl-6 pr-5 text-xs bg-muted/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-colors"
+              />
+              {areaSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAreaSearch("")}
+                  className="absolute right-1.5 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  <IconX className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <SidebarGroupContent>
           <SidebarMenu>
             {isLoading && (
@@ -361,6 +395,11 @@ export function NavAreas({
                   <IconPlus className="h-4 w-4" />
                   <span>Erstes Gebiet erstellen</span>
                 </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+            {!isLoading && visibleAreas.length === 0 && areaSearch && (
+              <SidebarMenuItem>
+                <span className="px-2 text-xs text-muted-foreground">Keine Treffer</span>
               </SidebarMenuItem>
             )}
             {!isLoading &&
