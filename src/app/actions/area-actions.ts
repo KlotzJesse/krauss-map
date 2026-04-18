@@ -2213,3 +2213,18 @@ export async function bulkRemoveTagFromAreasAction(
     return { success: false, error: String(err) };
   }
 }
+
+export async function updateTagAction(tagId: number, name: string, color: string): ServerActionResponse<void> {
+  try {
+    await db
+      .update(areaTags)
+      .set({ name: name.trim().slice(0, 50), color })
+      .where(eq(areaTags.id, tagId));
+
+    updateTag("tags");
+    updateTag("areas");
+    return { success: true, data: undefined };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
