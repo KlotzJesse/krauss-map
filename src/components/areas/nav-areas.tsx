@@ -38,6 +38,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useAreaPins } from "@/lib/hooks/use-area-pins";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { AreaSummary } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
@@ -148,6 +149,7 @@ export function NavAreas({
     areaToDelete,
     isDeleting,
   } = state;
+  const { isPinned, togglePin } = useAreaPins();
   const editInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (editingAreaId !== null) {
@@ -191,9 +193,16 @@ export function NavAreas({
 
   const visibleAreas = useMemo(() => {
     const q = areaSearch.trim().toLowerCase();
-    if (!q) return baseVisibleAreas;
-    return baseVisibleAreas.filter((a) => a.name.toLowerCase().includes(q));
-  }, [baseVisibleAreas, areaSearch]);
+    const filtered = q
+      ? baseVisibleAreas.filter((a) => a.name.toLowerCase().includes(q))
+      : baseVisibleAreas;
+    // Sort pinned areas to top, preserve original order within groups
+    return [...filtered].sort((a, b) => {
+      const pa = isPinned(a.id) ? 0 : 1;
+      const pb = isPinned(b.id) ? 0 : 1;
+      return pa - pb;
+    });
+  }, [baseVisibleAreas, areaSearch, isPinned]);
 
   const archivedCount = optimisticAreas.filter((a) => a.isArchived === "true").length;
 
@@ -411,6 +420,8 @@ export function NavAreas({
                   editingAreaName={editingAreaName}
                   editInputRef={editInputRef}
                   isCurrentRoute={currentAreaIdFromRoute === String(area.id)}
+                  isPinned={isPinned(area.id)}
+                  onTogglePin={togglePin}
                   onStartRename={handleStartRename}
                   onConfirmRename={handleConfirmRename}
                   onCancelRename={handleCancelRename}

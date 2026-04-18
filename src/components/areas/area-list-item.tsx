@@ -1,6 +1,6 @@
 "use client";
 
-import { IconArchive, IconCheck, IconFolder, IconX } from "@tabler/icons-react";
+import { IconArchive, IconCheck, IconFolder, IconPin, IconPinFilled, IconX } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { memo } from "react";
@@ -19,6 +19,8 @@ interface AreaListItemProps {
   editingAreaName: string;
   editInputRef: RefObject<HTMLInputElement | null>;
   isCurrentRoute: boolean;
+  isPinned?: boolean;
+  onTogglePin?: (areaId: number) => void;
   onStartRename: (area: AreaSummary, e: React.MouseEvent) => void;
   onConfirmRename: (areaId: number) => void;
   onCancelRename: () => void;
@@ -36,6 +38,8 @@ export const AreaListItem = memo(
     editingAreaName,
     editInputRef,
     isCurrentRoute,
+    isPinned = false,
+    onTogglePin,
     onStartRename,
     onConfirmRename,
     onCancelRename,
@@ -151,7 +155,24 @@ export const AreaListItem = memo(
                   {area.postalCodeCount}
                 </span>
               )}
-              <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0">
+              {isPinned && (
+                <IconPinFilled className="shrink-0 h-2.5 w-2.5 text-amber-500 group-hover/item:opacity-0 transition-opacity" />
+              )}
+              <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0 flex items-center">
+                {onTogglePin && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onTogglePin(area.id); }}
+                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-amber-500 transition-colors"
+                    title={isPinned ? "Anheften aufheben" : "Anheften"}
+                  >
+                    {isPinned ? (
+                      <IconPinFilled className="h-3 w-3 text-amber-500" />
+                    ) : (
+                      <IconPin className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
                 <AreaItemDropdown
                   area={area}
                   onStartRename={onStartRename}
@@ -178,6 +199,9 @@ export const AreaListItem = memo(
       return false;
     }
     if (prev.isCurrentRoute !== next.isCurrentRoute) {
+      return false;
+    }
+    if (prev.isPinned !== next.isPinned) {
       return false;
     }
     if (prev.isEditing !== next.isEditing) {
