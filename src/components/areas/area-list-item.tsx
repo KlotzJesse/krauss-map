@@ -13,6 +13,24 @@ import type { AreaSummary } from "@/lib/types/area-types";
 
 import { AreaItemDropdown, AreaItemMenu } from "./area-item-menu";
 
+function relativeTime(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  const now = Date.now();
+  const diff = now - d.getTime();
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 2) return "gerade eben";
+  if (minutes < 60) return `vor ${minutes} Min.`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `vor ${hours} Std.`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "gestern";
+  if (days < 7) return `vor ${days} Tagen`;
+  if (days < 30) return `vor ${Math.floor(days / 7)} Wo.`;
+  if (days < 365) return `vor ${Math.floor(days / 30)} Mon.`;
+  return `vor ${Math.floor(days / 365)} J.`;
+}
+
 interface AreaListItemProps {
   area: AreaSummary;
   isEditing: boolean;
@@ -135,9 +153,9 @@ export const AreaListItem = memo(
               }}
             >
               {isArchived ? (
-                <IconArchive className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <IconArchive className="h-4 w-4 shrink-0 text-muted-foreground" title="Archiviert" />
               ) : (
-                <IconFolder className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <IconFolder className="h-4 w-4 shrink-0 text-muted-foreground" title={area.updatedAt ? `Geändert: ${relativeTime(area.updatedAt)}` : undefined} />
               )}
               <Link
                 href={`/postal-codes/${area.id}` as Route}
