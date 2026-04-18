@@ -216,7 +216,8 @@ function MapLegend({
           <div className="px-2.5 pb-2 space-y-0.5 max-h-48 overflow-y-auto">
             {visibleLayers.map((l) => {
               const count = l.postalCodes?.length ?? 0;
-              const pct = totalPLZ > 0 ? Math.round((count / totalPLZ) * 100) : 0;
+              const pct =
+                totalPLZ > 0 ? Math.round((count / totalPLZ) * 100) : 0;
               const isActive = activeLayerId === l.id;
               return (
                 <button
@@ -227,9 +228,7 @@ function MapLegend({
                   className={cn(
                     "w-full flex items-center gap-1.5 text-left rounded transition-colors",
                     "hover:bg-muted/70 cursor-pointer",
-                    isActive
-                      ? "font-semibold bg-muted/60 px-1 -mx-1"
-                      : "px-0"
+                    isActive ? "font-semibold bg-muted/60 px-1 -mx-1" : "px-0"
                   )}
                 >
                   <span

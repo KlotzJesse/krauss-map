@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 
 import { CompareAreasButton } from "./compare-areas-button";
 import { ExportAllAreasButton } from "./export-all-areas-button";
+import { OverviewAreaList } from "./overview-area-list";
 
 const CHANGE_ICONS: Record<string, React.ElementType> = {
   add_postal_codes: IconPlus,
@@ -93,9 +94,6 @@ export async function PostalCodesOverview() {
       plz: prev.plz + (a.postalCodeCount ?? 0),
     });
   }
-
-  // Recent (sorted by updatedAt desc)
-  const recent = activeAreas.slice(0, 6);
 
   // Areas with coverage %
   const areasWithCoverage = activeAreas
@@ -208,96 +206,7 @@ export async function PostalCodesOverview() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Recent areas */}
           <div className="md:col-span-2 space-y-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center justify-between">
-                  Gebiete
-                  <Link
-                    href="/"
-                    className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors"
-                  >
-                    Alle anzeigen →
-                  </Link>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {recent.length === 0 ? (
-                  <div className="text-sm text-muted-foreground py-4 text-center">
-                    Noch keine Gebiete vorhanden
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {recent.map((area) => {
-                      const totalPc = area.totalPostalCodeCount ?? 0;
-                      const assigned = area.uniquePostalCodeCount ?? 0;
-                      const coveragePct =
-                        totalPc > 0
-                          ? Math.min(
-                              100,
-                              Math.round((assigned / totalPc) * 100)
-                            )
-                          : null;
-                      return (
-                        <li key={area.id}>
-                          <Link
-                            href={`/postal-codes/${area.id}` as Route}
-                            className="flex items-center gap-3 py-2.5 hover:bg-muted/40 rounded-md px-2 -mx-2 transition-colors group"
-                          >
-                            <IconFolder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium truncate">
-                                  {area.name}
-                                </span>
-                              </div>
-                              {coveragePct !== null && (
-                                <div className="flex items-center gap-1.5 mt-1">
-                                  <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                                    <div
-                                      className={cn(
-                                        "h-full rounded-full transition-all",
-                                        coveragePct >= 80
-                                          ? "bg-green-500"
-                                          : coveragePct >= 50
-                                            ? "bg-primary"
-                                            : coveragePct >= 20
-                                              ? "bg-amber-500"
-                                              : "bg-muted-foreground/40"
-                                      )}
-                                      style={{ width: `${coveragePct}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-[9px] text-muted-foreground tabular-nums shrink-0">
-                                    {coveragePct}%
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground shrink-0">
-                              {area.country && (
-                                <span className="uppercase font-mono">
-                                  {area.country}
-                                </span>
-                              )}
-                              {!!assigned && (
-                                <span className="bg-muted rounded px-1 py-0.5">
-                                  {assigned} PLZ
-                                </span>
-                              )}
-                              {!!area.layerCount && (
-                                <span className="bg-muted rounded px-1 py-0.5">
-                                  {area.layerCount}L
-                                </span>
-                              )}
-                            </div>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+            <OverviewAreaList areas={activeAreas} />
 
             {/* Recent activity on dashboard */}
             {recentActivity.length > 0 && (

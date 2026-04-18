@@ -418,7 +418,10 @@ export const LayerListItem = memo(function LayerListItem({
           : "border-border hover:border-primary/50 hover:bg-accent/50",
         isOptimistic && "opacity-60 pointer-events-none",
         !isVisible && "opacity-50",
-        isLocked && "ring-1 ring-amber-400/50"
+        isLocked && "ring-1 ring-amber-400/50",
+        postalCodes.length === 0 &&
+          activeLayerId !== layer.id &&
+          "border-amber-300/40 bg-amber-50/30 dark:bg-amber-950/10"
       )}
       onMouseEnter={() => {
         if (onHighlightCodes && postalCodes.length > 0) {
@@ -554,47 +557,100 @@ export const LayerListItem = memo(function LayerListItem({
                 {layer.name}
               </span>
             )}
-            <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
-              {layer.postalCodes?.length ?? 0}
-            </Badge>
-            {allCodesSet &&
-              allCodesSet.size > 0 &&
-              (layer.postalCodes?.length ?? 0) > 0 && (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <span className="flex items-center gap-0.5 cursor-default" />
-                    }
-                  >
-                    <span
-                      className="inline-block h-1.5 rounded-full bg-current opacity-40"
-                      style={{
-                        backgroundColor: layer.color,
-                        opacity: 0.7,
-                        width: `${Math.max(8, Math.round(((layer.postalCodes?.length ?? 0) / allCodesSet.size) * 48))}px`,
-                      }}
+            {postalCodes.length === 0 ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30 gap-0.5 cursor-default" />
+                  }
+                >
+                  <TriangleAlert className="h-2.5 w-2.5" />
+                  Leer
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium">Kein PLZ zugewiesen</p>
+                  <p className="text-muted-foreground text-[11px] mt-0.5">
+                    Klicke auf PLZ auf der Karte oder nutze Präfix-Hinzufügen.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] px-1 py-0 h-4 cursor-default tabular-nums"
                     />
-                    <span className="text-[9px] text-muted-foreground tabular-nums">
-                      {(
-                        ((layer.postalCodes?.length ?? 0) / allCodesSet.size) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      {layer.postalCodes?.length ?? 0} von {allCodesSet.size}{" "}
-                      PLZ (
-                      {(
-                        ((layer.postalCodes?.length ?? 0) / allCodesSet.size) *
-                        100
-                      ).toFixed(1)}
-                      %)
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
+                  }
+                >
+                  {postalCodes.length}
+                </TooltipTrigger>
+                <TooltipContent className="min-w-[140px]">
+                  <p className="font-medium mb-1">
+                    {postalCodes.length} PLZ
+                    {allCodesSet && allCodesSet.size > 0
+                      ? ` · ${((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}% des Gebiets`
+                      : ""}
+                  </p>
+                  {prefixDistribution.length > 0 && (
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wide mb-1">
+                        Top Regionen
+                      </p>
+                      {prefixDistribution.slice(0, 5).map(([prefix, count]) => (
+                        <div key={prefix} className="flex items-center gap-1.5">
+                          <span className="font-mono text-[10px] w-6">
+                            {prefix}
+                          </span>
+                          <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                backgroundColor: layer.color,
+                                width: `${Math.round((count / postalCodes.length) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground tabular-nums w-6 text-right">
+                            {count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {allCodesSet && allCodesSet.size > 0 && postalCodes.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span className="flex items-center gap-0.5 cursor-default" />
+                  }
+                >
+                  <span
+                    className="inline-block h-1.5 rounded-full bg-current opacity-40"
+                    style={{
+                      backgroundColor: layer.color,
+                      opacity: 0.7,
+                      width: `${Math.max(8, Math.round((postalCodes.length / allCodesSet.size) * 48))}px`,
+                    }}
+                  />
+                  <span className="text-[9px] text-muted-foreground tabular-nums">
+                    {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}
+                    %
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {postalCodes.length} von {allCodesSet.size} PLZ (
+                    {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}
+                    %)
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {duplicateCount > 0 && (
               <Tooltip>
                 <TooltipTrigger
