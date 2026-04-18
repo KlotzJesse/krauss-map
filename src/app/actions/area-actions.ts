@@ -2307,6 +2307,7 @@ export interface AreaPlzMatch {
   layerId: number;
   layerName: string;
   layerColor: string;
+  matchCount?: number;
 }
 
 export async function searchAreasByPostalCodeAction(
@@ -2317,6 +2318,11 @@ export async function searchAreasByPostalCodeAction(
     return { success: false, error: "Ungültige PLZ" };
   }
   try {
+    const isExact = trimmed.length === 5;
+    const whereCondition = isExact
+      ? eq(areaLayerPostalCodes.postalCode, trimmed)
+      : sql`${areaLayerPostalCodes.postalCode} LIKE ${trimmed + "%"}`;
+
     const rows = await db
       .select({
         areaId: areas.id,
@@ -2324,15 +2330,13 @@ export async function searchAreasByPostalCodeAction(
         layerId: areaLayers.id,
         layerName: areaLayers.name,
         layerColor: areaLayers.color,
+        matchCount: isExact ? sql<number>`1` : sql<number>`COUNT(*)`,
       })
       .from(areaLayerPostalCodes)
       .innerJoin(areaLayers, eq(areaLayerPostalCodes.layerId, areaLayers.id))
       .innerJoin(areas, eq(areaLayers.areaId, areas.id))
-      .where(
-        trimmed.length === 5
-          ? eq(areaLayerPostalCodes.postalCode, trimmed)
-          : sql`${areaLayerPostalCodes.postalCode} LIKE ${trimmed + "%"}`
-      )
+      .where(whereCondition)
+      .groupBy(areas.id, areaLayers.id)
       .orderBy(areas.name, areaLayers.name)
       .limit(20);
 

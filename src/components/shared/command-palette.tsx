@@ -188,8 +188,13 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
                     style={{ color: match.layerColor }}
                   />
                   <span className="flex-1 truncate">{match.areaName}</span>
-                  <span className="text-[10px] text-muted-foreground/60 truncate max-w-[100px]">
+                  <span className="text-[10px] text-muted-foreground/60 truncate max-w-[120px] flex items-center gap-1">
                     {match.layerName}
+                    {match.matchCount != null && match.matchCount > 1 && (
+                      <span className="text-[9px] bg-muted rounded px-1 py-0.5 font-mono">
+                        {match.matchCount}×
+                      </span>
+                    )}
                   </span>
                 </CommandItem>
               ))}

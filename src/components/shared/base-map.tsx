@@ -624,6 +624,31 @@ const MapInner = memo(function MapInner({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [toggleSidebar]);
 
+  // +/- keys: zoom in/out
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
+      const map = rawMapRef.current;
+      if (!map) return;
+      if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        map.zoomIn({ duration: 200 });
+      } else if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        map.zoomOut({ duration: 200 });
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   // startTransition-wrapped handlers to defer heavy subtree re-renders
   const handleShowTools = useStableCallback(() =>
     startTransition(() => interactions.showTools())

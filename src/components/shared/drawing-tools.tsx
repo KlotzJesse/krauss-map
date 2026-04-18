@@ -2799,6 +2799,8 @@ const LayerDialogs = memo(function LayerDialogs({
                   { keys: ["G"], desc: "Alle Ebenen anzeigen (Fit all)" },
                   { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
                   { keys: ["H"], desc: "Seitenleiste ein-/ausblenden" },
+                  { keys: ["+"], desc: "Zoom in" },
+                  { keys: ["-"], desc: "Zoom out" },
                   { keys: ["Ctrl", "K"], desc: "Suche / Befehlspalette" },
                   { keys: ["Ctrl", "B"], desc: "Kartenlesezeichen" },
                   { keys: ["?"], desc: "Shortcuts anzeigen" },
@@ -2830,8 +2832,14 @@ const LayerDialogs = memo(function LayerDialogs({
               {
                 group: "PLZ-Aktionen",
                 items: [
-                  { keys: ["Ctrl", "C"], desc: "PLZ der aktiven Ebene kopieren" },
-                  { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
+                  {
+                    keys: ["Ctrl", "C"],
+                    desc: "PLZ der aktiven Ebene kopieren",
+                  },
+                  {
+                    keys: ["Ctrl", "V"],
+                    desc: "PLZ aus Zwischenablage einfügen",
+                  },
                   {
                     keys: ["Ctrl", "Shift", "V"],
                     desc: "PLZ-Bereich einfügen (z.B. 80331–80339)",
@@ -2856,7 +2864,10 @@ const LayerDialogs = memo(function LayerDialogs({
                 </p>
                 <div className="space-y-1">
                   {items.map(({ keys, desc }) => (
-                    <div key={desc} className="flex items-center justify-between gap-4">
+                    <div
+                      key={desc}
+                      className="flex items-center justify-between gap-4"
+                    >
                       <span className="text-muted-foreground">{desc}</span>
                       <span className="flex gap-1 shrink-0">
                         {keys.map((k) => (
