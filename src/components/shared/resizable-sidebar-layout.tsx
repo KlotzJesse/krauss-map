@@ -22,26 +22,34 @@ export function ResizableSidebarLayout({
     if (typeof window === "undefined") return DEFAULT_WIDTH;
     const stored = localStorage.getItem(STORAGE_KEY);
     const parsed = stored ? parseInt(stored, 10) : NaN;
-    return isNaN(parsed) ? DEFAULT_WIDTH : Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parsed));
+    return isNaN(parsed)
+      ? DEFAULT_WIDTH
+      : Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parsed));
   });
 
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    isDragging.current = true;
-    startX.current = e.clientX;
-    startWidth.current = width;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, [width]);
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      isDragging.current = true;
+      startX.current = e.clientX;
+      startWidth.current = width;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [width]
+  );
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging.current) return;
     const delta = e.clientX - startX.current;
-    const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + delta));
+    const newWidth = Math.min(
+      MAX_WIDTH,
+      Math.max(MIN_WIDTH, startWidth.current + delta)
+    );
     setWidth(newWidth);
   }, []);
 
@@ -51,7 +59,10 @@ export function ResizableSidebarLayout({
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
     const delta = e.clientX - startX.current;
-    const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + delta));
+    const newWidth = Math.min(
+      MAX_WIDTH,
+      Math.max(MIN_WIDTH, startWidth.current + delta)
+    );
     localStorage.setItem(STORAGE_KEY, String(newWidth));
   }, []);
 

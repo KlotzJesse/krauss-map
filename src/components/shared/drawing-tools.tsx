@@ -2798,8 +2798,14 @@ const LayerDialogs = memo(function LayerDialogs({
               { keys: ["Ctrl", "Y"], desc: "Wiederholen" },
               { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
               { keys: ["Ctrl", "C"], desc: "PLZ der aktiven Ebene kopieren" },
-              { keys: ["Ctrl", "Shift", "V"], desc: "PLZ-Bereich einfügen (z.B. 80331–80339)" },
-              { keys: ["Ctrl", "Shift", "P"], desc: "PLZ-Präfix hinzufügen (z.B. 80 → alle 80xxx)" },
+              {
+                keys: ["Ctrl", "Shift", "V"],
+                desc: "PLZ-Bereich einfügen (z.B. 80331–80339)",
+              },
+              {
+                keys: ["Ctrl", "Shift", "P"],
+                desc: "PLZ-Präfix hinzufügen (z.B. 80 → alle 80xxx)",
+              },
               { keys: ["/"], desc: "PLZ-Suche fokussieren" },
               { keys: ["?"], desc: "Tastaturkürzel anzeigen" },
               { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },

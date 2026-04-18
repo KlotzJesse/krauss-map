@@ -50,7 +50,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -59,6 +58,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Textarea } from "@/components/ui/textarea";
 import { useAreaPins } from "@/lib/hooks/use-area-pins";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { AreaSummary } from "@/lib/types/area-types";
@@ -757,7 +757,12 @@ export function NavAreas({
       </AlertDialog>
 
       {/* Notes editor dialog */}
-      <Dialog open={notesArea !== null} onOpenChange={(v) => { if (!v) setNotesArea(null); }}>
+      <Dialog
+        open={notesArea !== null}
+        onOpenChange={(v) => {
+          if (!v) setNotesArea(null);
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Notizen — {notesArea?.name}</DialogTitle>
@@ -771,7 +776,11 @@ export function NavAreas({
             autoFocus
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNotesArea(null)} disabled={isSavingNotes}>
+            <Button
+              variant="outline"
+              onClick={() => setNotesArea(null)}
+              disabled={isSavingNotes}
+            >
               Abbrechen
             </Button>
             <Button onClick={handleSaveNotes} disabled={isSavingNotes}>

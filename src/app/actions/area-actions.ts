@@ -2214,7 +2214,11 @@ export async function bulkRemoveTagFromAreasAction(
   }
 }
 
-export async function updateTagAction(tagId: number, name: string, color: string): ServerActionResponse<void> {
+export async function updateTagAction(
+  tagId: number,
+  name: string,
+  color: string
+): ServerActionResponse<void> {
   try {
     await db
       .update(areaTags)
@@ -2279,7 +2283,9 @@ export interface AreaLayerExportRow {
   postalCodes: string[];
 }
 
-export async function getAllAreasWithLayersForExportAction(): ServerActionResponse<AreaLayerExportRow[]> {
+export async function getAllAreasWithLayersForExportAction(): ServerActionResponse<
+  AreaLayerExportRow[]
+> {
   try {
     const rows = await db
       .select({

@@ -132,10 +132,18 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
       const res = await updateTagAction(editingTagId, trimmed, editingTagColor);
       if (res.success) {
         setAllTags((prev) =>
-          prev.map((t) => t.id === editingTagId ? { ...t, name: trimmed, color: editingTagColor } : t)
+          prev.map((t) =>
+            t.id === editingTagId
+              ? { ...t, name: trimmed, color: editingTagColor }
+              : t
+          )
         );
         setTags((prev) =>
-          prev.map((t) => t.id === editingTagId ? { ...t, name: trimmed, color: editingTagColor } : t)
+          prev.map((t) =>
+            t.id === editingTagId
+              ? { ...t, name: trimmed, color: editingTagColor }
+              : t
+          )
         );
         setEditingTagId(null);
         toast.success(`Tag umbenannt`);
@@ -177,14 +185,19 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
           {allTags.length > 0 && (
             <div className="mb-3">
               <p className="text-xs text-muted-foreground mb-1.5">
-                {unassignedTags.length > 0 ? "Vorhandene Tags" : "Alle Tags bereits zugewiesen"}
+                {unassignedTags.length > 0
+                  ? "Vorhandene Tags"
+                  : "Alle Tags bereits zugewiesen"}
               </p>
               <div className="space-y-1">
                 {allTags.map((tag) => {
                   const isAssigned = tags.some((t) => t.id === tag.id);
                   const isEditing = editingTagId === tag.id;
                   return (
-                    <div key={tag.id} className="flex items-center gap-1 group min-h-[24px]">
+                    <div
+                      key={tag.id}
+                      className="flex items-center gap-1 group min-h-[24px]"
+                    >
                       {isEditing ? (
                         <>
                           <div
@@ -224,14 +237,24 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
                           <button
                             type="button"
                             onClick={() => !isAssigned && handleAssign(tag)}
-                            className={isAssigned ? "cursor-default" : "cursor-pointer"}
-                            title={isAssigned ? "Bereits zugewiesen" : `„${tag.name}" zuweisen`}
+                            className={
+                              isAssigned ? "cursor-default" : "cursor-pointer"
+                            }
+                            title={
+                              isAssigned
+                                ? "Bereits zugewiesen"
+                                : `„${tag.name}" zuweisen`
+                            }
                           >
                             <TagBadge
                               name={tag.name}
                               color={tag.color}
                               small
-                              className={isAssigned ? "opacity-40" : "hover:brightness-110"}
+                              className={
+                                isAssigned
+                                  ? "opacity-40"
+                                  : "hover:brightness-110"
+                              }
                             />
                           </button>
                           <span className="text-[9px] text-muted-foreground/60 ml-0.5 shrink-0">
@@ -267,7 +290,9 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
           {/* Show editing color picker when renaming */}
           {editingTagId !== null && (
             <div className="mb-3">
-              <p className="text-[10px] text-muted-foreground mb-1">Farbe wählen:</p>
+              <p className="text-[10px] text-muted-foreground mb-1">
+                Farbe wählen:
+              </p>
               <div className="flex flex-wrap gap-1">
                 {TAG_COLORS.map((c) => (
                   <button

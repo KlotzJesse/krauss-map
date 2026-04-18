@@ -11,12 +11,19 @@ import {
 } from "@tabler/icons-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 
 import {
   searchAreasByPostalCodeAction,
   type AreaPlzMatch,
 } from "@/app/actions/area-actions";
+import { TagBadge } from "@/components/areas/tag-badge";
 import {
   CommandDialog,
   CommandEmpty,
@@ -28,8 +35,6 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import type { AreaSummary } from "@/lib/types/area-types";
-
-import { TagBadge } from "@/components/areas/tag-badge";
 
 interface CommandPaletteProps {
   areas: AreaSummary[];
@@ -92,7 +97,10 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
 
   // Collect all unique tags across areas
   const allTags = useMemo(() => {
-    const tagMap = new Map<number, { id: number; name: string; color: string }>();
+    const tagMap = new Map<
+      number,
+      { id: number; name: string; color: string }
+    >();
     for (const area of areas) {
       for (const tag of area.tags ?? []) {
         if (!tagMap.has(tag.id)) tagMap.set(tag.id, tag);
@@ -106,7 +114,9 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
   const activeAreas = useMemo(() => {
     let result = areas.filter((a) => a.isArchived !== "true");
     if (activeTagFilter !== null) {
-      result = result.filter((a) => a.tags?.some((t) => t.id === activeTagFilter));
+      result = result.filter((a) =>
+        a.tags?.some((t) => t.id === activeTagFilter)
+      );
     }
     return result;
   }, [areas, activeTagFilter]);
@@ -116,7 +126,10 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
   return (
     <CommandDialog
       open={open}
-      onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true); }}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+        else setOpen(true);
+      }}
       title="Schnellnavigation"
     >
       <CommandInput
@@ -132,11 +145,22 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
             <button
               key={tag.id}
               type="button"
-              onClick={() => setActiveTagFilter(activeTagFilter === tag.id ? null : tag.id)}
+              onClick={() =>
+                setActiveTagFilter(activeTagFilter === tag.id ? null : tag.id)
+              }
               className={`transition-opacity ${activeTagFilter !== null && activeTagFilter !== tag.id ? "opacity-30" : ""}`}
-              title={activeTagFilter === tag.id ? "Filter entfernen" : `Nur „${tag.name}"`}
+              title={
+                activeTagFilter === tag.id
+                  ? "Filter entfernen"
+                  : `Nur „${tag.name}"`
+              }
             >
-              <TagBadge name={tag.name} color={tag.color} small className="cursor-pointer hover:brightness-110" />
+              <TagBadge
+                name={tag.name}
+                color={tag.color}
+                small
+                className="cursor-pointer hover:brightness-110"
+              />
             </button>
           ))}
         </div>
@@ -159,7 +183,10 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
                   value={`plz ${query} ${match.areaName} ${match.layerName}`}
                   onSelect={() => handleSelect(match.areaId)}
                 >
-                  <IconMapPin className="h-3.5 w-3.5 shrink-0" style={{ color: match.layerColor }} />
+                  <IconMapPin
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: match.layerColor }}
+                  />
                   <span className="flex-1 truncate">{match.areaName}</span>
                   <span className="text-[10px] text-muted-foreground/60 truncate max-w-[100px]">
                     {match.layerName}
@@ -172,7 +199,11 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
         )}
 
         {!isPlzQuery && activeAreas.length > 0 && (
-          <CommandGroup heading={activeTagFilter !== null ? "Gebiete (gefiltert)" : "Gebiete"}>
+          <CommandGroup
+            heading={
+              activeTagFilter !== null ? "Gebiete (gefiltert)" : "Gebiete"
+            }
+          >
             {activeAreas.map((area) => (
               <CommandItem
                 key={area.id}
@@ -203,7 +234,8 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
           </CommandGroup>
         )}
 
-        {!isPlzQuery && activeAreas.length > 0 &&
+        {!isPlzQuery &&
+          activeAreas.length > 0 &&
           (onCreateArea || archivedAreas.length > 0) && <CommandSeparator />}
 
         <CommandGroup heading="Aktionen">

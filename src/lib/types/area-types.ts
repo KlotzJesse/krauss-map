@@ -9,7 +9,13 @@ export type Area = InferSelectModel<typeof areas>;
 /** Lightweight area type for sidebar/list display — only id, name, granularity, isArchived, updatedAt, country */
 export type AreaSummary = Pick<
   Area,
-  "id" | "name" | "granularity" | "isArchived" | "updatedAt" | "country" | "description"
+  | "id"
+  | "name"
+  | "granularity"
+  | "isArchived"
+  | "updatedAt"
+  | "country"
+  | "description"
 > & {
   postalCodeCount?: number | null;
   layerCount?: number | null;
