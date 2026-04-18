@@ -4,6 +4,7 @@ import {
   IconArchive,
   IconCheckbox,
   IconDownload,
+  IconLayoutList,
   IconPlus,
   IconSearch,
   IconSquare,
@@ -218,6 +219,7 @@ export function NavAreas({
   const [areaSearch, setAreaSearch] = useState("");
   const [activeTagId, setActiveTagId] = useState<number | null>(null);
   const [selectMode, setSelectMode] = useState(false);
+  const [groupByTag, setGroupByTag] = useReducer((v: boolean) => !v, false);
   const [selectedAreaIds, setSelectedAreaIds] = useState<Set<number>>(
     new Set()
   );
@@ -264,6 +266,33 @@ export function NavAreas({
   const archivedCount = optimisticAreas.filter(
     (a) => a.isArchived === "true"
   ).length;
+
+  // Group visibleAreas by tag (when groupByTag is on)
+  const groupedByTag = useMemo(() => {
+    if (!groupByTag) return null;
+    const groups = new Map<
+      number | null,
+      {
+        tag: { id: number; name: string; color: string } | null;
+        areas: AreaSummary[];
+      }
+    >();
+    groups.set(null, { tag: null, areas: [] });
+    for (const tag of allTags) {
+      groups.set(tag.id, { tag, areas: [] });
+    }
+    for (const area of visibleAreas) {
+      if (!area.tags || area.tags.length === 0) {
+        groups.get(null)!.areas.push(area);
+      } else {
+        for (const tag of area.tags) {
+          groups.get(tag.id)?.areas.push(area);
+        }
+      }
+    }
+    // Remove empty groups (except "no tag" which we'll show if non-empty)
+    return [...groups.values()].filter((g) => g.areas.length > 0);
+  }, [groupByTag, visibleAreas, allTags]);
 
   const [_isPending, startTransition] = useTransition();
 
@@ -512,6 +541,20 @@ export function NavAreas({
               >
                 <IconDownload className="h-3.5 w-3.5" />
               </button>
+              {allTags.length > 0 && (
+                <button
+                  type="button"
+                  onClick={setGroupByTag}
+                  className={`hover:bg-sidebar-accent rounded p-0.5 ${groupByTag ? "text-primary" : "text-muted-foreground"}`}
+                  title={
+                    groupByTag
+                      ? "Gruppenansicht beenden"
+                      : "Nach Tags gruppieren"
+                  }
+                >
+                  <IconLayoutList className="h-3.5 w-3.5" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleToggleSelectMode}
@@ -681,6 +724,7 @@ export function NavAreas({
                 </SidebarMenuItem>
               )}
             {!isLoading &&
+              !groupByTag &&
               visibleAreas.map((area) => (
                 <AreaListItem
                   key={area.id}
@@ -704,6 +748,58 @@ export function NavAreas({
                   onEditNotes={handleEditNotes}
                   onAreaClick={handleAreaClick}
                 />
+              ))}
+            {!isLoading &&
+              groupByTag &&
+              groupedByTag?.map((group) => (
+                <li key={group.tag?.id ?? "no-tag"} className="list-none">
+                  <div className="flex items-center gap-1.5 px-2 pt-2 pb-0.5">
+                    {group.tag ? (
+                      <>
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: group.tag.color }}
+                        />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
+                          {group.tag.name}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                        Ohne Tag
+                      </span>
+                    )}
+                    <span className="text-[9px] text-muted-foreground/50 ml-auto">
+                      {group.areas.length}
+                    </span>
+                  </div>
+                  {group.areas.map((area) => (
+                    <AreaListItem
+                      key={area.id}
+                      area={area}
+                      isEditing={editingAreaId === area.id}
+                      editingAreaName={editingAreaName}
+                      editInputRef={editInputRef}
+                      isCurrentRoute={
+                        currentAreaIdFromRoute === String(area.id)
+                      }
+                      isPinned={isPinned(area.id)}
+                      isSelectable={selectMode}
+                      isSelected={selectedAreaIds.has(area.id)}
+                      onToggleSelect={handleToggleSelectArea}
+                      onTogglePin={togglePin}
+                      onStartRename={handleStartRename}
+                      onConfirmRename={handleConfirmRename}
+                      onCancelRename={handleCancelRename}
+                      onEditNameChange={handleEditNameChange}
+                      onStartDelete={handleStartDelete}
+                      onDuplicate={handleDuplicate}
+                      onArchive={handleArchive}
+                      onEditNotes={handleEditNotes}
+                      onAreaClick={handleAreaClick}
+                    />
+                  ))}
+                </li>
               ))}
           </SidebarMenu>
         </SidebarGroupContent>

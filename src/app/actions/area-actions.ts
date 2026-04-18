@@ -561,9 +561,11 @@ export async function duplicateAreaAction(sourceAreaId: number) {
         .where(eq(areaTagAssignments.areaId, sourceAreaId));
 
       if (sourceTags.length > 0) {
-        await tx.insert(areaTagAssignments).values(
-          sourceTags.map((t) => ({ areaId: newArea.id, tagId: t.tagId }))
-        );
+        await tx
+          .insert(areaTagAssignments)
+          .values(
+            sourceTags.map((t) => ({ areaId: newArea.id, tagId: t.tagId }))
+          );
       }
 
       // 6. Create initial version
