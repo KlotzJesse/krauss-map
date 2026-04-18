@@ -117,7 +117,7 @@ import type {
   areaLayers,
 } from "@/lib/schema/schema";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
-import { exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
+import { copyPostalCodesCSV, exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
 import { COLOR_THEMES, generateNextColor, reassignAllColors } from "@/lib/utils/layer-colors";
 
 const EMPTY_ARRAY: never[] = [];
@@ -2141,6 +2141,7 @@ const LayerDialogs = memo(function LayerDialogs({
             {[
               { keys: ["Alt", "↑ / ↓"], desc: "Gebiet wechseln" },
               { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
+              { keys: ["Ctrl", "C"], desc: "PLZ der aktiven Ebene kopieren" },
               { keys: ["/"], desc: "PLZ-Suche fokussieren" },
               { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
               { keys: ["N"], desc: "Neues Gebiet anlegen" },
@@ -2346,6 +2347,8 @@ function DrawingToolsImpl({
   const newLayerInputRef = useRef<HTMLInputElement | null>(null);
   const handleDuplicateLayerRef = useRef(handleDuplicateLayer);
   handleDuplicateLayerRef.current = handleDuplicateLayer;
+  const countryRef = useRef(country);
+  countryRef.current = country;
 
   const handleOpenKeyboardHelp = useCallback(
     () => dispatchUI({ type: "OPEN_KEYBOARD_HELP" }),
@@ -2391,6 +2394,17 @@ function DrawingToolsImpl({
       if (e.key === "d" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const id = activeLayerIdRef.current;
         if (id) handleDuplicateLayerRef.current(id);
+        return;
+      }
+
+      // Ctrl+C / Cmd+C: copy active layer PLZ to clipboard (when not in input)
+      if (e.key === "c" && !isInInput && (e.ctrlKey || e.metaKey) && !e.altKey) {
+        const id = activeLayerIdRef.current;
+        const activeLayer = layersRef.current.find((l) => l.id === id);
+        if (!activeLayer?.postalCodes?.length) return;
+        e.preventDefault();
+        const codes = activeLayer.postalCodes.map((pc) => pc.postalCode);
+        copyPostalCodesCSV(codes, countryRef.current ?? "DE");
         return;
       }
 
