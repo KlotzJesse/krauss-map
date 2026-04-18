@@ -453,7 +453,8 @@ export async function updateLayerAction(
         data.color !== undefined ||
         data.opacity !== undefined ||
         data.isVisible !== undefined ||
-        data.orderIndex !== undefined
+        data.orderIndex !== undefined ||
+        data.notes !== undefined
       ) {
         await tx
 
@@ -473,6 +474,8 @@ export async function updateLayerAction(
             ...(data.orderIndex !== undefined && {
               orderIndex: data.orderIndex,
             }),
+
+            ...(data.notes !== undefined && { notes: data.notes }),
           })
 
           .where(eq(areaLayers.id, layerId));

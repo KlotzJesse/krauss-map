@@ -10,6 +10,7 @@ import {
   GripVertical,
   List,
   Loader2,
+  StickyNote,
   TriangleAlert,
   Upload,
   X,
@@ -52,6 +53,7 @@ interface LayerListItemLayer {
   color: string;
   opacity?: number | null;
   isVisible?: string;
+  notes?: string | null;
   postalCodes?: { postalCode: string }[];
 }
 
@@ -76,6 +78,7 @@ interface LayerListItemProps {
   onSoloLayer?: (layerId: number) => void;
   onRemovePostalCode?: (layerId: number, postalCode: string) => void;
   onImportCSV?: (layerId: number) => void;
+  onNotesChange?: (layerId: number, notes: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }
 
@@ -200,11 +203,14 @@ export const LayerListItem = memo(function LayerListItem({
   onSoloLayer,
   onRemovePostalCode,
   onImportCSV,
+  onNotesChange,
   dragHandleProps,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [codesExpanded, setCodesExpanded] = useState(false);
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  const [notesValue, setNotesValue] = useState(layer.notes ?? "");
   const [codeSearch, setCodeSearch] = useState("");
   const isVisible = layer.isVisible !== "false";
   const currentOpacity = layer.opacity ?? 70;
@@ -529,6 +535,36 @@ export const LayerListItem = memo(function LayerListItem({
                 </TooltipContent>
               </Tooltip>
             )}
+
+            {/* Notes toggle */}
+            {onNotesChange && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant={notesExpanded ? "secondary" : "outline"}
+                      size="icon"
+                      className={cn(
+                        "h-5 w-5 relative",
+                        layer.notes && "text-amber-600"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNotesExpanded((v) => !v);
+                      }}
+                    />
+                  }
+                >
+                  <StickyNote className="h-3 w-3" />
+                  {layer.notes && !notesExpanded && (
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{notesExpanded ? "Notizen schließen" : "Notizen bearbeiten"}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
@@ -586,6 +622,22 @@ export const LayerListItem = memo(function LayerListItem({
               ))
             )}
           </div>
+        </div>
+      )}
+      {/* Notes section */}
+      {notesExpanded && onNotesChange && (
+        <div
+          className="px-2 pb-2 border-t mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <textarea
+            className="w-full mt-1.5 min-h-[60px] max-h-40 text-[11px] bg-muted rounded px-2 py-1.5 border-0 outline-none focus:ring-1 focus:ring-primary resize-y placeholder:text-muted-foreground/60 leading-relaxed"
+            placeholder="Notizen hinzufügen…"
+            value={notesValue}
+            onChange={(e) => setNotesValue(e.target.value)}
+            onBlur={() => onNotesChange(layer.id, notesValue)}
+          />
         </div>
       )}
     </div>

@@ -900,6 +900,17 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleNotesChange = (layerId: number, notes: string) => {
+    startTransition(async () => {
+      updateOptimisticLayers({ type: "update", id: layerId, layer: { notes } });
+      try {
+        await updateLayer(layerId, { notes: notes || null });
+      } catch {
+        toast.error("Fehler beim Speichern der Notiz");
+      }
+    });
+  };
+
   return {
     optimisticLayers,
     ui,
@@ -924,6 +935,7 @@ function useDrawingToolsActions({
     handleOpacityChange,
     handleReorderLayers,
     handleRemovePostalCodeFromLayer,
+    handleNotesChange,
   };
 }
 
@@ -979,6 +991,7 @@ interface LayerManagementSectionProps {
   handleReassignColors: () => void;
   handleReorderLayers: (oldIndex: number, newIndex: number) => void;
   handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
+  handleNotesChange?: (layerId: number, notes: string) => void;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   onOpenConflicts?: () => void;
 }
@@ -1006,6 +1019,7 @@ function LayerManagementSection({
   handleReassignColors,
   handleReorderLayers,
   handleRemovePostalCodeFromLayer,
+  handleNotesChange,
   addPostalCodesToLayer,
   onOpenConflicts,
 }: LayerManagementSectionProps) {
@@ -1384,6 +1398,7 @@ function LayerManagementSection({
                    onSoloLayer={handleSoloLayer}
                    onRemovePostalCode={handleRemovePostalCodeFromLayer}
                    onImportCSV={addPostalCodesToLayer ? openImportDialog : undefined}
+                   onNotesChange={handleNotesChange}
                  />
                ))
              ) : (
@@ -1424,6 +1439,7 @@ function LayerManagementSection({
                       onSoloLayer={handleSoloLayer}
                       onRemovePostalCode={handleRemovePostalCodeFromLayer}
                       onImportCSV={addPostalCodesToLayer ? openImportDialog : undefined}
+                      onNotesChange={handleNotesChange}
                     />
                   ))}
                 </SortableContext>
@@ -1657,6 +1673,7 @@ function DrawingToolsImpl({
     handleReassignColors,
     handleReorderLayers,
     handleRemovePostalCodeFromLayer,
+    handleNotesChange,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -1780,6 +1797,7 @@ function DrawingToolsImpl({
             handleReassignColors={handleReassignColors}
             handleReorderLayers={handleReorderLayers}
             handleRemovePostalCodeFromLayer={handleRemovePostalCodeFromLayer}
+            handleNotesChange={handleNotesChange}
             addPostalCodesToLayer={addPostalCodesToLayer}
             onOpenConflicts={onOpenConflicts}
           />
