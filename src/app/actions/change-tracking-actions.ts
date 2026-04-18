@@ -176,6 +176,7 @@ export async function recordChangeAction(
 
     if (options?.invalidateHistory !== false) {
       updateTag(`area-${areaId}-change-history`);
+      updateTag("recent-activity");
     }
 
     return { success: true, data: result };

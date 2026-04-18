@@ -390,3 +390,38 @@ export async function getCrossAreaDuplicates(areaId: number): Promise<CrossAreaD
     return [];
   }
 }
+
+export interface RecentActivityItem {
+  areaId: number;
+  areaName: string;
+  changeType: string;
+  entityType: string;
+  changeData: Record<string, unknown>;
+  createdAt: string;
+}
+
+export async function getRecentActivity(limit = 12): Promise<RecentActivityItem[]> {
+  "use cache";
+  cacheLife("seconds");
+  cacheTag("recent-activity");
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        a.id        AS "areaId",
+        a.name      AS "areaName",
+        ac.change_type  AS "changeType",
+        ac.entity_type  AS "entityType",
+        ac.change_data  AS "changeData",
+        ac.created_at   AS "createdAt"
+      FROM area_changes ac
+      INNER JOIN areas a ON a.id = ac.area_id
+      WHERE ac.is_undone = 'false'
+      ORDER BY ac.created_at DESC
+      LIMIT ${limit}
+    `);
+    return result.rows as unknown as RecentActivityItem[];
+  } catch (error) {
+    console.error("Error fetching recent activity:", error);
+    return [];
+  }
+}

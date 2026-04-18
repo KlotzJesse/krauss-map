@@ -5,7 +5,7 @@
 import type { ComponentProps } from "react";
 
 import type { Sidebar } from "@/components/ui/sidebar";
-import { getAreas } from "@/lib/db/data-functions";
+import { getAreas, getRecentActivity } from "@/lib/db/data-functions";
 
 import { AppSidebarClient } from "./app-sidebar-client";
 
@@ -15,7 +15,10 @@ interface AppSidebarProps extends ComponentProps<typeof Sidebar> {
 }
 
 export async function AppSidebar(props: AppSidebarProps) {
-  const areas = await getAreas();
+  const [areas, recentActivity] = await Promise.all([
+    getAreas(),
+    getRecentActivity(12),
+  ]);
 
-  return <AppSidebarClient areas={areas} {...props} />;
+  return <AppSidebarClient areas={areas} recentActivity={recentActivity} {...props} />;
 }

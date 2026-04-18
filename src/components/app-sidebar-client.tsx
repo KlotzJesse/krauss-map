@@ -6,6 +6,7 @@ import * as React from "react";
 
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
 import { NavAreas } from "@/components/areas/nav-areas";
+import { RecentActivityFeed } from "@/components/areas/recent-activity-feed";
 import { NavMain } from "@/components/nav-main";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
@@ -17,6 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import type { RecentActivityItem } from "@/lib/db/data-functions";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 const data = {
@@ -31,12 +33,14 @@ const data = {
 
 interface AppSidebarClientProps extends React.ComponentProps<typeof Sidebar> {
   areas: AreaSummary[];
+  recentActivity?: RecentActivityItem[];
   currentAreaId?: number | null;
   onAreaSelect?: (areaId: number) => void;
 }
 
 export function AppSidebarClient({
   areas,
+  recentActivity = [],
   currentAreaId,
   onAreaSelect,
   ...props
@@ -75,6 +79,7 @@ export function AppSidebarClient({
             currentAreaId={currentAreaId}
             onAreaSelect={onAreaSelect}
           />
+          <RecentActivityFeed items={recentActivity} />
         </SidebarContent>
       </Sidebar>
       <CreateAreaDialog
