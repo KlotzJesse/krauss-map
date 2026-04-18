@@ -11,6 +11,7 @@ import {
   List,
   Loader2,
   TriangleAlert,
+  Upload,
   X,
 } from "lucide-react";
 import type { RefObject } from "react";
@@ -74,6 +75,7 @@ interface LayerListItemProps {
   onToggleVisibility?: (layerId: number, visible: boolean) => void;
   onSoloLayer?: (layerId: number) => void;
   onRemovePostalCode?: (layerId: number, postalCode: string) => void;
+  onImportCSV?: (layerId: number) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }
 
@@ -197,6 +199,7 @@ export const LayerListItem = memo(function LayerListItem({
   onToggleVisibility,
   onSoloLayer,
   onRemovePostalCode,
+  onImportCSV,
   dragHandleProps,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
@@ -499,6 +502,30 @@ export const LayerListItem = memo(function LayerListItem({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{codesExpanded ? "PLZ-Liste schließen" : "PLZ-Liste anzeigen"}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Import CSV */}
+            {onImportCSV && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onImportCSV(layer.id);
+                      }}
+                    />
+                  }
+                >
+                  <Upload className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>PLZ aus CSV/Text importieren</p>
                 </TooltipContent>
               </Tooltip>
             )}

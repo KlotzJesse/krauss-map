@@ -29,7 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ChevronDown, ChevronUp, Eye, GripVertical, Palette, Search, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, GripVertical, Palette, Search, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -979,6 +979,7 @@ interface LayerManagementSectionProps {
   handleReassignColors: () => void;
   handleReorderLayers: (oldIndex: number, newIndex: number) => void;
   handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
+  addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   onOpenConflicts?: () => void;
 }
 
@@ -1005,6 +1006,7 @@ function LayerManagementSection({
   handleReassignColors,
   handleReorderLayers,
   handleRemovePostalCodeFromLayer,
+  addPostalCodesToLayer,
   onOpenConflicts,
 }: LayerManagementSectionProps) {
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
@@ -1051,6 +1053,57 @@ function LayerManagementSection({
   }, [optimisticLayers, layerSearch]);
 
   const isDragDisabled = !!layerSearch.trim();
+
+  // CSV import dialog state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importTargetLayerId, setImportTargetLayerId] = useState<number | null>(null);
+  const [importText, setImportText] = useState("");
+  const [importPending, setImportPending] = useState(false);
+
+  const openImportDialog = useCallback((layerId: number) => {
+    setImportTargetLayerId(layerId);
+    setImportText("");
+    setImportDialogOpen(true);
+  }, []);
+
+  const handleImportCSV = useCallback(async () => {
+    if (!addPostalCodesToLayer || !importTargetLayerId) return;
+    const codes = importText
+      .split(/[\s,;|\n\r]+/)
+      .map((s) => s.replace(/\D/g, "").trim())
+      .filter((s) => s.length >= 2 && s.length <= 5);
+    const unique = [...new Set(codes)];
+    if (unique.length === 0) {
+      toast.error("Keine gültigen PLZ gefunden");
+      return;
+    }
+    setImportPending(true);
+    try {
+      await addPostalCodesToLayer(importTargetLayerId, unique);
+      toast.success(`${unique.length} PLZ importiert`);
+      setImportDialogOpen(false);
+    } catch {
+      toast.error("Importfehler");
+    } finally {
+      setImportPending(false);
+    }
+  }, [addPostalCodesToLayer, importTargetLayerId, importText]);
+
+  const handleImportFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setImportText((prev) =>
+          prev ? `${prev}\n${ev.target?.result}` : String(ev.target?.result ?? "")
+        );
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    },
+    []
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -1328,11 +1381,12 @@ function LayerManagementSection({
                   onDelete={handleDeleteLayer}
                   onDuplicateLayer={handleDuplicateLayer}
                   onToggleVisibility={handleToggleVisibility}
-                  onSoloLayer={handleSoloLayer}
-                  onRemovePostalCode={handleRemovePostalCodeFromLayer}
-                />
-              ))
-            ) : (
+                   onSoloLayer={handleSoloLayer}
+                   onRemovePostalCode={handleRemovePostalCodeFromLayer}
+                   onImportCSV={addPostalCodesToLayer ? openImportDialog : undefined}
+                 />
+               ))
+             ) : (
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -1369,6 +1423,7 @@ function LayerManagementSection({
                       onToggleVisibility={handleToggleVisibility}
                       onSoloLayer={handleSoloLayer}
                       onRemovePostalCode={handleRemovePostalCodeFromLayer}
+                      onImportCSV={addPostalCodesToLayer ? openImportDialog : undefined}
                     />
                   ))}
                 </SortableContext>
@@ -1394,6 +1449,47 @@ function LayerManagementSection({
           )}
         </CollapsibleContent>
       </Collapsible>
+
+      {/* CSV Import dialog */}
+      <AlertDialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>PLZ importieren</AlertDialogTitle>
+            <AlertDialogDescription>
+              Füge PLZ ein oder lade eine Datei hoch — getrennt durch Komma, Semikolon, Leerzeichen oder Zeilenumbruch.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-1">
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder={"01234, 10115, 20095\noder eine PLZ pro Zeile…"}
+              className="w-full min-h-[100px] text-xs rounded border bg-background px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary resize-none font-mono"
+              disabled={importPending}
+            />
+            <label className="inline-flex items-center gap-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+              <Upload className="h-3 w-3" />
+              <span>CSV / TXT hochladen</span>
+              <input
+                type="file"
+                accept=".csv,.txt,.tsv"
+                className="sr-only"
+                onChange={handleImportFileUpload}
+              />
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={importPending}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleImportCSV(); }}
+              disabled={importPending || !importText.trim()}
+            >
+              {importPending ? "Importiere…" : "Importieren"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Separator />
     </>
   );
@@ -1684,6 +1780,7 @@ function DrawingToolsImpl({
             handleReassignColors={handleReassignColors}
             handleReorderLayers={handleReorderLayers}
             handleRemovePostalCodeFromLayer={handleRemovePostalCodeFromLayer}
+            addPostalCodesToLayer={addPostalCodesToLayer}
             onOpenConflicts={onOpenConflicts}
           />
         )}
