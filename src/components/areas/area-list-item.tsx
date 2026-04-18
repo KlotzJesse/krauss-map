@@ -135,9 +135,7 @@ export const AreaListItem = memo(
                 }}
                 className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
               >
-                <span className="truncate">
-                  {area.name}
-                </span>
+                <span className="truncate">{area.name}</span>
                 <LinkPendingIndicator />
               </Link>
               <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">

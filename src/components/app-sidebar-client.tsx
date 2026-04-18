@@ -3,7 +3,6 @@
 import { IconDashboard, IconMapPin2 } from "@tabler/icons-react";
 import Link from "next/link";
 import * as React from "react";
-import { Suspense } from "react";
 
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
 import { NavAreas } from "@/components/areas/nav-areas";
@@ -16,11 +15,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
 } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 const data = {
@@ -34,40 +29,13 @@ const data = {
 };
 
 interface AppSidebarClientProps extends React.ComponentProps<typeof Sidebar> {
-  areasPromise: Promise<AreaSummary[]>;
+  areas: AreaSummary[];
   currentAreaId?: number | null;
   onAreaSelect?: (areaId: number) => void;
 }
 
-function NavAreasLoading() {
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>
-        <div className="flex items-center justify-between w-full">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="w-4 h-4 rounded" />
-        </div>
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {(["skeleton-1", "skeleton-2", "skeleton-3"] as const).map(
-            (skeletonKey) => (
-              <SidebarMenuItem key={skeletonKey}>
-                <SidebarMenuButton disabled className="justify-start">
-                  <Skeleton className="w-4 h-4 rounded" />
-                  <Skeleton className="h-4 w-32" />
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )
-          )}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
-}
-
 export function AppSidebarClient({
-  areasPromise,
+  areas,
   currentAreaId,
   onAreaSelect,
   ...props
@@ -100,14 +68,12 @@ export function AppSidebarClient({
         <SidebarContent>
           <NavMain items={data.navMain} onCreateArea={handleCreateArea} />
           {/* Consume promise directly in client component with Suspense */}
-          <Suspense fallback={<NavAreasLoading />}>
-            <NavAreas
-              areasPromise={areasPromise}
-              isLoading={false}
-              currentAreaId={currentAreaId}
-              onAreaSelect={onAreaSelect}
-            />
-          </Suspense>
+          <NavAreas
+            areas={areas}
+            isLoading={false}
+            currentAreaId={currentAreaId}
+            onAreaSelect={onAreaSelect}
+          />
         </SidebarContent>
       </Sidebar>
       <CreateAreaDialog

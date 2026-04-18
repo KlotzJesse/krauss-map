@@ -1,5 +1,6 @@
-// Server Component wrapper that fetches data and passes promise to client
-// This prevents server-only imports from leaking into client bundle
+// Server Component wrapper that fetches data and passes resolved array to client.
+// Awaiting here ensures NavAreas receives areas directly (no Promise), preventing
+// suspension on every navigation which would defer active state updates.
 
 import type { ComponentProps } from "react";
 
@@ -14,9 +15,7 @@ interface AppSidebarProps extends ComponentProps<typeof Sidebar> {
 }
 
 export async function AppSidebar(props: AppSidebarProps) {
-  // Server Component: fetch data here and pass promise to client
-  // This keeps server-only code above the client boundary
-  const areasPromise = getAreas();
+  const areas = await getAreas();
 
-  return <AppSidebarClient areasPromise={areasPromise} {...props} />;
+  return <AppSidebarClient areas={areas} {...props} />;
 }

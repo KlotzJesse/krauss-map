@@ -35,7 +35,6 @@ import { batchUpdateVisibilityAction } from "@/app/actions/layer-actions";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
 import { LayerListItem } from "@/components/shared/layer-list-item";
-import { generateNextColor, reassignAllColors } from "@/lib/utils/layer-colors";
 import { PendingRegionsSection } from "@/components/shared/pending-regions-section";
 import {
   AlertDialog,
@@ -78,6 +77,7 @@ import type {
 } from "@/lib/schema/schema";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import { exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
+import { generateNextColor, reassignAllColors } from "@/lib/utils/layer-colors";
 
 const EMPTY_ARRAY: never[] = [];
 

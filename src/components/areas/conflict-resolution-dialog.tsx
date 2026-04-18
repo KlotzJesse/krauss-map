@@ -39,9 +39,9 @@ import type { ConflictGroup } from "@/lib/hooks/use-layer-conflicts";
 import { useLayerConflicts } from "@/lib/hooks/use-layer-conflicts";
 import type { Layer } from "@/lib/types/area-types";
 import { cn } from "@/lib/utils";
-import { isLightColor } from "@/lib/utils/layer-colors";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
+import { isLightColor } from "@/lib/utils/layer-colors";
 
 interface ConflictResolutionPanelProps {
   onClose: () => void;
@@ -370,13 +370,17 @@ export function ConflictResolutionPanel({
                                 className="flex items-center gap-0.5"
                               >
                                 {i > 0 && (
-                                  <span className="text-muted-foreground">↔</span>
+                                  <span className="text-muted-foreground">
+                                    ↔
+                                  </span>
                                 )}
                                 <Badge
                                   className="px-1.5 py-0 text-[10px] leading-4 border-0 whitespace-nowrap"
                                   style={{
                                     backgroundColor: layer.color,
-                                    color: isLightColor(layer.color) ? "#1a1a1a" : "#fff",
+                                    color: isLightColor(layer.color)
+                                      ? "#1a1a1a"
+                                      : "#fff",
                                   }}
                                 >
                                   {layer.name}
@@ -527,10 +531,7 @@ function GroupResolveDropdown({
 
   return (
     <Select value={strategy} onValueChange={handleChange}>
-      <SelectTrigger
-        className="h-6 w-auto text-xs gap-1"
-        disabled={disabled}
-      >
+      <SelectTrigger className="h-6 w-auto text-xs gap-1" disabled={disabled}>
         <SelectValue placeholder="Auflösen →" />
       </SelectTrigger>
       <SelectContent>

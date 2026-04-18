@@ -19,11 +19,12 @@ export function DeckGLOverlay(props: MapboxOverlayProps) {
   const overlay = useControl<MapboxOverlay>(
     () => new MapboxOverlay({ ...props, interleaved: true })
   );
-  // Guard against stale overlay after map is destroyed (navigation/HMR).
-  // overlay._map is set to undefined in onRemove; setProps would crash
-  // accessing the dead map's getProjection().
+  // Guard: _map must exist AND have a loaded style — a destroyed map object is
+  // still truthy after map.remove(), but getStyle() returns null/undefined.
+  // Calling setProps on a dead map throws "Cannot read properties of undefined
+  // (reading 'getProjection')" which is noisy even if the error boundary catches it.
   // @ts-expect-error — accessing private _map to check liveness
-  if (overlay._map) {
+  if (overlay._map?.getStyle()) {
     overlay.setProps({ ...props, interleaved: true });
   }
   return null;

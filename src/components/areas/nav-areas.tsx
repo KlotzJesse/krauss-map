@@ -9,7 +9,6 @@ import {
   useEffect,
   useTransition,
   useCallback,
-  use,
 } from "react";
 import { toast } from "sonner";
 
@@ -124,21 +123,18 @@ function navAreasReducer(
 }
 
 interface NavAreasProps {
-  areasPromise: Promise<AreaSummary[]>;
+  areas: AreaSummary[];
   isLoading?: boolean;
   currentAreaId?: number | null;
   onAreaSelect?: (areaId: number) => void;
 }
 
 export function NavAreas({
-  areasPromise,
+  areas,
   isLoading = false,
   currentAreaId: _currentAreaId,
   onAreaSelect,
 }: NavAreasProps) {
-  // Client Component: use() to consume promise where data is actually used
-  const areas = use(areasPromise);
-
   const [state, dispatch] = useReducer(navAreasReducer, initialState);
   const {
     createDialogOpen,
@@ -155,9 +151,8 @@ export function NavAreas({
     }
   }, [editingAreaId]);
   const pathname = usePathname();
-  const currentAreaIdFromRoute = pathname?.match(/\/postal-codes\/(\d+)/)?.[1] ?? null;
-  // biome-ignore lint: debug log to verify re-render on client-side nav
-  console.log("[NavAreas] pathname:", pathname, "currentAreaIdFromRoute:", currentAreaIdFromRoute);
+  const currentAreaIdFromRoute =
+    pathname?.match(/\/postal-codes\/(\d+)/)?.[1] ?? null;
 
   // Optimistic state for areas
   const [optimisticAreas, updateOptimisticAreas] = useOptimistic(

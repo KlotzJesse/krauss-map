@@ -31,7 +31,11 @@ interface PostalCodesPageProps {
 async function resolveAreaMeta(
   areaId: number,
   versionId: number | null
-): Promise<{ granularity: string; country: CountryCode; areaName: string | null }> {
+): Promise<{
+  granularity: string;
+  country: CountryCode;
+  areaName: string | null;
+}> {
   const isValidVersion =
     versionId !== null && versionId !== undefined && versionId > 0;
 

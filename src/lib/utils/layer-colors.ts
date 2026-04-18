@@ -89,14 +89,14 @@ export function generateNextColor(existingColors: string[]): string {
   let bestColor = "#3b82f6";
   let bestMinDist = -1;
 
-  // Try multiple saturation/lightness combos for variety
+  // Try multiple saturation/lightness combos — vivid but not harsh
   const slCombos: [number, number][] = [
-    [75, 50], // Vibrant mid
-    [65, 42], // Slightly darker
-    [80, 58], // Slightly lighter
-    [55, 45], // Muted
-    [70, 35], // Dark vibrant
-    [85, 62], // Light vibrant
+    [65, 68], // Medium soft
+    [70, 72], // Slightly lighter
+    [60, 65], // Muted mid
+    [72, 70], // Balanced
+    [63, 67], // Calm vivid
+    [68, 74], // Light-mid
   ];
 
   for (const [s, l] of slCombos) {
@@ -131,9 +131,9 @@ export function generatePalette(count: number): string[] {
 
   for (let i = 0; i < count; i++) {
     const hue = (i * GOLDEN_ANGLE) % 360;
-    // Alternate saturation and lightness for more variety
-    const saturation = 65 + (i % 3) * 10; // 65, 75, 85
-    const lightness = 45 + (i % 4) * 5; // 45, 50, 55, 60
+    // Alternate saturation and lightness for variety — vivid but not harsh
+    const saturation = 62 + (i % 3) * 7; // 62, 69, 76
+    const lightness = 66 + (i % 3) * 4; // 66, 70, 74
     colors.push(hslToHex(hue, saturation, lightness));
   }
 

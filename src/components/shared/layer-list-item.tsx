@@ -1,7 +1,16 @@
 "use client";
 
 import { IconPalette } from "@tabler/icons-react";
-import { Copy, CopyPlus, Eye, EyeOff, Focus, Loader2, TriangleAlert, X } from "lucide-react";
+import {
+  Copy,
+  CopyPlus,
+  Eye,
+  EyeOff,
+  Focus,
+  Loader2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import type { RefObject } from "react";
 import { memo, useState } from "react";
 import { toast } from "sonner";

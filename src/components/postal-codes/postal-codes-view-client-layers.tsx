@@ -43,9 +43,9 @@ import {
   MapSkeleton,
 } from "@/components/ui/loading-skeletons";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import { isLightColor } from "@/lib/utils/layer-colors";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
+import { isLightColor } from "@/lib/utils/layer-colors";
 
 const AddressAutocompleteEnhanced = dynamic(
   () =>
@@ -76,8 +76,8 @@ import {
   useSetMapCenterZoom,
 } from "@/lib/url-state/map-state";
 
-import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { Badge } from "../ui/badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
 const PostalCodeImportDialog = dynamic(
   () =>

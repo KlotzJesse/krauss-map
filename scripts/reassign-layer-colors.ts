@@ -8,13 +8,19 @@ async function reassignLayerColors() {
   try {
     console.log("Reassigning layer colors for maximum contrast...\n");
 
-    const allAreas = await db.select({ id: areas.id, name: areas.name }).from(areas);
+    const allAreas = await db
+      .select({ id: areas.id, name: areas.name })
+      .from(areas);
 
     let totalUpdated = 0;
 
     for (const area of allAreas) {
       const layers = await db
-        .select({ id: areaLayers.id, color: areaLayers.color, name: areaLayers.name })
+        .select({
+          id: areaLayers.id,
+          color: areaLayers.color,
+          name: areaLayers.name,
+        })
         .from(areaLayers)
         .where(eq(areaLayers.areaId, area.id))
         .orderBy(areaLayers.orderIndex);
@@ -41,7 +47,9 @@ async function reassignLayerColors() {
       }
     }
 
-    console.log(`\n✓ Updated ${totalUpdated} layer colors across ${allAreas.length} areas`);
+    console.log(
+      `\n✓ Updated ${totalUpdated} layer colors across ${allAreas.length} areas`
+    );
     process.exit(0);
   } catch (error) {
     console.error("Error:", error);
