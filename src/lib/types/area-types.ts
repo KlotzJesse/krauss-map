@@ -13,6 +13,7 @@ export type AreaSummary = Pick<
 > & {
   postalCodeCount?: number | null;
   layerCount?: number | null;
+  tags?: { id: number; name: string; color: string }[];
 };
 
 export type Layer = InferSelectModel<typeof areaLayers> & {

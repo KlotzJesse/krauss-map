@@ -61,6 +61,7 @@ import { batchUpdateVisibilityAction, mergeLayersAction } from "@/app/actions/la
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
 import { LayerListItem } from "@/components/shared/layer-list-item";
+import { AreaTagsManager } from "@/components/areas/area-tags-manager";
 import { PendingRegionsSection } from "@/components/shared/pending-regions-section";
 import {
   AlertDialog,
@@ -261,6 +262,9 @@ export interface DrawingToolsProps {
   areaName?: string; // Optional area/project name for exports
 
   areaDescription?: string | null; // Optional area description, editable inline
+
+  /** Tags assigned to this area — shown inline below area name. */
+  areaTags?: { id: number; name: string; color: string }[];
 
   activeLayerId?: number | null;
 
@@ -2496,6 +2500,7 @@ function DrawingToolsImpl({
   areaId,
   areaName,
   areaDescription,
+  areaTags: initialAreaTags = EMPTY_ARRAY,
   activeLayerId,
   onLayerSelect,
   layers = EMPTY_ARRAY,
@@ -2838,6 +2843,11 @@ function DrawingToolsImpl({
               >
                 {descDraft || (isViewingVersion ? "" : <span className="italic opacity-50">Beschreibung hinzufügen…</span>)}
               </button>
+            )}
+            {areaId && !isViewingVersion && (
+              <div className="mt-1.5">
+                <AreaTagsManager areaId={areaId} initialTags={initialAreaTags} />
+              </div>
             )}
           </div>
         )}

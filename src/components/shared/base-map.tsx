@@ -308,6 +308,7 @@ const MapInner = memo(function MapInner({
   areaId,
   areaName,
   areaDescription,
+  areaTags,
   previewPostalCode,
   onSetPreviewPostalCode,
   onZoomToLayer,
@@ -569,6 +570,7 @@ const MapInner = memo(function MapInner({
                 areaId={areaId ?? undefined}
                 areaName={areaName}
                 areaDescription={areaDescription}
+                areaTags={areaTags}
                 activeLayerId={activeLayerId}
                 onLayerSelect={setActiveLayer}
                 isLayerSwitchPending={isLayerPending}
@@ -755,6 +757,7 @@ const BaseMapComponent = ({
   areaId,
   areaName,
   areaDescription,
+  areaTags,
   previewPostalCode,
   onSetPreviewPostalCode,
   onZoomToLayer,
@@ -873,6 +876,7 @@ const BaseMapComponent = ({
               areaId={areaId}
               areaName={areaName}
               areaDescription={areaDescription}
+              areaTags={areaTags}
               previewPostalCode={previewPostalCode}
               onSetPreviewPostalCode={onSetPreviewPostalCode}
               onZoomToLayer={onZoomToLayer}

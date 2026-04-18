@@ -25,6 +25,7 @@ export interface BaseMapProps {
   areaId: number | null;
   areaName?: string;
   areaDescription?: string | null;
+  areaTags?: { id: number; name: string; color: string }[];
   previewPostalCode?: string | null;
   onSetPreviewPostalCode?: (postalCode: string | null) => void;
   onZoomToLayer?: (layerId: number) => void;

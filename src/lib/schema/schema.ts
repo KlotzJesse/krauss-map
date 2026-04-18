@@ -793,3 +793,35 @@ export type InsertAreaUndoStacks = typeof areaUndoStacks.$inferInsert;
 export type SelectLayerTemplates = typeof layerTemplates.$inferSelect;
 
 export type InsertLayerTemplates = typeof layerTemplates.$inferInsert;
+
+// ─── Area Tags ───────────────────────────────────────────────────────────────
+
+export const areaTags = pgTable(
+  "area_tags",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity().notNull(),
+    name: varchar({ length: 50 }).notNull(),
+    color: varchar({ length: 20 }).notNull().default("#3b82f6"),
+    createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_area_tags_name").on(table.name),
+  ]
+);
+
+export const areaTagAssignments = pgTable(
+  "area_tag_assignments",
+  {
+    areaId: integer("area_id").notNull(),
+    tagId: integer("tag_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.areaId, table.tagId] }),
+    index("idx_area_tag_assignments_area_id").on(table.areaId),
+    index("idx_area_tag_assignments_tag_id").on(table.tagId),
+  ]
+);
+
+export type SelectAreaTag = typeof areaTags.$inferSelect;
+export type InsertAreaTag = typeof areaTags.$inferInsert;
+export type SelectAreaTagAssignment = typeof areaTagAssignments.$inferSelect;

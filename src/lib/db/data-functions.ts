@@ -37,6 +37,12 @@ export async function getAreas() {
           FROM area_layers al
           WHERE al.area_id = "areas"."id"
         )`.as("layerCount"),
+        tags: sql<{ id: number; name: string; color: string }[]>`(
+          SELECT coalesce(json_agg(json_build_object('id', at.id, 'name', at.name, 'color', at.color) ORDER BY at.name), '[]'::json)
+          FROM area_tag_assignments ata
+          INNER JOIN area_tags at ON at.id = ata.tag_id
+          WHERE ata.area_id = "areas"."id"
+        )`.as("tags"),
       })
       .from(areas)
       .orderBy(desc(areas.updatedAt));
@@ -422,6 +428,24 @@ export async function getRecentActivity(limit = 12): Promise<RecentActivityItem[
     return result.rows as unknown as RecentActivityItem[];
   } catch (error) {
     console.error("Error fetching recent activity:", error);
+    return [];
+  }
+}
+
+export async function getAreaTags(areaId: number): Promise<{ id: number; name: string; color: string }[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(`area-${areaId}-tags`);
+  try {
+    const result = await db.execute(sql`
+      SELECT at.id, at.name, at.color
+      FROM area_tags at
+      INNER JOIN area_tag_assignments ata ON ata.tag_id = at.id
+      WHERE ata.area_id = ${areaId}
+      ORDER BY at.name
+    `);
+    return result.rows as unknown as { id: number; name: string; color: string }[];
+  } catch {
     return [];
   }
 }

@@ -8,6 +8,8 @@ import {
   areaChanges,
   areaUndoStacks,
   postalCodes,
+  areaTags,
+  areaTagAssignments,
 } from "./schema";
 
 export const areasRelations = relations(areas, ({ many, one }) => ({
@@ -80,5 +82,20 @@ export const areaUndoStacksRelations = relations(areaUndoStacks, ({ one }) => ({
   area: one(areas, {
     fields: [areaUndoStacks.areaId],
     references: [areas.id],
+  }),
+}));
+
+export const areaTagsRelations = relations(areaTags, ({ many }) => ({
+  assignments: many(areaTagAssignments),
+}));
+
+export const areaTagAssignmentsRelations = relations(areaTagAssignments, ({ one }) => ({
+  area: one(areas, {
+    fields: [areaTagAssignments.areaId],
+    references: [areas.id],
+  }),
+  tag: one(areaTags, {
+    fields: [areaTagAssignments.tagId],
+    references: [areaTags.id],
   }),
 }));

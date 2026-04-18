@@ -10,7 +10,7 @@ import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator
 import { Button } from "@/components/ui/button";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
 import type { AreaSummary } from "@/lib/types/area-types";
-
+import { TagBadge } from "./tag-badge";
 import { AreaItemDropdown, AreaItemMenu } from "./area-item-menu";
 
 function relativeTime(date: Date | string | null | undefined): string {
@@ -139,7 +139,7 @@ export const AreaListItem = memo(
           onDuplicate={onDuplicate}
           onArchive={onArchive}
         >
-          <div className="group/item relative flex items-center w-full">
+          <div className="group/item relative flex flex-col w-full">
             <div
               className={`flex items-center gap-2 w-full h-8 px-2 rounded-md transition-colors ${
                 isCurrentRoute
@@ -205,6 +205,13 @@ export const AreaListItem = memo(
                 />
               </div>
             </div>
+            {area.tags && area.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 px-2 pb-1">
+                {area.tags.map((tag) => (
+                  <TagBadge key={tag.id} name={tag.name} color={tag.color} className="text-[9px] px-1 py-0 h-3.5" />
+                ))}
+              </div>
+            )}
           </div>
         </AreaItemMenu>
       </SidebarMenuItem>

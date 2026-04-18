@@ -92,6 +92,7 @@ interface PostalCodesViewClientWithLayersProps {
   areaId: number;
   areaNamePromise: Promise<string | null>;
   areaDescriptionPromise?: Promise<string | null>;
+  areaTagsPromise?: Promise<{ id: number; name: string; color: string }[]>;
   layersPromise: Promise<Layer[]>;
   undoRedoStatusPromise: Promise<{
     canUndo: boolean;
@@ -362,6 +363,7 @@ export function PostalCodesViewClientWithLayers({
   country,
   areaNamePromise,
   areaDescriptionPromise,
+  areaTagsPromise,
   areaId,
   layersPromise,
   undoRedoStatusPromise,
@@ -377,6 +379,7 @@ export function PostalCodesViewClientWithLayers({
   const changes = use(changesPromise);
   const areaName = use(areaNamePromise);
   const areaDescription = areaDescriptionPromise ? use(areaDescriptionPromise) : null;
+  const areaTags = areaTagsPromise ? use(areaTagsPromise) : [];
 
   // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)
   // "native" = all DACH countries at their full resolution
@@ -605,6 +608,7 @@ export function PostalCodesViewClientWithLayers({
             areaId={areaId}
             areaName={areaName ?? undefined}
             areaDescription={areaDescription}
+            areaTags={areaTags}
             previewPostalCode={previewPostalCode}
             onSetPreviewPostalCode={handleBadgePreviewPostalCode}
             onZoomToLayer={handleZoomToLayer}

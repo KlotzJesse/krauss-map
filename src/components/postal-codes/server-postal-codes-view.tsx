@@ -11,6 +11,7 @@ import {
   getVersionSummaries,
   getChangeSummaries,
   getUndoRedoStatus,
+  getAreaTags,
 } from "@/lib/db/data-functions";
 
 import { PostalCodesViewClientWithLayers } from "./postal-codes-view-client-layers";
@@ -39,6 +40,7 @@ export default async function ServerPostalCodesView({
   // States data also fetched client-side to avoid 246KB RSC payload bloat
   const areaNamePromise = getAreaName(areaId);
   const areaDescriptionPromise = getAreaDescription(areaId);
+  const areaTagsPromise = getAreaTags(areaId);
   const layersPromise = getLayers(areaId);
   const versionsPromise = getVersionSummaries(areaId);
   const changesPromise = getChangeSummaries(areaId, { limit: 50 });
@@ -53,6 +55,7 @@ export default async function ServerPostalCodesView({
           areaId={areaId}
           areaNamePromise={areaNamePromise}
           areaDescriptionPromise={areaDescriptionPromise}
+          areaTagsPromise={areaTagsPromise}
           layersPromise={layersPromise}
           undoRedoStatusPromise={undoRedoStatusPromise}
           isViewingVersion={false}

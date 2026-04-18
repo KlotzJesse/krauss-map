@@ -12,6 +12,8 @@ import {
   areaLayerPostalCodes,
   postalCodes,
   layerTemplates,
+  areaTags,
+  areaTagAssignments,
   type SelectLayerTemplates,
 } from "../../lib/schema/schema";
 import { generateNextColor } from "../../lib/utils/layer-colors";
@@ -1993,5 +1995,104 @@ export async function getAreaComparisonAction(
   } catch (error) {
     console.error("Error comparing areas:", error);
     return { success: false, error: "Vergleich fehlgeschlagen" };
+  }
+}
+
+// ─── Area Tags Actions ────────────────────────────────────────────────────────
+
+export interface AreaTagWithCount {
+  id: number;
+  name: string;
+  color: string;
+  createdAt: string;
+  areaCount: number;
+}
+
+export async function getAllTagsAction(): ServerActionResponse<AreaTagWithCount[]> {
+  try {
+    const rows = await db
+      .select({
+        id: areaTags.id,
+        name: areaTags.name,
+        color: areaTags.color,
+        createdAt: areaTags.createdAt,
+        areaCount: sql<number>`count(${areaTagAssignments.areaId})::int`,
+      })
+      .from(areaTags)
+      .leftJoin(areaTagAssignments, eq(areaTags.id, areaTagAssignments.tagId))
+      .groupBy(areaTags.id)
+      .orderBy(areaTags.name);
+
+    return { success: true, data: rows };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function getAreaTagsAction(areaId: number): ServerActionResponse<{ id: number; name: string; color: string }[]> {
+  try {
+    const rows = await db
+      .select({ id: areaTags.id, name: areaTags.name, color: areaTags.color })
+      .from(areaTags)
+      .innerJoin(areaTagAssignments, eq(areaTags.id, areaTagAssignments.tagId))
+      .where(eq(areaTagAssignments.areaId, areaId))
+      .orderBy(areaTags.name);
+
+    return { success: true, data: rows };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function createTagAction(name: string, color: string): ServerActionResponse<{ id: number; name: string; color: string }> {
+  try {
+    const [tag] = await db
+      .insert(areaTags)
+      .values({ name: name.trim().slice(0, 50), color })
+      .returning({ id: areaTags.id, name: areaTags.name, color: areaTags.color });
+
+    updateTag("tags");
+    return { success: true, data: tag };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function deleteTagAction(tagId: number): ServerActionResponse<void> {
+  try {
+    await db.delete(areaTags).where(eq(areaTags.id, tagId));
+    updateTag("tags");
+    return { success: true, data: undefined };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function assignTagToAreaAction(areaId: number, tagId: number): ServerActionResponse<void> {
+  try {
+    await db
+      .insert(areaTagAssignments)
+      .values({ areaId, tagId })
+      .onConflictDoNothing();
+
+    updateTag(`area-${areaId}-tags`);
+    updateTag("tags");
+    return { success: true, data: undefined };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function removeTagFromAreaAction(areaId: number, tagId: number): ServerActionResponse<void> {
+  try {
+    await db
+      .delete(areaTagAssignments)
+      .where(and(eq(areaTagAssignments.areaId, areaId), eq(areaTagAssignments.tagId, tagId)));
+
+    updateTag(`area-${areaId}-tags`);
+    updateTag("tags");
+    return { success: true, data: undefined };
+  } catch (err) {
+    return { success: false, error: String(err) };
   }
 }
