@@ -2,6 +2,7 @@
 
 import {
   IconArchive,
+  IconArrowsSort,
   IconCheckbox,
   IconDownload,
   IconLayoutList,
@@ -223,6 +224,22 @@ export function NavAreas({
   const [selectedAreaIds, setSelectedAreaIds] = useState<Set<number>>(
     new Set()
   );
+  type SortMode = "default" | "name" | "plz" | "modified";
+  const sortModes: SortMode[] = ["default", "name", "plz", "modified"];
+  const sortLabels: Record<SortMode, string> = {
+    default: "Standard",
+    name: "Name (A–Z)",
+    plz: "PLZ-Anzahl",
+    modified: "Zuletzt geändert",
+  };
+  const [sortBy, setSortBy] = useState<SortMode>("default");
+
+  const cycleSortMode = useCallback(() => {
+    setSortBy((prev) => {
+      const idx = sortModes.indexOf(prev);
+      return sortModes[(idx + 1) % sortModes.length];
+    });
+  }, [sortModes]);
   const [notesArea, setNotesArea] = useState<AreaSummary | null>(null);
   const [notesText, setNotesText] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -256,12 +273,19 @@ export function NavAreas({
       );
     }
     // Sort pinned areas to top, preserve original order within groups
-    return [...filtered].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       const pa = isPinned(a.id) ? 0 : 1;
       const pb = isPinned(b.id) ? 0 : 1;
-      return pa - pb;
+      if (pa !== pb) return pa - pb;
+      if (sortBy === "name") return a.name.localeCompare(b.name, "de");
+      if (sortBy === "plz")
+        return (b.postalCodeCount ?? 0) - (a.postalCodeCount ?? 0);
+      if (sortBy === "modified")
+        return (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
+      return 0; // default: server order
     });
-  }, [baseVisibleAreas, areaSearch, activeTagId, isPinned]);
+    return sorted;
+  }, [baseVisibleAreas, areaSearch, activeTagId, isPinned, sortBy]);
 
   const archivedCount = optimisticAreas.filter(
     (a) => a.isArchived === "true"
@@ -568,7 +592,13 @@ export function NavAreas({
               )}
               <button
                 type="button"
-                onClick={handleToggleSelectMode}
+                onClick={cycleSortMode}
+                className={`hover:bg-sidebar-accent rounded p-0.5 ${sortBy !== "default" ? "text-primary" : "text-muted-foreground"}`}
+                title={`Sortierung: ${sortLabels[sortBy]} (klicken zum Wechseln)`}
+              >
+                <IconArrowsSort className="h-3.5 w-3.5" />
+              </button>
+              <button
                 className={`hover:bg-sidebar-accent rounded p-0.5 ${selectMode ? "text-primary" : "text-muted-foreground"}`}
                 title={
                   selectMode
