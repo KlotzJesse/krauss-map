@@ -2260,7 +2260,7 @@ function LayerManagementSection({
                 Keine Gebiete gefunden
               </p>
             ) : isDragDisabled ? (
-              filteredLayers.map((layer) => (
+              filteredLayers.map((layer, layerIndex) => (
                 <LayerListItem
                   key={layer.id}
                   layer={layer}
@@ -2321,6 +2321,7 @@ function LayerManagementSection({
                   onBulkMovePlz={handleBulkMovePlz}
                   onBulkRemovePlz={handleBulkRemovePlz}
                   onExportCSV={handleExportLayerCSV}
+                  layerIndex={layerIndex}
                 />
               ))
             ) : (
@@ -2334,7 +2335,7 @@ function LayerManagementSection({
                   items={optimisticLayers.map((l) => l.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {optimisticLayers.map((layer) => (
+                  {optimisticLayers.map((layer, layerIndex) => (
                     <SortableLayerListItem
                       key={layer.id}
                       layer={layer}
@@ -2400,6 +2401,7 @@ function LayerManagementSection({
                       onBulkMovePlz={handleBulkMovePlz}
                       onBulkRemovePlz={handleBulkRemovePlz}
                       onExportCSV={handleExportLayerCSV}
+                      layerIndex={layerIndex}
                     />
                   ))}
                 </SortableContext>
@@ -2852,6 +2854,7 @@ const LayerDialogs = memo(function LayerDialogs({
               {
                 group: "Ebenen",
                 items: [
+                  { keys: ["F1–F9"], desc: "Direkt zu Ebene 1–9 wechseln" },
                   { keys: ["Alt", "↑ / ↓"], desc: "Ebene wechseln" },
                   { keys: ["N"], desc: "Neue Ebene anlegen" },
                   { keys: ["D"], desc: "Aktive Ebene duplizieren" },
@@ -3333,6 +3336,18 @@ function DrawingToolsImpl({
       if (e.key === "?" && !isInInput && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         dispatchUIRef.current({ type: "OPEN_KEYBOARD_HELP" });
+        return;
+      }
+
+      // F1-F9: switch to layer 1-9 directly
+      const f1f9Match = /^F([1-9])$/.exec(e.key);
+      if (f1f9Match && !isInInput) {
+        const idx = Number(f1f9Match[1]) - 1;
+        const currentLayers = layersRef.current;
+        if (idx < currentLayers.length) {
+          e.preventDefault();
+          onLayerSelectRef.current?.(currentLayers[idx].id);
+        }
         return;
       }
 

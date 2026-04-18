@@ -113,6 +113,7 @@ interface LayerListItemProps {
   ) => void;
   onBulkRemovePlz?: (layerId: number, codes: string[]) => void;
   onExportCSV?: (layerId: number, layerName: string, codes: string[]) => void;
+  layerIndex?: number; // 0-based position in layer list (for F-key shortcut badge)
 }
 
 function LayerColorPickerContent({
@@ -254,6 +255,7 @@ export const LayerListItem = memo(function LayerListItem({
   onExportCSV,
   onCopyToArea,
   onMergeLayer,
+  layerIndex,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -464,6 +466,11 @@ export const LayerListItem = memo(function LayerListItem({
                 }}
                 title="Doppelklick zum Umbenennen"
               >
+                {layerIndex !== undefined && layerIndex < 9 && (
+                  <span className="inline-block mr-1 text-[9px] font-mono text-muted-foreground/60 select-none">
+                    {`F${layerIndex + 1}`}
+                  </span>
+                )}
                 {layer.name}
               </span>
             )}
