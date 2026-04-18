@@ -1860,6 +1860,8 @@ function LayerManagementSection({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
   );
+  const [editingGroupName, setEditingGroupName] = useState<string | null>(null);
+  const [editingGroupValue, setEditingGroupValue] = useState("");
   const toggleGroupCollapse = useCallback((groupName: string) => {
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
@@ -1868,6 +1870,31 @@ function LayerManagementSection({
       return next;
     });
   }, []);
+
+  const handleRenameGroup = useCallback(
+    (oldName: string, newName: string) => {
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed === oldName || !handleSetLayerGroup) return;
+      const toUpdate = optimisticLayers.filter((l) => l.groupName === oldName);
+      for (const layer of toUpdate) {
+        handleSetLayerGroup(layer.id, trimmed);
+      }
+    },
+    [optimisticLayers, handleSetLayerGroup]
+  );
+
+  const handleToggleGroupVisibility = useCallback(
+    (groupName: string) => {
+      const groupLayers = optimisticLayers.filter(
+        (l) => l.groupName === groupName
+      );
+      const allVisible = groupLayers.every((l) => l.isVisible !== "false");
+      for (const layer of groupLayers) {
+        handleToggleVisibility(layer.id, !allVisible);
+      }
+    },
+    [optimisticLayers, handleToggleVisibility]
+  );
 
   // Group layers by groupName; null/empty = ungrouped (shown last)
   const groupedLayers = useMemo(() => {
@@ -2526,23 +2553,77 @@ function LayerManagementSection({
                   ? [
                       <div
                         key={`group-${gName}`}
-                        className="flex items-center gap-1.5 px-1 py-0.5 mt-1 first:mt-0"
+                        className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr"
                       >
                         <button
                           type="button"
-                          className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors min-w-0 flex-1"
+                          className="shrink-0 text-muted-foreground hover:text-foreground transition-transform"
+                          style={{
+                            transform: collapsedGroups.has(gName)
+                              ? ""
+                              : "rotate(90deg)",
+                            fontSize: 8,
+                          }}
                           onClick={() => toggleGroupCollapse(gName)}
+                          aria-label={
+                            collapsedGroups.has(gName)
+                              ? "Gruppe aufklappen"
+                              : "Gruppe zuklappen"
+                          }
                         >
-                          <span
-                            className={`transition-transform ${collapsedGroups.has(gName) ? "" : "rotate-90"}`}
+                          ▶
+                        </button>
+                        <Folder className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        {editingGroupName === gName ? (
+                          <input
+                            autoFocus
+                            className="flex-1 text-xs font-medium border rounded px-1 py-0.5 bg-background min-w-0"
+                            value={editingGroupValue}
+                            onChange={(e) =>
+                              setEditingGroupValue(e.target.value)
+                            }
+                            onKeyDown={(e) => {
+                              e.stopPropagation();
+                              if (e.key === "Enter") {
+                                handleRenameGroup(gName, editingGroupValue);
+                                setEditingGroupName(null);
+                              } else if (e.key === "Escape") {
+                                setEditingGroupName(null);
+                              }
+                            }}
+                            onBlur={() => {
+                              handleRenameGroup(gName, editingGroupValue);
+                              setEditingGroupName(null);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="flex-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground transition-colors truncate"
+                            onDoubleClick={() => {
+                              setEditingGroupName(gName);
+                              setEditingGroupValue(gName);
+                            }}
+                            onClick={() => toggleGroupCollapse(gName)}
                           >
-                            ▶
-                          </span>
-                          <Folder className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{gName}</span>
-                          <span className="text-[10px] text-muted-foreground/70">
-                            ({gLayers.length})
-                          </span>
+                            {gName}
+                          </button>
+                        )}
+                        <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                          {gLayers.length}
+                        </span>
+                        <button
+                          type="button"
+                          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
+                          onClick={() => handleToggleGroupVisibility(gName)}
+                          aria-label="Gruppe ein-/ausblenden"
+                        >
+                          {gLayers.every((l) => l.isVisible !== "false") ? (
+                            <Eye className="h-3 w-3" />
+                          ) : (
+                            <EyeOff className="h-3 w-3" />
+                          )}
                         </button>
                       </div>,
                     ]
@@ -2647,23 +2728,77 @@ function LayerManagementSection({
                       ? [
                           <div
                             key={`group-${gName}`}
-                            className="flex items-center gap-1.5 px-1 py-0.5 mt-1 first:mt-0"
+                            className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr"
                           >
                             <button
                               type="button"
-                              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors min-w-0 flex-1"
+                              className="shrink-0 text-muted-foreground hover:text-foreground transition-transform"
+                              style={{
+                                transform: collapsedGroups.has(gName)
+                                  ? ""
+                                  : "rotate(90deg)",
+                                fontSize: 8,
+                              }}
                               onClick={() => toggleGroupCollapse(gName)}
+                              aria-label={
+                                collapsedGroups.has(gName)
+                                  ? "Gruppe aufklappen"
+                                  : "Gruppe zuklappen"
+                              }
                             >
-                              <span
-                                className={`transition-transform ${collapsedGroups.has(gName) ? "" : "rotate-90"}`}
+                              ▶
+                            </button>
+                            <Folder className="h-3 w-3 shrink-0 text-muted-foreground" />
+                            {editingGroupName === gName ? (
+                              <input
+                                autoFocus
+                                className="flex-1 text-xs font-medium border rounded px-1 py-0.5 bg-background min-w-0"
+                                value={editingGroupValue}
+                                onChange={(e) =>
+                                  setEditingGroupValue(e.target.value)
+                                }
+                                onKeyDown={(e) => {
+                                  e.stopPropagation();
+                                  if (e.key === "Enter") {
+                                    handleRenameGroup(gName, editingGroupValue);
+                                    setEditingGroupName(null);
+                                  } else if (e.key === "Escape") {
+                                    setEditingGroupName(null);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  handleRenameGroup(gName, editingGroupValue);
+                                  setEditingGroupName(null);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                className="flex-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground transition-colors truncate"
+                                onDoubleClick={() => {
+                                  setEditingGroupName(gName);
+                                  setEditingGroupValue(gName);
+                                }}
+                                onClick={() => toggleGroupCollapse(gName)}
                               >
-                                ▶
-                              </span>
-                              <Folder className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{gName}</span>
-                              <span className="text-[10px] text-muted-foreground/70">
-                                ({gLayers.length})
-                              </span>
+                                {gName}
+                              </button>
+                            )}
+                            <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                              {gLayers.length}
+                            </span>
+                            <button
+                              type="button"
+                              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
+                              onClick={() => handleToggleGroupVisibility(gName)}
+                              aria-label="Gruppe ein-/ausblenden"
+                            >
+                              {gLayers.every((l) => l.isVisible !== "false") ? (
+                                <Eye className="h-3 w-3" />
+                              ) : (
+                                <EyeOff className="h-3 w-3" />
+                              )}
                             </button>
                           </div>,
                         ]
