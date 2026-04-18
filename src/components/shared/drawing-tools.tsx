@@ -78,6 +78,7 @@ import {
   balanceLayersAction,
   fixDuplicateCodeAction,
   addPostalCodesByPrefixAction,
+  splitLayerAction,
 } from "@/app/actions/area-actions";
 import {
   batchUpdateVisibilityAction,
@@ -1454,6 +1455,7 @@ interface LayerManagementSectionProps {
   handleOpacityChange: (layerId: number, opacity: number) => void;
   handleDeleteLayer: (layerId: number) => void;
   handleDuplicateLayer: (layerId: number) => void;
+  handleSplitLayer?: (layerId: number, splitCount: number) => void;
   handleOpenCopyToArea: (layerId: number, layerName: string) => void;
   handleOpenMergeLayers: (layerId: number, layerName: string) => void;
   handleToggleVisibility: (layerId: number, visible: boolean) => void;
@@ -1515,6 +1517,7 @@ function LayerManagementSection({
   handleOpacityChange,
   handleDeleteLayer,
   handleDuplicateLayer,
+  handleSplitLayer,
   handleOpenCopyToArea,
   handleOpenMergeLayers,
   handleToggleVisibility,
@@ -2495,6 +2498,7 @@ function LayerManagementSection({
                   onBulkMovePlz={handleBulkMovePlz}
                   onBulkRemovePlz={handleBulkRemovePlz}
                   onExportCSV={handleExportLayerCSV}
+                  onSplitLayer={handleSplitLayer}
                   layerIndex={layerIndex}
                 />
               ))
@@ -2575,6 +2579,7 @@ function LayerManagementSection({
                       onBulkMovePlz={handleBulkMovePlz}
                       onBulkRemovePlz={handleBulkRemovePlz}
                       onExportCSV={handleExportLayerCSV}
+                      onSplitLayer={handleSplitLayer}
                       layerIndex={layerIndex}
                     />
                   ))}
@@ -3441,6 +3446,27 @@ function DrawingToolsImpl({
     [areaId]
   );
 
+  const [, startSplitTransition] = useTransition();
+  const handleSplitLayer = useCallback(
+    (layerId: number, splitCount: number) => {
+      if (!areaId) return;
+      startSplitTransition(async () => {
+        const toastId = toast.loading(`Teile Layer in ${splitCount} Teile...`);
+        const res = await splitLayerAction(areaId, layerId, splitCount);
+        if (res.success) {
+          toast.success(
+            `Layer in ${splitCount} Teile aufgeteilt (${res.data?.createdLayerIds.length} neue Layer)`,
+            { id: toastId }
+          );
+          onLayerUpdate?.();
+        } else {
+          toast.error(res.error ?? "Fehler beim Aufteilen", { id: toastId });
+        }
+      });
+    },
+    [areaId, onLayerUpdate]
+  );
+
   const [isCopyingLayer, startCopyLayerTransition] = useTransition();
 
   const handleOpenCopyToArea = useCallback(
@@ -4038,6 +4064,7 @@ function DrawingToolsImpl({
             handleOpacityChange={handleOpacityChange}
             handleDeleteLayer={handleDeleteLayer}
             handleDuplicateLayer={handleDuplicateLayer}
+            handleSplitLayer={handleSplitLayer}
             handleOpenCopyToArea={handleOpenCopyToArea}
             handleOpenMergeLayers={handleOpenMergeLayers}
             handleToggleVisibility={handleToggleVisibility}

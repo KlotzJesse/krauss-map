@@ -19,6 +19,7 @@ import {
   Lock,
   LockOpen,
   Plus,
+  Scissors,
   Square,
   StickyNote,
   Trash2,
@@ -116,6 +117,7 @@ interface LayerListItemProps {
   ) => void;
   onBulkRemovePlz?: (layerId: number, codes: string[]) => void;
   onExportCSV?: (layerId: number, layerName: string, codes: string[]) => void;
+  onSplitLayer?: (layerId: number, splitCount: number) => void;
   layerIndex?: number; // 0-based position in layer list (for F-key shortcut badge)
 }
 
@@ -281,12 +283,14 @@ export const LayerListItem = memo(function LayerListItem({
   onBulkMovePlz,
   onBulkRemovePlz,
   onExportCSV,
+  onSplitLayer,
   onCopyToArea,
   onMergeLayer,
   layerIndex,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [splitPopoverOpen, setSplitPopoverOpen] = useState(false);
   const [codesExpanded, setCodesExpanded] = useState(false);
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [notesValue, setNotesValue] = useState(layer.notes ?? "");
@@ -757,6 +761,61 @@ export const LayerListItem = memo(function LayerListItem({
                   <p>Mit anderem Layer zusammenführen</p>
                 </TooltipContent>
               </Tooltip>
+            )}
+
+            {onSplitLayer && postalCodes.length >= 4 && (
+              <Popover
+                open={splitPopoverOpen}
+                onOpenChange={setSplitPopoverOpen}
+              >
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <PopoverTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        }
+                      />
+                    }
+                  >
+                    <Scissors className="h-3 w-3" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Layer aufteilen</p>
+                  </TooltipContent>
+                </Tooltip>
+                <PopoverContent
+                  className="w-52 p-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p className="text-xs font-medium mb-2 text-muted-foreground">
+                    In wie viele Teile aufteilen?
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {[2, 3, 4, 5].map((n) => (
+                      <Button
+                        key={n}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 flex-1 text-xs"
+                        disabled={postalCodes.length < n}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSplitPopoverOpen(false);
+                          onSplitLayer(layer.id, n);
+                        }}
+                      >
+                        {n}× (~{Math.ceil(postalCodes.length / n)} PLZ)
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
 
             {onClearPLZ && postalCodes.length > 0 && (

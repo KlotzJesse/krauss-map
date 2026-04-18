@@ -2806,3 +2806,140 @@ export async function getLayerHistoryAction(layerId: number) {
     return { success: false as const, error: String(err) };
   }
 }
+
+/**
+ * Split a layer's PLZ into N roughly equal new layers.
+ * The original layer keeps the first chunk; N-1 new layers are created for the rest.
+ */
+export async function splitLayerAction(
+  areaId: number,
+  sourceLayerId: number,
+  splitCount: number,
+  createdBy?: string
+): ServerActionResponse<{ createdLayerIds: number[] }> {
+  try {
+    if (splitCount < 2 || splitCount > 10) {
+      return { success: false, error: "splitCount must be between 2 and 10" };
+    }
+
+    const result = await db.transaction(async (tx) => {
+      // Load source layer
+      const sourceLayer = await tx.query.areaLayers.findFirst({
+        where: and(
+          eq(areaLayers.id, sourceLayerId),
+          eq(areaLayers.areaId, areaId)
+        ),
+      });
+      if (!sourceLayer) throw new Error("Layer not found");
+
+      // Load all PLZ codes sorted for deterministic splitting
+      const codes = await tx
+        .select({ postalCode: areaLayerPostalCodes.postalCode })
+        .from(areaLayerPostalCodes)
+        .where(eq(areaLayerPostalCodes.layerId, sourceLayerId))
+        .orderBy(areaLayerPostalCodes.postalCode);
+
+      if (codes.length < splitCount) {
+        throw new Error("Not enough PLZ to split into that many parts");
+      }
+
+      const allCodes = codes.map((r) => r.postalCode);
+      const chunkSize = Math.ceil(allCodes.length / splitCount);
+      const chunks: string[][] = [];
+      for (let i = 0; i < splitCount; i++) {
+        chunks.push(allCodes.slice(i * chunkSize, (i + 1) * chunkSize));
+      }
+
+      // Load existing colors across all layers of this area to generate contrasting ones
+      const existingLayers = await tx
+        .select({ id: areaLayers.id, color: areaLayers.color })
+        .from(areaLayers)
+        .where(eq(areaLayers.areaId, areaId));
+      const existingColors = existingLayers.map((l) => l.color);
+
+      // Highest existing orderIndex
+      const maxOrderResult = await tx
+        .select({ maxOrder: sql<number>`MAX(${areaLayers.orderIndex})` })
+        .from(areaLayers)
+        .where(eq(areaLayers.areaId, areaId));
+      let nextOrder = (maxOrderResult[0]?.maxOrder ?? 0) + 1;
+
+      // Keep first chunk in the original layer — update its PLZ
+      const [firstChunk, ...otherChunks] = chunks;
+
+      // Delete codes not in the first chunk from source layer
+      const codesToRemove = allCodes.filter((c) => !firstChunk.includes(c));
+      if (codesToRemove.length > 0) {
+        await tx
+          .delete(areaLayerPostalCodes)
+          .where(
+            and(
+              eq(areaLayerPostalCodes.layerId, sourceLayerId),
+              inArray(areaLayerPostalCodes.postalCode, codesToRemove)
+            )
+          );
+      }
+
+      // Create new layers for remaining chunks
+      const createdLayerIds: number[] = [];
+      for (let i = 0; i < otherChunks.length; i++) {
+        const chunk = otherChunks[i];
+        const newColor = generateNextColor(existingColors);
+        existingColors.push(newColor);
+
+        const [newLayer] = await tx
+          .insert(areaLayers)
+          .values({
+            areaId,
+            name: `${sourceLayer.name} ${i + 2}`,
+            color: newColor,
+            opacity: sourceLayer.opacity,
+            isVisible: sourceLayer.isVisible,
+            orderIndex: nextOrder++,
+          })
+          .returning();
+
+        await tx
+          .insert(areaLayerPostalCodes)
+          .values(
+            chunk.map((postalCode) => ({ layerId: newLayer.id, postalCode }))
+          );
+
+        await recordChangeWithTx(tx, areaId, {
+          changeType: "create_layer",
+          entityType: "layer",
+          entityId: newLayer.id,
+          changeData: { layer: { name: newLayer.name, color: newColor } },
+          previousData: {},
+          createdBy,
+        });
+
+        createdLayerIds.push(newLayer.id);
+      }
+
+      // Record change on the source layer
+      await recordChangeWithTx(tx, areaId, {
+        changeType: "update_layer",
+        entityType: "layer",
+        entityId: sourceLayerId,
+        changeData: { splitCount, createdLayerIds },
+        previousData: { postalCodeCount: allCodes.length },
+        createdBy,
+      });
+
+      return createdLayerIds;
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}-undo-redo`);
+    updateTag(`area-${areaId}-change-history`);
+
+    return { success: true, data: { createdLayerIds: result } };
+  } catch (error) {
+    console.error("Error splitting layer:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to split layer",
+    };
+  }
+}
