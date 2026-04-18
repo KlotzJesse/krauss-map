@@ -1,6 +1,6 @@
 "use client";
 
-import { Diamond, FileSpreadsheet, Loader2Icon, X } from "lucide-react";
+import { Diamond, FileJson, FileSpreadsheet, Loader2Icon, X } from "lucide-react";
 import { Activity } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ interface DrawingActionsSectionProps {
   onClearAll: () => void;
   onExportExcel: () => void;
   onExportPDF: () => void;
+  onExportGeoJSON: () => void;
 }
 
 export function DrawingActionsSection({
@@ -43,6 +44,7 @@ export function DrawingActionsSection({
   onClearAll,
   onExportExcel,
   onExportPDF,
+  onExportGeoJSON,
 }: DrawingActionsSectionProps) {
   const isDrawingMode =
     currentMode !== null &&
@@ -120,6 +122,24 @@ export function DrawingActionsSection({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Als PDF-Datei exportieren</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onExportGeoJSON}
+                      className="flex-1 h-7 text-xs"
+                    />
+                  }
+                >
+                  <FileJson className="h-3 w-3 mr-1" />
+                  GeoJSON
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Als GeoJSON exportieren (mit Geometrien)</p>
                 </TooltipContent>
               </Tooltip>
             </div>

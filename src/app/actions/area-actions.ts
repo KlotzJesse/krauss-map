@@ -266,6 +266,61 @@ export async function archiveAreaAction(
   }
 }
 
+export async function exportAreaGeoJSONAction(
+  areaId: number
+): ServerActionResponse<string> {
+  try {
+    const { rows } = await db.execute<{
+      layer_id: number;
+      layer_name: string;
+      layer_color: string;
+      layer_order: number;
+      geometry: string | null;
+      postal_codes: string[];
+    }>(sql`
+      SELECT
+        al.id AS layer_id,
+        al.name AS layer_name,
+        al.color AS layer_color,
+        al.order_index AS layer_order,
+        ST_AsGeoJSON(ST_Union(pc.geometry))::text AS geometry,
+        array_agg(alpc.postal_code ORDER BY alpc.postal_code) AS postal_codes
+      FROM area_layers al
+      LEFT JOIN area_layer_postal_codes alpc ON alpc.layer_id = al.id
+      LEFT JOIN postal_codes pc ON pc.code = alpc.postal_code AND pc.granularity = al.granularity
+      WHERE al.area_id = ${areaId}
+      GROUP BY al.id, al.name, al.color, al.order_index
+      ORDER BY al.order_index ASC
+    `);
+
+    const features = rows
+      .filter((r) => r.geometry !== null)
+      .map((r) => ({
+        type: "Feature" as const,
+        geometry: JSON.parse(r.geometry!),
+        properties: {
+          layerId: r.layer_id,
+          name: r.layer_name,
+          color: r.layer_color,
+          order: r.layer_order,
+          postalCodes: r.postal_codes ?? [],
+          postalCodeCount: (r.postal_codes ?? []).length,
+        },
+      }));
+
+    const geojson = {
+      type: "FeatureCollection",
+      features,
+    };
+
+    return { success: true, data: JSON.stringify(geojson, null, 2) };
+  } catch (error) {
+    console.error("Error exporting GeoJSON:", error);
+    return { success: false, error: "GeoJSON Export fehlgeschlagen" };
+  }
+}
+
+
 export async function duplicateAreaAction(sourceAreaId: number) {
   let redirectPath: string | null = null;
 

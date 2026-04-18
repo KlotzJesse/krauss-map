@@ -49,6 +49,7 @@ import {
   deleteLayerAction,
   duplicateLayerAction,
   updateLayerAction,
+  exportAreaGeoJSONAction,
 } from "@/app/actions/area-actions";
 import { batchUpdateVisibilityAction } from "@/app/actions/layer-actions";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
@@ -646,6 +647,30 @@ function useDrawingToolsActions({
     await exportLayersPDF(layersWithCodes, areaName);
   };
 
+  const handleExportGeoJSON = async () => {
+    if (!areaId) {
+      toast.warning("Kein Gebiet ausgewählt");
+      return;
+    }
+    if (!optimisticLayers.length) {
+      toast.warning("Keine Ebenen zum Exportieren vorhanden");
+      return;
+    }
+    const result = await exportAreaGeoJSONAction(areaId);
+    if (!result.success || !result.data) {
+      toast.error(result.error ?? "GeoJSON Export fehlgeschlagen");
+      return;
+    }
+    const blob = new Blob([result.data], { type: "application/geo+json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${areaName ?? `gebiet-${areaId}`}.geojson`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("GeoJSON exportiert");
+  };
+
   const handleCreateLayer = async () => {
     if (!form.newLayerName.trim()) {
       return;
@@ -936,6 +961,7 @@ function useDrawingToolsActions({
     handleReorderLayers,
     handleRemovePostalCodeFromLayer,
     handleNotesChange,
+    handleExportGeoJSON,
   };
 }
 
@@ -1674,6 +1700,7 @@ function DrawingToolsImpl({
     handleReorderLayers,
     handleRemovePostalCodeFromLayer,
     handleNotesChange,
+    handleExportGeoJSON,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -1825,6 +1852,7 @@ function DrawingToolsImpl({
           onClearAll={handleClearAllWithToast}
           onExportExcel={handleExportExcel}
           onExportPDF={handleExportPDF}
+          onExportGeoJSON={handleExportGeoJSON}
         />
 
         {/* Stats Section */}
