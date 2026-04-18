@@ -1506,6 +1506,44 @@ function LayerManagementSection({
   const [importText, setImportText] = useState("");
   const [importPending, setImportPending] = useState(false);
 
+  // PLZ range/prefix add state
+  const [prefixInput, setPrefixInput] = useState("");
+  const prefixMatches = useMemo(() => {
+    const raw = prefixInput.trim().replace(/\s/g, "");
+    if (!raw || !allCodesSet || allCodesSet.size === 0) return null;
+    // Support: "80", "8", "80-89", "8-9" (prefix ranges)
+    const rangeMatch = raw.match(/^(\d{1,4})-(\d{1,4})$/);
+    if (rangeMatch) {
+      const [, fromStr, toStr] = rangeMatch;
+      const len = Math.max(fromStr.length, toStr.length);
+      const from = Number.parseInt(fromStr.padEnd(len, "0"), 10);
+      const to = Number.parseInt(toStr.padEnd(len, "9"), 10);
+      return [...allCodesSet].filter((c) => {
+        const prefix = Number.parseInt(c.slice(0, len), 10);
+        return prefix >= from && prefix <= to;
+      });
+    }
+    // Single prefix
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length < 1 || digits.length > 4) return null;
+    return [...allCodesSet].filter((c) => c.startsWith(digits));
+  }, [prefixInput, allCodesSet]);
+
+  const handleAddByPrefix = useCallback(async () => {
+    if (!addPostalCodesToLayer || !activeLayerId || !prefixMatches?.length) return;
+    // Filter out already-assigned codes from active layer
+    const activeLayer = optimisticLayers.find((l) => l.id === activeLayerId);
+    const existing = new Set(activeLayer?.postalCodes?.map((pc) => pc.postalCode) ?? []);
+    const toAdd = prefixMatches.filter((c) => !existing.has(c));
+    if (toAdd.length === 0) {
+      toast.info("Alle PLZ bereits in dieser Ebene");
+      return;
+    }
+    await addPostalCodesToLayer(activeLayerId, toAdd);
+    toast.success(`${toAdd.length} PLZ hinzugefügt`);
+    setPrefixInput("");
+  }, [addPostalCodesToLayer, activeLayerId, optimisticLayers, prefixMatches]);
+
   // Layer templates dialog
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
@@ -2260,6 +2298,35 @@ function LayerManagementSection({
               </div>
             )}
           </div>
+
+          {/* PLZ prefix / range bulk-add */}
+          {allCodesSet && allCodesSet.size > 0 && activeLayerId && addPostalCodesToLayer && (
+            <div className="border-t pt-1.5 mt-0.5">
+              <div className="flex gap-1">
+                <div className="relative flex-1">
+                  <Input
+                    value={prefixInput}
+                    onChange={(e) => setPrefixInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && prefixMatches?.length) handleAddByPrefix(); }}
+                    placeholder="Präfix (80) oder Bereich (80-89)"
+                    className="h-6 text-[10px] pr-2"
+                    maxLength={9}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddByPrefix}
+                  disabled={!prefixMatches?.length}
+                  className="h-6 px-2 text-[10px] rounded border border-input bg-background hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed shrink-0 font-medium"
+                >
+                  {prefixMatches !== null ? `+${prefixMatches.length}` : "Hinzufügen"}
+                </button>
+              </div>
+              {prefixInput.trim() && prefixMatches !== null && prefixMatches.length === 0 && (
+                <p className="text-[9px] text-muted-foreground mt-0.5">Keine PLZ gefunden</p>
+              )}
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
 
@@ -2423,9 +2490,12 @@ const LayerDialogs = memo(function LayerDialogs({
           <div className="space-y-3 text-sm">
             {[
               { keys: ["Alt", "↑ / ↓"], desc: "Ebene wechseln" },
+              { keys: ["Ctrl", "Z"], desc: "Rückgängig" },
+              { keys: ["Ctrl", "Y"], desc: "Wiederholen" },
               { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
               { keys: ["Ctrl", "C"], desc: "PLZ der aktiven Ebene kopieren" },
               { keys: ["/"], desc: "PLZ-Suche fokussieren" },
+              { keys: ["?"], desc: "Tastaturkürzel anzeigen" },
               { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
               { keys: ["N"], desc: "Neues Gebiet anlegen" },
               { keys: ["D"], desc: "Aktive Ebene duplizieren" },
@@ -2746,6 +2816,13 @@ function DrawingToolsImpl({
         e.preventDefault();
         const codes = activeLayer.postalCodes.map((pc) => pc.postalCode);
         copyPostalCodesCSV(codes, countryRef.current ?? "DE");
+        return;
+      }
+
+      // ? key: open keyboard help
+      if (e.key === "?" && !isInInput && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        dispatchUIRef.current({ type: "OPEN_KEYBOARD_HELP" });
         return;
       }
 
