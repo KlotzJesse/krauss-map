@@ -222,9 +222,10 @@ const UndoRedoToolbar = dynamic(
 interface StatsSectionProps {
   layers: Layer[];
   postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
+  onLayerSelect?: (layerId: number) => void;
 }
 
-function StatsSection({ layers, postalCodesData }: StatsSectionProps) {
+function StatsSection({ layers, postalCodesData, onLayerSelect }: StatsSectionProps) {
   const totalFeatures = postalCodesData?.features.length ?? 0;
   const assignedSet = new Set(
     layers.flatMap((l) => l.postalCodes?.map((pc) => pc.postalCode) ?? [])
@@ -3356,14 +3357,20 @@ function LayerManagementSection({
                           ? (count / layerStats.totalCodes) * 100
                           : 0;
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={layer.id}
-                          className="flex items-center gap-1.5 text-[10px]"
+                          className="flex items-center gap-1.5 text-[10px] w-full text-left hover:bg-muted/50 rounded px-0.5 transition-colors cursor-pointer"
+                          title={`${layer.name ?? `Layer ${layer.id}`} – ${count} PLZ (${pct.toFixed(0)}%) — klicken zum Aktivieren`}
+                          onClick={() => onLayerSelect?.(layer.id)}
                         >
                           <span
                             className="w-2 h-2 rounded-full shrink-0"
                             style={{ backgroundColor: layer.color }}
                           />
+                          <span className="truncate text-muted-foreground max-w-[70px]">
+                            {layer.name ?? `Layer ${layer.id}`}
+                          </span>
                           <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all"
@@ -3374,12 +3381,9 @@ function LayerManagementSection({
                             />
                           </div>
                           <span className="text-muted-foreground w-8 text-right tabular-nums">
-                            {pct.toFixed(0)}%
-                          </span>
-                          <span className="text-muted-foreground w-6 text-right tabular-nums">
                             {count}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                 </div>
@@ -4857,6 +4861,7 @@ function DrawingToolsImpl({
           <StatsSection
             layers={optimisticLayers}
             postalCodesData={postalCodesData}
+            onLayerSelect={onLayerSelect}
           />
         )}
 

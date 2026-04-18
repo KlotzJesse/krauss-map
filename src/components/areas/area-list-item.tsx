@@ -314,6 +314,39 @@ export const AreaListItem = memo(
                 {area.description}
               </p>
             )}
+            {!isSelectable &&
+              !isArchived &&
+              (area.totalPostalCodeCount ?? 0) > 0 && (
+                <div className="px-2 pb-1.5">
+                  {(() => {
+                    const pct = Math.min(
+                      100,
+                      Math.round(
+                        ((area.uniquePostalCodeCount ?? 0) /
+                          (area.totalPostalCodeCount ?? 1)) *
+                          100
+                      )
+                    );
+                    return (
+                      <div
+                        className="h-0.5 bg-muted rounded-full overflow-hidden"
+                        title={`Abdeckung: ${pct}%`}
+                      >
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            pct >= 80
+                              ? "bg-green-500"
+                              : pct >= 40
+                                ? "bg-primary/70"
+                                : "bg-amber-400"
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
           </div>
         </AreaItemMenu>
       </SidebarMenuItem>
@@ -326,6 +359,8 @@ export const AreaListItem = memo(
       prev.area.name !== next.area.name ||
       prev.area.country !== next.area.country ||
       prev.area.postalCodeCount !== next.area.postalCodeCount ||
+      prev.area.uniquePostalCodeCount !== next.area.uniquePostalCodeCount ||
+      prev.area.totalPostalCodeCount !== next.area.totalPostalCodeCount ||
       prev.area.conflictCount !== next.area.conflictCount ||
       prev.area.isArchived !== next.area.isArchived ||
       prev.area.description !== next.area.description
