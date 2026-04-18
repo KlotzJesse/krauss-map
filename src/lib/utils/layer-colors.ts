@@ -98,14 +98,14 @@ export function generateNextColor(existingColors: string[]): string {
   let bestColor = "#3b82f6";
   let bestMinDist = -1;
 
-  // Try multiple saturation/lightness combos — muted jewel tones: rich but not harsh
+  // Try multiple saturation/lightness combos — muted satin tones: high contrast, elegant
   const slCombos: [number, number][] = [
-    [62, 58], // Core jewel
-    [65, 60], // Slightly lighter
-    [58, 57], // Deeper muted
-    [67, 61], // Brighter jewel
-    [60, 59], // Balanced
-    [64, 62], // Light jewel
+    [50, 63], // Core satin
+    [52, 65], // Slightly lighter
+    [47, 61], // Deeper muted
+    [54, 66], // Airy
+    [49, 64], // Balanced
+    [53, 67], // Pale satin
   ];
 
   for (const [s, l] of slCombos) {
@@ -140,9 +140,9 @@ export function generatePalette(count: number): string[] {
 
   for (let i = 0; i < count; i++) {
     const hue = (i * GOLDEN_ANGLE) % 360;
-    // Muted jewel tones: L=56-62%, S=58-66% — rich contrast without harshness
-    const saturation = 58 + (i % 4) * 3; // 58, 61, 64, 67
-    const lightness = 56 + (i % 3) * 3; // 56, 59, 62
+    // Muted satin tones: L=60-68%, S=48-56% — elegant contrast without harshness
+    const saturation = 48 + (i % 4) * 2; // 48, 50, 52, 54
+    const lightness = 60 + (i % 3) * 3; // 60, 63, 66
     colors.push(hslToHex(hue, saturation, lightness));
   }
 
@@ -177,32 +177,32 @@ export const COLOR_THEMES: { id: string; label: string; sample: string[] }[] = [
   {
     id: "jewel",
     label: "Juwel",
-    sample: ["#3b82f6", "#22c55e", "#f59e0b", "#e11d48", "#8b5cf6"],
+    sample: ["#c26b6b", "#6fc97d", "#ac80d4", "#d4c46d", "#7dc9d9"],
   },
   {
     id: "pastel",
     label: "Pastell",
-    sample: ["#93c5fd", "#86efac", "#fde68a", "#fca5a5", "#d8b4fe"],
+    sample: ["#d4a0a0", "#9fd4a9", "#c9b0e0", "#e0d4a0", "#a9cfe0"],
   },
   {
     id: "vivid",
     label: "Kräftig",
-    sample: ["#2563eb", "#16a34a", "#d97706", "#dc2626", "#7c3aed"],
+    sample: ["#e63946", "#2a9d5c", "#e76f1b", "#7b2de8", "#1b9de7"],
   },
   {
     id: "earthy",
     label: "Erdtöne",
-    sample: ["#78716c", "#a3785c", "#6b7c55", "#8b6f47", "#7a7a5c"],
+    sample: ["#8d7a6b", "#6b8d7a", "#7a6b8d", "#8d876b", "#6b7a8d"],
   },
   {
     id: "ocean",
     label: "Ozean",
-    sample: ["#0ea5e9", "#06b6d4", "#0891b2", "#0369a1", "#0284c7"],
+    sample: ["#4ab5d9", "#3a9dc2", "#5bcce0", "#3a7ec2", "#50b0d4"],
   },
   {
     id: "autumn",
     label: "Herbst",
-    sample: ["#ea580c", "#d97706", "#ca8a04", "#b45309", "#92400e"],
+    sample: ["#d4743a", "#c2903a", "#d4b83a", "#c27a3a", "#d4963a"],
   },
 ];
 
@@ -212,12 +212,12 @@ function generateThemePalette(theme: string, count: number): string[] {
     string,
     { s: number; l: number; hueOffset: number }
   > = {
-    jewel: { s: 62, l: 58, hueOffset: 0 },
-    pastel: { s: 60, l: 78, hueOffset: 20 },
-    vivid: { s: 80, l: 48, hueOffset: 0 },
-    earthy: { s: 22, l: 52, hueOffset: 30 },
-    ocean: { s: 75, l: 48, hueOffset: 190 },
-    autumn: { s: 78, l: 50, hueOffset: 20 },
+    jewel: { s: 50, l: 63, hueOffset: 0 },
+    pastel: { s: 45, l: 78, hueOffset: 20 },
+    vivid: { s: 78, l: 50, hueOffset: 0 },
+    earthy: { s: 22, l: 54, hueOffset: 30 },
+    ocean: { s: 72, l: 50, hueOffset: 190 },
+    autumn: { s: 75, l: 52, hueOffset: 20 },
   };
 
   const params = themeParams[theme] ?? themeParams.jewel;
