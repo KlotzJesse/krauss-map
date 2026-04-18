@@ -492,7 +492,10 @@ export async function importAreaFromDataAction(
   return { success: false, error: "Unbekannter Fehler" };
 }
 
-export async function duplicateAreaAction(sourceAreaId: number) {
+export async function duplicateAreaAction(
+  sourceAreaId: number,
+  customName?: string
+) {
   let redirectPath: string | null = null;
 
   try {
@@ -511,7 +514,7 @@ export async function duplicateAreaAction(sourceAreaId: number) {
       const [newArea] = await tx
         .insert(areas)
         .values({
-          name: `${sourceArea.name} (Kopie)`,
+          name: customName?.trim() || `${sourceArea.name} (Kopie)`,
           description: sourceArea.description,
           granularity: sourceArea.granularity,
           country: sourceArea.country,

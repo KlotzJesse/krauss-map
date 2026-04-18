@@ -52,6 +52,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -79,6 +81,9 @@ interface NavAreasState {
   deleteDialogOpen: boolean;
   areaToDelete: AreaSummary | null;
   isDeleting: boolean;
+  duplicateDialogOpen: boolean;
+  areaToDuplicate: AreaSummary | null;
+  duplicateName: string;
 }
 
 type NavAreasAction =
@@ -91,7 +96,10 @@ type NavAreasAction =
   | { type: "OPEN_DELETE"; area: AreaSummary }
   | { type: "CLOSE_DELETE" }
   | { type: "START_DELETING" }
-  | { type: "FINISH_DELETING" };
+  | { type: "FINISH_DELETING" }
+  | { type: "OPEN_DUPLICATE"; area: AreaSummary }
+  | { type: "CLOSE_DUPLICATE" }
+  | { type: "SET_DUPLICATE_NAME"; name: string };
 
 const initialState: NavAreasState = {
   createDialogOpen: false,
@@ -100,6 +108,9 @@ const initialState: NavAreasState = {
   deleteDialogOpen: false,
   areaToDelete: null,
   isDeleting: false,
+  duplicateDialogOpen: false,
+  areaToDuplicate: null,
+  duplicateName: "",
 };
 
 function navAreasReducer(
@@ -146,6 +157,25 @@ function navAreasReducer(
         areaToDelete: null,
       };
     }
+    case "OPEN_DUPLICATE": {
+      return {
+        ...state,
+        areaToDuplicate: action.area,
+        duplicateName: `${action.area.name} (Kopie)`,
+        duplicateDialogOpen: true,
+      };
+    }
+    case "CLOSE_DUPLICATE": {
+      return {
+        ...state,
+        duplicateDialogOpen: false,
+        areaToDuplicate: null,
+        duplicateName: "",
+      };
+    }
+    case "SET_DUPLICATE_NAME": {
+      return { ...state, duplicateName: action.name };
+    }
     default: {
       return state;
     }
@@ -173,6 +203,9 @@ export function NavAreas({
     deleteDialogOpen,
     areaToDelete,
     isDeleting,
+    duplicateDialogOpen,
+    areaToDuplicate,
+    duplicateName,
   } = state;
   const { isPinned, togglePin } = useAreaPins();
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -402,18 +435,23 @@ export function NavAreas({
     []
   );
 
-  const handleDuplicate = useCallback(
-    (area: AreaSummary) => {
-      startTransition(async () => {
-        await executeAction(duplicateAreaAction(area.id), {
-          loading: `Dupliziere "${area.name}"...`,
-          success: `"${area.name}" dupliziert`,
-          error: "Duplizieren fehlgeschlagen",
-        });
+  const handleDuplicate = useCallback((area: AreaSummary) => {
+    dispatch({ type: "OPEN_DUPLICATE", area });
+  }, []);
+
+  const handleConfirmDuplicate = useCallback(() => {
+    if (!areaToDuplicate) return;
+    const area = areaToDuplicate;
+    const name = duplicateName;
+    dispatch({ type: "CLOSE_DUPLICATE" });
+    startTransition(async () => {
+      await executeAction(duplicateAreaAction(area.id, name), {
+        loading: `Dupliziere "${area.name}"...`,
+        success: `"${name || `${area.name} (Kopie)`}" erstellt`,
+        error: "Duplizieren fehlgeschlagen",
       });
-    },
-    [startTransition]
-  );
+    });
+  }, [areaToDuplicate, duplicateName, startTransition]);
 
   const handleArchive = useCallback(
     (area: AreaSummary, archive: boolean) => {
@@ -913,7 +951,57 @@ export function NavAreas({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Notes editor dialog */}
+      {/* Duplicate area dialog */}
+      <Dialog
+        open={duplicateDialogOpen}
+        onOpenChange={(v) => {
+          if (!v) dispatch({ type: "CLOSE_DUPLICATE" });
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Gebiet duplizieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-1">
+            <Label htmlFor="duplicate-name-input" className="text-sm">
+              Name der Kopie
+            </Label>
+            <Input
+              id="duplicate-name-input"
+              value={duplicateName}
+              onChange={(e) =>
+                dispatch({ type: "SET_DUPLICATE_NAME", name: e.target.value })
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && duplicateName.trim())
+                  handleConfirmDuplicate();
+                if (e.key === "Escape") dispatch({ type: "CLOSE_DUPLICATE" });
+              }}
+              placeholder={
+                areaToDuplicate ? `${areaToDuplicate.name} (Kopie)` : ""
+              }
+              autoFocus
+              className="h-8 text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => dispatch({ type: "CLOSE_DUPLICATE" })}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmDuplicate}
+              disabled={!duplicateName.trim()}
+            >
+              Duplizieren
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={notesArea !== null}
         onOpenChange={(v) => {
