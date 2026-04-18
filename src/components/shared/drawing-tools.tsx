@@ -81,6 +81,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Card,
   CardAction,
   CardContent,
@@ -110,7 +118,7 @@ import type {
 } from "@/lib/schema/schema";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import { exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
-import { generateNextColor, reassignAllColors } from "@/lib/utils/layer-colors";
+import { COLOR_THEMES, generateNextColor, reassignAllColors } from "@/lib/utils/layer-colors";
 
 const EMPTY_ARRAY: never[] = [];
 
@@ -925,9 +933,9 @@ function useDrawingToolsActions({
     }
   };
 
-  const handleReassignColors = () => {
+  const handleReassignColors = (theme?: string) => {
     startTransition(async () => {
-      const colorMap = reassignAllColors(optimisticLayers);
+      const colorMap = reassignAllColors(optimisticLayers, theme);
       for (const [id, color] of colorMap) {
         updateOptimisticLayers({ type: "update", id, layer: { color } });
       }
@@ -1165,7 +1173,7 @@ interface LayerManagementSectionProps {
   handleToggleVisibility: (layerId: number, visible: boolean) => void;
   handleSoloLayer: (layerId: number) => void;
   handleShowAllLayers: () => void;
-  handleReassignColors: () => void;
+  handleReassignColors: (theme?: string) => void;
   handleReorderLayers: (oldIndex: number, newIndex: number) => void;
   handleSortByCount: () => void;
   handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
@@ -1484,23 +1492,50 @@ function LayerManagementSection({
             </Tooltip>
           )}
           {optimisticLayers.length >= 2 && (
-            <Tooltip>
-              <TooltipTrigger
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 render={
                   <Button
-                    onClick={handleReassignColors}
                     variant="ghost"
                     size="sm"
+                    title="Farbpalette wählen"
                     className="h-7 w-7 p-0 shrink-0"
                   />
                 }
               >
                 <Palette className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Farben für maximalen Kontrast optimieren</p>
-              </TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel>Farbpalette</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {COLOR_THEMES.map((theme) => (
+                  <DropdownMenuItem
+                    key={theme.id}
+                    onClick={() => handleReassignColors(theme.id)}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <span className="flex gap-0.5 shrink-0">
+                      {theme.sample.slice(0, 5).map((color, i) => (
+                        <span
+                          key={i}
+                          className="inline-block w-3 h-3 rounded-sm"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </span>
+                    <span className="text-sm">{theme.label}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleReassignColors()}
+                  className="cursor-pointer"
+                >
+                  <Palette className="h-3.5 w-3.5 mr-2" />
+                  <span className="text-sm">Optimaler Kontrast</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {optimisticLayers.length >= 2 && (
             <Tooltip>

@@ -154,10 +154,11 @@ export function generatePalette(count: number): string[] {
  * Returns a Map of layerId → newColor.
  */
 export function reassignAllColors(
-  layers: { id: number; color: string }[]
+  layers: { id: number; color: string }[],
+  theme?: string
 ): Map<number, string> {
   const count = layers.length;
-  const palette = generatePalette(count);
+  const palette = theme ? generateThemePalette(theme, count) : generatePalette(count);
   const result = new Map<number, string>();
 
   for (let i = 0; i < count; i++) {
@@ -165,4 +166,64 @@ export function reassignAllColors(
   }
 
   return result;
+}
+
+/**
+ * Named color themes for layer palettes.
+ */
+export const COLOR_THEMES: { id: string; label: string; sample: string[] }[] = [
+  {
+    id: "jewel",
+    label: "Juwel",
+    sample: ["#3b82f6", "#22c55e", "#f59e0b", "#e11d48", "#8b5cf6"],
+  },
+  {
+    id: "pastel",
+    label: "Pastell",
+    sample: ["#93c5fd", "#86efac", "#fde68a", "#fca5a5", "#d8b4fe"],
+  },
+  {
+    id: "vivid",
+    label: "Kräftig",
+    sample: ["#2563eb", "#16a34a", "#d97706", "#dc2626", "#7c3aed"],
+  },
+  {
+    id: "earthy",
+    label: "Erdtöne",
+    sample: ["#78716c", "#a3785c", "#6b7c55", "#8b6f47", "#7a7a5c"],
+  },
+  {
+    id: "ocean",
+    label: "Ozean",
+    sample: ["#0ea5e9", "#06b6d4", "#0891b2", "#0369a1", "#0284c7"],
+  },
+  {
+    id: "autumn",
+    label: "Herbst",
+    sample: ["#ea580c", "#d97706", "#ca8a04", "#b45309", "#92400e"],
+  },
+];
+
+function generateThemePalette(theme: string, count: number): string[] {
+  const GOLDEN_ANGLE = 137.508;
+  const themeParams: Record<string, { s: number; l: number; hueOffset: number }> = {
+    jewel:   { s: 62, l: 58, hueOffset: 0 },
+    pastel:  { s: 60, l: 78, hueOffset: 20 },
+    vivid:   { s: 80, l: 48, hueOffset: 0 },
+    earthy:  { s: 22, l: 52, hueOffset: 30 },
+    ocean:   { s: 75, l: 48, hueOffset: 190 },
+    autumn:  { s: 78, l: 50, hueOffset: 20 },
+  };
+
+  const params = themeParams[theme] ?? themeParams.jewel;
+  const colors: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const hue = (params.hueOffset + i * GOLDEN_ANGLE) % 360;
+    const saturation = params.s + (i % 3) * 3;
+    const lightness = params.l + (i % 2) * 4;
+    colors.push(hslToHex(hue, saturation, lightness));
+  }
+
+  return colors;
 }
