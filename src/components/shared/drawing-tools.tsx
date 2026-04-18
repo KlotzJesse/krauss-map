@@ -2840,6 +2840,7 @@ const LayerDialogs = memo(function LayerDialogs({
                   { keys: ["G"], desc: "Alle Ebenen anzeigen (Fit all)" },
                   { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
                   { keys: ["H"], desc: "Seitenleiste ein-/ausblenden" },
+                  { keys: ["M"], desc: "Kartenstil wechseln" },
                   { keys: ["+"], desc: "Zoom in" },
                   { keys: ["-"], desc: "Zoom out" },
                   { keys: ["Ctrl", "K"], desc: "Suche / Befehlspalette" },

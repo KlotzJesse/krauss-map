@@ -634,6 +634,25 @@ const MapInner = memo(function MapInner({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [toggleSidebar]);
 
+  // M key: cycle map style
+  useEffect(() => {
+    if (!onCycleMapStyle) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "m" && e.key !== "M") return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
+      onCycleMapStyle();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onCycleMapStyle]);
+
   // +/- keys: zoom in/out
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
