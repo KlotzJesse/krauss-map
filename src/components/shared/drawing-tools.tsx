@@ -1810,11 +1810,50 @@ function LayerManagementSection({
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
-        setImportText((prev) =>
-          prev
-            ? `${prev}\n${ev.target?.result}`
-            : String(ev.target?.result ?? "")
-        );
+        const raw = String(ev.target?.result ?? "");
+        // Detect GeoJSON: extract postal code properties
+        const isJsonFile =
+          file.name.endsWith(".json") || file.name.endsWith(".geojson");
+        if (isJsonFile) {
+          try {
+            const parsed = JSON.parse(raw) as Record<string, unknown>;
+            const features =
+              parsed.type === "FeatureCollection" &&
+              Array.isArray(parsed.features)
+                ? (parsed.features as {
+                    properties?: Record<string, unknown>;
+                  }[])
+                : parsed.type === "Feature"
+                  ? [parsed as { properties?: Record<string, unknown> }]
+                  : null;
+            if (features) {
+              const codes = features
+                .map((f) => {
+                  const p = f.properties ?? {};
+                  const raw =
+                    p.postal_code ??
+                    p.postcode ??
+                    p.plz ??
+                    p.PLZ ??
+                    p.code ??
+                    p.zip ??
+                    "";
+                  return String(raw).replace(/\D/g, "").trim();
+                })
+                .filter((c) => c.length >= 2 && c.length <= 5);
+              if (codes.length > 0) {
+                setImportText((prev) =>
+                  prev ? `${prev}\n${codes.join("\n")}` : codes.join("\n")
+                );
+                e.target.value = "";
+                return;
+              }
+            }
+          } catch {
+            // Not valid JSON — fall through to text import
+          }
+        }
+        setImportText((prev) => (prev ? `${prev}\n${raw}` : raw));
       };
       reader.readAsText(file);
       e.target.value = "";
@@ -2892,7 +2931,8 @@ function LayerManagementSection({
             <AlertDialogTitle>PLZ importieren</AlertDialogTitle>
             <AlertDialogDescription>
               Füge PLZ ein oder lade eine Datei hoch — getrennt durch Komma,
-              Semikolon, Leerzeichen oder Zeilenumbruch.
+              Semikolon, Leerzeichen oder Zeilenumbruch. Auch GeoJSON/CSV mit
+              PLZ-Spalte wird unterstützt.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 py-1">
@@ -2905,10 +2945,10 @@ function LayerManagementSection({
             />
             <label className="inline-flex items-center gap-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
               <Upload className="h-3 w-3" />
-              <span>CSV / TXT hochladen</span>
+              <span>CSV / TXT / GeoJSON hochladen</span>
               <input
                 type="file"
-                accept=".csv,.txt,.tsv"
+                accept=".csv,.txt,.tsv,.json,.geojson"
                 className="sr-only"
                 onChange={handleImportFileUpload}
               />
