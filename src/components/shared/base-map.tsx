@@ -367,6 +367,7 @@ const MapInner = memo(function MapInner({
                 versions={versions}
                 changes={changes}
                 onOpenConflicts={handleOpenConflicts}
+                undoRedoStatus={initialUndoRedoStatus}
               />
             </Suspense>
           </DrawingToolsErrorBoundary>

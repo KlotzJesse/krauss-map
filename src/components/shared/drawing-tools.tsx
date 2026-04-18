@@ -136,6 +136,13 @@ const LayerMergeDialog = dynamic(
     ),
   { ssr: false }
 );
+const UndoRedoToolbar = dynamic(
+  () =>
+    import("@/components/areas/undo-redo-toolbar").then(
+      (m) => m.UndoRedoToolbar
+    ),
+  { ssr: false }
+);
 
 interface StatsSectionProps {
   layers: Layer[];
@@ -264,6 +271,14 @@ export interface DrawingToolsProps {
   versionId?: number | null;
 
   isLayerSwitchPending?: boolean;
+
+  // Undo/redo status (from server)
+  undoRedoStatus?: {
+    canUndo: boolean;
+    canRedo: boolean;
+    undoCount: number;
+    redoCount: number;
+  };
 
   // Version and change data for dialogs
 
@@ -2115,6 +2130,7 @@ function DrawingToolsImpl({
   versions = EMPTY_ARRAY,
   changes = EMPTY_ARRAY,
   onOpenConflicts,
+  undoRedoStatus,
 }: DrawingToolsProps) {
   const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
 
@@ -2344,6 +2360,15 @@ function DrawingToolsImpl({
               Änderungen erstellen neue Version
             </span>
           </div>
+        )}
+        {!isViewingVersion && areaId && undoRedoStatus && (
+          <UndoRedoToolbar
+            areaId={areaId}
+            initialStatus={undoRedoStatus}
+            onStatusUpdate={onLayerUpdate}
+            className="mt-0.5"
+            variant="default"
+          />
         )}
         <CardAction>
           <button
