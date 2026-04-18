@@ -1,5 +1,5 @@
 "use no memo";
-import { PlusIcon } from "lucide-react";
+import { Camera, PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   Component,
@@ -276,6 +276,16 @@ const MapInner = memo(function MapInner({
     country,
   });
 
+  const handleScreenshot = useCallback(() => {
+    const canvas = rawMapRef.current?.getCanvas();
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `karte-${areaName ?? "export"}-${new Date().toISOString().slice(0, 10)}.png`;
+    a.click();
+  }, [areaName]);
+
   // startTransition-wrapped handlers to defer heavy subtree re-renders
   const handleShowTools = useStableCallback(() =>
     startTransition(() => interactions.showTools())
@@ -374,6 +384,19 @@ const MapInner = memo(function MapInner({
           </ToggleButton>
         </div>
       </Activity>
+
+      {/* Screenshot button - bottom right */}
+      <div className="absolute bottom-4 right-4 z-10">
+        <button
+          type="button"
+          onClick={handleScreenshot}
+          title="Karte als PNG speichern"
+          aria-label="Screenshot der Karte erstellen"
+          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <Camera className="h-4 w-4" />
+        </button>
+      </div>
 
       {/* Conflict resolution panel — right side, next to the map */}
       <Activity mode={showConflicts ? "visible" : "hidden"}>
@@ -484,6 +507,7 @@ const BaseMapComponent = ({
             style={MAP_STYLE}
             minZoom={3}
             maxZoom={18}
+            canvasContextAttributes={{ preserveDrawingBuffer: true }}
           >
             <MapInner
               data={data}
