@@ -267,6 +267,17 @@ export function NavAreas({
     (a) => a.isArchived === "true"
   ).length;
 
+  const activeAreaCount = optimisticAreas.filter(
+    (a) => a.isArchived !== "true"
+  ).length;
+  const totalPlzCount = useMemo(
+    () =>
+      optimisticAreas
+        .filter((a) => a.isArchived !== "true")
+        .reduce((sum, a) => sum + (a.postalCodeCount ?? 0), 0),
+    [optimisticAreas]
+  );
+
   // Group visibleAreas by tag (when groupByTag is on)
   const groupedByTag = useMemo(() => {
     if (!groupByTag) return null;
@@ -804,6 +815,26 @@ export function NavAreas({
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
+
+      {/* Compact stats footer */}
+      {!isLoading && activeAreaCount > 0 && (
+        <div className="group-data-[collapsible=icon]:hidden px-3 py-1.5 border-t flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>
+            <span className="font-medium text-foreground">
+              {activeAreaCount}
+            </span>{" "}
+            Gebiet{activeAreaCount !== 1 ? "e" : ""}
+          </span>
+          {totalPlzCount > 0 && (
+            <span>
+              <span className="font-medium text-foreground">
+                {totalPlzCount.toLocaleString("de-DE")}
+              </span>{" "}
+              PLZ gesamt
+            </span>
+          )}
+        </div>
+      )}
 
       <CreateAreaDialog
         open={createDialogOpen}
