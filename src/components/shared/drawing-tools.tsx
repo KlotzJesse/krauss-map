@@ -1188,6 +1188,7 @@ interface LayerManagementSectionProps {
   onPreviewPostalCode?: (postalCode: string | null) => void;
   onZoomToLayer?: (layerId: number) => void;
   plzFindInputRef?: React.RefObject<HTMLInputElement | null>;
+  newLayerInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 function LayerManagementSection({
@@ -1224,6 +1225,7 @@ function LayerManagementSection({
   onPreviewPostalCode,
   onZoomToLayer,
   plzFindInputRef: externalPlzFindInputRef,
+  newLayerInputRef: externalNewLayerInputRef,
 }: LayerManagementSectionProps) {
   const { isLocked, toggleLock } = useLockedLayers(areaId);
 
@@ -1298,6 +1300,8 @@ function LayerManagementSection({
   const [plzFindQuery, setPlzFindQuery] = useState("");
   const internalPlzFindInputRef = useRef<HTMLInputElement | null>(null);
   const plzFindInputRef = externalPlzFindInputRef ?? internalPlzFindInputRef;
+  const internalNewLayerInputRef = useRef<HTMLInputElement | null>(null);
+  const newLayerInputRef = externalNewLayerInputRef ?? internalNewLayerInputRef;
   const plzFindResults = useMemo(() => {
     const q = plzFindQuery.trim().replace(/\D/g, "");
     if (q.length < 2) return null;
@@ -1708,6 +1712,7 @@ function LayerManagementSection({
           {/* Create new layer */}
           <div className="flex gap-1">
             <Input
+              ref={newLayerInputRef}
               value={form.newLayerName}
               onChange={handleNewLayerNameChange}
               maxLength={31}
@@ -2138,6 +2143,7 @@ const LayerDialogs = memo(function LayerDialogs({
               { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
               { keys: ["/"], desc: "PLZ-Suche fokussieren" },
               { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
+              { keys: ["N"], desc: "Neues Gebiet anlegen" },
               { keys: ["Esc"], desc: "Zeichenmodus beenden" },
               { keys: ["Enter"], desc: "Polygon abschließen" },
               { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
@@ -2336,6 +2342,7 @@ function DrawingToolsImpl({
   const onZoomToLayerRef = useRef(onZoomToLayer);
   onZoomToLayerRef.current = onZoomToLayer;
   const plzFindInputRef = useRef<HTMLInputElement | null>(null);
+  const newLayerInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleOpenKeyboardHelp = useCallback(
     () => dispatchUI({ type: "OPEN_KEYBOARD_HELP" }),
@@ -2363,6 +2370,17 @@ function DrawingToolsImpl({
       if (e.key === "f" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const id = activeLayerIdRef.current;
         if (id) onZoomToLayerRef.current?.(id);
+        return;
+      }
+
+      // N key: focus new layer input
+      if (e.key === "n" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        dispatchUIRef.current({ type: "SET_LAYERS_OPEN", open: true });
+        setTimeout(() => {
+          newLayerInputRef.current?.focus();
+          newLayerInputRef.current?.select();
+        }, 50);
         return;
       }
 
@@ -2568,6 +2586,7 @@ function DrawingToolsImpl({
             onPreviewPostalCode={onPreviewPostalCode}
             onZoomToLayer={onZoomToLayer}
             plzFindInputRef={plzFindInputRef}
+            newLayerInputRef={newLayerInputRef}
           />
         )}
 
