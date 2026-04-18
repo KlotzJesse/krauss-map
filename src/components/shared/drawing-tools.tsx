@@ -52,6 +52,8 @@ import {
   duplicateLayerAction,
   updateLayerAction,
   exportAreaGeoJSONAction,
+  exportAreaDataAction,
+  importAreaFromDataAction,
 } from "@/app/actions/area-actions";
 import { batchUpdateVisibilityAction } from "@/app/actions/layer-actions";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
@@ -673,6 +675,26 @@ function useDrawingToolsActions({
     toast.success("GeoJSON exportiert");
   };
 
+  const handleExportData = async () => {
+    if (!areaId) {
+      toast.warning("Kein Gebiet ausgewählt");
+      return;
+    }
+    const result = await exportAreaDataAction(areaId);
+    if (!result.success || !result.data) {
+      toast.error(result.error ?? "JSON Export fehlgeschlagen");
+      return;
+    }
+    const blob = new Blob([result.data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${areaName ?? `gebiet-${areaId}`}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("JSON exportiert");
+  };
+
   const handleCreateLayer = async () => {
     if (!form.newLayerName.trim()) {
       return;
@@ -1000,6 +1022,7 @@ function useDrawingToolsActions({
     handleRemovePostalCodeFromLayer,
     handleNotesChange,
     handleExportGeoJSON,
+    handleExportData,
     handleBulkDelete,
     handleBulkVisibility,
   };
@@ -1878,6 +1901,7 @@ function DrawingToolsImpl({
     handleRemovePostalCodeFromLayer,
     handleNotesChange,
     handleExportGeoJSON,
+    handleExportData,
     handleBulkDelete,
     handleBulkVisibility,
   } = useDrawingToolsActions({
@@ -1945,6 +1969,24 @@ function DrawingToolsImpl({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  const handleImportDataFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = "";
+      const text = await file.text();
+      const toastId = toast.loading("Importiere Gebiet...");
+      const result = await importAreaFromDataAction(text);
+      toast.dismiss(toastId);
+      if (!result?.success) {
+        toast.error(result?.error ?? "Import fehlgeschlagen");
+      }
+    },
+    []
+  );
+
+  const importDataFileRef = useRef<HTMLInputElement>(null);
 
   return (
     <Card
@@ -2062,7 +2104,23 @@ function DrawingToolsImpl({
           onExportExcel={handleExportExcel}
           onExportPDF={handleExportPDF}
           onExportGeoJSON={handleExportGeoJSON}
+          onExportData={handleExportData}
         />
+
+        {/* Import JSON — creates a new area from JSON backup */}
+        <div className="flex justify-end">
+          <label className="inline-flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+            <Upload className="h-3 w-3" />
+            <span>Gebiet aus JSON importieren</span>
+            <input
+              ref={importDataFileRef}
+              type="file"
+              accept=".json"
+              className="sr-only"
+              onChange={handleImportDataFile}
+            />
+          </label>
+        </div>
 
         {/* Stats Section */}
         {postalCodesData && (

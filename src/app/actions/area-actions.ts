@@ -321,6 +321,138 @@ export async function exportAreaGeoJSONAction(
 }
 
 
+/** Area data format for JSON export/import (no geometry blobs, just PLZ codes). */
+export interface AreaExportData {
+  version: 1;
+  name: string;
+  description?: string | null;
+  granularity: string;
+  country: string;
+  layers: Array<{
+    name: string;
+    color: string;
+    opacity: number;
+    isVisible: string;
+    orderIndex: number;
+    notes?: string | null;
+    postalCodes: string[];
+  }>;
+}
+
+export async function exportAreaDataAction(
+  areaId: number
+): ServerActionResponse<string> {
+  try {
+    const area = await db.query.areas.findFirst({
+      where: eq(areas.id, areaId),
+      with: {
+        layers: {
+          orderBy: (l, { asc }) => [asc(l.orderIndex)],
+          with: { postalCodes: true },
+        },
+      },
+    });
+
+    if (!area) return { success: false, error: "Gebiet nicht gefunden" };
+
+    const exportData: AreaExportData = {
+      version: 1,
+      name: area.name,
+      description: area.description,
+      granularity: area.granularity ?? "5digit",
+      country: area.country ?? "DE",
+      layers: area.layers.map((l) => ({
+        name: l.name,
+        color: l.color,
+        opacity: l.opacity ?? 80,
+        isVisible: l.isVisible ?? "true",
+        orderIndex: l.orderIndex ?? 0,
+        notes: l.notes,
+        postalCodes: l.postalCodes.map((pc) => pc.postalCode).sort(),
+      })),
+    };
+
+    return { success: true, data: JSON.stringify(exportData, null, 2) };
+  } catch (error) {
+    console.error("Error exporting area data:", error);
+    return { success: false, error: "Daten-Export fehlgeschlagen" };
+  }
+}
+
+export async function importAreaFromDataAction(
+  jsonData: string,
+  createdBy?: string
+): ServerActionResponse<{ areaId: number }> {
+  let redirectPath: string | null = null;
+
+  try {
+    const raw = JSON.parse(jsonData) as AreaExportData;
+    if (!raw || typeof raw !== "object" || raw.version !== 1) {
+      return { success: false, error: "Ungültiges Dateiformat" };
+    }
+
+    let newAreaId: number | null = null;
+
+    await db.transaction(async (tx) => {
+      const [newArea] = await tx
+        .insert(areas)
+        .values({
+          name: raw.name,
+          description: raw.description ?? undefined,
+          granularity: raw.granularity ?? "5digit",
+          country: raw.country ?? "DE",
+        })
+        .returning();
+
+      newAreaId = newArea.id;
+
+      for (const layerData of raw.layers) {
+        const [newLayer] = await tx
+          .insert(areaLayers)
+          .values({
+            areaId: newArea.id,
+            name: layerData.name.slice(0, 31),
+            color: layerData.color,
+            opacity: layerData.opacity,
+            isVisible: layerData.isVisible,
+            orderIndex: layerData.orderIndex,
+            notes: layerData.notes ?? null,
+          })
+          .returning();
+
+        if (layerData.postalCodes.length > 0) {
+          await tx
+            .insert(areaLayerPostalCodes)
+            .values(
+              layerData.postalCodes.map((code) => ({
+                layerId: newLayer.id,
+                postalCode: code,
+              }))
+            )
+            .onConflictDoNothing();
+        }
+      }
+    });
+
+    if (!newAreaId) throw new Error("Area creation failed");
+
+    updateTag("areas");
+    updateTag(`area-${newAreaId}`);
+    updateTag("version-info");
+
+    redirectPath = `/postal-codes/${newAreaId}`;
+  } catch (error) {
+    if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) {
+      throw error;
+    }
+    console.error("Error importing area data:", error);
+    return { success: false, error: "Import fehlgeschlagen" };
+  }
+
+  if (redirectPath) redirect(redirectPath as Route);
+  return { success: false, error: "Unbekannter Fehler" };
+}
+
 export async function duplicateAreaAction(sourceAreaId: number) {
   let redirectPath: string | null = null;
 

@@ -32,6 +32,7 @@ interface DrawingActionsSectionProps {
   onExportExcel: () => void;
   onExportPDF: () => void;
   onExportGeoJSON: () => void;
+  onExportData: () => void;
 }
 
 export function DrawingActionsSection({
@@ -45,6 +46,7 @@ export function DrawingActionsSection({
   onExportExcel,
   onExportPDF,
   onExportGeoJSON,
+  onExportData,
 }: DrawingActionsSectionProps) {
   const isDrawingMode =
     currentMode !== null &&
@@ -140,6 +142,24 @@ export function DrawingActionsSection({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Als GeoJSON exportieren (mit Geometrien)</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onExportData}
+                      className="flex-1 h-7 text-xs"
+                    />
+                  }
+                >
+                  <FileJson className="h-3 w-3 mr-1" />
+                  JSON
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Gebiet als JSON sichern (für Import/Restore)</p>
                 </TooltipContent>
               </Tooltip>
             </div>
