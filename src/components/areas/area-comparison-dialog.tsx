@@ -376,6 +376,81 @@ export function AreaComparisonDialog({
                 )}
               </div>
             </div>
+
+            {/* PLZ code diff */}
+            {(result.overlapCodes.length > 0 ||
+              result.onlyInACodes.length > 0 ||
+              result.onlyInBCodes.length > 0) && (
+              <div className="border-t pt-4">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-3">
+                  PLZ-Vergleich (bis 200 je Kategorie)
+                </h4>
+                <div className="grid grid-cols-3 gap-3">
+                  {result.onlyInACodes.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-medium text-primary mb-1.5 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+                        Nur in A ({result.onlyInACodes.length}
+                        {result.onlyInA > result.onlyInACodes.length ? "+" : ""}
+                        )
+                      </div>
+                      <div className="flex flex-wrap gap-0.5 max-h-32 overflow-y-auto">
+                        {result.onlyInACodes.map((code) => (
+                          <span
+                            key={code}
+                            className="text-[10px] font-mono bg-primary/10 text-primary rounded px-1 py-0.5 leading-none"
+                          >
+                            {code}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {result.overlapCodes.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-medium text-orange-600 mb-1.5 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block" />
+                        In beiden ({result.overlapCodes.length}
+                        {result.overlapCount > result.overlapCodes.length
+                          ? "+"
+                          : ""}
+                        )
+                      </div>
+                      <div className="flex flex-wrap gap-0.5 max-h-32 overflow-y-auto">
+                        {result.overlapCodes.map((code) => (
+                          <span
+                            key={code}
+                            className="text-[10px] font-mono bg-orange-100 text-orange-700 rounded px-1 py-0.5 leading-none"
+                          >
+                            {code}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {result.onlyInBCodes.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-medium text-blue-600 mb-1.5 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
+                        Nur in B ({result.onlyInBCodes.length}
+                        {result.onlyInB > result.onlyInBCodes.length ? "+" : ""}
+                        )
+                      </div>
+                      <div className="flex flex-wrap gap-0.5 max-h-32 overflow-y-auto">
+                        {result.onlyInBCodes.map((code) => (
+                          <span
+                            key={code}
+                            className="text-[10px] font-mono bg-blue-100 text-blue-700 rounded px-1 py-0.5 leading-none"
+                          >
+                            {code}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </DialogContent>

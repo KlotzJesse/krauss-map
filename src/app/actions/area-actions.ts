@@ -1946,6 +1946,9 @@ export interface AreaComparisonResult {
   overlapCount: number;
   onlyInA: number;
   onlyInB: number;
+  overlapCodes: string[];
+  onlyInACodes: string[];
+  onlyInBCodes: string[];
 }
 
 export async function getAreaComparisonAction(
@@ -1953,7 +1956,7 @@ export async function getAreaComparisonAction(
   areaIdB: number
 ): ServerActionResponse<AreaComparisonResult> {
   try {
-    const [dataA, dataB, overlap] = await Promise.all([
+    const [dataA, dataB, overlap, codesResult] = await Promise.all([
       // Area A details
       db.execute<Record<string, unknown>>(sql`
         SELECT
@@ -2013,6 +2016,34 @@ export async function getAreaComparisonAction(
           WHERE b_codes.postal_code = a_codes.postal_code
         )
       `),
+      // PLZ code diff (capped at 200 each)
+      db.execute<Record<string, unknown>>(sql`
+        WITH a_codes AS (
+          SELECT DISTINCT alpc.postal_code
+          FROM area_layer_postal_codes alpc
+          INNER JOIN area_layers al ON al.id = alpc.layer_id AND al.area_id = ${areaIdA}
+        ),
+        b_codes AS (
+          SELECT DISTINCT alpc.postal_code
+          FROM area_layer_postal_codes alpc
+          INNER JOIN area_layers al ON al.id = alpc.layer_id AND al.area_id = ${areaIdB}
+        )
+        SELECT
+          postal_code,
+          CASE
+            WHEN EXISTS (SELECT 1 FROM a_codes ac WHERE ac.postal_code = c.postal_code)
+             AND EXISTS (SELECT 1 FROM b_codes bc WHERE bc.postal_code = c.postal_code) THEN 'both'
+            WHEN EXISTS (SELECT 1 FROM a_codes ac WHERE ac.postal_code = c.postal_code) THEN 'only_a'
+            ELSE 'only_b'
+          END AS bucket
+        FROM (
+          SELECT postal_code FROM a_codes
+          UNION
+          SELECT postal_code FROM b_codes
+        ) c
+        ORDER BY postal_code
+        LIMIT 600
+      `),
     ]);
 
     if (!dataA.rows[0] || !dataB.rows[0]) {
@@ -2023,6 +2054,23 @@ export async function getAreaComparisonAction(
     const rowB = dataB.rows[0] as Record<string, unknown>;
     const overlapRow = overlap.rows[0] as Record<string, unknown>;
     const overlapCount = Number(overlapRow.overlap ?? 0);
+
+    const codeRows = codesResult.rows as {
+      postal_code: string;
+      bucket: string;
+    }[];
+    const overlapCodes = codeRows
+      .filter((r) => r.bucket === "both")
+      .map((r) => r.postal_code)
+      .slice(0, 200);
+    const onlyInACodes = codeRows
+      .filter((r) => r.bucket === "only_a")
+      .map((r) => r.postal_code)
+      .slice(0, 200);
+    const onlyInBCodes = codeRows
+      .filter((r) => r.bucket === "only_b")
+      .map((r) => r.postal_code)
+      .slice(0, 200);
 
     const aData: AreaComparisonData = {
       id: Number(rowA.id),
@@ -2049,6 +2097,9 @@ export async function getAreaComparisonAction(
         overlapCount,
         onlyInA: aData.totalPlz - overlapCount,
         onlyInB: bData.totalPlz - overlapCount,
+        overlapCodes,
+        onlyInACodes,
+        onlyInBCodes,
       },
     };
   } catch (error) {
