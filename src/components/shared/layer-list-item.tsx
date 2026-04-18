@@ -480,13 +480,40 @@ export const LayerListItem = memo(function LayerListItem({
             {allCodesSet &&
               allCodesSet.size > 0 &&
               (layer.postalCodes?.length ?? 0) > 0 && (
-                <span className="text-[9px] text-muted-foreground tabular-nums">
-                  {(
-                    ((layer.postalCodes?.length ?? 0) / allCodesSet.size) *
-                    100
-                  ).toFixed(1)}
-                  %
-                </span>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span className="flex items-center gap-0.5 cursor-default" />
+                    }
+                  >
+                    <span
+                      className="inline-block h-1.5 rounded-full bg-current opacity-40"
+                      style={{
+                        backgroundColor: layer.color,
+                        opacity: 0.7,
+                        width: `${Math.max(8, Math.round(((layer.postalCodes?.length ?? 0) / allCodesSet.size) * 48))}px`,
+                      }}
+                    />
+                    <span className="text-[9px] text-muted-foreground tabular-nums">
+                      {(
+                        ((layer.postalCodes?.length ?? 0) / allCodesSet.size) *
+                        100
+                      ).toFixed(1)}
+                      %
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {layer.postalCodes?.length ?? 0} von {allCodesSet.size}{" "}
+                      PLZ (
+                      {(
+                        ((layer.postalCodes?.length ?? 0) / allCodesSet.size) *
+                        100
+                      ).toFixed(1)}
+                      %)
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             {duplicateCount > 0 && (
               <Tooltip>

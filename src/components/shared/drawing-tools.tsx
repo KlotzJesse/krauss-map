@@ -2846,6 +2846,10 @@ const LayerDialogs = memo(function LayerDialogs({
                   { keys: ["M"], desc: "Kartenstil wechseln" },
                   { keys: ["+"], desc: "Zoom in" },
                   { keys: ["-"], desc: "Zoom out" },
+                  {
+                    keys: ["Alt", "⇧", "↑ / ↓"],
+                    desc: "Gebiet wechseln (Sidebar)",
+                  },
                   { keys: ["Ctrl", "K"], desc: "Suche / Befehlspalette" },
                   { keys: ["Ctrl", "B"], desc: "Kartenlesezeichen" },
                   { keys: ["?"], desc: "Shortcuts anzeigen" },

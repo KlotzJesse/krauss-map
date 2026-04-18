@@ -12,7 +12,7 @@ import {
   IconTags,
   IconX,
 } from "@tabler/icons-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   useOptimistic,
   useReducer,
@@ -214,6 +214,7 @@ export function NavAreas({
       editInputRef.current?.focus();
     }
   }, [editingAreaId]);
+  const router = useRouter();
   const pathname = usePathname();
   const currentAreaIdFromRoute =
     pathname?.match(/\/postal-codes\/(\d+)/)?.[1] ?? null;
@@ -372,6 +373,38 @@ export function NavAreas({
     },
     [onAreaSelect]
   );
+
+  // Alt+Shift+↑/↓: navigate between areas in the sidebar
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!e.altKey || !e.shiftKey) return;
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
+      if (!visibleAreas.length) return;
+      const currentIdx = visibleAreas.findIndex(
+        (a) => String(a.id) === currentAreaIdFromRoute
+      );
+      const nextIdx =
+        e.key === "ArrowUp"
+          ? Math.max(0, currentIdx === -1 ? 0 : currentIdx - 1)
+          : Math.min(
+              visibleAreas.length - 1,
+              currentIdx === -1 ? 0 : currentIdx + 1
+            );
+      if (nextIdx !== currentIdx || currentIdx === -1) {
+        e.preventDefault();
+        router.push(`/postal-codes/${visibleAreas[nextIdx].id}`);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [visibleAreas, currentAreaIdFromRoute, router]);
 
   const handleStartRename = useCallback(
     (area: AreaSummary, e: React.MouseEvent) => {
