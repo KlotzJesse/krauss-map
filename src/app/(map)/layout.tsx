@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { ResizableSidebarLayout } from "@/components/shared/resizable-sidebar-layout";
 import { FeatureErrorBoundary } from "@/components/ui/error-boundaries";
 import { SidebarSkeleton } from "@/components/ui/loading-skeleton";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
 
 export default async function MapLayout({
   children,
@@ -12,14 +13,7 @@ export default async function MapLayout({
 }) {
   return (
     <FeatureErrorBoundary fallbackMessage="Fehler beim Laden der Anwendung">
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
+      <ResizableSidebarLayout>
         <Suspense fallback={<SidebarSkeleton />}>
           <AppSidebar variant="inset" />
         </Suspense>
@@ -32,7 +26,7 @@ export default async function MapLayout({
             </div>
           </div>
         </SidebarInset>
-      </SidebarProvider>
+      </ResizableSidebarLayout>
     </FeatureErrorBoundary>
   );
 }
