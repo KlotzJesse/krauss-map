@@ -1045,12 +1045,14 @@ function LayerManagementSection({
     [optimisticLayers, handleReorderLayers]
   );
 
-  // Per-layer duplicate postal code counts
-  const duplicateCountByLayer = useMemo(() => {
+  // Per-layer duplicate postal code counts + overall stats
+  const { duplicateCountByLayer, layerStats } = useMemo(() => {
     const counts = new Map<number, number>();
     const codeToLayers = new Map<string, number[]>();
+    let totalCodes = 0;
     for (const layer of optimisticLayers) {
       if (!layer.postalCodes) continue;
+      totalCodes += layer.postalCodes.length;
       for (const pc of layer.postalCodes) {
         const existing = codeToLayers.get(pc.postalCode);
         if (existing) {
@@ -1060,14 +1062,23 @@ function LayerManagementSection({
         }
       }
     }
+    let duplicateCodeCount = 0;
     for (const [, layerIds] of codeToLayers) {
       if (layerIds.length > 1) {
+        duplicateCodeCount++;
         for (const id of layerIds) {
           counts.set(id, (counts.get(id) ?? 0) + 1);
         }
       }
     }
-    return counts;
+    return {
+      duplicateCountByLayer: counts,
+      layerStats: {
+        uniqueCodes: codeToLayers.size,
+        totalCodes,
+        duplicateCodes: duplicateCodeCount,
+      },
+    };
   }, [optimisticLayers]);
 
   return (
@@ -1338,6 +1349,23 @@ function LayerManagementSection({
               </DndContext>
             )}
           </div>
+
+          {/* Layer stats summary — shown when there are layers with codes */}
+          {layerStats.totalCodes > 0 && (
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t pt-1.5 mt-0.5">
+              <span>
+                <span className="font-medium text-foreground">{layerStats.uniqueCodes}</span> eindeutige PLZ
+              </span>
+              {layerStats.duplicateCodes > 0 && (
+                <span className="text-amber-500 font-medium">
+                  {layerStats.duplicateCodes}✕ doppelt
+                </span>
+              )}
+              <span>
+                <span className="font-medium text-foreground">{layerStats.totalCodes}</span> gesamt
+              </span>
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
       <Separator />
