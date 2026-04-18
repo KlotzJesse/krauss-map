@@ -1087,6 +1087,57 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleBulkMovePlz = (fromLayerId: number, toLayerId: number, codes: string[]) => {
+    if (!addPostalCodesToLayer || !removePostalCodesFromLayer || codes.length === 0) return;
+    startTransition(async () => {
+      const fromLayer = optimisticLayers.find((l) => l.id === fromLayerId);
+      const toLayer = optimisticLayers.find((l) => l.id === toLayerId);
+      if (!fromLayer || !toLayer) return;
+      const codeSet = new Set(codes);
+      updateOptimisticLayers({
+        type: "update",
+        id: fromLayerId,
+        layer: { postalCodes: fromLayer.postalCodes?.filter((pc) => !codeSet.has(pc.postalCode)) ?? [] },
+      });
+      const existingTarget = new Set(toLayer.postalCodes?.map((pc) => pc.postalCode) ?? []);
+      const newForTarget = codes.filter((c) => !existingTarget.has(c));
+      updateOptimisticLayers({
+        type: "update",
+        id: toLayerId,
+        layer: { postalCodes: [...(toLayer.postalCodes ?? []), ...newForTarget.map((c) => ({ postalCode: c }))] },
+      });
+      try {
+        await addPostalCodesToLayer(toLayerId, codes);
+        await removePostalCodesFromLayer(fromLayerId, codes);
+        onLayerUpdate?.();
+        toast.success(`${codes.length} PLZ → ${toLayer.name}`);
+      } catch {
+        toast.error("Fehler beim Verschieben der PLZ");
+      }
+    });
+  };
+
+  const handleBulkRemovePlz = (layerId: number, codes: string[]) => {
+    if (!removePostalCodesFromLayer || codes.length === 0) return;
+    startTransition(async () => {
+      const layer = optimisticLayers.find((l) => l.id === layerId);
+      if (!layer) return;
+      const codeSet = new Set(codes);
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { postalCodes: layer.postalCodes?.filter((pc) => !codeSet.has(pc.postalCode)) ?? [] },
+      });
+      try {
+        await removePostalCodesFromLayer(layerId, codes);
+        onLayerUpdate?.();
+        toast.success(`${codes.length} PLZ entfernt`);
+      } catch {
+        toast.error("Fehler beim Entfernen der PLZ");
+      }
+    });
+  };
+
   const handleBulkDelete = (layerIds: number[]) => {
     if (!layerIds.length) return;
     startTransition(async () => {
@@ -1155,6 +1206,8 @@ function useDrawingToolsActions({
     handleExportData,
     handleBulkDelete,
     handleBulkVisibility,
+    handleBulkMovePlz,
+    handleBulkRemovePlz,
   };
 }
 
@@ -1216,6 +1269,8 @@ interface LayerManagementSectionProps {
   handleClearLayerPLZ?: (layerId: number) => void;
   handleBulkDelete: (layerIds: number[]) => void;
   handleBulkVisibility: (layerIds: number[], visible: boolean) => void;
+  handleBulkMovePlz?: (fromLayerId: number, toLayerId: number, codes: string[]) => void;
+  handleBulkRemovePlz?: (layerId: number, codes: string[]) => void;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   onOpenConflicts?: () => void;
   onPreviewPostalCode?: (postalCode: string | null) => void;
@@ -1255,6 +1310,8 @@ function LayerManagementSection({
   handleClearLayerPLZ,
   handleBulkDelete,
   handleBulkVisibility,
+  handleBulkMovePlz,
+  handleBulkRemovePlz,
   addPostalCodesToLayer,
   onOpenConflicts,
   onPreviewPostalCode,
@@ -1957,6 +2014,8 @@ function LayerManagementSection({
                    onClearPLZ={handleClearLayerPLZ}
                    onAddPlzRange={addPostalCodesToLayer ? (layerId, codes) => addPostalCodesToLayer(layerId, codes) : undefined}
                    allCodesSet={allCodesSet}
+                   onBulkMovePlz={handleBulkMovePlz}
+                   onBulkRemovePlz={handleBulkRemovePlz}
                  />
                ))
              ) : (
@@ -2009,6 +2068,8 @@ function LayerManagementSection({
                       onClearPLZ={handleClearLayerPLZ}
                       onAddPlzRange={addPostalCodesToLayer ? (layerId, codes) => addPostalCodesToLayer(layerId, codes) : undefined}
                       allCodesSet={allCodesSet}
+                      onBulkMovePlz={handleBulkMovePlz}
+                      onBulkRemovePlz={handleBulkRemovePlz}
                     />
                   ))}
                 </SortableContext>
@@ -2471,6 +2532,8 @@ function DrawingToolsImpl({
     handleExportData,
     handleBulkDelete,
     handleBulkVisibility,
+    handleBulkMovePlz,
+    handleBulkRemovePlz,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -2838,6 +2901,8 @@ function DrawingToolsImpl({
             onOpenConflicts={onOpenConflicts}
             handleBulkDelete={handleBulkDelete}
             handleBulkVisibility={handleBulkVisibility}
+            handleBulkMovePlz={handleBulkMovePlz}
+            handleBulkRemovePlz={handleBulkRemovePlz}
             onPreviewPostalCode={onPreviewPostalCode}
             onZoomToLayer={onZoomToLayer}
             plzFindInputRef={plzFindInputRef}

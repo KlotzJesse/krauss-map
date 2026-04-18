@@ -98,6 +98,8 @@ interface LayerListItemProps {
   onClearPLZ?: (layerId: number) => void;
   onAddPlzRange?: (layerId: number, codes: string[]) => void;
   allCodesSet?: Set<string>;
+  onBulkMovePlz?: (fromLayerId: number, toLayerId: number, codes: string[]) => void;
+  onBulkRemovePlz?: (layerId: number, codes: string[]) => void;
 }
 
 function LayerColorPickerContent({
@@ -234,6 +236,8 @@ export const LayerListItem = memo(function LayerListItem({
   onClearPLZ,
   onAddPlzRange,
   allCodesSet,
+  onBulkMovePlz,
+  onBulkRemovePlz,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -243,6 +247,8 @@ export const LayerListItem = memo(function LayerListItem({
   const [codeSearch, setCodeSearch] = useState("");
   const [rangeInput, setRangeInput] = useState("");
   const [rangeInputVisible, setRangeInputVisible] = useState(false);
+  const [plzSelectMode, setPlzSelectMode] = useState(false);
+  const [selectedPlzCodes, setSelectedPlzCodes] = useState<Set<string>>(new Set());
   const isVisible = layer.isVisible !== "false";
   const currentOpacity = layer.opacity ?? 70;
   const postalCodes = layer.postalCodes ?? [];
@@ -808,6 +814,68 @@ export const LayerListItem = memo(function LayerListItem({
               )}
             </div>
           )}
+          {/* PLZ bulk select toolbar */}
+          {(onBulkMovePlz || onBulkRemovePlz) && postalCodes.length > 1 && (
+            <div className="flex items-center justify-between mt-1 mb-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setPlzSelectMode(!plzSelectMode);
+                  setSelectedPlzCodes(new Set());
+                }}
+                className={cn(
+                  "text-[10px] transition-colors",
+                  plzSelectMode ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {plzSelectMode ? `${selectedPlzCodes.size} ausgewählt` : "Mehrere auswählen"}
+              </button>
+              {plzSelectMode && selectedPlzCodes.size > 0 && (
+                <div className="flex items-center gap-1">
+                  {onBulkMovePlz && otherLayers.length > 0 && (
+                    <select
+                      className="h-5 text-[10px] bg-muted border-0 rounded px-1 cursor-pointer"
+                      defaultValue=""
+                      onChange={(e) => {
+                        const toId = Number(e.target.value);
+                        if (toId) {
+                          onBulkMovePlz(layer.id, toId, [...selectedPlzCodes]);
+                          setSelectedPlzCodes(new Set());
+                          setPlzSelectMode(false);
+                        }
+                        e.target.value = "";
+                      }}
+                    >
+                      <option value="" disabled>Verschieben nach…</option>
+                      {otherLayers.map((ol) => (
+                        <option key={ol.id} value={ol.id}>{ol.name}</option>
+                      ))}
+                    </select>
+                  )}
+                  {onBulkRemovePlz && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onBulkRemovePlz(layer.id, [...selectedPlzCodes]);
+                        setSelectedPlzCodes(new Set());
+                        setPlzSelectMode(false);
+                      }}
+                      className="h-5 px-1.5 text-[10px] bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors"
+                    >
+                      Entfernen
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlzCodes(new Set(filteredCodes.map((c) => c.postalCode)))}
+                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Alle
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto mt-1">
             {filteredCodes.length === 0 ? (
               <p className="text-[10px] text-muted-foreground w-full text-center py-1">
@@ -817,12 +885,25 @@ export const LayerListItem = memo(function LayerListItem({
               filteredCodes.map((pc) => (
                 <span
                   key={pc.postalCode}
-                  className="inline-flex items-center gap-0.5 text-[10px] bg-muted rounded px-1.5 py-0.5 leading-none group/badge cursor-pointer"
-                  onMouseEnter={() => onPreviewPostalCode?.(pc.postalCode)}
-                  onMouseLeave={() => onPreviewPostalCode?.(null)}
+                  className={cn(
+                    "inline-flex items-center gap-0.5 text-[10px] rounded px-1.5 py-0.5 leading-none group/badge cursor-pointer transition-colors",
+                    plzSelectMode && selectedPlzCodes.has(pc.postalCode)
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  )}
+                  onClick={plzSelectMode ? () => {
+                    const next = new Set(selectedPlzCodes);
+                    if (next.has(pc.postalCode)) next.delete(pc.postalCode);
+                    else next.add(pc.postalCode);
+                    setSelectedPlzCodes(next);
+                  } : undefined}
+                  onMouseEnter={() => !plzSelectMode && onPreviewPostalCode?.(pc.postalCode)}
+                  onMouseLeave={() => !plzSelectMode && onPreviewPostalCode?.(null)}
+                  role={plzSelectMode ? "checkbox" : undefined}
+                  aria-checked={plzSelectMode ? selectedPlzCodes.has(pc.postalCode) : undefined}
                 >
                   {pc.postalCode}
-                  {onMovePlz && otherLayers.length > 0 && (
+                  {!plzSelectMode && onMovePlz && otherLayers.length > 0 && (
                     <Tooltip>
                       <TooltipTrigger
                         render={
@@ -850,7 +931,7 @@ export const LayerListItem = memo(function LayerListItem({
                       <TooltipContent><p>PLZ verschieben</p></TooltipContent>
                     </Tooltip>
                   )}
-                  {onRemovePostalCode && (
+                  {!plzSelectMode && onRemovePostalCode && (
                     <button
                       type="button"
                       className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors"
