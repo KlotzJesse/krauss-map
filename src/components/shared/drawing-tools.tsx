@@ -189,6 +189,13 @@ const CopyLayerToAreaDialog = dynamic(
     ),
   { ssr: false }
 );
+const MergeLayersDialog = dynamic(
+  () =>
+    import("@/components/areas/merge-layers-dialog").then(
+      (m) => m.MergeLayersDialog
+    ),
+  { ssr: false }
+);
 const UndoRedoToolbar = dynamic(
   () =>
     import("@/components/areas/undo-redo-toolbar").then(
@@ -1366,6 +1373,7 @@ interface LayerManagementSectionProps {
   handleDeleteLayer: (layerId: number) => void;
   handleDuplicateLayer: (layerId: number) => void;
   handleOpenCopyToArea: (layerId: number, layerName: string) => void;
+  handleOpenMergeLayers: (layerId: number, layerName: string) => void;
   handleToggleVisibility: (layerId: number, visible: boolean) => void;
   handleSoloLayer: (layerId: number) => void;
   handleShowAllLayers: () => void;
@@ -1420,6 +1428,7 @@ function LayerManagementSection({
   handleDeleteLayer,
   handleDuplicateLayer,
   handleOpenCopyToArea,
+  handleOpenMergeLayers,
   handleToggleVisibility,
   handleSoloLayer,
   handleShowAllLayers,
@@ -2269,6 +2278,11 @@ function LayerManagementSection({
                   onDelete={handleDeleteLayer}
                   onDuplicateLayer={handleDuplicateLayer}
                   onCopyToArea={handleOpenCopyToArea}
+                  onMergeLayer={
+                    optimisticLayers.filter((l) => l.id !== layer.id).length > 0
+                      ? handleOpenMergeLayers
+                      : undefined
+                  }
                   onToggleVisibility={handleToggleVisibility}
                   onSoloLayer={handleSoloLayer}
                   onRemovePostalCode={guardedRemovePostalCode}
@@ -2337,6 +2351,12 @@ function LayerManagementSection({
                       onDelete={handleDeleteLayer}
                       onDuplicateLayer={handleDuplicateLayer}
                       onCopyToArea={handleOpenCopyToArea}
+                      onMergeLayer={
+                        optimisticLayers.filter((l) => l.id !== layer.id)
+                          .length > 0
+                          ? handleOpenMergeLayers
+                          : undefined
+                      }
                       onToggleVisibility={handleToggleVisibility}
                       onSoloLayer={handleSoloLayer}
                       onRemovePostalCode={guardedRemovePostalCode}
@@ -2967,6 +2987,12 @@ function DrawingToolsImpl({
     layerName: string;
   }>({ open: false, layerId: null, layerName: "" });
 
+  const [mergeLayersDialog, setMergeLayersDialog] = useState<{
+    open: boolean;
+    layerId: number | null;
+    layerName: string;
+  }>({ open: false, layerId: null, layerName: "" });
+
   // Area description inline editing
   const [descDraft, setDescDraft] = useState(areaDescription ?? "");
   const [descEditing, setDescEditing] = useState(false);
@@ -3085,6 +3111,13 @@ function DrawingToolsImpl({
   const handleOpenCopyToArea = useCallback(
     (layerId: number, layerName: string) => {
       setCopyLayerDialog({ open: true, layerId, layerName });
+    },
+    []
+  );
+
+  const handleOpenMergeLayers = useCallback(
+    (layerId: number, layerName: string) => {
+      setMergeLayersDialog({ open: true, layerId, layerName });
     },
     []
   );
@@ -3508,6 +3541,7 @@ function DrawingToolsImpl({
             handleDeleteLayer={handleDeleteLayer}
             handleDuplicateLayer={handleDuplicateLayer}
             handleOpenCopyToArea={handleOpenCopyToArea}
+            handleOpenMergeLayers={handleOpenMergeLayers}
             handleToggleVisibility={handleToggleVisibility}
             handleSoloLayer={handleSoloLayer}
             handleShowAllLayers={handleShowAllLayers}
@@ -3608,6 +3642,21 @@ function DrawingToolsImpl({
           currentAreaId={areaId ?? 0}
           onConfirm={handleConfirmCopyToArea}
           isPending={isCopyingLayer}
+        />
+
+        {/* Merge Layers Dialog */}
+        <MergeLayersDialog
+          open={mergeLayersDialog.open}
+          onOpenChange={(open) =>
+            setMergeLayersDialog((prev) => ({ ...prev, open }))
+          }
+          areaId={areaId ?? 0}
+          sourceLayerId={mergeLayersDialog.layerId ?? 0}
+          sourceLayerName={mergeLayersDialog.layerName ?? ""}
+          otherLayers={(layers ?? [])
+            .filter((l) => l.id !== mergeLayersDialog.layerId)
+            .map((l) => ({ id: l.id, name: l.name }))}
+          onSuccess={() => onLayerUpdate?.()}
         />
       </CardContent>
     </Card>
