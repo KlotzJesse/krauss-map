@@ -239,13 +239,21 @@ function StatsSection({
   const coverage =
     totalFeatures > 0 ? (assignedCount / totalFeatures) * 100 : 0;
 
-  // Build sorted layer sizes for bar chart
+  // Build sorted layer sizes for bar chart (include full data for CSV)
   const layerSizes = layers
-    .map((l) => ({
-      name: l.name ?? `Layer ${l.id}`,
-      count: l.postalCodes?.length ?? 0,
-      color: l.color ?? "#6366f1",
-    }))
+    .map((l) => {
+      const codes = l.postalCodes?.map((pc) => pc.postalCode) ?? [];
+      const sorted = [...codes].sort();
+      return {
+        id: l.id,
+        name: l.name ?? `Layer ${l.id}`,
+        count: codes.length,
+        color: l.color ?? "#6366f1",
+        notes: l.notes ?? "",
+        minCode: sorted[0] ?? "",
+        maxCode: sorted.at(-1) ?? "",
+      };
+    })
     .sort((a, b) => b.count - a.count);
   const maxCount = Math.max(...layerSizes.map((l) => l.count), 1);
 
@@ -346,13 +354,13 @@ function StatsSection({
                 title="Statistik als CSV exportieren"
                 onClick={() => {
                   const total = layerSizes.reduce((s, l) => s + l.count, 0);
-                  const header = "Layer;PLZ;Anteil %";
+                  const header = "Layer;Farbe;PLZ;Anteil %;Von;Bis;Notizen";
                   const rows = layerSizes.map(
                     (l) =>
-                      `${l.name};${l.count};${total > 0 ? ((l.count / total) * 100).toFixed(1) : "0.0"}`
+                      `${l.name};${l.color};${l.count};${total > 0 ? ((l.count / total) * 100).toFixed(1) : "0.0"};${l.minCode};${l.maxCode};"${(l.notes ?? "").replace(/"/g, '""')}"`
                   );
                   const csv = [header, ...rows].join("\n");
-                  const blob = new Blob([csv], {
+                  const blob = new Blob(["\uFEFF" + csv], {
                     type: "text/csv;charset=utf-8;",
                   });
                   const url = URL.createObjectURL(blob);
@@ -368,7 +376,7 @@ function StatsSection({
               </button>
             </div>
             {layerSizes.map((layer) => (
-              <div key={layer.name} className="flex items-center gap-1.5">
+              <div key={layer.id} className="flex items-center gap-1.5">
                 <div className="w-16 shrink-0 truncate text-[10px] text-muted-foreground">
                   {layer.name}
                 </div>
@@ -3392,12 +3400,21 @@ function LayerManagementSection({
                         layerStats.totalCodes > 0
                           ? (count / layerStats.totalCodes) * 100
                           : 0;
+                      const codes =
+                        layer.postalCodes?.map((pc) => pc.postalCode).sort() ??
+                        [];
+                      const minPlz = codes[0] ?? "";
+                      const maxPlz = codes.at(-1) ?? "";
+                      const range =
+                        minPlz && maxPlz && minPlz !== maxPlz
+                          ? `${minPlz}–${maxPlz}`
+                          : minPlz;
                       return (
                         <button
                           type="button"
                           key={layer.id}
                           className="flex items-center gap-1.5 text-[10px] w-full text-left hover:bg-muted/50 rounded px-0.5 transition-colors cursor-pointer"
-                          title={`${layer.name ?? `Layer ${layer.id}`} – ${count} PLZ (${pct.toFixed(0)}%) — klicken zum Aktivieren`}
+                          title={`${layer.name ?? `Layer ${layer.id}`} – ${count} PLZ (${pct.toFixed(0)}%)${range ? ` | ${range}` : ""} — klicken zum Aktivieren`}
                           onClick={() => onLayerSelect?.(layer.id)}
                         >
                           <span
