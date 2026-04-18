@@ -10,7 +10,7 @@ import {
 } from "@tabler/icons-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ChevronDown, ChevronUp, Eye, Palette, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, Palette, Search, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -921,6 +921,12 @@ function LayerManagementSection({
   );
 
   const hasHiddenLayers = optimisticLayers.some((l) => l.isVisible === "false");
+  const [layerSearch, setLayerSearch] = useState("");
+  const filteredLayers = useMemo(() => {
+    const q = layerSearch.trim().toLowerCase();
+    if (!q) return optimisticLayers;
+    return optimisticLayers.filter((l) => l.name.toLowerCase().includes(q));
+  }, [optimisticLayers, layerSearch]);
 
   // Per-layer duplicate postal code counts
   const duplicateCountByLayer = useMemo(() => {
@@ -1117,34 +1123,62 @@ function LayerManagementSection({
             </Tooltip>
           </div>
 
+          {/* Layer search — shown when there are enough layers to scroll */}
+          {optimisticLayers.length >= 5 && (
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+              <Input
+                value={layerSearch}
+                onChange={(e) => setLayerSearch(e.target.value)}
+                placeholder="Gebiete filtern…"
+                className="h-7 text-xs pl-7 pr-6"
+              />
+              {layerSearch && (
+                <button
+                  type="button"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground"
+                  onClick={() => setLayerSearch("")}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Layer list */}
           <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
-            {optimisticLayers.map((layer) => (
-              <LayerListItem
-                key={layer.id}
-                layer={layer}
-                activeLayerId={activeLayerId}
-                isLayerSwitchPending={isLayerSwitchPending}
-                duplicateCount={duplicateCountByLayer.get(layer.id) ?? 0}
-                editingLayerId={form.editingLayerId}
-                editingLayerName={form.editingLayerName}
-                editLayerInputRef={editLayerInputRef}
-                onSelect={(id) => onLayerSelect?.(id)}
-                onStartEdit={(id, name) =>
-                  dispatchForm({ type: "START_EDIT", layerId: id, name })
-                }
-                onConfirmEdit={handleRenameLayer}
-                onCancelEdit={() => dispatchForm({ type: "CANCEL_EDIT" })}
-                onEditNameChange={(name) =>
-                  dispatchForm({ type: "SET_EDIT_NAME", name })
-                }
-                onColorChange={handleColorChange}
-                onDelete={handleDeleteLayer}
-                onDuplicateLayer={handleDuplicateLayer}
-                onToggleVisibility={handleToggleVisibility}
-                onSoloLayer={handleSoloLayer}
-              />
-            ))}
+            {filteredLayers.length === 0 && layerSearch ? (
+              <p className="text-xs text-muted-foreground text-center py-3">
+                Keine Gebiete gefunden
+              </p>
+            ) : (
+              filteredLayers.map((layer) => (
+                <LayerListItem
+                  key={layer.id}
+                  layer={layer}
+                  activeLayerId={activeLayerId}
+                  isLayerSwitchPending={isLayerSwitchPending}
+                  duplicateCount={duplicateCountByLayer.get(layer.id) ?? 0}
+                  editingLayerId={form.editingLayerId}
+                  editingLayerName={form.editingLayerName}
+                  editLayerInputRef={editLayerInputRef}
+                  onSelect={(id) => onLayerSelect?.(id)}
+                  onStartEdit={(id, name) =>
+                    dispatchForm({ type: "START_EDIT", layerId: id, name })
+                  }
+                  onConfirmEdit={handleRenameLayer}
+                  onCancelEdit={() => dispatchForm({ type: "CANCEL_EDIT" })}
+                  onEditNameChange={(name) =>
+                    dispatchForm({ type: "SET_EDIT_NAME", name })
+                  }
+                  onColorChange={handleColorChange}
+                  onDelete={handleDeleteLayer}
+                  onDuplicateLayer={handleDuplicateLayer}
+                  onToggleVisibility={handleToggleVisibility}
+                  onSoloLayer={handleSoloLayer}
+                />
+              ))
+            )}
           </div>
         </CollapsibleContent>
       </Collapsible>
