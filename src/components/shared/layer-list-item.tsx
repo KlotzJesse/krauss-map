@@ -413,9 +413,15 @@ export const LayerListItem = memo(function LayerListItem({
                 )}
               </button>
             )}
-            <div
-              className="w-2.5 h-2.5 rounded-sm shrink-0 border border-border"
+            <button
+              type="button"
+              className="w-2.5 h-2.5 rounded-sm shrink-0 border border-border hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
               style={{ backgroundColor: layer.color }}
+              title="Farbe ändern"
+              onClick={(e) => {
+                e.stopPropagation();
+                setColorPickerOpen(true);
+              }}
             />
             {editingLayerId === layer.id ? (
               <Input
