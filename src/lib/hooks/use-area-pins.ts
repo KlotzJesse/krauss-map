@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 const STORAGE_KEY = "pinned-area-ids";
 
@@ -24,7 +24,12 @@ function writePins(pins: Set<number>): void {
 }
 
 export function useAreaPins() {
-  const [pinnedIds, setPinnedIds] = useState<Set<number>>(() => readPins());
+  const [pinnedIds, setPinnedIds] = useState<Set<number>>(new Set());
+
+  // Load from localStorage only after hydration to avoid SSR mismatch
+  useEffect(() => {
+    setPinnedIds(readPins());
+  }, []);
 
   const isPinned = useCallback((id: number) => pinnedIds.has(id), [pinnedIds]);
 

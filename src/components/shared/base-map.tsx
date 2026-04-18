@@ -28,7 +28,7 @@ import {
   Activity,
 } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import { Map, useMap } from "react-map-gl/maplibre";
+import { Map, useMap, type MapRef } from "react-map-gl/maplibre";
 
 import {
   DrawingToolsErrorBoundary,
@@ -436,11 +436,13 @@ const MapInner = memo(function MapInner({
     const center = config?.center ?? ([10.4515, 51.1657] as [number, number]);
     const zoom = config?.zoom ?? 5;
     setMapCenterZoom(center, zoom);
+    rawMapRef.current?.flyTo({ center, zoom });
   }, [country, setMapCenterZoom]);
 
   const handleBookmarkJump = useCallback(
     (center: [number, number], zoom: number) => {
       setMapCenterZoom(center, zoom);
+      rawMapRef.current?.flyTo({ center, zoom });
     },
     [setMapCenterZoom]
   );
@@ -450,7 +452,12 @@ const MapInner = memo(function MapInner({
     setIsGeolocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setMapCenterZoom([pos.coords.longitude, pos.coords.latitude], 13);
+        const center: [number, number] = [
+          pos.coords.longitude,
+          pos.coords.latitude,
+        ];
+        setMapCenterZoom(center, 13);
+        rawMapRef.current?.flyTo({ center, zoom: 13 });
         setIsGeolocating(false);
       },
       () => {
@@ -650,7 +657,9 @@ const MapInner = memo(function MapInner({
       5,
       Math.min(13, Math.round(Math.log2(360 / span)) - 1)
     );
-    setMapCenterZoom([centerLng, centerLat], zoom);
+    const center: [number, number] = [centerLng, centerLat];
+    setMapCenterZoom(center, zoom);
+    rawMapRef.current?.flyTo({ center, zoom });
   }, [data, layers, setMapCenterZoom]);
 
   // G key: zoom to fit all layers
@@ -1242,42 +1251,50 @@ const BaseMapComponent = ({
     localStorage.setItem("map-style-id", next.id);
   }, [mapStyleId]);
 
-  const [viewState, setViewState] = useState({
-    longitude: effectiveCenter[0],
-    latitude: effectiveCenter[1],
-    zoom: effectiveZoom,
-  });
+  const mapExternalRef = useRef<MapRef>(null);
+  // Track URL positions we wrote ourselves so the sync effect can ignore them
+  const lastDebouncePositionRef = useRef<[number, number, number] | null>(null);
+  const hasMountedRef = useRef(false);
 
-  // Sync from URL changes (back/forward, saved views)
-  useEffect(() => {
-    setViewState((prev) => ({
-      ...prev,
-      longitude: effectiveCenter[0],
-      latitude: effectiveCenter[1],
-      zoom: effectiveZoom,
-    }));
-  }, [effectiveCenter, effectiveZoom]);
-
-  // Handle map movement with debounced URL sync
+  // Handle map movement — only debounced URL sync, no React state update
+  // (map is uncontrolled: it manages its own viewport state internally)
   const handleMove = useCallback(
     (evt: {
       viewState: { longitude: number; latitude: number; zoom: number };
     }) => {
-      setViewState(evt.viewState);
-
-      // Debounced URL sync — don't write to URL on every frame
+      const { longitude, latitude, zoom } = evt.viewState;
       if (moveDebounceRef.current) {
         clearTimeout(moveDebounceRef.current);
       }
       moveDebounceRef.current = setTimeout(() => {
-        setMapCenterZoom(
-          [evt.viewState.longitude, evt.viewState.latitude],
-          evt.viewState.zoom
-        );
+        lastDebouncePositionRef.current = [longitude, latitude, zoom];
+        setMapCenterZoom([longitude, latitude], zoom);
       }, 750);
     },
     [setMapCenterZoom]
   );
+
+  // Sync from external URL changes (back/forward, zoom-to-layer, etc.)
+  // Skip if the URL change came from our own debounced panning write.
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    const last = lastDebouncePositionRef.current;
+    const isOwnWrite =
+      last !== null &&
+      Math.abs(last[0] - effectiveCenter[0]) < 0.0001 &&
+      Math.abs(last[1] - effectiveCenter[1]) < 0.0001 &&
+      Math.abs(last[2] - effectiveZoom) < 0.01;
+    if (!isOwnWrite) {
+      mapExternalRef.current?.flyTo({
+        center: [effectiveCenter[0], effectiveCenter[1]],
+        zoom: effectiveZoom,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveCenter[0], effectiveCenter[1], effectiveZoom]);
 
   // Cleanup debounce timer
   useEffect(
@@ -1299,7 +1316,12 @@ const BaseMapComponent = ({
       >
         <MapRecoveryBoundary>
           <Map
-            {...viewState}
+            ref={mapExternalRef}
+            initialViewState={{
+              longitude: effectiveCenter[0],
+              latitude: effectiveCenter[1],
+              zoom: effectiveZoom,
+            }}
             onMove={handleMove}
             mapStyle={currentMapStyle}
             style={MAP_STYLE}

@@ -148,6 +148,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type {
   ChangeSummary,
@@ -268,156 +269,156 @@ function StatsSection({
       <Separator />
       <Collapsible open={open} onOpenChange={onOpenChange}>
         <CollapsibleTrigger className="flex w-full items-center justify-between py-0.5 text-left">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">Statistik</span>
-              {!open && (
-                <span className="text-muted-foreground text-xs">
-                  {coverage.toFixed(0)}% Abdeckung · {assignedCount} PLZ
-                </span>
-              )}
-            </div>
-            <IconChevronDown
-              className={`text-muted-foreground size-3.5 transition-transform ${open ? "rotate-0" : "-rotate-90"}`}
-            />
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold">Statistik</span>
+            {!open && (
+              <span className="text-muted-foreground text-xs">
+                {coverage.toFixed(0)}% Abdeckung · {assignedCount} PLZ
+              </span>
+            )}
+          </div>
+          <IconChevronDown
+            className={`text-muted-foreground size-3.5 transition-transform ${open ? "rotate-0" : "-rotate-90"}`}
+          />
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="space-y-2 pb-1 pt-1">
-        {/* Coverage donut ring */}
-        <div className="flex items-center gap-3">
-          <svg
-            width="52"
-            height="52"
-            viewBox="0 0 52 52"
-            className="shrink-0"
-            aria-hidden
-          >
-            <circle
-              cx="26"
-              cy="26"
-              r="20"
-              fill="none"
-              strokeWidth="5"
-              className="stroke-muted"
-            />
-            <circle
-              cx="26"
-              cy="26"
-              r="20"
-              fill="none"
-              strokeWidth="5"
-              strokeDasharray={`${2 * Math.PI * 20}`}
-              strokeDashoffset={`${2 * Math.PI * 20 * (1 - Math.min(coverage, 100) / 100)}`}
-              strokeLinecap="round"
-              className="stroke-primary transition-[stroke-dashoffset] duration-500"
-              transform="rotate(-90 26 26)"
-            />
-            <text
-              x="26"
-              y="25"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="9.5"
-              fontWeight="bold"
-              className="fill-foreground"
-            >
-              {coverage.toFixed(0)}%
-            </text>
-            <text
-              x="26"
-              y="34"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="6.5"
-              className="fill-muted-foreground"
-            >
-              Abdeckung
-            </text>
-          </svg>
-          <div className="flex-1 space-y-1.5">
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>Zugewiesen</span>
-              <span className="tabular-nums font-medium text-foreground">
-                {assignedCount.toLocaleString("de-DE")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>Ohne Gebiet</span>
-              <span
-                className={`tabular-nums font-medium ${unassignedCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}
+            {/* Coverage donut ring */}
+            <div className="flex items-center gap-3">
+              <svg
+                width="52"
+                height="52"
+                viewBox="0 0 52 52"
+                className="shrink-0"
+                aria-hidden
               >
-                {unassignedCount.toLocaleString("de-DE")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>Gesamt PLZ</span>
-              <span className="tabular-nums font-medium text-foreground">
-                {totalFeatures.toLocaleString("de-DE")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>Gebiete</span>
-              <span className="tabular-nums font-medium text-foreground">
-                {layers.length}
-              </span>
-            </div>
-          </div>
-        </div>
-        {layerSizes.length > 0 && (
-          <div className="space-y-1 pt-0.5">
-            <div className="flex items-center justify-between">
-              <div className="text-[10px] font-semibold text-muted-foreground">
-                Layer-Verteilung
-              </div>
-              <button
-                type="button"
-                className="text-[9px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
-                title="Statistik als CSV exportieren"
-                onClick={() => {
-                  const total = layerSizes.reduce((s, l) => s + l.count, 0);
-                  const header = "Layer;Farbe;PLZ;Anteil %;Von;Bis;Notizen";
-                  const rows = layerSizes.map(
-                    (l) =>
-                      `${l.name};${l.color};${l.count};${total > 0 ? ((l.count / total) * 100).toFixed(1) : "0.0"};${l.minCode};${l.maxCode};"${(l.notes ?? "").replace(/"/g, '""')}"`
-                  );
-                  const csv = [header, ...rows].join("\n");
-                  const blob = new Blob(["\uFEFF" + csv], {
-                    type: "text/csv;charset=utf-8;",
-                  });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "statistik.csv";
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                <Download className="h-2.5 w-2.5" />
-                CSV
-              </button>
-            </div>
-            {layerSizes.map((layer) => (
-              <div key={layer.id} className="flex items-center gap-1.5">
-                <div className="w-16 shrink-0 truncate text-[10px] text-muted-foreground">
-                  {layer.name}
+                <circle
+                  cx="26"
+                  cy="26"
+                  r="20"
+                  fill="none"
+                  strokeWidth="5"
+                  className="stroke-muted"
+                />
+                <circle
+                  cx="26"
+                  cy="26"
+                  r="20"
+                  fill="none"
+                  strokeWidth="5"
+                  strokeDasharray={`${2 * Math.PI * 20}`}
+                  strokeDashoffset={`${2 * Math.PI * 20 * (1 - Math.min(coverage, 100) / 100)}`}
+                  strokeLinecap="round"
+                  className="stroke-primary transition-[stroke-dashoffset] duration-500"
+                  transform="rotate(-90 26 26)"
+                />
+                <text
+                  x="26"
+                  y="25"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="9.5"
+                  fontWeight="bold"
+                  className="fill-foreground"
+                >
+                  {coverage.toFixed(0)}%
+                </text>
+                <text
+                  x="26"
+                  y="34"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="6.5"
+                  className="fill-muted-foreground"
+                >
+                  Abdeckung
+                </text>
+              </svg>
+              <div className="flex-1 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>Zugewiesen</span>
+                  <span className="tabular-nums font-medium text-foreground">
+                    {assignedCount.toLocaleString("de-DE")}
+                  </span>
                 </div>
-                <div className="relative flex-1 h-3 rounded-sm bg-muted overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-sm transition-[width] duration-300"
-                    style={{
-                      width: `${(layer.count / maxCount) * 100}%`,
-                      backgroundColor: layer.color,
-                      opacity: 0.85,
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>Ohne Gebiet</span>
+                  <span
+                    className={`tabular-nums font-medium ${unassignedCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}
+                  >
+                    {unassignedCount.toLocaleString("de-DE")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>Gesamt PLZ</span>
+                  <span className="tabular-nums font-medium text-foreground">
+                    {totalFeatures.toLocaleString("de-DE")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>Gebiete</span>
+                  <span className="tabular-nums font-medium text-foreground">
+                    {layers.length}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {layerSizes.length > 0 && (
+              <div className="space-y-1 pt-0.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-semibold text-muted-foreground">
+                    Layer-Verteilung
+                  </div>
+                  <button
+                    type="button"
+                    className="text-[9px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
+                    title="Statistik als CSV exportieren"
+                    onClick={() => {
+                      const total = layerSizes.reduce((s, l) => s + l.count, 0);
+                      const header = "Layer;Farbe;PLZ;Anteil %;Von;Bis;Notizen";
+                      const rows = layerSizes.map(
+                        (l) =>
+                          `${l.name};${l.color};${l.count};${total > 0 ? ((l.count / total) * 100).toFixed(1) : "0.0"};${l.minCode};${l.maxCode};"${(l.notes ?? "").replace(/"/g, '""')}"`
+                      );
+                      const csv = [header, ...rows].join("\n");
+                      const blob = new Blob(["\uFEFF" + csv], {
+                        type: "text/csv;charset=utf-8;",
+                      });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "statistik.csv";
+                      a.click();
+                      URL.revokeObjectURL(url);
                     }}
-                  />
+                  >
+                    <Download className="h-2.5 w-2.5" />
+                    CSV
+                  </button>
                 </div>
-                <div className="w-8 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-                  {layer.count}
-                </div>
+                {layerSizes.map((layer) => (
+                  <div key={layer.id} className="flex items-center gap-1.5">
+                    <div className="w-16 shrink-0 truncate text-[10px] text-muted-foreground">
+                      {layer.name}
+                    </div>
+                    <div className="relative flex-1 h-3 rounded-sm bg-muted overflow-hidden">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-sm transition-[width] duration-300"
+                        style={{
+                          width: `${(layer.count / maxCount) * 100}%`,
+                          backgroundColor: layer.color,
+                          opacity: 0.85,
+                        }}
+                      />
+                    </div>
+                    <div className="w-8 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+                      {layer.count}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
         </CollapsibleContent>
       </Collapsible>
     </>
@@ -432,7 +433,11 @@ function ConflictBanner({
   crossAreaDuplicates,
   crossAreaDuplicatesByArea,
 }: {
-  crossAreaDuplicates: { postalCode: string; otherAreaId: number; otherAreaName: string }[];
+  crossAreaDuplicates: {
+    postalCode: string;
+    otherAreaId: number;
+    otherAreaName: string;
+  }[];
   crossAreaDuplicatesByArea: Map<string, { areaId: number; codes: string[] }>;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -446,8 +451,8 @@ function ConflictBanner({
       >
         <TriangleAlert className="h-3 w-3 shrink-0" />
         <span className="flex-1 text-left">
-          {crossAreaDuplicates.length.toLocaleString("de-DE")} PLZ in {areaCount}{" "}
-          {areaCount === 1 ? "anderem Gebiet" : "anderen Gebieten"}
+          {crossAreaDuplicates.length.toLocaleString("de-DE")} PLZ in{" "}
+          {areaCount} {areaCount === 1 ? "anderem Gebiet" : "anderen Gebieten"}
         </span>
         <ChevronDown
           className={`h-3 w-3 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -1070,7 +1075,7 @@ function useDrawingToolsActions({
     toast.success(`${layersWithCodes.length} Ebenen als ZIP exportiert`);
   }, [optimisticLayers, areaName, areaId]);
 
-  const handleCreateLayer = async () => {
+  const handleCreateLayer = useCallback(async () => {
     if (!form.newLayerName.trim()) {
       return;
     }
@@ -1110,75 +1115,105 @@ function useDrawingToolsActions({
         }
       );
     });
-  };
+  }, [
+    form.newLayerName,
+    optimisticLayers,
+    areaId,
+    dispatchForm,
+    startTransition,
+    updateOptimisticLayers,
+    onLayerSelect,
+  ]);
 
-  const handleColorChange = async (layerId: number, color: string) => {
-    startTransition(async () => {
-      updateOptimisticLayers({ type: "update", id: layerId, layer: { color } });
-      try {
-        await updateLayer(layerId, { color });
-      } catch {
-        toast.error("Fehler beim Ändern der Farbe - Bitte erneut versuchen");
-      }
-    });
-  };
-
-  const handleOpacityChange = (layerId: number, opacity: number) => {
-    startTransition(async () => {
-      updateOptimisticLayers({
-        type: "update",
-        id: layerId,
-        layer: { opacity },
-      });
-      try {
-        await updateLayer(layerId, { opacity });
-      } catch {
-        toast.error(
-          "Fehler beim Ändern der Transparenz - Bitte erneut versuchen"
-        );
-      }
-    });
-  };
-
-  const handleToggleVisibility = (layerId: number, visible: boolean) => {
-    startTransition(async () => {
-      updateOptimisticLayers({
-        type: "update",
-        id: layerId,
-        layer: { isVisible: visible ? "true" : "false" },
-      });
-      if (areaId) {
-        const result = await batchUpdateVisibilityAction(areaId, [
-          { layerId, isVisible: visible },
-        ]);
-        if (result.success) onLayerUpdate?.();
-      }
-    });
-  };
-
-  const handleSoloLayer = (soloId: number) => {
-    startTransition(async () => {
-      const updates: { layerId: number; isVisible: boolean }[] = [];
-      for (const layer of optimisticLayers) {
-        const shouldBeVisible = layer.id === soloId;
-        const currentlyVisible = layer.isVisible !== "false";
-        if (currentlyVisible !== shouldBeVisible) {
-          updates.push({ layerId: layer.id, isVisible: shouldBeVisible });
-          updateOptimisticLayers({
-            type: "update",
-            id: layer.id,
-            layer: { isVisible: shouldBeVisible ? "true" : "false" },
-          });
+  const handleColorChange = useCallback(
+    async (layerId: number, color: string) => {
+      startTransition(async () => {
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: { color },
+        });
+        try {
+          await updateLayer(layerId, { color });
+        } catch {
+          toast.error("Fehler beim Ändern der Farbe - Bitte erneut versuchen");
         }
-      }
-      if (areaId && updates.length > 0) {
-        const result = await batchUpdateVisibilityAction(areaId, updates);
-        if (result.success) onLayerUpdate?.();
-      }
-    });
-  };
+      });
+    },
+    [startTransition, updateOptimisticLayers]
+  );
 
-  const handleShowAllLayers = () => {
+  const handleOpacityChange = useCallback(
+    (layerId: number, opacity: number) => {
+      startTransition(async () => {
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: { opacity },
+        });
+        try {
+          await updateLayer(layerId, { opacity });
+        } catch {
+          toast.error(
+            "Fehler beim Ändern der Transparenz - Bitte erneut versuchen"
+          );
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers]
+  );
+
+  const handleToggleVisibility = useCallback(
+    (layerId: number, visible: boolean) => {
+      startTransition(async () => {
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: { isVisible: visible ? "true" : "false" },
+        });
+        if (areaId) {
+          const result = await batchUpdateVisibilityAction(areaId, [
+            { layerId, isVisible: visible },
+          ]);
+          if (result.success) onLayerUpdate?.();
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers, areaId, onLayerUpdate]
+  );
+
+  const handleSoloLayer = useCallback(
+    (soloId: number) => {
+      startTransition(async () => {
+        const updates: { layerId: number; isVisible: boolean }[] = [];
+        for (const layer of optimisticLayers) {
+          const shouldBeVisible = layer.id === soloId;
+          const currentlyVisible = layer.isVisible !== "false";
+          if (currentlyVisible !== shouldBeVisible) {
+            updates.push({ layerId: layer.id, isVisible: shouldBeVisible });
+            updateOptimisticLayers({
+              type: "update",
+              id: layer.id,
+              layer: { isVisible: shouldBeVisible ? "true" : "false" },
+            });
+          }
+        }
+        if (areaId && updates.length > 0) {
+          const result = await batchUpdateVisibilityAction(areaId, updates);
+          if (result.success) onLayerUpdate?.();
+        }
+      });
+    },
+    [
+      startTransition,
+      updateOptimisticLayers,
+      optimisticLayers,
+      areaId,
+      onLayerUpdate,
+    ]
+  );
+
+  const handleShowAllLayers = useCallback(() => {
     startTransition(async () => {
       const updates: { layerId: number; isVisible: boolean }[] = [];
       for (const layer of optimisticLayers) {
@@ -1196,13 +1231,22 @@ function useDrawingToolsActions({
         if (result.success) onLayerUpdate?.();
       }
     });
-  };
+  }, [
+    startTransition,
+    updateOptimisticLayers,
+    optimisticLayers,
+    areaId,
+    onLayerUpdate,
+  ]);
 
-  const handleDeleteLayer = (layerId: number) => {
-    dispatchForm({ type: "OPEN_DELETE", layerId });
-  };
+  const handleDeleteLayer = useCallback(
+    (layerId: number) => {
+      dispatchForm({ type: "OPEN_DELETE", layerId });
+    },
+    [dispatchForm]
+  );
 
-  const confirmDeleteLayer = async () => {
+  const confirmDeleteLayer = useCallback(async () => {
     if (!form.layerToDelete) {
       return;
     }
@@ -1220,32 +1264,40 @@ function useDrawingToolsActions({
         // error handled by executeAction
       }
     });
-  };
+  }, [
+    form.layerToDelete,
+    startTransition,
+    updateOptimisticLayers,
+    dispatchForm,
+  ]);
 
-  const handleRenameLayer = async (layerId: number, newName: string) => {
-    const trimmed = newName.trim().slice(0, 31);
-    if (!trimmed) {
-      toast.error("Gebiets-Name darf nicht leer sein");
-      return;
-    }
-    startTransition(async () => {
-      updateOptimisticLayers({
-        type: "update",
-        id: layerId,
-        layer: { name: trimmed },
-      });
-      dispatchForm({ type: "CANCEL_EDIT" });
-      try {
-        await executeAction(updateLayer(layerId, { name: trimmed }), {
-          loading: "Benenne Gebiet um...",
-          success: "Gebiet umbenannt",
-          error: "Fehler beim Umbenennen - Bitte erneut versuchen",
-        });
-      } catch {
-        // error handled by executeAction
+  const handleRenameLayer = useCallback(
+    async (layerId: number, newName: string) => {
+      const trimmed = newName.trim().slice(0, 31);
+      if (!trimmed) {
+        toast.error("Gebiets-Name darf nicht leer sein");
+        return;
       }
-    });
-  };
+      startTransition(async () => {
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: { name: trimmed },
+        });
+        dispatchForm({ type: "CANCEL_EDIT" });
+        try {
+          await executeAction(updateLayer(layerId, { name: trimmed }), {
+            loading: "Benenne Gebiet um...",
+            success: "Gebiet umbenannt",
+            error: "Fehler beim Umbenennen - Bitte erneut versuchen",
+          });
+        } catch {
+          // error handled by executeAction
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers, dispatchForm]
+  );
 
   const handleFillHoles = () => {
     const activeLayer = optimisticLayers.find((l) => l.id === activeLayerId);
@@ -1261,49 +1313,55 @@ function useDrawingToolsActions({
     }
   };
 
-  const handleReassignColors = (theme?: string) => {
-    startTransition(async () => {
-      const colorMap = reassignAllColors(optimisticLayers, theme);
-      for (const [id, color] of colorMap) {
-        updateOptimisticLayers({ type: "update", id, layer: { color } });
-      }
-      try {
-        await Promise.all(
-          [...colorMap].map(([id, color]) => updateLayer(id, { color }))
-        );
-        toast.success("Farben optimiert");
-        onLayerUpdate?.();
-      } catch {
-        toast.error("Fehler beim Zuweisen der Farben");
-      }
-    });
-  };
+  const handleReassignColors = useCallback(
+    (theme?: string) => {
+      startTransition(async () => {
+        const colorMap = reassignAllColors(optimisticLayers, theme);
+        for (const [id, color] of colorMap) {
+          updateOptimisticLayers({ type: "update", id, layer: { color } });
+        }
+        try {
+          await Promise.all(
+            [...colorMap].map(([id, color]) => updateLayer(id, { color }))
+          );
+          toast.success("Farben optimiert");
+          onLayerUpdate?.();
+        } catch {
+          toast.error("Fehler beim Zuweisen der Farben");
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers, optimisticLayers, onLayerUpdate]
+  );
 
-  const handleReorderLayers = (oldIndex: number, newIndex: number) => {
-    startTransition(async () => {
-      const reordered = arrayMove(optimisticLayers, oldIndex, newIndex);
-      const withNewIndices = reordered.map((l, i) => ({
-        ...l,
-        orderIndex: i,
-      }));
-      updateOptimisticLayers({ type: "reorder", layers: withNewIndices });
-      const changedLayers = withNewIndices.filter(
-        (l, i) => optimisticLayers[i]?.id !== l.id
-      );
-      try {
-        await Promise.all(
-          changedLayers.map((l) =>
-            updateLayer(l.id, { orderIndex: l.orderIndex })
-          )
+  const handleReorderLayers = useCallback(
+    (oldIndex: number, newIndex: number) => {
+      startTransition(async () => {
+        const reordered = arrayMove(optimisticLayers, oldIndex, newIndex);
+        const withNewIndices = reordered.map((l, i) => ({
+          ...l,
+          orderIndex: i,
+        }));
+        updateOptimisticLayers({ type: "reorder", layers: withNewIndices });
+        const changedLayers = withNewIndices.filter(
+          (l, i) => optimisticLayers[i]?.id !== l.id
         );
-        onLayerUpdate?.();
-      } catch {
-        toast.error("Fehler beim Speichern der Reihenfolge");
-      }
-    });
-  };
+        try {
+          await Promise.all(
+            changedLayers.map((l) =>
+              updateLayer(l.id, { orderIndex: l.orderIndex })
+            )
+          );
+          onLayerUpdate?.();
+        } catch {
+          toast.error("Fehler beim Speichern der Reihenfolge");
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers, optimisticLayers, onLayerUpdate]
+  );
 
-  const handleSortByCount = () => {
+  const handleSortByCount = useCallback(() => {
     startTransition(async () => {
       const sorted = [...optimisticLayers].sort(
         (a, b) => (b.postalCodes?.length ?? 0) - (a.postalCodes?.length ?? 0)
@@ -1322,30 +1380,42 @@ function useDrawingToolsActions({
         toast.error("Fehler beim Sortieren");
       }
     });
-  };
+  }, [
+    startTransition,
+    updateOptimisticLayers,
+    optimisticLayers,
+    onLayerUpdate,
+  ]);
 
-  const handleRemovePostalCodeFromLayer = (
-    layerId: number,
-    postalCode: string
-  ) => {
-    if (!removePostalCodesFromLayer) return;
-    startTransition(async () => {
-      const layer = optimisticLayers.find((l) => l.id === layerId);
-      const updated =
-        layer?.postalCodes?.filter((pc) => pc.postalCode !== postalCode) ?? [];
-      updateOptimisticLayers({
-        type: "update",
-        id: layerId,
-        layer: { postalCodes: updated },
+  const handleRemovePostalCodeFromLayer = useCallback(
+    (layerId: number, postalCode: string) => {
+      if (!removePostalCodesFromLayer) return;
+      startTransition(async () => {
+        const layer = optimisticLayers.find((l) => l.id === layerId);
+        const updated =
+          layer?.postalCodes?.filter((pc) => pc.postalCode !== postalCode) ??
+          [];
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: { postalCodes: updated },
+        });
+        try {
+          await removePostalCodesFromLayer(layerId, [postalCode]);
+          onLayerUpdate?.();
+        } catch {
+          toast.error("Fehler beim Entfernen der PLZ");
+        }
       });
-      try {
-        await removePostalCodesFromLayer(layerId, [postalCode]);
-        onLayerUpdate?.();
-      } catch {
-        toast.error("Fehler beim Entfernen der PLZ");
-      }
-    });
-  };
+    },
+    [
+      startTransition,
+      updateOptimisticLayers,
+      optimisticLayers,
+      removePostalCodesFromLayer,
+      onLayerUpdate,
+    ]
+  );
 
   const handleClearLayerPLZ = useCallback(
     (layerId: number) => {
@@ -1371,182 +1441,203 @@ function useDrawingToolsActions({
     [optimisticLayers, removePostalCodesFromLayer, onLayerUpdate]
   );
 
-  const handleMovePlz = (
-    fromLayerId: number,
-    toLayerId: number,
-    postalCode: string
-  ) => {
-    if (!addPostalCodesToLayer || !removePostalCodesFromLayer) return;
-    startTransition(async () => {
-      // Optimistically: remove from source, add to target
-      const fromLayer = optimisticLayers.find((l) => l.id === fromLayerId);
-      const toLayer = optimisticLayers.find((l) => l.id === toLayerId);
-      if (!fromLayer || !toLayer) return;
-      updateOptimisticLayers({
-        type: "update",
-        id: fromLayerId,
-        layer: {
-          postalCodes:
-            fromLayer.postalCodes?.filter(
-              (pc) => pc.postalCode !== postalCode
-            ) ?? [],
-        },
-      });
-      updateOptimisticLayers({
-        type: "update",
-        id: toLayerId,
-        layer: {
-          postalCodes: [...(toLayer.postalCodes ?? []), { postalCode }],
-        },
-      });
-      try {
-        await addPostalCodesToLayer(toLayerId, [postalCode]);
-        await removePostalCodesFromLayer(fromLayerId, [postalCode]);
-        onLayerUpdate?.();
-        toast.success(`${postalCode} → ${toLayer.name}`);
-      } catch {
-        toast.error("Fehler beim Verschieben der PLZ");
-      }
-    });
-  };
-
-  const handleNotesChange = (layerId: number, notes: string) => {
-    startTransition(async () => {
-      updateOptimisticLayers({ type: "update", id: layerId, layer: { notes } });
-      try {
-        await updateLayer(layerId, { notes: notes || null });
-      } catch {
-        toast.error("Fehler beim Speichern der Notiz");
-      }
-    });
-  };
-
-  const handleSetLayerGroup = (layerId: number, groupName: string | null) => {
-    startTransition(async () => {
-      updateOptimisticLayers({
-        type: "update",
-        id: layerId,
-        layer: { groupName: groupName ?? undefined },
-      });
-      try {
-        await updateLayer(layerId, { groupName: groupName || null });
-      } catch {
-        toast.error("Fehler beim Speichern der Gruppe");
-      }
-    });
-  };
-
-  const handleBulkMovePlz = (
-    fromLayerId: number,
-    toLayerId: number,
-    codes: string[]
-  ) => {
-    if (
-      !addPostalCodesToLayer ||
-      !removePostalCodesFromLayer ||
-      codes.length === 0
-    )
-      return;
-    startTransition(async () => {
-      const fromLayer = optimisticLayers.find((l) => l.id === fromLayerId);
-      const toLayer = optimisticLayers.find((l) => l.id === toLayerId);
-      if (!fromLayer || !toLayer) return;
-      const codeSet = new Set(codes);
-      updateOptimisticLayers({
-        type: "update",
-        id: fromLayerId,
-        layer: {
-          postalCodes:
-            fromLayer.postalCodes?.filter(
-              (pc) => !codeSet.has(pc.postalCode)
-            ) ?? [],
-        },
-      });
-      const existingTarget = new Set(
-        toLayer.postalCodes?.map((pc) => pc.postalCode) ?? []
-      );
-      const newForTarget = codes.filter((c) => !existingTarget.has(c));
-      updateOptimisticLayers({
-        type: "update",
-        id: toLayerId,
-        layer: {
-          postalCodes: [
-            ...(toLayer.postalCodes ?? []),
-            ...newForTarget.map((c) => ({ postalCode: c })),
-          ],
-        },
-      });
-      try {
-        await addPostalCodesToLayer(toLayerId, codes);
-        await removePostalCodesFromLayer(fromLayerId, codes);
-        onLayerUpdate?.();
-        toast.success(`${codes.length} PLZ → ${toLayer.name}`);
-      } catch {
-        toast.error("Fehler beim Verschieben der PLZ");
-      }
-    });
-  };
-
-  const handleBulkRemovePlz = (layerId: number, codes: string[]) => {
-    if (!removePostalCodesFromLayer || codes.length === 0) return;
-    startTransition(async () => {
-      const layer = optimisticLayers.find((l) => l.id === layerId);
-      if (!layer) return;
-      const codeSet = new Set(codes);
-      updateOptimisticLayers({
-        type: "update",
-        id: layerId,
-        layer: {
-          postalCodes:
-            layer.postalCodes?.filter((pc) => !codeSet.has(pc.postalCode)) ??
-            [],
-        },
-      });
-      try {
-        await removePostalCodesFromLayer(layerId, codes);
-        onLayerUpdate?.();
-        toast.success(`${codes.length} PLZ entfernt`);
-      } catch {
-        toast.error("Fehler beim Entfernen der PLZ");
-      }
-    });
-  };
-
-  const handleBulkDelete = (layerIds: number[]) => {
-    if (!layerIds.length) return;
-    startTransition(async () => {
-      for (const id of layerIds) {
-        updateOptimisticLayers({ type: "delete", id });
-      }
-      try {
-        await Promise.all(layerIds.map((id) => deleteLayer(id)));
-        toast.success(`${layerIds.length} Gebiete gelöscht`);
-      } catch {
-        toast.error("Fehler beim Löschen");
-      }
-    });
-  };
-
-  const handleBulkVisibility = (layerIds: number[], visible: boolean) => {
-    if (!layerIds.length || !areaId) return;
-    startTransition(async () => {
-      for (const id of layerIds) {
+  const handleMovePlz = useStableCallback(
+    (fromLayerId: number, toLayerId: number, postalCode: string) => {
+      if (!addPostalCodesToLayer || !removePostalCodesFromLayer) return;
+      startTransition(async () => {
+        // Optimistically: remove from source, add to target
+        const fromLayer = optimisticLayers.find((l) => l.id === fromLayerId);
+        const toLayer = optimisticLayers.find((l) => l.id === toLayerId);
+        if (!fromLayer || !toLayer) return;
         updateOptimisticLayers({
           type: "update",
-          id,
-          layer: { isVisible: visible ? "true" : "false" },
+          id: fromLayerId,
+          layer: {
+            postalCodes:
+              fromLayer.postalCodes?.filter(
+                (pc) => pc.postalCode !== postalCode
+              ) ?? [],
+          },
         });
-      }
-      try {
-        await batchUpdateVisibilityAction(
-          areaId,
-          layerIds.map((id) => ({ layerId: id, isVisible: visible }))
+        updateOptimisticLayers({
+          type: "update",
+          id: toLayerId,
+          layer: {
+            postalCodes: [...(toLayer.postalCodes ?? []), { postalCode }],
+          },
+        });
+        try {
+          await addPostalCodesToLayer(toLayerId, [postalCode]);
+          await removePostalCodesFromLayer(fromLayerId, [postalCode]);
+          onLayerUpdate?.();
+          toast.success(`${postalCode} → ${toLayer.name}`);
+        } catch {
+          toast.error("Fehler beim Verschieben der PLZ");
+        }
+      });
+    }
+  );
+
+  const handleNotesChange = useCallback(
+    (layerId: number, notes: string) => {
+      startTransition(async () => {
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: { notes },
+        });
+        try {
+          await updateLayer(layerId, { notes: notes || null });
+        } catch {
+          toast.error("Fehler beim Speichern der Notiz");
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers]
+  );
+
+  const handleSetLayerGroup = useCallback(
+    (layerId: number, groupName: string | null) => {
+      startTransition(async () => {
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: { groupName: groupName ?? undefined },
+        });
+        try {
+          await updateLayer(layerId, { groupName: groupName || null });
+        } catch {
+          toast.error("Fehler beim Speichern der Gruppe");
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers]
+  );
+
+  const handleBulkMovePlz = useStableCallback(
+    (fromLayerId: number, toLayerId: number, codes: string[]) => {
+      if (
+        !addPostalCodesToLayer ||
+        !removePostalCodesFromLayer ||
+        codes.length === 0
+      )
+        return;
+      startTransition(async () => {
+        const fromLayer = optimisticLayers.find((l) => l.id === fromLayerId);
+        const toLayer = optimisticLayers.find((l) => l.id === toLayerId);
+        if (!fromLayer || !toLayer) return;
+        const codeSet = new Set(codes);
+        updateOptimisticLayers({
+          type: "update",
+          id: fromLayerId,
+          layer: {
+            postalCodes:
+              fromLayer.postalCodes?.filter(
+                (pc) => !codeSet.has(pc.postalCode)
+              ) ?? [],
+          },
+        });
+        const existingTarget = new Set(
+          toLayer.postalCodes?.map((pc) => pc.postalCode) ?? []
         );
-      } catch {
-        toast.error("Fehler beim Ändern der Sichtbarkeit");
-      }
-    });
-  };
+        const newForTarget = codes.filter((c) => !existingTarget.has(c));
+        updateOptimisticLayers({
+          type: "update",
+          id: toLayerId,
+          layer: {
+            postalCodes: [
+              ...(toLayer.postalCodes ?? []),
+              ...newForTarget.map((c) => ({ postalCode: c })),
+            ],
+          },
+        });
+        try {
+          await addPostalCodesToLayer(toLayerId, codes);
+          await removePostalCodesFromLayer(fromLayerId, codes);
+          onLayerUpdate?.();
+          toast.success(`${codes.length} PLZ → ${toLayer.name}`);
+        } catch {
+          toast.error("Fehler beim Verschieben der PLZ");
+        }
+      });
+    }
+  );
+
+  const handleBulkRemovePlz = useCallback(
+    (layerId: number, codes: string[]) => {
+      if (!removePostalCodesFromLayer || codes.length === 0) return;
+      startTransition(async () => {
+        const layer = optimisticLayers.find((l) => l.id === layerId);
+        if (!layer) return;
+        const codeSet = new Set(codes);
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: {
+            postalCodes:
+              layer.postalCodes?.filter((pc) => !codeSet.has(pc.postalCode)) ??
+              [],
+          },
+        });
+        try {
+          await removePostalCodesFromLayer(layerId, codes);
+          onLayerUpdate?.();
+          toast.success(`${codes.length} PLZ entfernt`);
+        } catch {
+          toast.error("Fehler beim Entfernen der PLZ");
+        }
+      });
+    },
+    [
+      startTransition,
+      updateOptimisticLayers,
+      optimisticLayers,
+      removePostalCodesFromLayer,
+      onLayerUpdate,
+    ]
+  );
+
+  const handleBulkDelete = useCallback(
+    (layerIds: number[]) => {
+      if (!layerIds.length) return;
+      startTransition(async () => {
+        for (const id of layerIds) {
+          updateOptimisticLayers({ type: "delete", id });
+        }
+        try {
+          await Promise.all(layerIds.map((id) => deleteLayer(id)));
+          toast.success(`${layerIds.length} Gebiete gelöscht`);
+        } catch {
+          toast.error("Fehler beim Löschen");
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers]
+  );
+
+  const handleBulkVisibility = useCallback(
+    (layerIds: number[], visible: boolean) => {
+      if (!layerIds.length || !areaId) return;
+      startTransition(async () => {
+        for (const id of layerIds) {
+          updateOptimisticLayers({
+            type: "update",
+            id,
+            layer: { isVisible: visible ? "true" : "false" },
+          });
+        }
+        try {
+          await batchUpdateVisibilityAction(
+            areaId,
+            layerIds.map((id) => ({ layerId: id, isVisible: visible }))
+          );
+        } catch {
+          toast.error("Fehler beim Ändern der Sichtbarkeit");
+        }
+      });
+    },
+    [startTransition, updateOptimisticLayers, areaId]
+  );
 
   return {
     optimisticLayers,
@@ -1686,7 +1777,7 @@ interface LayerManagementSectionProps {
   ) => void;
 }
 
-function LayerManagementSection({
+const LayerManagementSection = memo(function LayerManagementSection({
   areaId,
   optimisticLayers,
   ui,
@@ -3854,7 +3945,7 @@ function LayerManagementSection({
       </Dialog>
     </>
   );
-}
+});
 
 interface LayerDialogsProps {
   areaId: number;
@@ -4161,15 +4252,16 @@ function DrawingToolsImpl({
   }, [areaId, descDraft, areaDescription, onLayerUpdate]);
 
   // Intercept addPostalCodesToLayer to block writes on locked layers
-  const guardedAddPostalCodesToLayer = addPostalCodesToLayer
-    ? async (layerId: number, codes: string[]) => {
-        if (isLayerLocked(layerId)) {
-          toast.warning("Ebene ist gesperrt — PLZ hinzufügen nicht möglich");
-          return;
-        }
-        await addPostalCodesToLayer(layerId, codes);
+  const guardedAddPostalCodesToLayer = useStableCallback(
+    async (layerId: number, codes: string[]) => {
+      if (!addPostalCodesToLayer) return;
+      if (isLayerLocked(layerId)) {
+        toast.warning("Ebene ist gesperrt — PLZ hinzufügen nicht möglich");
+        return;
       }
-    : undefined;
+      await addPostalCodesToLayer(layerId, codes);
+    }
+  );
   const {
     optimisticLayers,
     ui,
@@ -5022,7 +5114,9 @@ function DrawingToolsImpl({
   );
 }
 
-export function DrawingTools(props: DrawingToolsProps) {
+export const DrawingTools = memo(function DrawingTools(
+  props: DrawingToolsProps
+) {
   return (
     <Suspense
       fallback={<Skeleton className="w-full h-full min-h-50 rounded-lg" />}
@@ -5030,4 +5124,4 @@ export function DrawingTools(props: DrawingToolsProps) {
       <DrawingToolsImpl {...props} />
     </Suspense>
   );
-}
+});
