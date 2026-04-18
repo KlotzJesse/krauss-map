@@ -126,15 +126,15 @@ interface StyleAccumulator {
 
 const COUNTRY_BORDER_COLORS: Record<string, [number, number, number, number]> =
   {
-    // Germany: clean blue — distinctive, classic map color for DE
-    DE: [37, 99, 235, 210],
-    // Austria: rich red — Austrian national flag color
-    AT: [220, 38, 38, 210],
-    // Switzerland: teal — distinct from both DE and AT, clean look
-    CH: [13, 148, 136, 210],
+    // Germany: deep royal blue — professional, map-quality, clearly German
+    DE: [29, 78, 216, 220],
+    // Austria: deep crimson — flag-inspired, distinct from DE blue
+    AT: [185, 28, 28, 220],
+    // Switzerland: emerald green — fully distinct from DE and AT, clean cartographic
+    CH: [5, 150, 105, 220],
   };
 const DEFAULT_COUNTRY_BORDER_COLOR: [number, number, number, number] = [
-  71, 85, 105, 210,
+  71, 85, 105, 220,
 ];
 
 function toAccumulator(): StyleAccumulator {

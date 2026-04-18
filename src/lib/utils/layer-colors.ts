@@ -75,11 +75,12 @@ function colorDistance(
 /**
  * Country border + national colors reserved to avoid layer-color clashes.
  * These are always factored into color distance calculations.
+ * Must match COUNTRY_BORDER_COLORS in use-deck-layers.ts.
  */
 const RESERVED_BASE_COLORS = [
-  "#2563eb", // DE country border blue
-  "#dc2626", // AT country border red
-  "#0d9488", // CH country border teal
+  "#1d4ed8", // DE country border — deep royal blue
+  "#b91c1c", // AT country border — deep crimson
+  "#059669", // CH country border — emerald green
 ];
 
 /**
@@ -98,14 +99,14 @@ export function generateNextColor(existingColors: string[]): string {
   let bestColor = "#3b82f6";
   let bestMinDist = -1;
 
-  // Try multiple saturation/lightness combos — muted satin tones: high contrast, elegant
+  // Try multiple saturation/lightness combos — rich cartographic tones: clear contrast, not pastel
   const slCombos: [number, number][] = [
-    [50, 63], // Core satin
-    [52, 65], // Slightly lighter
-    [47, 61], // Deeper muted
-    [54, 66], // Airy
-    [49, 64], // Balanced
-    [53, 67], // Pale satin
+    [62, 62], // Rich mid-tone
+    [60, 60], // Slightly deeper
+    [58, 64], // Balanced vivid
+    [64, 61], // Saturated
+    [56, 63], // Medium
+    [66, 63], // Vivid
   ];
 
   for (const [s, l] of slCombos) {
@@ -140,9 +141,9 @@ export function generatePalette(count: number): string[] {
 
   for (let i = 0; i < count; i++) {
     const hue = (i * GOLDEN_ANGLE) % 360;
-    // Muted satin tones: L=60-68%, S=48-56% — elegant contrast without harshness
-    const saturation = 48 + (i % 4) * 2; // 48, 50, 52, 54
-    const lightness = 60 + (i % 3) * 3; // 60, 63, 66
+    // Rich cartographic tones: S=58-66%, L=59-63% — clear without being overwhelming
+    const saturation = 58 + (i % 4) * 2; // 58, 60, 62, 64
+    const lightness = 59 + (i % 3) * 2; // 59, 61, 63
     colors.push(hslToHex(hue, saturation, lightness));
   }
 
@@ -212,10 +213,10 @@ function generateThemePalette(theme: string, count: number): string[] {
     string,
     { s: number; l: number; hueOffset: number }
   > = {
-    jewel: { s: 50, l: 63, hueOffset: 0 },
+    jewel: { s: 62, l: 62, hueOffset: 0 },
     pastel: { s: 45, l: 78, hueOffset: 20 },
-    vivid: { s: 78, l: 50, hueOffset: 0 },
-    earthy: { s: 22, l: 54, hueOffset: 30 },
+    vivid: { s: 80, l: 50, hueOffset: 0 },
+    earthy: { s: 25, l: 54, hueOffset: 30 },
     ocean: { s: 72, l: 50, hueOffset: 190 },
     autumn: { s: 75, l: 52, hueOffset: 20 },
   };
