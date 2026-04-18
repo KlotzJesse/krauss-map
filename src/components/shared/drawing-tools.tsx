@@ -2144,6 +2144,7 @@ const LayerDialogs = memo(function LayerDialogs({
               { keys: ["/"], desc: "PLZ-Suche fokussieren" },
               { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
               { keys: ["N"], desc: "Neues Gebiet anlegen" },
+              { keys: ["D"], desc: "Aktive Ebene duplizieren" },
               { keys: ["Esc"], desc: "Zeichenmodus beenden" },
               { keys: ["Enter"], desc: "Polygon abschließen" },
               { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
@@ -2343,6 +2344,8 @@ function DrawingToolsImpl({
   onZoomToLayerRef.current = onZoomToLayer;
   const plzFindInputRef = useRef<HTMLInputElement | null>(null);
   const newLayerInputRef = useRef<HTMLInputElement | null>(null);
+  const handleDuplicateLayerRef = useRef(handleDuplicateLayer);
+  handleDuplicateLayerRef.current = handleDuplicateLayer;
 
   const handleOpenKeyboardHelp = useCallback(
     () => dispatchUI({ type: "OPEN_KEYBOARD_HELP" }),
@@ -2381,6 +2384,13 @@ function DrawingToolsImpl({
           newLayerInputRef.current?.focus();
           newLayerInputRef.current?.select();
         }, 50);
+        return;
+      }
+
+      // D key: duplicate active layer
+      if (e.key === "d" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const id = activeLayerIdRef.current;
+        if (id) handleDuplicateLayerRef.current(id);
         return;
       }
 
