@@ -2784,59 +2784,93 @@ const LayerDialogs = memo(function LayerDialogs({
         open={ui.showKeyboardHelp}
         onOpenChange={handleKeyboardHelpOpenChange}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Tastaturkürzel</DialogTitle>
             <DialogDescription>
               Alle verfügbaren Shortcuts in der Kartenansicht
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 text-sm">
+          <div className="space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-1">
             {[
-              { keys: ["Alt", "↑ / ↓"], desc: "Ebene wechseln" },
-              { keys: ["Ctrl", "Z"], desc: "Rückgängig" },
-              { keys: ["Ctrl", "Y"], desc: "Wiederholen" },
-              { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
-              { keys: ["Ctrl", "C"], desc: "PLZ der aktiven Ebene kopieren" },
               {
-                keys: ["Ctrl", "Shift", "V"],
-                desc: "PLZ-Bereich einfügen (z.B. 80331–80339)",
+                group: "Navigation & Ansicht",
+                items: [
+                  { keys: ["G"], desc: "Alle Ebenen anzeigen (Fit all)" },
+                  { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
+                  { keys: ["H"], desc: "Seitenleiste ein-/ausblenden" },
+                  { keys: ["Ctrl", "K"], desc: "Suche / Befehlspalette" },
+                  { keys: ["Ctrl", "B"], desc: "Kartenlesezeichen" },
+                  { keys: ["?"], desc: "Shortcuts anzeigen" },
+                ],
               },
               {
-                keys: ["Ctrl", "Shift", "P"],
-                desc: "PLZ-Präfix hinzufügen (z.B. 80 → alle 80xxx)",
+                group: "Ebenen",
+                items: [
+                  { keys: ["Alt", "↑ / ↓"], desc: "Ebene wechseln" },
+                  { keys: ["N"], desc: "Neue Ebene anlegen" },
+                  { keys: ["D"], desc: "Aktive Ebene duplizieren" },
+                  { keys: ["E"], desc: "Sichtbarkeit umschalten" },
+                  { keys: ["F2"], desc: "Aktive Ebene umbenennen" },
+                  { keys: ["Del"], desc: "Aktive Ebene löschen" },
+                ],
               },
-              { keys: ["Ctrl", "K"], desc: "Suche / Befehlspalette öffnen" },
-              { keys: ["Ctrl", "B"], desc: "Kartenlesezeichen öffnen" },
-              { keys: ["?"], desc: "Tastaturkürzel anzeigen" },
-              { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
-              { keys: ["G"], desc: "Alle Ebenen anzeigen (Fit all)" },
-              { keys: ["H"], desc: "Seitenleiste ein-/ausblenden" },
-              { keys: ["N"], desc: "Neues Gebiet anlegen" },
-              { keys: ["D"], desc: "Aktive Ebene duplizieren" },
-              { keys: ["E"], desc: "Sichtbarkeit umschalten" },
-              { keys: ["Del"], desc: "Aktive Ebene löschen" },
-              { keys: ["F2"], desc: "Aktive Ebene umbenennen" },
-              { keys: ["Esc"], desc: "Zeichenmodus beenden" },
-              { keys: ["Enter"], desc: "Polygon abschließen" },
-              { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
-              { keys: ["Z"], desc: "Cursor-Modus" },
-              { keys: ["L"], desc: "Lasso-Modus" },
-              { keys: ["C"], desc: "Kursor-Modus (Kreis)" },
-              { keys: ["R"], desc: "Rechteck zeichnen" },
-            ].map(({ keys, desc }) => (
-              <div key={desc} className="flex items-center justify-between">
-                <span className="text-muted-foreground">{desc}</span>
-                <span className="flex gap-1">
-                  {keys.map((k) => (
-                    <kbd
-                      key={k}
-                      className="px-1.5 py-0.5 text-[10px] font-mono bg-muted border rounded"
-                    >
-                      {k}
-                    </kbd>
+              {
+                group: "Zeichnen",
+                items: [
+                  { keys: ["Z"], desc: "Cursor-Modus" },
+                  { keys: ["L"], desc: "Lasso-Modus" },
+                  { keys: ["C"], desc: "Kursor-Modus (Kreis)" },
+                  { keys: ["R"], desc: "Rechteck zeichnen" },
+                  { keys: ["Enter"], desc: "Polygon abschließen" },
+                  { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
+                  { keys: ["Esc"], desc: "Zeichenmodus beenden" },
+                ],
+              },
+              {
+                group: "PLZ-Aktionen",
+                items: [
+                  { keys: ["Ctrl", "C"], desc: "PLZ der aktiven Ebene kopieren" },
+                  { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
+                  {
+                    keys: ["Ctrl", "Shift", "V"],
+                    desc: "PLZ-Bereich einfügen (z.B. 80331–80339)",
+                  },
+                  {
+                    keys: ["Ctrl", "Shift", "P"],
+                    desc: "PLZ-Präfix hinzufügen (z.B. 80 → alle 80xxx)",
+                  },
+                ],
+              },
+              {
+                group: "Bearbeitung",
+                items: [
+                  { keys: ["Ctrl", "Z"], desc: "Rückgängig" },
+                  { keys: ["Ctrl", "Y"], desc: "Wiederholen" },
+                ],
+              },
+            ].map(({ group, items }) => (
+              <div key={group}>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                  {group}
+                </p>
+                <div className="space-y-1">
+                  {items.map(({ keys, desc }) => (
+                    <div key={desc} className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">{desc}</span>
+                      <span className="flex gap-1 shrink-0">
+                        {keys.map((k) => (
+                          <kbd
+                            key={k}
+                            className="px-1.5 py-0.5 text-[10px] font-mono bg-muted border rounded"
+                          >
+                            {k}
+                          </kbd>
+                        ))}
+                      </span>
+                    </div>
                   ))}
-                </span>
+                </div>
               </div>
             ))}
           </div>
