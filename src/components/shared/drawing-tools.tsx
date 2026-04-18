@@ -1830,6 +1830,25 @@ function LayerManagementSection({
   // Layer templates dialog
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
+  // Layer diff/compare dialog
+  const [diffDialog, setDiffDialog] = useState<{
+    open: boolean;
+    layerAId: number | null;
+    layerBId: number | null;
+  }>({ open: false, layerAId: null, layerBId: null });
+
+  const openDiffDialog = useCallback(
+    (layerId: number) => {
+      const other = optimisticLayers.find((l) => l.id !== layerId);
+      setDiffDialog({
+        open: true,
+        layerAId: layerId,
+        layerBId: other?.id ?? null,
+      });
+    },
+    [optimisticLayers]
+  );
+
   const openImportDialog = useCallback((layerId: number) => {
     setImportTargetLayerId(layerId);
     setImportText("");
@@ -2499,6 +2518,7 @@ function LayerManagementSection({
                   onBulkRemovePlz={handleBulkRemovePlz}
                   onExportCSV={handleExportLayerCSV}
                   onSplitLayer={handleSplitLayer}
+                  onCompareLayer={openDiffDialog}
                   layerIndex={layerIndex}
                 />
               ))
@@ -2580,6 +2600,7 @@ function LayerManagementSection({
                       onBulkRemovePlz={handleBulkRemovePlz}
                       onExportCSV={handleExportLayerCSV}
                       onSplitLayer={handleSplitLayer}
+                      onCompareLayer={openDiffDialog}
                       layerIndex={layerIndex}
                     />
                   ))}
@@ -3043,6 +3064,144 @@ function LayerManagementSection({
         }))}
         onApplied={() => onLayerUpdate?.()}
       />
+
+      {/* Layer Diff Dialog */}
+      <Dialog
+        open={diffDialog.open}
+        onOpenChange={(open) => setDiffDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Layer-Vergleich</DialogTitle>
+            <DialogDescription>
+              Unterschiede zwischen zwei Ebenen auf einen Blick
+            </DialogDescription>
+          </DialogHeader>
+          {diffDialog.layerAId &&
+            diffDialog.layerBId &&
+            (() => {
+              const layerA = optimisticLayers.find(
+                (l) => l.id === diffDialog.layerAId
+              );
+              const layerB = optimisticLayers.find(
+                (l) => l.id === diffDialog.layerBId
+              );
+              if (!layerA || !layerB) return null;
+              const setA = new Set(
+                (layerA.postalCodes ?? []).map((p) => p.postalCode)
+              );
+              const setB = new Set(
+                (layerB.postalCodes ?? []).map((p) => p.postalCode)
+              );
+              const onlyA = [...setA].filter((c) => !setB.has(c)).sort();
+              const onlyB = [...setB].filter((c) => !setA.has(c)).sort();
+              const both = [...setA].filter((c) => setB.has(c)).sort();
+              return (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 rounded border bg-background px-2 py-1 text-xs"
+                      value={diffDialog.layerAId ?? ""}
+                      onChange={(e) =>
+                        setDiffDialog((prev) => ({
+                          ...prev,
+                          layerAId: Number(e.target.value),
+                        }))
+                      }
+                    >
+                      {optimisticLayers.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name} ({(l.postalCodes ?? []).length})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="self-center text-xs text-muted-foreground">
+                      vs
+                    </span>
+                    <select
+                      className="flex-1 rounded border bg-background px-2 py-1 text-xs"
+                      value={diffDialog.layerBId ?? ""}
+                      onChange={(e) =>
+                        setDiffDialog((prev) => ({
+                          ...prev,
+                          layerBId: Number(e.target.value),
+                        }))
+                      }
+                    >
+                      {optimisticLayers.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name} ({(l.postalCodes ?? []).length})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="rounded border p-2">
+                      <div
+                        className="font-semibold mb-1 truncate"
+                        style={{ color: layerA.color }}
+                      >
+                        Nur {layerA.name}
+                        <span className="ml-1 font-normal text-muted-foreground">
+                          ({onlyA.length})
+                        </span>
+                      </div>
+                      <div className="max-h-32 overflow-y-auto space-y-0.5">
+                        {onlyA.map((c) => (
+                          <div key={c} className="font-mono">
+                            {c}
+                          </div>
+                        ))}
+                        {onlyA.length === 0 && (
+                          <div className="text-muted-foreground italic">–</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded border p-2 bg-muted/30">
+                      <div className="font-semibold mb-1 text-muted-foreground">
+                        Gemeinsam
+                        <span className="ml-1 font-normal">
+                          ({both.length})
+                        </span>
+                      </div>
+                      <div className="max-h-32 overflow-y-auto space-y-0.5">
+                        {both.map((c) => (
+                          <div key={c} className="font-mono">
+                            {c}
+                          </div>
+                        ))}
+                        {both.length === 0 && (
+                          <div className="text-muted-foreground italic">–</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded border p-2">
+                      <div
+                        className="font-semibold mb-1 truncate"
+                        style={{ color: layerB.color }}
+                      >
+                        Nur {layerB.name}
+                        <span className="ml-1 font-normal text-muted-foreground">
+                          ({onlyB.length})
+                        </span>
+                      </div>
+                      <div className="max-h-32 overflow-y-auto space-y-0.5">
+                        {onlyB.map((c) => (
+                          <div key={c} className="font-mono">
+                            {c}
+                          </div>
+                        ))}
+                        {onlyB.length === 0 && (
+                          <div className="text-muted-foreground italic">–</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

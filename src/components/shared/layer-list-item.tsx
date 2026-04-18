@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   Focus,
+  GitCompareArrows,
   GitMerge,
   GripVertical,
   History,
@@ -118,6 +119,7 @@ interface LayerListItemProps {
   onBulkRemovePlz?: (layerId: number, codes: string[]) => void;
   onExportCSV?: (layerId: number, layerName: string, codes: string[]) => void;
   onSplitLayer?: (layerId: number, splitCount: number) => void;
+  onCompareLayer?: (layerId: number) => void;
   layerIndex?: number; // 0-based position in layer list (for F-key shortcut badge)
 }
 
@@ -284,6 +286,7 @@ export const LayerListItem = memo(function LayerListItem({
   onBulkRemovePlz,
   onExportCSV,
   onSplitLayer,
+  onCompareLayer,
   onCopyToArea,
   onMergeLayer,
   layerIndex,
@@ -816,6 +819,29 @@ export const LayerListItem = memo(function LayerListItem({
                   </div>
                 </PopoverContent>
               </Popover>
+            )}
+
+            {onCompareLayer && postalCodes.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCompareLayer(layer.id);
+                      }}
+                    />
+                  }
+                >
+                  <GitCompareArrows className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Mit anderem Layer vergleichen</p>
+                </TooltipContent>
+              </Tooltip>
             )}
 
             {onClearPLZ && postalCodes.length > 0 && (
