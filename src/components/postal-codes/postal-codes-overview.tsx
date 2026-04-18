@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { getAreas, getRecentActivity } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
+import { CompareAreasButton } from "./compare-areas-button";
 import { ExportAllAreasButton } from "./export-all-areas-button";
 
 const CHANGE_ICONS: Record<string, React.ElementType> = {
@@ -99,7 +100,12 @@ export async function PostalCodesOverview() {
               Gesamtüberblick aller Gebiete und PLZ-Zuordnungen
             </p>
           </div>
-          {activeAreas.length > 0 && <ExportAllAreasButton />}
+          {activeAreas.length > 0 && (
+            <div className="flex items-center gap-2">
+              <CompareAreasButton areas={areas} />
+              <ExportAllAreasButton />
+            </div>
+          )}
         </div>
 
         {/* Stats row */}

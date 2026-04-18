@@ -1857,3 +1857,141 @@ export async function applyLayerTemplateAction(
     return { success: false, error: "Vorlage konnte nicht angewendet werden" };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Area Comparison
+// ---------------------------------------------------------------------------
+
+export interface AreaComparisonLayer {
+  id: number;
+  name: string;
+  color: string;
+  postalCodeCount: number;
+  orderIndex: number;
+}
+
+export interface AreaComparisonData {
+  id: number;
+  name: string;
+  country: string | null;
+  granularity: string | null;
+  layers: AreaComparisonLayer[];
+  totalPlz: number;
+}
+
+export interface AreaComparisonResult {
+  a: AreaComparisonData;
+  b: AreaComparisonData;
+  overlapCount: number;
+  onlyInA: number;
+  onlyInB: number;
+}
+
+export async function getAreaComparisonAction(
+  areaIdA: number,
+  areaIdB: number
+): ServerActionResponse<AreaComparisonResult> {
+  try {
+    const [dataA, dataB, overlap] = await Promise.all([
+      // Area A details
+      db.execute<Record<string, unknown>>(sql`
+        SELECT
+          a.id, a.name, a.country, a.granularity,
+          COALESCE(json_agg(
+            json_build_object(
+              'id', al.id,
+              'name', al.name,
+              'color', al.color,
+              'orderIndex', al.order_index,
+              'postalCodeCount', (
+                SELECT COUNT(*) FROM area_layer_postal_codes alpc WHERE alpc.layer_id = al.id
+              )
+            ) ORDER BY al.order_index
+          ) FILTER (WHERE al.id IS NOT NULL), '[]') AS layers,
+          (SELECT COUNT(DISTINCT alpc.postal_code)
+           FROM area_layer_postal_codes alpc
+           INNER JOIN area_layers al2 ON al2.id = alpc.layer_id AND al2.area_id = a.id
+          ) AS "totalPlz"
+        FROM areas a
+        LEFT JOIN area_layers al ON al.area_id = a.id
+        WHERE a.id = ${areaIdA}
+        GROUP BY a.id
+      `),
+      // Area B details
+      db.execute<Record<string, unknown>>(sql`
+        SELECT
+          a.id, a.name, a.country, a.granularity,
+          COALESCE(json_agg(
+            json_build_object(
+              'id', al.id,
+              'name', al.name,
+              'color', al.color,
+              'orderIndex', al.order_index,
+              'postalCodeCount', (
+                SELECT COUNT(*) FROM area_layer_postal_codes alpc WHERE alpc.layer_id = al.id
+              )
+            ) ORDER BY al.order_index
+          ) FILTER (WHERE al.id IS NOT NULL), '[]') AS layers,
+          (SELECT COUNT(DISTINCT alpc.postal_code)
+           FROM area_layer_postal_codes alpc
+           INNER JOIN area_layers al2 ON al2.id = alpc.layer_id AND al2.area_id = a.id
+          ) AS "totalPlz"
+        FROM areas a
+        LEFT JOIN area_layers al ON al.area_id = a.id
+        WHERE a.id = ${areaIdB}
+        GROUP BY a.id
+      `),
+      // Overlap count
+      db.execute<Record<string, unknown>>(sql`
+        SELECT COUNT(DISTINCT a_codes.postal_code) AS overlap
+        FROM area_layer_postal_codes a_codes
+        INNER JOIN area_layers al_a ON al_a.id = a_codes.layer_id AND al_a.area_id = ${areaIdA}
+        WHERE EXISTS (
+          SELECT 1 FROM area_layer_postal_codes b_codes
+          INNER JOIN area_layers al_b ON al_b.id = b_codes.layer_id AND al_b.area_id = ${areaIdB}
+          WHERE b_codes.postal_code = a_codes.postal_code
+        )
+      `),
+    ]);
+
+    if (!dataA.rows[0] || !dataB.rows[0]) {
+      return { success: false, error: "Gebiet nicht gefunden" };
+    }
+
+    const rowA = dataA.rows[0] as Record<string, unknown>;
+    const rowB = dataB.rows[0] as Record<string, unknown>;
+    const overlapRow = overlap.rows[0] as Record<string, unknown>;
+    const overlapCount = Number(overlapRow.overlap ?? 0);
+
+    const aData: AreaComparisonData = {
+      id: Number(rowA.id),
+      name: String(rowA.name),
+      country: rowA.country ? String(rowA.country) : null,
+      granularity: rowA.granularity ? String(rowA.granularity) : null,
+      layers: (rowA.layers as AreaComparisonLayer[]) ?? [],
+      totalPlz: Number(rowA.totalPlz ?? 0),
+    };
+    const bData: AreaComparisonData = {
+      id: Number(rowB.id),
+      name: String(rowB.name),
+      country: rowB.country ? String(rowB.country) : null,
+      granularity: rowB.granularity ? String(rowB.granularity) : null,
+      layers: (rowB.layers as AreaComparisonLayer[]) ?? [],
+      totalPlz: Number(rowB.totalPlz ?? 0),
+    };
+
+    return {
+      success: true,
+      data: {
+        a: aData,
+        b: bData,
+        overlapCount,
+        onlyInA: aData.totalPlz - overlapCount,
+        onlyInB: bData.totalPlz - overlapCount,
+      },
+    };
+  } catch (error) {
+    console.error("Error comparing areas:", error);
+    return { success: false, error: "Vergleich fehlgeschlagen" };
+  }
+}
