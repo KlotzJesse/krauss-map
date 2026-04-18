@@ -375,6 +375,8 @@ interface UseDeckLayersProps {
   beforeId?: string;
   /** Set of composite postal codes (e.g. "DE:12345") to highlight on the map. */
   highlightedCodes?: Set<string> | null;
+  /** When true, renders a highlight overlay for postal codes not assigned to any layer. */
+  showUnassigned?: boolean;
 }
 
 /**
@@ -394,6 +396,7 @@ export function useDeckLayers({
   country,
   beforeId,
   highlightedCodes,
+  showUnassigned = false,
 }: UseDeckLayersProps) {
   // Hover state: store the currently hovered feature for the outline layer
   const [hoveredFeature, setHoveredFeature] = useState<Feature<
@@ -434,6 +437,33 @@ export function useDeckLayers({
     }
     return codes;
   }, [layers, country]);
+
+  // All assigned codes (across all layers, regardless of visibility) — used for unassigned overlay.
+  const allAssignedCodeSet = useMemo(() => {
+    const codes = new Set<string>();
+    if (!layers) return codes;
+    for (const layer of layers) {
+      for (const pc of layer.postalCodes ?? []) {
+        codes.add(country ? `${country}:${pc.postalCode}` : pc.postalCode);
+      }
+    }
+    return codes;
+  }, [layers, country]);
+
+  // Unassigned feature data — postal codes not in any layer.
+  const unassignedFeaturesData = useMemo(() => {
+    if (!showUnassigned) return EMPTY_FEATURE_COLLECTION as FeatureCollection<Polygon | MultiPolygon>;
+    const allCodes = new Set<string>();
+    for (const f of data.features) {
+      const code = getFeatureCode(f);
+      if (code) allCodes.add(code);
+    }
+    const unassignedCodes = new Set<string>();
+    for (const code of allCodes) {
+      if (!allAssignedCodeSet.has(code)) unassignedCodes.add(code);
+    }
+    return filterAreaFeatures(data, unassignedCodes, featureIndex);
+  }, [showUnassigned, data, allAssignedCodeSet, featureIndex]);
 
   // Single-layer code set (codes in exactly one visible layer)
   const singleLayerCodeSet = useMemo(() => {
@@ -678,6 +708,24 @@ export function useDeckLayers({
       })
     );
 
+    // Unassigned PLZ overlay — postal codes not assigned to any layer
+    if (showUnassigned) {
+      result.push(
+        new GeoJsonLayer({
+          id: "unassigned-overlay",
+          data: unassignedFeaturesData,
+          beforeId,
+          filled: true,
+          stroked: true,
+          getFillColor: [239, 68, 68, 55],
+          getLineColor: [220, 38, 38, 160],
+          getLineWidth: 1.5,
+          lineWidthUnits: "pixels" as const,
+          pickable: false,
+        })
+      );
+    }
+
     // Solid area overlay — postal codes in exactly one visible layer
     result.push(
       new GeoJsonLayer({
@@ -883,6 +931,8 @@ export function useDeckLayers({
     highlightData,
     isCursorMode,
     beforeId,
+    showUnassigned,
+    unassignedFeaturesData,
   ]);
 
   return {

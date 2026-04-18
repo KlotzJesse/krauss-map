@@ -1,5 +1,5 @@
 "use no memo";
-import { Camera, Home, Layers, LocateFixed, Maximize2, Printer, PlusIcon } from "lucide-react";
+import { Camera, Home, Layers, LocateFixed, Maximize2, Printer, PlusIcon, Eye, EyeOff, Search, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import {
@@ -193,6 +193,95 @@ function MapLegend({ layers, activeLayerId }: { layers: BaseMapProps["layers"]; 
   );
 }
 
+import type { FeatureCollection, Polygon, MultiPolygon, Feature } from "geojson";
+
+function PlzSearch({
+  data,
+  featureIndex,
+  country,
+}: {
+  data: FeatureCollection<Polygon | MultiPolygon>;
+  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
+  country?: string;
+}) {
+  const { current: mapRef } = useMap();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSearch = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const code = query.trim();
+    if (!code || !mapRef) return;
+    const key = country ? `${country}:${code}` : code;
+    const features = featureIndex?.get(key) ?? featureIndex?.get(code);
+    if (!features || features.length === 0) return;
+    // Compute bounding box of first feature
+    const allCoords: number[][] = [];
+    for (const ft of features) {
+      const geom = ft.geometry;
+      if (geom.type === "Polygon") {
+        for (const ring of geom.coordinates) {
+          for (const c of ring) allCoords.push(c);
+        }
+      } else if (geom.type === "MultiPolygon") {
+        for (const poly of geom.coordinates) {
+          for (const ring of poly) {
+            for (const c of ring) allCoords.push(c);
+          }
+        }
+      }
+    }
+    if (allCoords.length === 0) return;
+    const lngs = allCoords.map((c) => c[0]);
+    const lats = allCoords.map((c) => c[1]);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    mapRef.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 80, duration: 800 });
+    setOpen(false);
+    setQuery("");
+  }, [query, mapRef, featureIndex, country]);
+
+  return (
+    <div className="absolute top-4 right-4 z-10 print:hidden">
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+          title="PLZ suchen und anspringen"
+          aria-label="PLZ suchen"
+          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+      ) : (
+        <form onSubmit={handleSearch} className="flex items-center gap-1 bg-white/95 border border-border rounded-lg shadow-md px-2 py-1">
+          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="PLZ eingeben…"
+            className="text-xs outline-none bg-transparent w-28 placeholder:text-muted-foreground"
+            onKeyDown={(e) => e.key === "Escape" && (setOpen(false), setQuery(""))}
+          />
+          <button
+            type="button"
+            onClick={() => { setOpen(false); setQuery(""); }}
+            aria-label="Suche schließen"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 /**
  * Inner map component — must be a child of <Map> to use useMap() hook.
  * Manages TerraDraw integration via raw MapLibre instance and labels via hybrid approach.
@@ -254,6 +343,7 @@ const MapInner = memo(function MapInner({
   const [showConflicts, setShowConflicts] = useState(false);
   const [highlightedConflictCodes, setHighlightedConflictCodes] =
     useState<Set<string> | null>(null);
+  const [showUnassigned, setShowUnassigned] = useState(false);
 
   const handleOpenConflicts = useCallback(() => setShowConflicts(true), []);
   const handleCloseConflicts = useCallback(() => {
@@ -337,6 +427,7 @@ const MapInner = memo(function MapInner({
     country,
     beforeId: firstSymbolLayerId,
     highlightedCodes: highlightedConflictCodes,
+    showUnassigned,
   });
 
   // MapLibre native labels (hybrid escape hatch)
@@ -567,7 +658,24 @@ const MapInner = memo(function MapInner({
             <Layers className="h-4 w-4" />
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setShowUnassigned(!showUnassigned)}
+          title={showUnassigned ? "Freie PLZ ausblenden" : "Freie PLZ anzeigen (nicht zugeordnet)"}
+          aria-label="Nicht zugeordnete PLZ anzeigen/ausblenden"
+          className={cn(
+            "flex items-center justify-center w-8 h-8 rounded-md border shadow-sm transition-colors",
+            showUnassigned
+              ? "bg-red-100 border-red-300 text-red-600 hover:bg-red-50"
+              : "bg-white/90 border-border text-muted-foreground hover:bg-white hover:text-foreground"
+          )}
+        >
+          {showUnassigned ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
       </div>
+
+      {/* PLZ search overlay — top right */}
+      <PlzSearch data={data} featureIndex={optimizations.featureIndex} country={country} />
 
       {/* Conflict resolution panel — right side, next to the map */}
       <Activity mode={showConflicts ? "visible" : "hidden"}>
