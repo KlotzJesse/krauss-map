@@ -1550,3 +1550,42 @@ export async function searchPostalCodesByBoundaryAction(data: {
     return { success: false, error: "Boundary search failed" };
   }
 }
+
+export interface PlzSearchResult {
+  areaId: number;
+  areaName: string;
+  layerId: number;
+  layerName: string;
+  layerColor: string;
+  country: string;
+  granularity: string;
+}
+
+export async function searchPostalCodeInAreasAction(
+  postalCode: string
+): ServerActionResponse<PlzSearchResult[]> {
+  const code = postalCode.trim().toUpperCase();
+  if (!code) return { success: true, data: [] };
+  try {
+    const { rows } = await db.execute<Record<string, unknown>>(sql`
+      SELECT
+        a.id AS "areaId",
+        a.name AS "areaName",
+        al.id AS "layerId",
+        al.name AS "layerName",
+        al.color AS "layerColor",
+        a.country AS country,
+        a.granularity AS granularity
+      FROM area_layer_postal_codes alpc
+      INNER JOIN area_layers al ON al.id = alpc.layer_id
+      INNER JOIN areas a ON a.id = al.area_id
+      WHERE alpc.postal_code = ${code}
+        AND a.is_archived != 'true'
+      ORDER BY a.name, al.order_index
+    `);
+    return { success: true, data: rows as unknown as PlzSearchResult[] };
+  } catch (error) {
+    console.error("Error searching PLZ:", error);
+    return { success: false, error: "PLZ-Suche fehlgeschlagen" };
+  }
+}

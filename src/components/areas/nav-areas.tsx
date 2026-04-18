@@ -42,6 +42,7 @@ import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action
 
 import { AreaListItem } from "./area-list-item";
 import { CreateAreaDialog } from "./create-area-dialog";
+import { PlzSearch } from "./plz-search";
 
 interface NavAreasState {
   createDialogOpen: boolean;
@@ -310,6 +311,9 @@ export function NavAreas({
 
   return (
     <>
+      <div className="group-data-[collapsible=icon]:hidden">
+        <PlzSearch />
+      </div>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>
           <div className="flex items-center justify-between w-full">
