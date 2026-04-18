@@ -1,7 +1,7 @@
 "use client";
 
 import { IconArrowBackUp, IconArrowForwardUp } from "@tabler/icons-react";
-import { useOptimistic } from "react";
+import { useOptimistic, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -68,6 +68,30 @@ export function UndoRedoToolbar({
       onOptimisticRedo: () => updateOptimisticStatus("redo"),
     }
   );
+
+  // Keyboard shortcuts: Ctrl+Z = undo, Ctrl+Shift+Z / Ctrl+Y = redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInInput = document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement ||
+        (document.activeElement as HTMLElement)?.isContentEditable;
+      if (isInInput) return;
+
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (!ctrl) return;
+
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        if (optimisticStatus.canUndo && !isLoading) undo();
+      } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
+        e.preventDefault();
+        if (optimisticStatus.canRedo && !isLoading) redo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo, optimisticStatus.canUndo, optimisticStatus.canRedo, isLoading]);
 
   if (!areaId) {
     return null;
