@@ -65,35 +65,28 @@ function MenuItems({
   );
 }
 
-export const AreaItemMenu = memo(
-  function AreaItemMenu({
-    area,
-    onStartRename,
-    onStartDelete,
-    onDuplicate,
-    children,
-  }: AreaItemMenuProps) {
-    return (
-      <ContextMenu>
-        <ContextMenuTrigger className="w-full">{children}</ContextMenuTrigger>
-        <ContextMenuContent className="w-44">
-          <MenuItems
-            area={area}
-            onStartRename={onStartRename}
-            onStartDelete={onStartDelete}
-            onDuplicate={onDuplicate}
-            variant="context"
-          />
-        </ContextMenuContent>
-      </ContextMenu>
-    );
-  },
-  (prev, next) =>
-    prev.area.id === next.area.id &&
-    prev.onStartRename === next.onStartRename &&
-    prev.onStartDelete === next.onStartDelete &&
-    prev.onDuplicate === next.onDuplicate
-);
+export const AreaItemMenu = memo(function AreaItemMenu({
+  area,
+  onStartRename,
+  onStartDelete,
+  onDuplicate,
+  children,
+}: AreaItemMenuProps) {
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger className="w-full">{children}</ContextMenuTrigger>
+      <ContextMenuContent className="w-44">
+        <MenuItems
+          area={area}
+          onStartRename={onStartRename}
+          onStartDelete={onStartDelete}
+          onDuplicate={onDuplicate}
+          variant="context"
+        />
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+});
 
 /** Standalone 3-dots dropdown button for area items */
 export const AreaItemDropdown = memo(
