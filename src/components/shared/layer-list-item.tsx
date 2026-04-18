@@ -825,9 +825,20 @@ export const LayerListItem = memo(function LayerListItem({
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>
-                    {notesExpanded ? "Notizen schließen" : "Notizen bearbeiten"}
-                  </p>
+                  {layer.notes && !notesExpanded ? (
+                    <div className="max-w-[220px]">
+                      <p className="font-medium text-xs mb-1">Notiz:</p>
+                      <p className="text-xs text-muted-foreground line-clamp-4 whitespace-pre-wrap">
+                        {layer.notes}
+                      </p>
+                    </div>
+                  ) : (
+                    <p>
+                      {notesExpanded
+                        ? "Notizen schließen"
+                        : "Notizen bearbeiten"}
+                    </p>
+                  )}
                 </TooltipContent>
               </Tooltip>
             )}
