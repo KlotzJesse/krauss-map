@@ -243,6 +243,18 @@ export const LayerListItem = memo(function LayerListItem({
     return postalCodes.filter((pc) => pc.postalCode.includes(q));
   }, [postalCodes, codeSearch]);
 
+  const prefixDistribution = useMemo(() => {
+    if (postalCodes.length < 3) return [];
+    const map = new Map<string, number>();
+    for (const pc of postalCodes) {
+      const prefix = pc.postalCode.slice(0, 2);
+      map.set(prefix, (map.get(prefix) ?? 0) + 1);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+  }, [postalCodes]);
+
   return (
     <div
       className={cn(
@@ -669,6 +681,29 @@ export const LayerListItem = memo(function LayerListItem({
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
+          {/* PLZ prefix distribution */}
+          {prefixDistribution.length > 0 && (
+            <div className="mt-1.5 mb-2">
+              <div className="text-[9px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Top-Regionen (2-stellig)</div>
+              <div className="space-y-0.5">
+                {prefixDistribution.map(([prefix, count]) => {
+                  const pct = postalCodes.length > 0 ? (count / postalCodes.length) * 100 : 0;
+                  return (
+                    <div key={prefix} className="flex items-center gap-1.5">
+                      <span className="font-mono text-[10px] w-6 text-right text-muted-foreground shrink-0">{prefix}x</span>
+                      <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${pct}%`, backgroundColor: layer.color }}
+                        />
+                      </div>
+                      <span className="text-[10px] tabular-nums text-muted-foreground w-5 text-right shrink-0">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {postalCodes.length > 8 && (
             <div className="relative mt-1.5 mb-1">
               <input
