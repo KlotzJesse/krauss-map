@@ -1540,6 +1540,7 @@ function LayerManagementSection({
   >("default");
 
   const [isBalancing, setIsBalancing] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
   const [, startBalanceTransition] = useTransition();
   const handleBalanceLayers = useCallback(() => {
     if (!areaId || optimisticLayers.length < 2) return;
@@ -1800,7 +1801,7 @@ function LayerManagementSection({
   );
 
   // Per-layer duplicate postal code counts + overall stats
-  const { duplicateCountByLayer, layerStats } = useMemo(() => {
+  const { duplicateCountByLayer, duplicateCodeMap, layerStats } = useMemo(() => {
     const counts = new Map<number, number>();
     const codeToLayers = new Map<string, number[]>();
     let totalCodes = 0;
@@ -1842,6 +1843,9 @@ function LayerManagementSection({
 
     return {
       duplicateCountByLayer: counts,
+      duplicateCodeMap: new Map(
+        [...codeToLayers.entries()].filter(([, ids]) => ids.length > 1)
+      ),
       layerStats: {
         uniqueCodes: codeToLayers.size,
         totalCodes,
@@ -2460,9 +2464,14 @@ function LayerManagementSection({
                   eindeutige PLZ
                 </span>
                 {layerStats.duplicateCodes > 0 && (
-                  <span className="text-amber-500 font-medium">
+                  <button
+                    type="button"
+                    className="text-amber-500 font-medium hover:text-amber-600 transition-colors"
+                    onClick={() => setShowDuplicates((v) => !v)}
+                    title="Doppelte PLZ anzeigen"
+                  >
                     {layerStats.duplicateCodes}✕ doppelt
-                  </span>
+                  </button>
                 )}
                 <span className="flex items-center gap-1.5">
                   <span className="font-medium text-foreground">
@@ -2503,6 +2512,55 @@ function LayerManagementSection({
                   </button>
                 </span>
               </div>
+              {/* Duplicate PLZ detail panel */}
+              {showDuplicates && duplicateCodeMap.size > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-amber-500 font-medium uppercase tracking-wide">
+                      Doppelte PLZ ({duplicateCodeMap.size})
+                    </span>
+                    <button
+                      type="button"
+                      className="text-[9px] text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowDuplicates(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="max-h-28 overflow-y-auto space-y-0.5">
+                    {[...duplicateCodeMap.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([code, layerIds]) => (
+                      <div key={code} className="flex items-center gap-1 text-[10px]">
+                        <button
+                          type="button"
+                          className="font-mono font-medium text-amber-500 hover:underline"
+                          title={`PLZ ${code} auf der Karte anzeigen`}
+                          onClick={() => {
+                            onPreviewPostalCode?.(code);
+                            setTimeout(() => onPreviewPostalCode?.(null), 2000);
+                          }}
+                        >
+                          {code}
+                        </button>
+                        <span className="text-muted-foreground">in</span>
+                        <span className="flex gap-0.5 flex-wrap">
+                          {layerIds.map((id: number) => {
+                            const l = optimisticLayers.find((x) => x.id === id);
+                            return l ? (
+                              <span
+                                key={id}
+                                className="px-1 rounded text-[9px] font-medium"
+                                style={{ backgroundColor: l.color + "33", color: l.color }}
+                              >
+                                {l.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* PLZ range */}
               {layerStats.minCode &&
                 layerStats.maxCode &&
