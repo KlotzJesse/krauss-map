@@ -27,6 +27,7 @@ export interface BaseMapProps {
   areaDescription?: string | null;
   previewPostalCode?: string | null;
   onSetPreviewPostalCode?: (postalCode: string | null) => void;
+  onZoomToLayer?: (layerId: number) => void;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   removePostalCodesFromLayer?: (
     layerId: number,

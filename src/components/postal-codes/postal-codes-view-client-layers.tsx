@@ -441,6 +441,49 @@ export function PostalCodesViewClientWithLayers({
     [data, setMapCenterZoom]
   );
 
+  const handleZoomToLayer = useCallback(
+    (layerId: number) => {
+      if (!data) return;
+      const layer = optimisticLayers.find((l) => l.id === layerId);
+      if (!layer?.postalCodes?.length) return;
+
+      const codeSet = new Set(layer.postalCodes.map((pc) => pc.postalCode));
+      let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+      let found = false;
+
+      for (const feature of data.features) {
+        if (!codeSet.has(feature.properties?.code)) continue;
+        found = true;
+        const coords: number[][] = [];
+        const geom = feature.geometry;
+        if (geom.type === "Polygon") {
+          for (const ring of geom.coordinates) for (const c of ring) coords.push(c);
+        } else if (geom.type === "MultiPolygon") {
+          for (const poly of geom.coordinates) for (const ring of poly) for (const c of ring) coords.push(c);
+        }
+        for (const [lng, lat] of coords) {
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+        }
+      }
+
+      if (!found) return;
+
+      const centerLng = (minLng + maxLng) / 2;
+      const centerLat = (minLat + maxLat) / 2;
+      // Approximate zoom: wider bbox → lower zoom
+      const lngSpan = maxLng - minLng;
+      const latSpan = maxLat - minLat;
+      const span = Math.max(lngSpan, latSpan);
+      const zoom = Math.max(5, Math.min(13, Math.round(Math.log2(360 / span)) - 1));
+
+      setMapCenterZoom([centerLng, centerLat], zoom);
+    },
+    [data, optimisticLayers, setMapCenterZoom]
+  );
+
   const handleGranularityChange = useCallback(
     (newGranularity: string) => {
       if (newGranularity === defaultGranularity) {
@@ -564,6 +607,7 @@ export function PostalCodesViewClientWithLayers({
             areaDescription={areaDescription}
             previewPostalCode={previewPostalCode}
             onSetPreviewPostalCode={handleBadgePreviewPostalCode}
+            onZoomToLayer={handleZoomToLayer}
             addPostalCodesToLayer={addPostalCodesToLayer}
             removePostalCodesFromLayer={removePostalCodesFromLayer}
             isViewingVersion={isViewingVersion}

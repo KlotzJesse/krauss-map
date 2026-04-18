@@ -28,6 +28,7 @@ interface PostalCodesMapProps {
   areaDescription?: string | null;
   previewPostalCode?: string | null;
   onSetPreviewPostalCode?: (postalCode: string | null) => void;
+  onZoomToLayer?: (layerId: number) => void;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   removePostalCodesFromLayer?: (
     layerId: number,
@@ -64,6 +65,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
   changes,
   previewPostalCode,
   onSetPreviewPostalCode,
+  onZoomToLayer,
 }: PostalCodesMapProps) {
   const [{ center, zoom }] = useMapView();
 
@@ -83,6 +85,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
       areaDescription={areaDescription}
       previewPostalCode={previewPostalCode}
       onSetPreviewPostalCode={onSetPreviewPostalCode}
+      onZoomToLayer={onZoomToLayer}
       addPostalCodesToLayer={addPostalCodesToLayer}
       removePostalCodesFromLayer={removePostalCodesFromLayer}
       isViewingVersion={isViewingVersion}

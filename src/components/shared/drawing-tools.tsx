@@ -299,6 +299,8 @@ export interface DrawingToolsProps {
 
   /** Callback to set the hovered PLZ for map preview. */
   onPreviewPostalCode?: (postalCode: string | null) => void;
+  /** Callback to zoom the map to a layer's postal code extent. */
+  onZoomToLayer?: (layerId: number) => void;
 }
 
 // --- UI state reducer ---
@@ -1184,6 +1186,7 @@ interface LayerManagementSectionProps {
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   onOpenConflicts?: () => void;
   onPreviewPostalCode?: (postalCode: string | null) => void;
+  onZoomToLayer?: (layerId: number) => void;
   plzFindInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -1219,6 +1222,7 @@ function LayerManagementSection({
   addPostalCodesToLayer,
   onOpenConflicts,
   onPreviewPostalCode,
+  onZoomToLayer,
   plzFindInputRef: externalPlzFindInputRef,
 }: LayerManagementSectionProps) {
   const { isLocked, toggleLock } = useLockedLayers(areaId);
@@ -1795,6 +1799,7 @@ function LayerManagementSection({
                    isLocked={isLocked(layer.id)}
                    onToggleLock={toggleLock}
                    onPreviewPostalCode={onPreviewPostalCode}
+                   onZoomToLayer={onZoomToLayer}
                  />
                ))
              ) : (
@@ -1843,6 +1848,7 @@ function LayerManagementSection({
                       isLocked={isLocked(layer.id)}
                       onToggleLock={toggleLock}
                       onPreviewPostalCode={onPreviewPostalCode}
+                      onZoomToLayer={onZoomToLayer}
                     />
                   ))}
                 </SortableContext>
@@ -2205,6 +2211,7 @@ function DrawingToolsImpl({
   onOpenConflicts,
   undoRedoStatus,
   onPreviewPostalCode,
+  onZoomToLayer,
 }: DrawingToolsProps) {
   const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
 
@@ -2541,6 +2548,7 @@ function DrawingToolsImpl({
             handleBulkDelete={handleBulkDelete}
             handleBulkVisibility={handleBulkVisibility}
             onPreviewPostalCode={onPreviewPostalCode}
+            onZoomToLayer={onZoomToLayer}
             plzFindInputRef={plzFindInputRef}
           />
         )}

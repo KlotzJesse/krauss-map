@@ -92,6 +92,7 @@ interface LayerListItemProps {
   isLocked?: boolean;
   onToggleLock?: (layerId: number) => void;
   onPreviewPostalCode?: (postalCode: string | null) => void;
+  onZoomToLayer?: (layerId: number) => void;
 }
 
 function LayerColorPickerContent({
@@ -224,6 +225,7 @@ export const LayerListItem = memo(function LayerListItem({
   isLocked = false,
   onToggleLock,
   onPreviewPostalCode,
+  onZoomToLayer,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -631,6 +633,28 @@ export const LayerListItem = memo(function LayerListItem({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{isLocked ? "Ebene gesperrt – entsperren?" : "Ebene sperren"}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onZoomToLayer && (layer.postalCodes?.length ?? 0) > 0 && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onZoomToLayer(layer.id);
+                      }}
+                    />
+                  }
+                >
+                  <Focus className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Karte auf Ebene fokussieren</p>
                 </TooltipContent>
               </Tooltip>
             )}
