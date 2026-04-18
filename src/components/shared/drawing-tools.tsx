@@ -21,6 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   IconAlertTriangle,
+  IconChevronDown,
   IconClock,
   IconDeviceFloppy,
   IconDots,
@@ -224,12 +225,16 @@ interface StatsSectionProps {
   layers: Layer[];
   postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
   onLayerSelect?: (layerId: number) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 function StatsSection({
   layers,
   postalCodesData,
   onLayerSelect,
+  open = true,
+  onOpenChange,
 }: StatsSectionProps) {
   const totalFeatures = postalCodesData?.features.length ?? 0;
   const assignedSet = new Set(
@@ -261,8 +266,22 @@ function StatsSection({
   return (
     <>
       <Separator />
-      <div className="space-y-2 pb-1">
-        <div className="text-xs font-semibold">Statistik</div>
+      <Collapsible open={open} onOpenChange={onOpenChange}>
+        <CollapsibleTrigger className="flex w-full items-center justify-between py-0.5 text-left">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold">Statistik</span>
+              {!open && (
+                <span className="text-muted-foreground text-xs">
+                  {coverage.toFixed(0)}% Abdeckung · {assignedCount} PLZ
+                </span>
+              )}
+            </div>
+            <IconChevronDown
+              className={`text-muted-foreground size-3.5 transition-transform ${open ? "rotate-0" : "-rotate-90"}`}
+            />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="space-y-2 pb-1 pt-1">
         {/* Coverage donut ring */}
         <div className="flex items-center gap-3">
           <svg
@@ -399,6 +418,8 @@ function StatsSection({
           </div>
         )}
       </div>
+        </CollapsibleContent>
+      </Collapsible>
     </>
   );
 }
@@ -497,6 +518,7 @@ export interface DrawingToolsProps {
 interface DrawingToolsUIState {
   layersOpen: boolean;
   regionsOpen: boolean;
+  statsOpen: boolean;
   showVersionHistory: boolean;
   showCreateVersion: boolean;
   showLayerMerge: boolean;
@@ -507,6 +529,7 @@ interface DrawingToolsUIState {
 type DrawingToolsUIAction =
   | { type: "SET_LAYERS_OPEN"; open: boolean }
   | { type: "SET_REGIONS_OPEN"; open: boolean }
+  | { type: "SET_STATS_OPEN"; open: boolean }
   | { type: "OPEN_HISTORY" }
   | { type: "CLOSE_HISTORY" }
   | { type: "OPEN_VERSION" }
@@ -528,6 +551,9 @@ function drawingToolsUIReducer(
     }
     case "SET_REGIONS_OPEN": {
       return { ...state, regionsOpen: action.open };
+    }
+    case "SET_STATS_OPEN": {
+      return { ...state, statsOpen: action.open };
     }
     case "AUTO_OPEN_REGIONS": {
       return { ...state, regionsOpen: true };
@@ -715,6 +741,7 @@ function useDrawingToolsActions({
   const [ui, dispatchUI] = useReducer(drawingToolsUIReducer, undefined, () => {
     let layersOpen = !!areaId;
     let regionsOpen = false;
+    let statsOpen = true;
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("drawing-tools-ui");
       if (saved) {
@@ -722,9 +749,11 @@ function useDrawingToolsActions({
           const parsed = JSON.parse(saved) as {
             layersOpen?: boolean;
             regionsOpen?: boolean;
+            statsOpen?: boolean;
           };
           layersOpen = parsed.layersOpen ?? layersOpen;
           regionsOpen = parsed.regionsOpen ?? false;
+          statsOpen = parsed.statsOpen ?? true;
         } catch {
           /* ignore */
         }
@@ -733,6 +762,7 @@ function useDrawingToolsActions({
     return {
       layersOpen,
       regionsOpen,
+      statsOpen,
       showVersionHistory: false,
       showCreateVersion: false,
       showLayerMerge: false,
@@ -4185,6 +4215,23 @@ function DrawingToolsImpl({
     },
     [dispatchUI]
   );
+
+  const handleSetStatsOpen = useCallback(
+    (open: boolean) => {
+      dispatchUI({ type: "SET_STATS_OPEN", open });
+      try {
+        const saved = localStorage.getItem("drawing-tools-ui");
+        const prev = saved ? JSON.parse(saved) : {};
+        localStorage.setItem(
+          "drawing-tools-ui",
+          JSON.stringify({ ...prev, statsOpen: open })
+        );
+      } catch {
+        /* ignore */
+      }
+    },
+    [dispatchUI]
+  );
   const handleClearAllWithToast = useCallback(() => {
     onClearAll();
     toast.success("Zeichnungen gelöscht", { duration: 2000 });
@@ -4899,6 +4946,8 @@ function DrawingToolsImpl({
             layers={optimisticLayers}
             postalCodesData={postalCodesData}
             onLayerSelect={onLayerSelect}
+            open={ui.statsOpen}
+            onOpenChange={handleSetStatsOpen}
           />
         )}
 
