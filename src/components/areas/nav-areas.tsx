@@ -1,6 +1,6 @@
 "use client";
 
-import { IconPlus } from "@tabler/icons-react";
+import { IconArchive, IconPlus } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
 import {
   useOptimistic,
@@ -16,6 +16,7 @@ import {
   updateAreaAction,
   deleteAreaAction,
   duplicateAreaAction,
+  archiveAreaAction,
 } from "@/app/actions/area-actions";
 import {
   AlertDialog,
@@ -159,7 +160,7 @@ export function NavAreas({
     areas,
     (
       currentAreas: AreaSummary[],
-      update: { type: "rename" | "delete"; id: number; name?: string }
+      update: { type: "rename" | "delete" | "archive"; id: number; name?: string; isArchived?: string }
     ) => {
       if (update.type === "rename" && update.name) {
         return currentAreas.map((area) =>
@@ -169,9 +170,21 @@ export function NavAreas({
       if (update.type === "delete") {
         return currentAreas.filter((area) => area.id !== update.id);
       }
+      if (update.type === "archive") {
+        return currentAreas.map((area) =>
+          area.id === update.id ? { ...area, isArchived: update.isArchived ?? "false" } : area
+        );
+      }
       return currentAreas;
     }
   );
+
+  const [showArchived, setShowArchived] = useReducer((v: boolean) => !v, false);
+
+  const visibleAreas = showArchived
+    ? optimisticAreas
+    : optimisticAreas.filter((a) => a.isArchived !== "true");
+  const archivedCount = optimisticAreas.filter((a) => a.isArchived === "true").length;
 
   const [_isPending, startTransition] = useTransition();
 
@@ -259,6 +272,20 @@ export function NavAreas({
     [startTransition]
   );
 
+  const handleArchive = useCallback(
+    (area: AreaSummary, archive: boolean) => {
+      startTransition(async () => {
+        updateOptimisticAreas({ type: "archive", id: area.id, isArchived: archive ? "true" : "false" });
+        await executeAction(archiveAreaAction(area.id, archive), {
+          loading: archive ? `Archiviere "${area.name}"...` : `Stelle "${area.name}" wieder her...`,
+          success: archive ? `"${area.name}" archiviert` : `"${area.name}" wiederhergestellt`,
+          error: "Fehler beim Archivieren",
+        });
+      });
+    },
+    [startTransition]
+  );
+
   const handleConfirmDelete = async () => {
     if (!areaToDelete) {
       return;
@@ -287,14 +314,31 @@ export function NavAreas({
         <SidebarGroupLabel>
           <div className="flex items-center justify-between w-full">
             <span>Gebiete</span>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: "OPEN_CREATE" })}
-              className="hover:bg-sidebar-accent rounded p-0.5"
-              title="Neues Gebiet erstellen"
-            >
-              <IconPlus className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-0.5">
+              {archivedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={setShowArchived}
+                  className={`hover:bg-sidebar-accent rounded p-0.5 relative ${showArchived ? "text-amber-500" : "text-muted-foreground"}`}
+                  title={showArchived ? "Archivierte ausblenden" : `${archivedCount} archivierte anzeigen`}
+                >
+                  <IconArchive className="h-3.5 w-3.5" />
+                  {!showArchived && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 text-[8px] leading-none flex items-center justify-center rounded-full bg-amber-500 text-white font-bold">
+                      {archivedCount}
+                    </span>
+                  )}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "OPEN_CREATE" })}
+                className="hover:bg-sidebar-accent rounded p-0.5"
+                title="Neues Gebiet erstellen"
+              >
+                <IconPlus className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </SidebarGroupLabel>
         <SidebarGroupContent>
@@ -304,7 +348,7 @@ export function NavAreas({
                 <SidebarMenuButton disabled>Lade...</SidebarMenuButton>
               </SidebarMenuItem>
             )}
-            {!isLoading && optimisticAreas.length === 0 && (
+            {!isLoading && visibleAreas.length === 0 && optimisticAreas.length === 0 && (
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => dispatch({ type: "OPEN_CREATE" })}
@@ -316,7 +360,7 @@ export function NavAreas({
               </SidebarMenuItem>
             )}
             {!isLoading &&
-              optimisticAreas.map((area) => (
+              visibleAreas.map((area) => (
                 <AreaListItem
                   key={area.id}
                   area={area}
@@ -330,6 +374,7 @@ export function NavAreas({
                   onEditNameChange={handleEditNameChange}
                   onStartDelete={handleStartDelete}
                   onDuplicate={handleDuplicate}
+                  onArchive={handleArchive}
                   onAreaClick={handleAreaClick}
                 />
               ))}

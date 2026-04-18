@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  IconArchive,
+  IconArchiveOff,
   IconCopy,
   IconDotsVertical,
   IconEdit,
@@ -29,6 +31,7 @@ interface AreaItemMenuProps {
   onStartRename: (area: AreaSummary, e: React.MouseEvent) => void;
   onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
   onDuplicate: (area: AreaSummary) => void;
+  onArchive: (area: AreaSummary, archive: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -38,6 +41,7 @@ function MenuItems({
   onStartRename,
   onStartDelete,
   onDuplicate,
+  onArchive,
   variant,
 }: Omit<AreaItemMenuProps, "children"> & {
   variant: "context" | "dropdown";
@@ -45,6 +49,7 @@ function MenuItems({
   const Item = variant === "context" ? ContextMenuItem : DropdownMenuItem;
   const Sep =
     variant === "context" ? ContextMenuSeparator : DropdownMenuSeparator;
+  const isArchived = area.isArchived === "true";
 
   return (
     <>
@@ -55,6 +60,14 @@ function MenuItems({
       <Item onClick={() => onDuplicate(area)}>
         <IconCopy className="h-4 w-4 mr-2" />
         Duplizieren
+      </Item>
+      <Item onClick={() => onArchive(area, !isArchived)}>
+        {isArchived ? (
+          <IconArchiveOff className="h-4 w-4 mr-2" />
+        ) : (
+          <IconArchive className="h-4 w-4 mr-2" />
+        )}
+        {isArchived ? "Wiederherstellen" : "Archivieren"}
       </Item>
       <Sep />
       <Item onClick={(e) => onStartDelete(area, e)} variant="destructive">
@@ -70,6 +83,7 @@ export const AreaItemMenu = memo(function AreaItemMenu({
   onStartRename,
   onStartDelete,
   onDuplicate,
+  onArchive,
   children,
 }: AreaItemMenuProps) {
   return (
@@ -81,6 +95,7 @@ export const AreaItemMenu = memo(function AreaItemMenu({
           onStartRename={onStartRename}
           onStartDelete={onStartDelete}
           onDuplicate={onDuplicate}
+          onArchive={onArchive}
           variant="context"
         />
       </ContextMenuContent>
@@ -95,6 +110,7 @@ export const AreaItemDropdown = memo(
     onStartRename,
     onStartDelete,
     onDuplicate,
+    onArchive,
   }: Omit<AreaItemMenuProps, "children">) {
     return (
       <DropdownMenu>
@@ -111,6 +127,7 @@ export const AreaItemDropdown = memo(
             onStartRename={onStartRename}
             onStartDelete={onStartDelete}
             onDuplicate={onDuplicate}
+            onArchive={onArchive}
             variant="dropdown"
           />
         </DropdownMenuContent>
@@ -119,7 +136,9 @@ export const AreaItemDropdown = memo(
   },
   (prev, next) =>
     prev.area.id === next.area.id &&
+    prev.area.isArchived === next.area.isArchived &&
     prev.onStartRename === next.onStartRename &&
     prev.onStartDelete === next.onStartDelete &&
-    prev.onDuplicate === next.onDuplicate
+    prev.onDuplicate === next.onDuplicate &&
+    prev.onArchive === next.onArchive
 );

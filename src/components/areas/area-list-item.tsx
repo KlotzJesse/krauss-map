@@ -1,6 +1,6 @@
 "use client";
 
-import { IconCheck, IconFolder, IconX } from "@tabler/icons-react";
+import { IconArchive, IconCheck, IconFolder, IconX } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { memo } from "react";
@@ -25,6 +25,7 @@ interface AreaListItemProps {
   onEditNameChange: (name: string) => void;
   onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
   onDuplicate: (area: AreaSummary) => void;
+  onArchive: (area: AreaSummary, archive: boolean) => void;
   onAreaClick: (area: AreaSummary) => void;
 }
 
@@ -41,8 +42,10 @@ export const AreaListItem = memo(
     onEditNameChange,
     onStartDelete,
     onDuplicate,
+    onArchive,
     onAreaClick,
   }: AreaListItemProps) {
+    const isArchived = area.isArchived === "true";
     if (isEditing) {
       return (
         <SidebarMenuItem>
@@ -112,6 +115,7 @@ export const AreaListItem = memo(
           onStartRename={onStartRename}
           onStartDelete={onStartDelete}
           onDuplicate={onDuplicate}
+          onArchive={onArchive}
         >
           <div className="group/item relative flex items-center w-full">
             <div
@@ -119,14 +123,18 @@ export const AreaListItem = memo(
                 isCurrentRoute
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-              }`}
+              } ${isArchived ? "opacity-50" : ""}`}
               onDoubleClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 onStartRename(area, e);
               }}
             >
-              <IconFolder className="h-4 w-4 shrink-0 text-muted-foreground" />
+              {isArchived ? (
+                <IconArchive className="h-4 w-4 shrink-0 text-muted-foreground" />
+              ) : (
+                <IconFolder className="h-4 w-4 shrink-0 text-muted-foreground" />
+              )}
               <Link
                 href={`/postal-codes/${area.id}` as Route}
                 onClick={(e) => {
@@ -135,7 +143,7 @@ export const AreaListItem = memo(
                 }}
                 className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
               >
-                <span className="truncate">{area.name}</span>
+                <span className={`truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}>{area.name}</span>
                 <LinkPendingIndicator />
               </Link>
               {!!area.postalCodeCount && (
@@ -149,6 +157,7 @@ export const AreaListItem = memo(
                   onStartRename={onStartRename}
                   onStartDelete={onStartDelete}
                   onDuplicate={onDuplicate}
+                  onArchive={onArchive}
                 />
               </div>
             </div>
@@ -163,7 +172,8 @@ export const AreaListItem = memo(
       prev.area.id !== next.area.id ||
       prev.area.name !== next.area.name ||
       prev.area.country !== next.area.country ||
-      prev.area.postalCodeCount !== next.area.postalCodeCount
+      prev.area.postalCodeCount !== next.area.postalCodeCount ||
+      prev.area.isArchived !== next.area.isArchived
     ) {
       return false;
     }

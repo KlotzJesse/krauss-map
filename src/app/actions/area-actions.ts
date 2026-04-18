@@ -244,6 +244,28 @@ export async function deleteAreaAction(id: number) {
   }
 }
 
+export async function archiveAreaAction(
+  id: number,
+  archive: boolean
+): ServerActionResponse {
+  try {
+    await db
+      .update(areas)
+      .set({
+        isArchived: archive ? "true" : "false",
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(areas.id, id));
+
+    updateTag("areas");
+    updateTag(`area-${id}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error archiving area:", error);
+    return { success: false, error: "Failed to archive area" };
+  }
+}
+
 export async function duplicateAreaAction(sourceAreaId: number) {
   let redirectPath: string | null = null;
 
