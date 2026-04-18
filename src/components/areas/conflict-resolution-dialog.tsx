@@ -50,6 +50,8 @@ interface ConflictResolutionPanelProps {
   layers: Layer[];
   /** Country code for composite postal code keys (e.g. "DE"). */
   country?: string;
+  /** Active layer — used for "keep in active layer" auto-resolve */
+  activeLayerId?: number | null;
 }
 
 export function ConflictResolutionPanel({
@@ -58,6 +60,7 @@ export function ConflictResolutionPanel({
   areaId,
   layers,
   country,
+  activeLayerId,
 }: ConflictResolutionPanelProps) {
   // Convert raw postal codes to composite keys for feature-index lookup
   const toCompositeSet = useCallback(
@@ -238,6 +241,13 @@ export function ConflictResolutionPanel({
     if (!bestLayer) return;
     await handleBatchResolve(bestLayer.id, allConflictCodes);
   }, [conflicts, layers, handleBatchResolve]);
+
+  /** Auto-resolve: keep all conflicting PLZ in the currently active layer. */
+  const handleAutoResolveActiveLayer = useCallback(async () => {
+    if (!activeLayerId) return;
+    const allConflictCodes = new Set(conflicts.map((c) => c.postalCode));
+    await handleBatchResolve(activeLayerId, allConflictCodes);
+  }, [activeLayerId, conflicts, handleBatchResolve]);
 
   const selectedInGroup = (group: ConflictGroup) =>
     group.postalCodes.filter((c) => selectedCodes.has(c)).length;
@@ -485,6 +495,29 @@ export function ConflictResolutionPanel({
               </TooltipContent>
             </Tooltip>
           </Activity>
+          {activeLayerId && (
+            <Activity mode={conflicts.length > 0 ? "visible" : "hidden"}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={handleAutoResolveActiveLayer}
+                      disabled={resolving || isDetecting}
+                    />
+                  }
+                >
+                  <IconWand className="h-3 w-3 mr-1" />
+                  Aktives Gebiet
+                </TooltipTrigger>
+                <TooltipContent>
+                  Alle Konflikte auflösen — PLZ im aktiven Gebiet behalten
+                </TooltipContent>
+              </Tooltip>
+            </Activity>
+          )}
           <Activity mode={selectedCodes.size > 0 ? "visible" : "hidden"}>
             <SelectedResolveDropdown
               selectedCount={selectedCodes.size}

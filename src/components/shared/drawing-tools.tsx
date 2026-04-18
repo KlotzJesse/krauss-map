@@ -36,9 +36,11 @@ import type { Dispatch, RefObject } from "react";
 import {
   Suspense,
   useCallback,
+  useEffect,
   useMemo,
   useOptimistic,
   useReducer,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -1616,18 +1618,52 @@ function LayerManagementSection({
 
           {/* Layer stats summary — shown when there are layers with codes */}
           {layerStats.totalCodes > 0 && (
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t pt-1.5 mt-0.5">
-              <span>
-                <span className="font-medium text-foreground">{layerStats.uniqueCodes}</span> eindeutige PLZ
-              </span>
-              {layerStats.duplicateCodes > 0 && (
-                <span className="text-amber-500 font-medium">
-                  {layerStats.duplicateCodes}✕ doppelt
+            <div className="border-t pt-1.5 mt-0.5 space-y-1.5">
+              {/* Summary row */}
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>
+                  <span className="font-medium text-foreground">{layerStats.uniqueCodes}</span> eindeutige PLZ
                 </span>
+                {layerStats.duplicateCodes > 0 && (
+                  <span className="text-amber-500 font-medium">
+                    {layerStats.duplicateCodes}✕ doppelt
+                  </span>
+                )}
+                <span>
+                  <span className="font-medium text-foreground">{layerStats.totalCodes}</span> gesamt
+                </span>
+              </div>
+              {/* Per-layer mini bar chart */}
+              {optimisticLayers.length > 1 && (
+                <div className="space-y-0.5">
+                  {optimisticLayers
+                    .filter((l) => (l.postalCodes?.length ?? 0) > 0)
+                    .sort((a, b) => (b.postalCodes?.length ?? 0) - (a.postalCodes?.length ?? 0))
+                    .map((layer) => {
+                      const count = layer.postalCodes?.length ?? 0;
+                      const pct = layerStats.totalCodes > 0 ? (count / layerStats.totalCodes) * 100 : 0;
+                      return (
+                        <div key={layer.id} className="flex items-center gap-1.5 text-[10px]">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: layer.color }}
+                          />
+                          <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{ width: `${pct}%`, backgroundColor: layer.color }}
+                            />
+                          </div>
+                          <span className="text-muted-foreground w-6 text-right">{count}</span>
+                        </div>
+                      );
+                    })}
+                </div>
               )}
-              <span>
-                <span className="font-medium text-foreground">{layerStats.totalCodes}</span> gesamt
-              </span>
+              {/* Keyboard hint */}
+              <div className="text-[9px] text-muted-foreground/60 text-right">
+                Alt+↑↓ Gebiet wechseln
+              </div>
             </div>
           )}
         </CollapsibleContent>
@@ -1881,6 +1917,34 @@ function DrawingToolsImpl({
     },
     [areaId]
   );
+
+  // Keyboard shortcut: Alt+ArrowUp/Down switches active layer
+  const layersRef = useRef(layers);
+  layersRef.current = layers;
+  const activeLayerIdRef = useRef(activeLayerId);
+  activeLayerIdRef.current = activeLayerId;
+  const onLayerSelectRef = useRef(onLayerSelect);
+  onLayerSelectRef.current = onLayerSelect;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      const currentLayers = layersRef.current;
+      if (!currentLayers.length) return;
+      const currentIdx = currentLayers.findIndex((l) => l.id === activeLayerIdRef.current);
+      const nextIdx = e.key === "ArrowUp"
+        ? Math.max(0, (currentIdx === -1 ? 0 : currentIdx) - 1)
+        : Math.min(currentLayers.length - 1, (currentIdx === -1 ? 0 : currentIdx) + 1);
+      if (nextIdx !== currentIdx) {
+        e.preventDefault();
+        onLayerSelectRef.current?.(currentLayers[nextIdx].id);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <Card

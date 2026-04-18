@@ -407,6 +407,7 @@ const MapInner = memo(function MapInner({
             areaId={areaId!}
             layers={layers ?? []}
             country={country}
+            activeLayerId={activeLayerId}
           />
         </div>
       </Activity>
