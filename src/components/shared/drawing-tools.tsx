@@ -2015,6 +2015,7 @@ const LayerDialogs = memo(function LayerDialogs({
           <div className="space-y-3 text-sm">
             {[
               { keys: ["Alt", "↑ / ↓"], desc: "Gebiet wechseln" },
+              { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
               { keys: ["Esc"], desc: "Zeichenmodus beenden" },
               { keys: ["Enter"], desc: "Polygon abschließen" },
               { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
@@ -2183,6 +2184,8 @@ function DrawingToolsImpl({
   activeLayerIdRef.current = activeLayerId;
   const onLayerSelectRef = useRef(onLayerSelect);
   onLayerSelectRef.current = onLayerSelect;
+  const guardedAddRef = useRef(guardedAddPostalCodesToLayer);
+  guardedAddRef.current = guardedAddPostalCodesToLayer;
 
   const handleOpenKeyboardHelp = useCallback(
     () => dispatchUI({ type: "OPEN_KEYBOARD_HELP" }),
@@ -2205,8 +2208,32 @@ function DrawingToolsImpl({
         onLayerSelectRef.current?.(currentLayers[nextIdx].id);
       }
     };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement;
+      // Only intercept paste outside text inputs
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      const addFn = guardedAddRef.current;
+      const layerId = activeLayerIdRef.current;
+      if (!addFn || !layerId) return;
+      const text = e.clipboardData?.getData("text") ?? "";
+      const codes = text
+        .split(/[\s,;]+/)
+        .map((s) => s.trim())
+        .filter((s) => /^\d{4,5}$/.test(s));
+      if (codes.length === 0) return;
+      e.preventDefault();
+      addFn(layerId, codes).then(() => {
+        toast.success(`${codes.length} PLZ eingefügt`);
+      });
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("paste", handlePaste);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("paste", handlePaste);
+    };
   }, []);
 
   const handleImportDataFile = useCallback(
