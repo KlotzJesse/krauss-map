@@ -249,47 +249,85 @@ function StatsSection({ layers, postalCodesData }: StatsSectionProps) {
       <Separator />
       <div className="space-y-2 pb-1">
         <div className="text-xs font-semibold">Statistik</div>
-        <div className="grid grid-cols-2 gap-1.5">
-          <div className="rounded-md bg-muted/60 px-2 py-1.5 text-center">
-            <div className="text-sm font-bold tabular-nums">
-              {assignedCount.toLocaleString("de-DE")}
-            </div>
-            <div className="text-[10px] text-muted-foreground leading-tight">
-              Zugewiesen
-            </div>
-          </div>
-          <div className="rounded-md bg-muted/60 px-2 py-1.5 text-center">
-            <div className="text-sm font-bold tabular-nums">
-              {unassignedCount.toLocaleString("de-DE")}
-            </div>
-            <div className="text-[10px] text-muted-foreground leading-tight">
-              Ohne Gebiet
-            </div>
-          </div>
-        </div>
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Abdeckung</span>
-            <span className="font-semibold tabular-nums">
-              {coverage.toFixed(1)}&thinsp;%
-            </span>
-          </div>
-          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-primary transition-[width] duration-300"
-              style={{ width: `${Math.min(coverage, 100)}%` }}
+        {/* Coverage donut ring */}
+        <div className="flex items-center gap-3">
+          <svg
+            width="52"
+            height="52"
+            viewBox="0 0 52 52"
+            className="shrink-0"
+            aria-hidden
+          >
+            <circle
+              cx="26"
+              cy="26"
+              r="20"
+              fill="none"
+              strokeWidth="5"
+              className="stroke-muted"
             />
+            <circle
+              cx="26"
+              cy="26"
+              r="20"
+              fill="none"
+              strokeWidth="5"
+              strokeDasharray={`${2 * Math.PI * 20}`}
+              strokeDashoffset={`${2 * Math.PI * 20 * (1 - Math.min(coverage, 100) / 100)}`}
+              strokeLinecap="round"
+              className="stroke-primary transition-[stroke-dashoffset] duration-500"
+              transform="rotate(-90 26 26)"
+            />
+            <text
+              x="26"
+              y="25"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="9.5"
+              fontWeight="bold"
+              className="fill-foreground"
+            >
+              {coverage.toFixed(0)}%
+            </text>
+            <text
+              x="26"
+              y="34"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="6.5"
+              className="fill-muted-foreground"
+            >
+              Abdeckung
+            </text>
+          </svg>
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>Zugewiesen</span>
+              <span className="tabular-nums font-medium text-foreground">
+                {assignedCount.toLocaleString("de-DE")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>Ohne Gebiet</span>
+              <span
+                className={`tabular-nums font-medium ${unassignedCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}
+              >
+                {unassignedCount.toLocaleString("de-DE")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>Gesamt PLZ</span>
+              <span className="tabular-nums font-medium text-foreground">
+                {totalFeatures.toLocaleString("de-DE")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>Gebiete</span>
+              <span className="tabular-nums font-medium text-foreground">
+                {layers.length}
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-          <span>Gesamt PLZ</span>
-          <span className="tabular-nums">
-            {totalFeatures.toLocaleString("de-DE")}
-          </span>
-        </div>
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-          <span>Gebiete</span>
-          <span className="tabular-nums">{layers.length}</span>
         </div>
         {layerSizes.length > 0 && (
           <div className="space-y-1 pt-0.5">
@@ -2379,6 +2417,24 @@ function LayerManagementSection({
                       <p>{selectedIds.size} Gebiete löschen</p>
                     </TooltipContent>
                   </Tooltip>
+                  {selectedIds.size >= 2 && (
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            onClick={handleOpenMerge}
+                            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                          />
+                        }
+                      >
+                        <IconGitMerge className="h-3 w-3" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Ausgewählte Gebiete zusammenführen</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   <span className="text-border mx-1">|</span>
                   <Popover
                     open={bulkGroupPopoverOpen}

@@ -434,6 +434,11 @@ export const LayerListItem = memo(function LayerListItem({
             if (!isOptimistic) {
               onSelect(layer.id);
             }
+          } else if (e.key === "F2") {
+            e.preventDefault();
+            if (!isOptimistic) {
+              onStartEdit(layer.id, layer.name);
+            }
           }
         }}
       >
@@ -1280,9 +1285,20 @@ export const LayerListItem = memo(function LayerListItem({
           </div>
         </div>
         {layer.notes && (
-          <p className="text-[10px] text-muted-foreground/70 italic truncate leading-tight mt-0.5 pl-[18px] pr-1 pb-0.5">
-            {layer.notes.split("\n")[0].trim()}
-          </p>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <p className="text-[10px] text-muted-foreground/70 italic truncate leading-tight mt-0.5 pl-[18px] pr-1 pb-0.5 cursor-default" />
+              }
+            >
+              {layer.notes.split("\n")[0].trim()}
+            </TooltipTrigger>
+            {layer.notes.length > 60 || layer.notes.includes("\n") ? (
+              <TooltipContent className="max-w-64 whitespace-pre-wrap">
+                <p>{layer.notes}</p>
+              </TooltipContent>
+            ) : null}
+          </Tooltip>
         )}
         {maxLayerPLZ != null && maxLayerPLZ > 0 && (
           <div
