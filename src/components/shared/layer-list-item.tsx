@@ -2,6 +2,7 @@
 
 import { IconPalette } from "@tabler/icons-react";
 import {
+  ArrowRightLeft,
   CheckSquare,
   Copy,
   CopyPlus,
@@ -81,6 +82,8 @@ interface LayerListItemProps {
   onToggleVisibility?: (layerId: number, visible: boolean) => void;
   onSoloLayer?: (layerId: number) => void;
   onRemovePostalCode?: (layerId: number, postalCode: string) => void;
+  onMovePlz?: (fromLayerId: number, toLayerId: number, postalCode: string) => void;
+  otherLayers?: { id: number; name: string; color: string }[];
   onImportCSV?: (layerId: number) => void;
   onNotesChange?: (layerId: number, notes: string) => void;
   isSelected?: boolean;
@@ -210,6 +213,8 @@ export const LayerListItem = memo(function LayerListItem({
   onToggleVisibility,
   onSoloLayer,
   onRemovePostalCode,
+  onMovePlz,
+  otherLayers = [],
   onImportCSV,
   onNotesChange,
   isSelected,
@@ -667,9 +672,37 @@ export const LayerListItem = memo(function LayerListItem({
               filteredCodes.map((pc) => (
                 <span
                   key={pc.postalCode}
-                  className="inline-flex items-center gap-0.5 text-[10px] bg-muted rounded px-1.5 py-0.5 leading-none"
+                  className="inline-flex items-center gap-0.5 text-[10px] bg-muted rounded px-1.5 py-0.5 leading-none group/badge"
                 >
                   {pc.postalCode}
+                  {onMovePlz && otherLayers.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <div className="relative inline-flex opacity-0 group-hover/badge:opacity-100 transition-opacity" />
+                        }
+                      >
+                        <select
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          defaultValue=""
+                          onChange={(e) => {
+                            const toId = Number(e.target.value);
+                            if (toId) onMovePlz(layer.id, toId, pc.postalCode);
+                            e.target.value = "";
+                          }}
+                          title={`PLZ ${pc.postalCode} verschieben`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="" disabled>Verschieben nach…</option>
+                          {otherLayers.map((ol) => (
+                            <option key={ol.id} value={ol.id}>{ol.name}</option>
+                          ))}
+                        </select>
+                        <ArrowRightLeft className="h-2 w-2 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent><p>PLZ verschieben</p></TooltipContent>
+                    </Tooltip>
+                  )}
                   {onRemovePostalCode && (
                     <button
                       type="button"

@@ -986,6 +986,34 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleMovePlz = (fromLayerId: number, toLayerId: number, postalCode: string) => {
+    if (!addPostalCodesToLayer || !removePostalCodesFromLayer) return;
+    startTransition(async () => {
+      // Optimistically: remove from source, add to target
+      const fromLayer = optimisticLayers.find((l) => l.id === fromLayerId);
+      const toLayer = optimisticLayers.find((l) => l.id === toLayerId);
+      if (!fromLayer || !toLayer) return;
+      updateOptimisticLayers({
+        type: "update",
+        id: fromLayerId,
+        layer: { postalCodes: fromLayer.postalCodes?.filter((pc) => pc.postalCode !== postalCode) ?? [] },
+      });
+      updateOptimisticLayers({
+        type: "update",
+        id: toLayerId,
+        layer: { postalCodes: [...(toLayer.postalCodes ?? []), { postalCode }] },
+      });
+      try {
+        await addPostalCodesToLayer(toLayerId, [postalCode]);
+        await removePostalCodesFromLayer(fromLayerId, [postalCode]);
+        onLayerUpdate?.();
+        toast.success(`${postalCode} → ${toLayer.name}`);
+      } catch {
+        toast.error("Fehler beim Verschieben der PLZ");
+      }
+    });
+  };
+
   const handleNotesChange = (layerId: number, notes: string) => {
     startTransition(async () => {
       updateOptimisticLayers({ type: "update", id: layerId, layer: { notes } });
@@ -1058,6 +1086,7 @@ function useDrawingToolsActions({
     handleReorderLayers,
     handleSortByCount,
     handleRemovePostalCodeFromLayer,
+    handleMovePlz,
     handleNotesChange,
     handleExportGeoJSON,
     handleExportData,
@@ -1119,6 +1148,7 @@ interface LayerManagementSectionProps {
   handleReorderLayers: (oldIndex: number, newIndex: number) => void;
   handleSortByCount: () => void;
   handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
+  handleMovePlz?: (fromLayerId: number, toLayerId: number, postalCode: string) => void;
   handleNotesChange?: (layerId: number, notes: string) => void;
   handleBulkDelete: (layerIds: number[]) => void;
   handleBulkVisibility: (layerIds: number[], visible: boolean) => void;
@@ -1151,6 +1181,7 @@ function LayerManagementSection({
   handleReorderLayers,
   handleSortByCount,
   handleRemovePostalCodeFromLayer,
+  handleMovePlz,
   handleNotesChange,
   handleBulkDelete,
   handleBulkVisibility,
@@ -1689,6 +1720,8 @@ function LayerManagementSection({
                    onRemovePostalCode={guardedRemovePostalCode}
                    onImportCSV={addPostalCodesToLayer ? guardedImportCSV : undefined}
                    onNotesChange={handleNotesChange}
+                   onMovePlz={handleMovePlz}
+                   otherLayers={optimisticLayers.filter((l) => l.id !== layer.id).map((l) => ({ id: l.id, name: l.name, color: l.color }))}
                    isSelected={selectMode ? selectedIds.has(layer.id) : undefined}
                    onToggleSelect={selectMode ? toggleSelect : undefined}
                    isLocked={isLocked(layer.id)}
@@ -1734,6 +1767,8 @@ function LayerManagementSection({
                       onRemovePostalCode={guardedRemovePostalCode}
                       onImportCSV={addPostalCodesToLayer ? guardedImportCSV : undefined}
                       onNotesChange={handleNotesChange}
+                      onMovePlz={handleMovePlz}
+                      otherLayers={optimisticLayers.filter((l) => l.id !== layer.id).map((l) => ({ id: l.id, name: l.name, color: l.color }))}
                       isSelected={selectMode ? selectedIds.has(layer.id) : undefined}
                       onToggleSelect={selectMode ? toggleSelect : undefined}
                       isLocked={isLocked(layer.id)}
@@ -2097,6 +2132,7 @@ function DrawingToolsImpl({
     handleReorderLayers,
     handleSortByCount,
     handleRemovePostalCodeFromLayer,
+    handleMovePlz,
     handleNotesChange,
     handleExportGeoJSON,
     handleExportData,
@@ -2286,6 +2322,7 @@ function DrawingToolsImpl({
             handleReorderLayers={handleReorderLayers}
             handleSortByCount={handleSortByCount}
             handleRemovePostalCodeFromLayer={handleRemovePostalCodeFromLayer}
+            handleMovePlz={handleMovePlz}
             handleNotesChange={handleNotesChange}
             addPostalCodesToLayer={guardedAddPostalCodesToLayer}
             onOpenConflicts={onOpenConflicts}
