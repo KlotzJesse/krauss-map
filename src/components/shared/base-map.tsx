@@ -1,5 +1,5 @@
 "use no memo";
-import { Camera, Home, LocateFixed, Maximize2, Printer, PlusIcon } from "lucide-react";
+import { Camera, Home, Layers, LocateFixed, Maximize2, Printer, PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   Component,
@@ -176,7 +176,9 @@ const MapInner = memo(function MapInner({
   versions,
   changes,
   initialUndoRedoStatus,
-}: Omit<BaseMapProps, "center" | "zoom">) {
+  onCycleMapStyle,
+  mapStyleLabel,
+}: Omit<BaseMapProps, "center" | "zoom"> & { onCycleMapStyle?: () => void; mapStyleLabel?: string }) {
   const { current: mapRef } = useMap();
   const rawMapRef = useRef<maplibregl.Map | null>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -512,6 +514,17 @@ const MapInner = memo(function MapInner({
         >
           <LocateFixed className={`h-4 w-4 ${isGeolocating ? "animate-pulse" : ""}`} />
         </button>
+        {onCycleMapStyle && (
+          <button
+            type="button"
+            onClick={onCycleMapStyle}
+            title={`Kartenstil: ${mapStyleLabel ?? ""} (wechseln)`}
+            aria-label="Kartenstil wechseln"
+            className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <Layers className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Conflict resolution panel — right side, next to the map */}
@@ -589,6 +602,30 @@ const BaseMapComponent = ({
   const setMapCenterZoom = useSetMapCenterZoom();
   const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const MAP_STYLES = [
+    { id: "colorful", label: "Bunt", url: "/versatilescolorful.json" },
+    { id: "light", label: "Hell", url: "https://tiles.versatiles.org/styles/colorful/style.json" },
+    { id: "neutrino", label: "Minimal", url: "https://demotiles.maplibre.org/style.json" },
+  ] as const;
+  type MapStyleId = (typeof MAP_STYLES)[number]["id"];
+
+  const [mapStyleId, setMapStyleId] = useState<MapStyleId>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("map-style-id") as MapStyleId | null;
+      if (saved && MAP_STYLES.some((s) => s.id === saved)) return saved;
+    }
+    return "colorful";
+  });
+
+  const currentMapStyle = MAP_STYLES.find((s) => s.id === mapStyleId)?.url ?? "/versatilescolorful.json";
+
+  const handleCycleMapStyle = useCallback(() => {
+    const idx = MAP_STYLES.findIndex((s) => s.id === mapStyleId);
+    const next = MAP_STYLES[(idx + 1) % MAP_STYLES.length];
+    setMapStyleId(next.id);
+    localStorage.setItem("map-style-id", next.id);
+  }, [mapStyleId]);
+
   const [viewState, setViewState] = useState({
     longitude: effectiveCenter[0],
     latitude: effectiveCenter[1],
@@ -648,7 +685,7 @@ const BaseMapComponent = ({
           <Map
             {...viewState}
             onMove={handleMove}
-            mapStyle="/versatilescolorful.json"
+            mapStyle={currentMapStyle}
             style={MAP_STYLE}
             minZoom={3}
             maxZoom={18}
@@ -675,6 +712,8 @@ const BaseMapComponent = ({
               versions={versions}
               changes={changes}
               initialUndoRedoStatus={initialUndoRedoStatus}
+              onCycleMapStyle={handleCycleMapStyle}
+              mapStyleLabel={MAP_STYLES.find((s) => s.id === mapStyleId)?.label}
             />
           </Map>
         </MapRecoveryBoundary>
