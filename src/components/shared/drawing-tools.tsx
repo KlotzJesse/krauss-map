@@ -1031,6 +1031,23 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleClearLayerPLZ = useCallback((layerId: number) => {
+    if (!removePostalCodesFromLayer) return;
+    const layer = optimisticLayers.find((l) => l.id === layerId);
+    const codes = layer?.postalCodes?.map((pc) => pc.postalCode) ?? [];
+    if (codes.length === 0) return;
+    startTransition(async () => {
+      updateOptimisticLayers({ type: "update", id: layerId, layer: { postalCodes: [] } });
+      try {
+        await removePostalCodesFromLayer(layerId, codes);
+        onLayerUpdate?.();
+        toast.success(`${codes.length} PLZ entfernt`);
+      } catch {
+        toast.error("Fehler beim Leeren des Layers");
+      }
+    });
+  }, [optimisticLayers, removePostalCodesFromLayer, onLayerUpdate]);
+
   const handleMovePlz = (fromLayerId: number, toLayerId: number, postalCode: string) => {
     if (!addPostalCodesToLayer || !removePostalCodesFromLayer) return;
     startTransition(async () => {
@@ -1133,6 +1150,7 @@ function useDrawingToolsActions({
     handleRemovePostalCodeFromLayer,
     handleMovePlz,
     handleNotesChange,
+    handleClearLayerPLZ,
     handleExportGeoJSON,
     handleExportData,
     handleBulkDelete,
@@ -1195,6 +1213,7 @@ interface LayerManagementSectionProps {
   handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
   handleMovePlz?: (fromLayerId: number, toLayerId: number, postalCode: string) => void;
   handleNotesChange?: (layerId: number, notes: string) => void;
+  handleClearLayerPLZ?: (layerId: number) => void;
   handleBulkDelete: (layerIds: number[]) => void;
   handleBulkVisibility: (layerIds: number[], visible: boolean) => void;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
@@ -1232,6 +1251,7 @@ function LayerManagementSection({
   handleRemovePostalCodeFromLayer,
   handleMovePlz,
   handleNotesChange,
+  handleClearLayerPLZ,
   handleBulkDelete,
   handleBulkVisibility,
   addPostalCodesToLayer,
@@ -1867,6 +1887,7 @@ function LayerManagementSection({
                    onToggleLock={toggleLock}
                    onPreviewPostalCode={onPreviewPostalCode}
                    onZoomToLayer={onZoomToLayer}
+                   onClearPLZ={handleClearLayerPLZ}
                  />
                ))
              ) : (
@@ -1916,6 +1937,7 @@ function LayerManagementSection({
                       onToggleLock={toggleLock}
                       onPreviewPostalCode={onPreviewPostalCode}
                       onZoomToLayer={onZoomToLayer}
+                      onClearPLZ={handleClearLayerPLZ}
                     />
                   ))}
                 </SortableContext>
@@ -2343,6 +2365,7 @@ function DrawingToolsImpl({
     handleRemovePostalCodeFromLayer,
     handleMovePlz,
     handleNotesChange,
+    handleClearLayerPLZ,
     handleExportGeoJSON,
     handleExportData,
     handleBulkDelete,
@@ -2678,6 +2701,7 @@ function DrawingToolsImpl({
             handleRemovePostalCodeFromLayer={handleRemovePostalCodeFromLayer}
             handleMovePlz={handleMovePlz}
             handleNotesChange={handleNotesChange}
+            handleClearLayerPLZ={handleClearLayerPLZ}
             addPostalCodesToLayer={guardedAddPostalCodesToLayer}
             onOpenConflicts={onOpenConflicts}
             handleBulkDelete={handleBulkDelete}

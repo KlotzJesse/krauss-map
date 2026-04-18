@@ -16,6 +16,7 @@ import {
   LockOpen,
   Square,
   StickyNote,
+  Trash2,
   TriangleAlert,
   Upload,
   X,
@@ -93,6 +94,7 @@ interface LayerListItemProps {
   onToggleLock?: (layerId: number) => void;
   onPreviewPostalCode?: (postalCode: string | null) => void;
   onZoomToLayer?: (layerId: number) => void;
+  onClearPLZ?: (layerId: number) => void;
 }
 
 function LayerColorPickerContent({
@@ -226,6 +228,7 @@ export const LayerListItem = memo(function LayerListItem({
   onToggleLock,
   onPreviewPostalCode,
   onZoomToLayer,
+  onClearPLZ,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -514,6 +517,29 @@ export const LayerListItem = memo(function LayerListItem({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Layer duplizieren</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {onClearPLZ && postalCodes.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClearPLZ(layer.id);
+                      }}
+                    />
+                  }
+                >
+                  <Trash2 className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Alle PLZ löschen</p>
                 </TooltipContent>
               </Tooltip>
             )}
