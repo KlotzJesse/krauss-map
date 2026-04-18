@@ -29,7 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ArrowDownUp, CheckSquare, ChevronDown, ChevronUp, Download, Eye, EyeOff, GripVertical, HelpCircle, Palette, Search, Square, Trash2, Upload, X } from "lucide-react";
+import { ArrowDownUp, CheckSquare, ChevronDown, ChevronUp, Download, Eye, EyeOff, GripVertical, HelpCircle, Palette, Search, Square, TriangleAlert, Trash2, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -1345,6 +1345,34 @@ function LayerManagementSection({
 
   const isDragDisabled = !!layerSearch.trim() || layerSortMode !== "default";
 
+  // Cross-area PLZ duplicate detection — fetched lazily when layers section is open
+  const [crossAreaDuplicates, setCrossAreaDuplicates] = useState<{ postalCode: string; otherAreaId: number; otherAreaName: string }[]>([]);
+  const [crossAreaLoaded, setCrossAreaLoaded] = useState(false);
+  useEffect(() => {
+    if (!areaId || crossAreaLoaded) return;
+    fetch(`/api/areas/${areaId}/duplicates`)
+      .then((r) => r.json())
+      .then((data) => {
+        setCrossAreaDuplicates(Array.isArray(data) ? data : []);
+        setCrossAreaLoaded(true);
+      })
+      .catch(() => setCrossAreaLoaded(true));
+  }, [areaId, crossAreaLoaded]);
+
+  // Group cross-area duplicates by other area name for compact display
+  const crossAreaDuplicatesByArea = useMemo(() => {
+    const map = new Map<string, { areaId: number; codes: string[] }>();
+    for (const d of crossAreaDuplicates) {
+      const existing = map.get(d.otherAreaName);
+      if (existing) {
+        existing.codes.push(d.postalCode);
+      } else {
+        map.set(d.otherAreaName, { areaId: d.otherAreaId, codes: [d.postalCode] });
+      }
+    }
+    return map;
+  }, [crossAreaDuplicates]);
+
   // PLZ quick-find: search which layer(s) contain a given code
   const [plzFindQuery, setPlzFindQuery] = useState("");
   const internalPlzFindInputRef = useRef<HTMLInputElement | null>(null);
@@ -1841,6 +1869,24 @@ function LayerManagementSection({
                   </p>
                 </TooltipContent>
               </Tooltip>
+            </div>
+          )}
+
+          {/* Cross-area PLZ duplicate warning */}
+          {crossAreaDuplicatesByArea.size > 0 && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-2.5 py-2 text-xs">
+              <div className="flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-400 mb-1">
+                <TriangleAlert className="h-3 w-3 shrink-0" />
+                <span>{crossAreaDuplicates.length} PLZ auch in anderen Gebieten</span>
+              </div>
+              <ul className="space-y-0.5 text-amber-600 dark:text-amber-500">
+                {[...crossAreaDuplicatesByArea.entries()].map(([areaName, { codes }]) => (
+                  <li key={areaName} className="flex items-baseline gap-1 min-w-0">
+                    <span className="font-medium truncate">{areaName}:</span>
+                    <span className="text-[10px] shrink-0">{codes.slice(0, 5).join(", ")}{codes.length > 5 ? ` +${codes.length - 5}` : ""}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

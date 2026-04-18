@@ -351,3 +351,42 @@ export async function getUndoRedoStatus(areaId: number) {
     throw new Error("Failed to get undo/redo status", { cause: error });
   }
 }
+
+export type CrossAreaDuplicate = {
+  postalCode: string;
+  otherAreaId: number;
+  otherAreaName: string;
+};
+
+/**
+ * Find PLZ codes in the given area that also appear in other non-archived areas.
+ * Returns deduplicated list of (postalCode, otherAreaId, otherAreaName).
+ */
+export async function getCrossAreaDuplicates(areaId: number): Promise<CrossAreaDuplicate[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(`area-${areaId}-duplicates`, "areas");
+  try {
+    // Single self-join: find codes from this area that also exist in other areas
+    const result = await db.execute(sql`
+      SELECT DISTINCT
+        own.postal_code AS "postalCode",
+        a.id            AS "otherAreaId",
+        a.name          AS "otherAreaName"
+      FROM area_layer_postal_codes own
+      INNER JOIN area_layers       ol  ON ol.id      = own.layer_id
+                                      AND ol.area_id  = ${areaId}
+      INNER JOIN area_layer_postal_codes other ON other.postal_code = own.postal_code
+      INNER JOIN area_layers       tl  ON tl.id      = other.layer_id
+                                      AND tl.area_id != ${areaId}
+      INNER JOIN areas             a   ON a.id        = tl.area_id
+                                      AND a.is_archived = 'false'
+      ORDER BY own.postal_code
+    `);
+
+    return result.rows as CrossAreaDuplicate[];
+  } catch (error) {
+    console.error("Error fetching cross-area duplicates:", error);
+    return [];
+  }
+}
