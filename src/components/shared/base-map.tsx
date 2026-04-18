@@ -835,8 +835,14 @@ const MapInner = memo(function MapInner({
         </div>
       </Activity>
 
-      {/* Screenshot + Print buttons - bottom left */}
-      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1 print:hidden">
+      {/* Screenshot + Print buttons - top left when panel open, bottom left otherwise */}
+      <div
+        className={`absolute z-10 flex flex-col gap-1 print:hidden transition-all duration-200 ${
+          interactions.isDrawingToolsVisible
+            ? "top-4 left-[472px]"
+            : "bottom-4 left-4"
+        }`}
+      >
         <button
           type="button"
           onClick={handleScreenshot}
