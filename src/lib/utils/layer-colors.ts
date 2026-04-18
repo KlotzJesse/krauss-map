@@ -172,6 +172,22 @@ export function reassignAllColors(
 }
 
 /**
+ * Deterministically map a group name to a distinct accent color.
+ * Used for group header left-border and subtle tint — consistent across sessions.
+ */
+export function hashGroupColor(groupName: string): string {
+  // Simple DJB2-style hash
+  let hash = 5381;
+  for (let i = 0; i < groupName.length; i++) {
+    hash = (hash * 33) ^ groupName.charCodeAt(i);
+  }
+  // Map to a spread of visually distinct hues — keep away from gray/near-white
+  const hue = Math.abs(hash) % 360;
+  // Mid-saturation, mid-lightness: visible but not overwhelming
+  return hslToHex(hue, 55, 58);
+}
+
+/**
  * Named color themes for layer palettes.
  */
 export const COLOR_THEMES: { id: string; label: string; sample: string[] }[] = [

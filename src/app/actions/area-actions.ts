@@ -1477,6 +1477,53 @@ export async function fixDuplicateCodeAction(
 }
 
 /**
+ * Fix a duplicate postal code by keeping it in a specific layer and removing from all others.
+ * Allows the user to manually choose which layer should own the code.
+ */
+export async function fixDuplicateWithLayerAction(
+  areaId: number,
+  postalCode: string,
+  keepLayerId: number,
+  allLayerIds: number[]
+): ServerActionResponse<{ keptLayerId: number }> {
+  try {
+    if (!areaId || !postalCode || !keepLayerId || allLayerIds.length < 2) {
+      return { success: false, error: "Invalid parameters" };
+    }
+
+    const removeFromLayerIds = allLayerIds.filter((id) => id !== keepLayerId);
+
+    await db.transaction(async (tx) => {
+      for (const layerId of removeFromLayerIds) {
+        await tx
+          .delete(areaLayerPostalCodes)
+          .where(
+            and(
+              eq(areaLayerPostalCodes.layerId, layerId),
+              eq(areaLayerPostalCodes.postalCode, postalCode)
+            )
+          );
+        await recordChangeWithTx(tx, areaId, {
+          changeType: "remove_postal_codes",
+          entityType: "postal_code",
+          entityId: layerId,
+          changeData: { postalCodes: [postalCode], layerId },
+          previousData: { postalCodes: [postalCode] },
+        });
+      }
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}-change-history`);
+
+    return { success: true, data: { keptLayerId: keepLayerId } };
+  } catch (error) {
+    console.error("Error fixing duplicate with layer:", error);
+    return { success: false, error: "Failed to fix duplicate" };
+  }
+}
+
+/**
  * Adds all postal codes matching a prefix to a layer.
  * Looks up matching codes from the postal_codes table for the area's granularity/country.
  */

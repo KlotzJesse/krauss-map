@@ -79,6 +79,7 @@ import {
   importAreaFromDataAction,
   balanceLayersAction,
   fixDuplicateCodeAction,
+  fixDuplicateWithLayerAction,
   addPostalCodesByPrefixAction,
   splitLayerAction,
 } from "@/app/actions/area-actions";
@@ -161,6 +162,7 @@ import {
 import {
   COLOR_THEMES,
   generateNextColor,
+  hashGroupColor,
   reassignAllColors,
 } from "@/lib/utils/layer-colors";
 
@@ -2694,7 +2696,12 @@ function LayerManagementSection({
                   ? [
                       <div
                         key={`group-${gName}`}
-                        className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr"
+                        className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr rounded-sm"
+                        style={{
+                          borderLeft: `3px solid ${hashGroupColor(gName)}`,
+                          paddingLeft: 6,
+                          backgroundColor: `${hashGroupColor(gName)}14`,
+                        }}
                       >
                         <button
                           type="button"
@@ -2884,7 +2891,12 @@ function LayerManagementSection({
                       ? [
                           <div
                             key={`group-${gName}`}
-                            className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr"
+                            className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr rounded-sm"
+                            style={{
+                              borderLeft: `3px solid ${hashGroupColor(gName)}`,
+                              paddingLeft: 6,
+                              backgroundColor: `${hashGroupColor(gName)}14`,
+                            }}
                           >
                             <button
                               type="button"
@@ -3175,7 +3187,7 @@ function LayerManagementSection({
                         >
                           <button
                             type="button"
-                            className="font-mono font-medium text-amber-500 hover:underline"
+                            className="font-mono font-medium text-amber-500 hover:underline shrink-0"
                             title={`PLZ ${code} auf der Karte anzeigen`}
                             onClick={() => {
                               onPreviewPostalCode?.(code);
@@ -3187,23 +3199,41 @@ function LayerManagementSection({
                           >
                             {code}
                           </button>
-                          <span className="text-muted-foreground">in</span>
+                          <span className="text-muted-foreground shrink-0">→</span>
                           <span className="flex gap-0.5 flex-wrap flex-1">
                             {layerIds.map((id: number) => {
                               const l = optimisticLayers.find(
                                 (x) => x.id === id
                               );
                               return l ? (
-                                <span
-                                  key={id}
-                                  className="px-1 rounded text-[9px] font-medium"
-                                  style={{
-                                    backgroundColor: l.color + "33",
-                                    color: l.color,
-                                  }}
-                                >
-                                  {l.name}
-                                </span>
+                                <Tooltip key={id}>
+                                  <TooltipTrigger
+                                    render={
+                                      <button
+                                        type="button"
+                                        className="px-1 rounded text-[9px] font-medium border border-transparent hover:border-current transition-all hover:scale-105"
+                                        style={{
+                                          backgroundColor: l.color + "33",
+                                          color: l.color,
+                                        }}
+                                        onClick={async () => {
+                                          await fixDuplicateWithLayerAction(
+                                            areaId,
+                                            code,
+                                            id,
+                                            layerIds
+                                          );
+                                          onLayerUpdate?.();
+                                        }}
+                                      />
+                                    }
+                                  >
+                                    {l.name}
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    <p className="text-[10px]">Nur in „{l.name}" behalten</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               ) : null;
                             })}
                           </span>
