@@ -1,5 +1,5 @@
 "use no memo";
-import { Camera, Printer, PlusIcon } from "lucide-react";
+import { Camera, Maximize2, Printer, PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   Component,
@@ -14,6 +14,7 @@ import {
 } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Map, useMap } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
@@ -180,6 +181,7 @@ const MapInner = memo(function MapInner({
   const rawMapRef = useRef<maplibregl.Map | null>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const setMapCenterZoom = useSetMapCenterZoom();
 
   // Conflict resolution panel state (lifted from DrawingTools)
   const [showConflicts, setShowConflicts] = useState(false);
@@ -207,6 +209,9 @@ const MapInner = memo(function MapInner({
     rawMapRef.current = raw;
     mapCanvasRef.current = raw.getCanvas();
 
+    const navControl = new maplibregl.NavigationControl({ visualizePitch: false });
+    raw.addControl(navControl, "bottom-right");
+
     const handleLoad = () => setIsMapLoaded(true);
 
     if (raw.loaded()) {
@@ -217,6 +222,7 @@ const MapInner = memo(function MapInner({
 
     return () => {
       raw.off("load", handleLoad);
+      try { raw.removeControl(navControl); } catch { /* already removed */ }
       setIsMapLoaded(false);
     };
   }, [mapRef]);
@@ -292,6 +298,43 @@ const MapInner = memo(function MapInner({
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
+
+  const handleFitAllLayers = useCallback(() => {
+    if (!data?.features || !layers?.length) return;
+    const allCodes = new Set(
+      layers.flatMap((l) => l.postalCodes?.map((pc) => pc.postalCode) ?? [])
+    );
+    if (allCodes.size === 0) return;
+
+    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+    let found = false;
+
+    for (const feature of data.features) {
+      if (!allCodes.has(feature.properties?.code)) continue;
+      found = true;
+      const geom = feature.geometry;
+      const rings: number[][][] = geom.type === "Polygon"
+        ? geom.coordinates
+        : geom.type === "MultiPolygon"
+          ? geom.coordinates.flat()
+          : [];
+      for (const ring of rings) {
+        for (const [lng, lat] of ring) {
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+        }
+      }
+    }
+
+    if (!found) return;
+    const centerLng = (minLng + maxLng) / 2;
+    const centerLat = (minLat + maxLat) / 2;
+    const span = Math.max(maxLng - minLng, maxLat - minLat);
+    const zoom = Math.max(5, Math.min(13, Math.round(Math.log2(360 / span)) - 1));
+    setMapCenterZoom([centerLng, centerLat], zoom);
+  }, [data, layers, setMapCenterZoom]);
 
   // startTransition-wrapped handlers to defer heavy subtree re-renders
   const handleShowTools = useStableCallback(() =>
@@ -396,8 +439,8 @@ const MapInner = memo(function MapInner({
         </div>
       </Activity>
 
-      {/* Screenshot + Print buttons - bottom right */}
-      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-1">
+      {/* Screenshot + Print buttons - bottom left */}
+      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1 print:hidden">
         <button
           type="button"
           onClick={handleScreenshot}
@@ -412,10 +455,21 @@ const MapInner = memo(function MapInner({
           onClick={handlePrint}
           title="Karte drucken"
           aria-label="Karte drucken"
-          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground print:hidden"
+          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
         >
           <Printer className="h-4 w-4" />
         </button>
+        {(layers?.some((l) => (l.postalCodes?.length ?? 0) > 0)) && (
+          <button
+            type="button"
+            onClick={handleFitAllLayers}
+            title="Alle Ebenen anzeigen"
+            aria-label="Karte auf alle Ebenen ausrichten"
+            className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Conflict resolution panel — right side, next to the map */}
