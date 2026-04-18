@@ -834,3 +834,23 @@ export const areaTagAssignments = pgTable(
 export type SelectAreaTag = typeof areaTags.$inferSelect;
 export type InsertAreaTag = typeof areaTags.$inferInsert;
 export type SelectAreaTagAssignment = typeof areaTagAssignments.$inferSelect;
+
+// ─── Map Bookmarks ────────────────────────────────────────────────────────────
+
+export const mapBookmarks = pgTable(
+  "map_bookmarks",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity().notNull(),
+    name: varchar({ length: 80 }).notNull(),
+    longitude: varchar({ length: 30 }).notNull(),
+    latitude: varchar({ length: 30 }).notNull(),
+    zoom: varchar({ length: 10 }).notNull(),
+    createdAt: timestamp("created_at", { mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("idx_map_bookmarks_created_at").on(table.createdAt)]
+);
+
+export type SelectMapBookmark = typeof mapBookmarks.$inferSelect;
+export type InsertMapBookmark = typeof mapBookmarks.$inferInsert;

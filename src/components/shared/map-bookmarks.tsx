@@ -8,32 +8,17 @@ import {
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
-const STORAGE_KEY = "map-bookmarks-v1";
+import {
+  createBookmarkAction,
+  deleteBookmarkAction,
+  getBookmarksAction,
+  updateBookmarkNameAction,
+} from "@/app/actions/bookmark-actions";
+import type { SelectMapBookmark } from "@/lib/schema/schema";
+
 const MAX_NAME_LENGTH = 40;
-
-interface Bookmark {
-  id: string;
-  name: string;
-  center: [number, number];
-  zoom: number;
-  createdAt: number;
-}
-
-function loadBookmarks(): Bookmark[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Bookmark[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveBookmarks(bookmarks: Bookmark[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
-}
 
 interface MapBookmarksProps {
   getCurrentView: () => { center: [number, number]; zoom: number };
@@ -46,19 +31,23 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
     center: [number, number];
     zoom: number;
   } | null>(null);
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [bookmarks, setBookmarks] = useState<SelectMapBookmark[]>([]);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [newName, setNewName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const panelRef = useRef<HTMLDivElement>(null);
   const newInputRef = useRef<HTMLInputElement>(null);
 
-  // Load on open
+  // Load from DB on open
   useEffect(() => {
     if (open) {
-      setBookmarks(loadBookmarks());
       setCurrentView(getCurrentView());
+      startTransition(async () => {
+        const rows = await getBookmarksAction();
+        setBookmarks(rows);
+      });
     }
   }, [open, getCurrentView]);
 
@@ -89,49 +78,50 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
 
   const addBookmark = useCallback(() => {
     const view = currentView ?? getCurrentView();
-    const name =
-      newName.trim() || `Lesezeichen ${new Date().toLocaleTimeString("de-DE")}`;
-    const bookmark: Bookmark = {
-      id: crypto.randomUUID(),
-      name,
-      center: view.center,
-      zoom: view.zoom,
-      createdAt: Date.now(),
-    };
-    const updated = [bookmark, ...bookmarks].slice(0, 20);
-    setBookmarks(updated);
-    saveBookmarks(updated);
+    const name = newName.trim();
     setIsAdding(false);
     setNewName("");
-  }, [newName, currentView, getCurrentView, bookmarks]);
+    startTransition(async () => {
+      const row = await createBookmarkAction(
+        name,
+        view.center[0],
+        view.center[1],
+        view.zoom
+      );
+      if (row) setBookmarks((prev) => [row, ...prev].slice(0, 20));
+    });
+  }, [newName, currentView, getCurrentView]);
 
-  const deleteBookmark = useCallback(
-    (id: string) => {
-      const updated = bookmarks.filter((b) => b.id !== id);
-      setBookmarks(updated);
-      saveBookmarks(updated);
-    },
-    [bookmarks]
-  );
+  const deleteBookmark = useCallback((id: number) => {
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
+    startTransition(async () => {
+      await deleteBookmarkAction(id);
+    });
+  }, []);
 
-  const startEdit = useCallback((b: Bookmark) => {
+  const startEdit = useCallback((b: SelectMapBookmark) => {
     setEditingId(b.id);
     setEditName(b.name);
   }, []);
 
   const saveEdit = useCallback(() => {
-    if (!editingId) return;
-    const updated = bookmarks.map((b) =>
-      b.id === editingId ? { ...b, name: editName.trim() || b.name } : b
+    if (editingId === null) return;
+    const name = editName.trim();
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === editingId ? { ...b, name: name || b.name } : b))
     );
-    setBookmarks(updated);
-    saveBookmarks(updated);
     setEditingId(null);
-  }, [editingId, editName, bookmarks]);
+    startTransition(async () => {
+      await updateBookmarkNameAction(editingId, name);
+    });
+  }, [editingId, editName]);
 
   const jumpTo = useCallback(
-    (b: Bookmark) => {
-      onJumpTo(b.center, b.zoom);
+    (b: SelectMapBookmark) => {
+      onJumpTo(
+        [Number.parseFloat(b.longitude), Number.parseFloat(b.latitude)],
+        Number.parseFloat(b.zoom)
+      );
       setOpen(false);
     },
     [onJumpTo]
@@ -199,7 +189,7 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
                     type="button"
                     className="flex-1 text-xs text-left truncate hover:text-primary transition-colors"
                     onClick={() => jumpTo(b)}
-                    title={`Zoom ${Math.round(b.zoom)} · ${b.center[1].toFixed(4)}, ${b.center[0].toFixed(4)}`}
+                    title={`Zoom ${Math.round(Number.parseFloat(b.zoom))} · ${Number.parseFloat(b.latitude).toFixed(4)}, ${Number.parseFloat(b.longitude).toFixed(4)}`}
                   >
                     {b.name}
                   </button>
