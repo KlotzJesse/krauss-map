@@ -68,6 +68,7 @@ import {
   createLayerAction,
   deleteLayerAction,
   duplicateLayerAction,
+  copyLayerToAreaAction,
   updateLayerAction,
   updateAreaAction,
   exportAreaGeoJSONAction,
@@ -178,6 +179,13 @@ const LayerTemplatesDialog = dynamic(
   () =>
     import("@/components/areas/layer-templates-dialog").then(
       (m) => m.LayerTemplatesDialog
+    ),
+  { ssr: false }
+);
+const CopyLayerToAreaDialog = dynamic(
+  () =>
+    import("@/components/areas/copy-layer-to-area-dialog").then(
+      (m) => m.CopyLayerToAreaDialog
     ),
   { ssr: false }
 );
@@ -1357,6 +1365,7 @@ interface LayerManagementSectionProps {
   handleOpacityChange: (layerId: number, opacity: number) => void;
   handleDeleteLayer: (layerId: number) => void;
   handleDuplicateLayer: (layerId: number) => void;
+  handleOpenCopyToArea: (layerId: number, layerName: string) => void;
   handleToggleVisibility: (layerId: number, visible: boolean) => void;
   handleSoloLayer: (layerId: number) => void;
   handleShowAllLayers: () => void;
@@ -1410,6 +1419,7 @@ function LayerManagementSection({
   handleOpacityChange,
   handleDeleteLayer,
   handleDuplicateLayer,
+  handleOpenCopyToArea,
   handleToggleVisibility,
   handleSoloLayer,
   handleShowAllLayers,
@@ -2258,6 +2268,7 @@ function LayerManagementSection({
                   onOpacityChange={handleOpacityChange}
                   onDelete={handleDeleteLayer}
                   onDuplicateLayer={handleDuplicateLayer}
+                  onCopyToArea={handleOpenCopyToArea}
                   onToggleVisibility={handleToggleVisibility}
                   onSoloLayer={handleSoloLayer}
                   onRemovePostalCode={guardedRemovePostalCode}
@@ -2325,6 +2336,7 @@ function LayerManagementSection({
                       onOpacityChange={handleOpacityChange}
                       onDelete={handleDeleteLayer}
                       onDuplicateLayer={handleDuplicateLayer}
+                      onCopyToArea={handleOpenCopyToArea}
                       onToggleVisibility={handleToggleVisibility}
                       onSoloLayer={handleSoloLayer}
                       onRemovePostalCode={guardedRemovePostalCode}
@@ -2949,6 +2961,12 @@ function DrawingToolsImpl({
 }: DrawingToolsProps) {
   const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
 
+  const [copyLayerDialog, setCopyLayerDialog] = useState<{
+    open: boolean;
+    layerId: number | null;
+    layerName: string;
+  }>({ open: false, layerId: null, layerName: "" });
+
   // Area description inline editing
   const [descDraft, setDescDraft] = useState(areaDescription ?? "");
   const [descEditing, setDescEditing] = useState(false);
@@ -3062,7 +3080,32 @@ function DrawingToolsImpl({
     [areaId]
   );
 
-  // Keyboard shortcut: Alt+ArrowUp/Down switches active layer
+  const [isCopyingLayer, startCopyLayerTransition] = useTransition();
+
+  const handleOpenCopyToArea = useCallback(
+    (layerId: number, layerName: string) => {
+      setCopyLayerDialog({ open: true, layerId, layerName });
+    },
+    []
+  );
+
+  const handleConfirmCopyToArea = useCallback(
+    (targetAreaId: number, newName: string) => {
+      const layerId = copyLayerDialog.layerId;
+      if (!layerId) return;
+      setCopyLayerDialog((prev) => ({ ...prev, open: false }));
+      startCopyLayerTransition(async () => {
+        const res = await copyLayerToAreaAction(layerId, targetAreaId, newName);
+        if (res.success) {
+          toast.success("Ebene erfolgreich kopiert");
+        } else {
+          toast.error(res.error ?? "Kopieren fehlgeschlagen");
+        }
+      });
+    },
+    [copyLayerDialog.layerId]
+  );
+
   const allCodesSet = useMemo<Set<string>>(() => {
     if (!postalCodesData?.features) return new Set();
     const s = new Set<string>();
@@ -3464,6 +3507,7 @@ function DrawingToolsImpl({
             handleOpacityChange={handleOpacityChange}
             handleDeleteLayer={handleDeleteLayer}
             handleDuplicateLayer={handleDuplicateLayer}
+            handleOpenCopyToArea={handleOpenCopyToArea}
             handleToggleVisibility={handleToggleVisibility}
             handleSoloLayer={handleSoloLayer}
             handleShowAllLayers={handleShowAllLayers}
@@ -3553,6 +3597,18 @@ function DrawingToolsImpl({
             confirmDeleteLayer={confirmDeleteLayer}
           />
         )}
+
+        {/* Copy Layer to Area Dialog */}
+        <CopyLayerToAreaDialog
+          open={copyLayerDialog.open}
+          onOpenChange={(open) =>
+            setCopyLayerDialog((prev) => ({ ...prev, open }))
+          }
+          sourceLayerName={copyLayerDialog.layerName ?? ""}
+          currentAreaId={areaId ?? 0}
+          onConfirm={handleConfirmCopyToArea}
+          isPending={isCopyingLayer}
+        />
       </CardContent>
     </Card>
   );

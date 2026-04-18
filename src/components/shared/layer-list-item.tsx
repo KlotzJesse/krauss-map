@@ -81,6 +81,7 @@ interface LayerListItemProps {
   onOpacityChange?: (layerId: number, opacity: number) => void;
   onDelete: (layerId: number) => void;
   onDuplicateLayer?: (layerId: number) => void;
+  onCopyToArea?: (layerId: number, layerName: string) => void;
   onToggleVisibility?: (layerId: number, visible: boolean) => void;
   onSoloLayer?: (layerId: number) => void;
   onRemovePostalCode?: (layerId: number, postalCode: string) => void;
@@ -246,6 +247,7 @@ export const LayerListItem = memo(function LayerListItem({
   allCodesSet,
   onBulkMovePlz,
   onBulkRemovePlz,
+  onCopyToArea,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -606,6 +608,29 @@ export const LayerListItem = memo(function LayerListItem({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Layer duplizieren</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {onCopyToArea && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCopyToArea(layer.id, layer.name);
+                      }}
+                    />
+                  }
+                >
+                  <ArrowRightLeft className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>In anderes Gebiet kopieren</p>
                 </TooltipContent>
               </Tooltip>
             )}

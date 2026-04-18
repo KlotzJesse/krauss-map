@@ -1008,13 +1008,101 @@ export async function duplicateLayerAction(
   }
 }
 
+export async function copyLayerToAreaAction(
+  sourceLayerId: number,
+  targetAreaId: number,
+  customName?: string,
+  createdBy?: string
+): ServerActionResponse<{ id: number }> {
+  try {
+    const sourceLayer = await db.query.areaLayers.findFirst({
+      where: eq(areaLayers.id, sourceLayerId),
+      with: { postalCodes: true },
+    });
+
+    if (!sourceLayer) {
+      return { success: false, error: "Source layer not found" };
+    }
+
+    // Verify target area exists
+    const targetArea = await db.query.areas.findFirst({
+      where: eq(areas.id, targetAreaId),
+    });
+
+    if (!targetArea) {
+      return { success: false, error: "Target area not found" };
+    }
+
+    const [maxOrder] = await db
+      .select({ max: sql<number>`coalesce(max(${areaLayers.orderIndex}), 0)` })
+      .from(areaLayers)
+      .where(eq(areaLayers.areaId, targetAreaId));
+
+    const siblingLayers = await db
+      .select({ color: areaLayers.color })
+      .from(areaLayers)
+      .where(eq(areaLayers.areaId, targetAreaId));
+    const newColor = generateNextColor(siblingLayers.map((l) => l.color));
+
+    const newLayerId = await db.transaction(async (tx) => {
+      const layerName = customName?.trim() || `${sourceLayer.name} (Kopie)`;
+      const [newLayer] = await tx
+        .insert(areaLayers)
+        .values({
+          areaId: targetAreaId,
+          name: layerName,
+          color: newColor,
+          opacity: sourceLayer.opacity,
+          isVisible: sourceLayer.isVisible,
+          orderIndex: (maxOrder?.max ?? 0) + 1,
+        })
+        .returning();
+
+      const codes = sourceLayer.postalCodes ?? [];
+      if (codes.length > 0) {
+        await tx.insert(areaLayerPostalCodes).values(
+          codes.map((c) => ({
+            layerId: newLayer.id,
+            postalCode: c.postalCode,
+          }))
+        );
+      }
+
+      await recordChangeWithTx(tx, targetAreaId, {
+        changeType: "create_layer",
+        entityType: "layer",
+        entityId: newLayer.id,
+        changeData: {
+          layer: {
+            areaId: targetAreaId,
+            name: newLayer.name,
+            color: newLayer.color,
+            opacity: newLayer.opacity,
+            isVisible: newLayer.isVisible,
+            orderIndex: newLayer.orderIndex,
+          },
+        },
+        createdBy,
+      });
+
+      return newLayer.id;
+    });
+
+    updateTag(`area-${targetAreaId}-layers`);
+    updateTag(`area-${targetAreaId}`);
+    updateTag(`area-${targetAreaId}-undo-redo`);
+
+    return { success: true, data: { id: newLayerId } };
+  } catch (error) {
+    console.error("Error copying layer to area:", error);
+    return { success: false, error: "Failed to copy layer" };
+  }
+}
+
 export async function addPostalCodesToLayerAction(
   areaId: number,
-
   layerId: number,
-
   postalCodes: string[],
-
   createdBy?: string
 ): ServerActionResponse {
   try {
@@ -2403,6 +2491,22 @@ export async function getAllAreasWithLayersForExportAction(): ServerActionRespon
     return { success: true, data: result };
   } catch (err) {
     console.error("Error fetching areas for export:", err);
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function listAreasForCopyAction(): ServerActionResponse<
+  { id: number; name: string }[]
+> {
+  try {
+    const rows = await db
+      .select({ id: areas.id, name: areas.name })
+      .from(areas)
+      .where(eq(areas.isArchived, "false"))
+      .orderBy(areas.name);
+    return { success: true, data: rows };
+  } catch (err) {
+    console.error("Error listing areas for copy:", err);
     return { success: false, error: String(err) };
   }
 }
