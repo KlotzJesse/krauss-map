@@ -879,6 +879,27 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleRemovePostalCodeFromLayer = (layerId: number, postalCode: string) => {
+    if (!removePostalCodesFromLayer) return;
+    startTransition(async () => {
+      const layer = optimisticLayers.find((l) => l.id === layerId);
+      const updated = layer?.postalCodes?.filter(
+        (pc) => pc.postalCode !== postalCode
+      ) ?? [];
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { postalCodes: updated },
+      });
+      try {
+        await removePostalCodesFromLayer(layerId, [postalCode]);
+        onLayerUpdate?.();
+      } catch {
+        toast.error("Fehler beim Entfernen der PLZ");
+      }
+    });
+  };
+
   return {
     optimisticLayers,
     ui,
@@ -902,6 +923,7 @@ function useDrawingToolsActions({
     handleReassignColors,
     handleOpacityChange,
     handleReorderLayers,
+    handleRemovePostalCodeFromLayer,
   };
 }
 
@@ -956,6 +978,7 @@ interface LayerManagementSectionProps {
   handleShowAllLayers: () => void;
   handleReassignColors: () => void;
   handleReorderLayers: (oldIndex: number, newIndex: number) => void;
+  handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
   onOpenConflicts?: () => void;
 }
 
@@ -981,6 +1004,7 @@ function LayerManagementSection({
   handleShowAllLayers,
   handleReassignColors,
   handleReorderLayers,
+  handleRemovePostalCodeFromLayer,
   onOpenConflicts,
 }: LayerManagementSectionProps) {
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
@@ -1305,6 +1329,7 @@ function LayerManagementSection({
                   onDuplicateLayer={handleDuplicateLayer}
                   onToggleVisibility={handleToggleVisibility}
                   onSoloLayer={handleSoloLayer}
+                  onRemovePostalCode={handleRemovePostalCodeFromLayer}
                 />
               ))
             ) : (
@@ -1343,6 +1368,7 @@ function LayerManagementSection({
                       onDuplicateLayer={handleDuplicateLayer}
                       onToggleVisibility={handleToggleVisibility}
                       onSoloLayer={handleSoloLayer}
+                      onRemovePostalCode={handleRemovePostalCodeFromLayer}
                     />
                   ))}
                 </SortableContext>
@@ -1534,6 +1560,7 @@ function DrawingToolsImpl({
     handleShowAllLayers,
     handleReassignColors,
     handleReorderLayers,
+    handleRemovePostalCodeFromLayer,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -1656,6 +1683,7 @@ function DrawingToolsImpl({
             handleShowAllLayers={handleShowAllLayers}
             handleReassignColors={handleReassignColors}
             handleReorderLayers={handleReorderLayers}
+            handleRemovePostalCodeFromLayer={handleRemovePostalCodeFromLayer}
             onOpenConflicts={onOpenConflicts}
           />
         )}

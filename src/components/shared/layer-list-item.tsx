@@ -7,12 +7,14 @@ import {
   Eye,
   EyeOff,
   Focus,
+  GripVertical,
+  List,
   Loader2,
   TriangleAlert,
   X,
 } from "lucide-react";
 import type { RefObject } from "react";
-import { memo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -40,7 +42,6 @@ import {
 import { cn } from "@/lib/utils";
 import { copyPostalCodesCSV } from "@/lib/utils/export-utils";
 import { generatePalette } from "@/lib/utils/layer-colors";
-import { GripVertical } from "lucide-react";
 
 export const DEFAULT_LAYER_COLORS = generatePalette(16);
 
@@ -72,6 +73,7 @@ interface LayerListItemProps {
   onDuplicateLayer?: (layerId: number) => void;
   onToggleVisibility?: (layerId: number, visible: boolean) => void;
   onSoloLayer?: (layerId: number) => void;
+  onRemovePostalCode?: (layerId: number, postalCode: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }
 
@@ -194,12 +196,22 @@ export const LayerListItem = memo(function LayerListItem({
   onDuplicateLayer,
   onToggleVisibility,
   onSoloLayer,
+  onRemovePostalCode,
   dragHandleProps,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [codesExpanded, setCodesExpanded] = useState(false);
+  const [codeSearch, setCodeSearch] = useState("");
   const isVisible = layer.isVisible !== "false";
   const currentOpacity = layer.opacity ?? 70;
+  const postalCodes = layer.postalCodes ?? [];
+
+  const filteredCodes = useMemo(() => {
+    const q = codeSearch.trim();
+    if (!q) return postalCodes;
+    return postalCodes.filter((pc) => pc.postalCode.includes(q));
+  }, [postalCodes, codeSearch]);
 
   return (
     <div
@@ -465,9 +477,90 @@ export const LayerListItem = memo(function LayerListItem({
                 <p>Layer löschen</p>
               </TooltipContent>
             </Tooltip>
+
+            {/* Toggle codes list */}
+            {postalCodes.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant={codesExpanded ? "secondary" : "outline"}
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCodesExpanded((v) => !v);
+                        if (codesExpanded) setCodeSearch("");
+                      }}
+                    />
+                  }
+                >
+                  <List className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{codesExpanded ? "PLZ-Liste schließen" : "PLZ-Liste anzeigen"}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Expandable postal codes section */}
+      {codesExpanded && postalCodes.length > 0 && (
+        <div
+          className="px-2 pb-2 border-t mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          {postalCodes.length > 8 && (
+            <div className="relative mt-1.5 mb-1">
+              <input
+                type="text"
+                value={codeSearch}
+                onChange={(e) => setCodeSearch(e.target.value)}
+                placeholder="PLZ suchen…"
+                className="w-full h-6 text-[10px] bg-muted rounded px-2 pr-5 border-0 outline-none focus:ring-1 focus:ring-primary"
+              />
+              {codeSearch && (
+                <button
+                  type="button"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground"
+                  onClick={() => setCodeSearch("")}
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              )}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto mt-1">
+            {filteredCodes.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground w-full text-center py-1">
+                Keine PLZ gefunden
+              </p>
+            ) : (
+              filteredCodes.map((pc) => (
+                <span
+                  key={pc.postalCode}
+                  className="inline-flex items-center gap-0.5 text-[10px] bg-muted rounded px-1.5 py-0.5 leading-none"
+                >
+                  {pc.postalCode}
+                  {onRemovePostalCode && (
+                    <button
+                      type="button"
+                      className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                      onClick={() => onRemovePostalCode(layer.id, pc.postalCode)}
+                      aria-label={`PLZ ${pc.postalCode} entfernen`}
+                    >
+                      <X className="h-2 w-2" />
+                    </button>
+                  )}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 });
