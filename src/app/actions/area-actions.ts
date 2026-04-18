@@ -2228,3 +2228,45 @@ export async function updateTagAction(tagId: number, name: string, color: string
     return { success: false, error: String(err) };
   }
 }
+
+export interface AreaPlzMatch {
+  areaId: number;
+  areaName: string;
+  layerId: number;
+  layerName: string;
+  layerColor: string;
+}
+
+export async function searchAreasByPostalCodeAction(
+  postalCode: string
+): ServerActionResponse<AreaPlzMatch[]> {
+  const trimmed = postalCode.trim();
+  if (!trimmed || !/^\d{2,5}$/.test(trimmed)) {
+    return { success: false, error: "Ungültige PLZ" };
+  }
+  try {
+    const rows = await db
+      .select({
+        areaId: areas.id,
+        areaName: areas.name,
+        layerId: areaLayers.id,
+        layerName: areaLayers.name,
+        layerColor: areaLayers.color,
+      })
+      .from(areaLayerPostalCodes)
+      .innerJoin(areaLayers, eq(areaLayerPostalCodes.layerId, areaLayers.id))
+      .innerJoin(areas, eq(areaLayers.areaId, areas.id))
+      .where(
+        trimmed.length === 5
+          ? eq(areaLayerPostalCodes.postalCode, trimmed)
+          : sql`${areaLayerPostalCodes.postalCode} LIKE ${trimmed + "%"}`
+      )
+      .orderBy(areas.name, areaLayers.name)
+      .limit(20);
+
+    return { success: true, data: rows };
+  } catch (err) {
+    console.error("Error searching by postal code:", err);
+    return { success: false, error: String(err) };
+  }
+}

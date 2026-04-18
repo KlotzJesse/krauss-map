@@ -4,14 +4,19 @@ import {
   IconArchive,
   IconChartBar,
   IconFolder,
+  IconMapPin,
   IconPlus,
   IconSearch,
   IconTag,
 } from "@tabler/icons-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 
+import {
+  searchAreasByPostalCodeAction,
+  type AreaPlzMatch,
+} from "@/app/actions/area-actions";
 import {
   CommandDialog,
   CommandEmpty,
@@ -35,6 +40,8 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<number | null>(null);
+  const [plzMatches, setPlzMatches] = useState<AreaPlzMatch[]>([]);
+  const [_isPending, startTransition] = useTransition();
   const router = useRouter();
 
   useEffect(() => {
@@ -48,10 +55,31 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Debounced PLZ search
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!/^\d{2,5}$/.test(trimmed)) {
+      setPlzMatches([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      startTransition(async () => {
+        const res = await searchAreasByPostalCodeAction(trimmed);
+        if (res.success && res.data) {
+          setPlzMatches(res.data);
+        } else {
+          setPlzMatches([]);
+        }
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const handleClose = useCallback(() => {
     setOpen(false);
     setQuery("");
     setActiveTagFilter(null);
+    setPlzMatches([]);
   }, []);
 
   const handleSelect = useCallback(
@@ -73,6 +101,8 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
     return [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [areas]);
 
+  const isPlzQuery = /^\d{2,5}$/.test(query.trim());
+
   const activeAreas = useMemo(() => {
     let result = areas.filter((a) => a.isArchived !== "true");
     if (activeTagFilter !== null) {
@@ -82,25 +112,6 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
   }, [areas, activeTagFilter]);
 
   const archivedAreas = areas.filter((a) => a.isArchived === "true");
-
-  // Check if query looks like a PLZ code (digits)
-  const isPlzQuery = /^\d{2,5}$/.test(query.trim());
-  const plzMatches = useMemo(() => {
-    if (!isPlzQuery) return [];
-    const q = query.trim();
-    const results: Array<{ area: AreaSummary; layerName?: string }> = [];
-    for (const area of areas) {
-      if (area.isArchived === "true") continue;
-      // Check if the postalCode search matches — use area name for now since
-      // we don't have per-code data in AreaSummary. Surface areas where the code
-      // could plausibly exist based on postalCodeCount > 0.
-      if ((area.postalCodeCount ?? 0) > 0) {
-        results.push({ area });
-      }
-    }
-    // Limit to first 5 suggestions since we can't confirm membership without DB
-    return results.slice(0, 5);
-  }, [isPlzQuery, query, areas]);
 
   return (
     <CommandDialog
@@ -141,17 +152,17 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
 
         {isPlzQuery && plzMatches.length > 0 && (
           <>
-            <CommandGroup heading={`PLZ-Suche: ${query.trim()}`}>
-              {plzMatches.map(({ area }) => (
+            <CommandGroup heading={`PLZ ${query.trim()} — gefunden in:`}>
+              {plzMatches.map((match) => (
                 <CommandItem
-                  key={`plz-${area.id}`}
-                  value={`plz ${query} ${area.name}`}
-                  onSelect={() => handleSelect(area.id)}
+                  key={`plz-${match.areaId}-${match.layerId}`}
+                  value={`plz ${query} ${match.areaName} ${match.layerName}`}
+                  onSelect={() => handleSelect(match.areaId)}
                 >
-                  <IconSearch className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>{area.name}</span>
-                  <span className="text-[10px] text-muted-foreground/60 ml-1">
-                    {area.postalCodeCount} PLZ
+                  <IconMapPin className="h-3.5 w-3.5 shrink-0" style={{ color: match.layerColor }} />
+                  <span className="flex-1 truncate">{match.areaName}</span>
+                  <span className="text-[10px] text-muted-foreground/60 truncate max-w-[100px]">
+                    {match.layerName}
                   </span>
                 </CommandItem>
               ))}
@@ -160,8 +171,8 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
           </>
         )}
 
-        {activeAreas.length > 0 && (
-          <CommandGroup heading={activeTagFilter !== null ? `Gebiete (gefiltert)` : "Gebiete"}>
+        {!isPlzQuery && activeAreas.length > 0 && (
+          <CommandGroup heading={activeTagFilter !== null ? "Gebiete (gefiltert)" : "Gebiete"}>
             {activeAreas.map((area) => (
               <CommandItem
                 key={area.id}
@@ -192,7 +203,7 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
           </CommandGroup>
         )}
 
-        {activeAreas.length > 0 &&
+        {!isPlzQuery && activeAreas.length > 0 &&
           (onCreateArea || archivedAreas.length > 0) && <CommandSeparator />}
 
         <CommandGroup heading="Aktionen">
@@ -230,7 +241,7 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
           )}
         </CommandGroup>
 
-        {archivedAreas.length > 0 && (
+        {!isPlzQuery && archivedAreas.length > 0 && (
           <>
             <CommandSeparator />
             <CommandGroup heading="Archiviert">
