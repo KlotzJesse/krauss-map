@@ -1525,6 +1525,17 @@ function LayerManagementSection({
         }
       }
     }
+
+    // PLZ prefix distribution (first 2 digits)
+    const prefixCounts = new Map<string, number>();
+    for (const [code] of codeToLayers) {
+      const prefix = code.slice(0, 2);
+      prefixCounts.set(prefix, (prefixCounts.get(prefix) ?? 0) + 1);
+    }
+    const prefixDistribution = [...prefixCounts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([prefix, count]) => ({ prefix, count }));
+
     return {
       duplicateCountByLayer: counts,
       layerStats: {
@@ -1533,6 +1544,7 @@ function LayerManagementSection({
         duplicateCodes: duplicateCodeCount,
         minCode,
         maxCode,
+        prefixDistribution,
       },
     };
   }, [optimisticLayers]);
@@ -1880,10 +1892,17 @@ function LayerManagementSection({
                 <span>{crossAreaDuplicates.length} PLZ auch in anderen Gebieten</span>
               </div>
               <ul className="space-y-0.5 text-amber-600 dark:text-amber-500">
-                {[...crossAreaDuplicatesByArea.entries()].map(([areaName, { codes }]) => (
+                {[...crossAreaDuplicatesByArea.entries()].map(([areaName, { areaId: otherAreaId, codes }]) => (
                   <li key={areaName} className="flex items-baseline gap-1 min-w-0">
-                    <span className="font-medium truncate">{areaName}:</span>
-                    <span className="text-[10px] shrink-0">{codes.slice(0, 5).join(", ")}{codes.length > 5 ? ` +${codes.length - 5}` : ""}</span>
+                    <a
+                      href={`/postal-codes/${otherAreaId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium truncate underline-offset-2 hover:underline shrink-0 max-w-[120px]"
+                    >
+                      {areaName}
+                    </a>
+                    <span className="text-[10px]">{codes.slice(0, 5).join(", ")}{codes.length > 5 ? ` +${codes.length - 5}` : ""}</span>
                   </li>
                 ))}
               </ul>
@@ -2068,6 +2087,34 @@ function LayerManagementSection({
                         </div>
                       );
                     })}
+                </div>
+              )}
+              {/* PLZ prefix distribution (2-digit) — compact sparkline */}
+              {layerStats.prefixDistribution.length > 1 && (
+                <div className="space-y-0.5">
+                  <div className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">PLZ-Verteilung nach Vorwahl</div>
+                  <div className="flex items-end gap-px h-8 overflow-x-auto">
+                    {(() => {
+                      const max = Math.max(...layerStats.prefixDistribution.map((p) => p.count));
+                      return layerStats.prefixDistribution.map(({ prefix, count }) => (
+                        <div
+                          key={prefix}
+                          className="flex flex-col items-center gap-px flex-1 min-w-[8px] group"
+                          title={`${prefix}xxx: ${count} PLZ`}
+                        >
+                          <div
+                            className="w-full rounded-sm bg-primary/60 group-hover:bg-primary transition-colors"
+                            style={{ height: `${Math.max(2, (count / max) * 24)}px` }}
+                          />
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                  <div className="flex justify-between text-[8px] text-muted-foreground/60">
+                    <span>{layerStats.prefixDistribution[0]?.prefix}xx</span>
+                    <span>{layerStats.prefixDistribution[Math.floor(layerStats.prefixDistribution.length / 2)]?.prefix}xx</span>
+                    <span>{layerStats.prefixDistribution[layerStats.prefixDistribution.length - 1]?.prefix}xx</span>
+                  </div>
                 </div>
               )}
               {/* Keyboard hint */}
