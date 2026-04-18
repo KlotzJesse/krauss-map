@@ -428,6 +428,57 @@ type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
 
+function ConflictBanner({
+  crossAreaDuplicates,
+  crossAreaDuplicatesByArea,
+}: {
+  crossAreaDuplicates: { postalCode: string; otherAreaId: number; otherAreaName: string }[];
+  crossAreaDuplicatesByArea: Map<string, { areaId: number; codes: string[] }>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const areaCount = crossAreaDuplicatesByArea.size;
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-2.5 py-1.5 text-xs">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center gap-1.5 font-medium text-amber-700 dark:text-amber-400"
+      >
+        <TriangleAlert className="h-3 w-3 shrink-0" />
+        <span className="flex-1 text-left">
+          {crossAreaDuplicates.length.toLocaleString("de-DE")} PLZ in {areaCount}{" "}
+          {areaCount === 1 ? "anderem Gebiet" : "anderen Gebieten"}
+        </span>
+        <ChevronDown
+          className={`h-3 w-3 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
+        />
+      </button>
+      {expanded && (
+        <ul className="mt-1 space-y-0.5 text-amber-600 dark:text-amber-500 max-h-32 overflow-y-auto">
+          {[...crossAreaDuplicatesByArea.entries()].map(
+            ([areaName, { areaId: otherAreaId, codes }]) => (
+              <li key={areaName} className="flex items-baseline gap-1 min-w-0">
+                <a
+                  href={`/postal-codes/${otherAreaId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium truncate underline-offset-2 hover:underline shrink-0 max-w-[120px]"
+                >
+                  {areaName}
+                </a>
+                <span className="text-[10px]">
+                  {codes.slice(0, 5).join(", ")}
+                  {codes.length > 5 ? ` +${codes.length - 5}` : ""}
+                </span>
+              </li>
+            )
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export interface DrawingToolsProps {
   currentMode: TerraDrawMode | null;
 
@@ -2732,39 +2783,12 @@ function LayerManagementSection({
             </div>
           )}
 
-          {/* Cross-area PLZ duplicate warning */}
+          {/* Cross-area PLZ duplicate warning — collapsible */}
           {crossAreaDuplicatesByArea.size > 0 && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-2.5 py-2 text-xs">
-              <div className="flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-400 mb-1">
-                <TriangleAlert className="h-3 w-3 shrink-0" />
-                <span>
-                  {crossAreaDuplicates.length} PLZ auch in anderen Gebieten
-                </span>
-              </div>
-              <ul className="space-y-0.5 text-amber-600 dark:text-amber-500">
-                {[...crossAreaDuplicatesByArea.entries()].map(
-                  ([areaName, { areaId: otherAreaId, codes }]) => (
-                    <li
-                      key={areaName}
-                      className="flex items-baseline gap-1 min-w-0"
-                    >
-                      <a
-                        href={`/postal-codes/${otherAreaId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium truncate underline-offset-2 hover:underline shrink-0 max-w-[120px]"
-                      >
-                        {areaName}
-                      </a>
-                      <span className="text-[10px]">
-                        {codes.slice(0, 5).join(", ")}
-                        {codes.length > 5 ? ` +${codes.length - 5}` : ""}
-                      </span>
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
+            <ConflictBanner
+              crossAreaDuplicates={crossAreaDuplicates}
+              crossAreaDuplicatesByArea={crossAreaDuplicatesByArea}
+            />
           )}
 
           {/* Layer list */}

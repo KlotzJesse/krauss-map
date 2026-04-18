@@ -202,7 +202,7 @@ function MapLegend({
   );
 
   return (
-    <div className="absolute bottom-4 right-4 z-10 print:hidden">
+    <div className="absolute bottom-20 right-4 z-10 print:hidden">
       <div className="bg-white/95 border border-border rounded-lg shadow-md overflow-hidden max-w-[200px]">
         <button
           type="button"

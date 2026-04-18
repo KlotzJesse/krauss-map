@@ -353,19 +353,25 @@ export function GranularitySelector({
           </SelectContent>
         </Select>
 
-        {/* Status Information */}
+        {/* Status Information — compact inline hint */}
         <Activity mode={hasPostalCodes ? "visible" : "hidden"}>
-          <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-            <div className="flex items-center gap-1 mb-1">
-              <Lock className="h-3 w-3" />
-              <span className="font-medium">
-                Gebiet hat {totalPostalCodes} Regionen
-              </span>
-            </div>
-            <p>
-              Wechsel zu höherer Granularität (→) ist kompatibel. Wechsel zu
-              niedrigerer Granularität (←) löscht alle Regionen.
-            </p>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Lock className="h-3 w-3 shrink-0" />
+            <span>{totalPostalCodes.toLocaleString("de-DE")} Regionen</span>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Info className="h-3 w-3 shrink-0 cursor-help text-muted-foreground/70 hover:text-muted-foreground" />
+                }
+              />
+              <TooltipContent side="bottom" className="max-w-[220px]">
+                <p className="text-xs">
+                  Höhere Granularität (→) ist kompatibel — bestehende Regionen
+                  bleiben erhalten. Niedrigere Granularität (←) löscht alle
+                  Regionen unwiderruflich.
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </Activity>
 
