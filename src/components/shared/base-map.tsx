@@ -182,10 +182,12 @@ function MapLegend({
   layers,
   activeLayerId,
   unassignedCount,
+  onZoomToLayer,
 }: {
   layers: BaseMapProps["layers"];
   activeLayerId?: number | null;
   unassignedCount?: number;
+  onZoomToLayer?: (layerId: number) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const visibleLayers = layers.filter(
@@ -193,6 +195,11 @@ function MapLegend({
   );
   const showUnassignedEntry = (unassignedCount ?? 0) > 0;
   if (visibleLayers.length === 0 && !showUnassignedEntry) return null;
+
+  const totalPLZ = visibleLayers.reduce(
+    (s, x) => s + (x.postalCodes?.length ?? 0),
+    0
+  );
 
   return (
     <div className="absolute bottom-4 right-4 z-10 print:hidden">
@@ -206,21 +213,23 @@ function MapLegend({
           <span className="text-muted-foreground">{collapsed ? "▲" : "▼"}</span>
         </button>
         {!collapsed && (
-          <div className="px-2.5 pb-2 space-y-1 max-h-48 overflow-y-auto">
+          <div className="px-2.5 pb-2 space-y-0.5 max-h-48 overflow-y-auto">
             {visibleLayers.map((l) => {
               const count = l.postalCodes?.length ?? 0;
-              const total = visibleLayers.reduce(
-                (s, x) => s + (x.postalCodes?.length ?? 0),
-                0
-              );
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              const pct = totalPLZ > 0 ? Math.round((count / totalPLZ) * 100) : 0;
+              const isActive = activeLayerId === l.id;
               return (
-                <div
+                <button
                   key={l.id}
+                  type="button"
+                  title={`${l.name} — ${count} PLZ · Klicken zum Zentrieren`}
+                  onClick={() => onZoomToLayer?.(l.id)}
                   className={cn(
-                    "flex items-center gap-1.5",
-                    activeLayerId === l.id &&
-                      "font-semibold bg-muted/60 rounded px-1 -mx-1"
+                    "w-full flex items-center gap-1.5 text-left rounded transition-colors",
+                    "hover:bg-muted/70 cursor-pointer",
+                    isActive
+                      ? "font-semibold bg-muted/60 px-1 -mx-1"
+                      : "px-0"
                   )}
                 >
                   <span
@@ -236,7 +245,7 @@ function MapLegend({
                   <span className="text-[8px] text-muted-foreground/60 shrink-0 tabular-nums w-7 text-right">
                     {pct}%
                   </span>
-                </div>
+                </button>
               );
             })}
             {showUnassignedEntry && (
@@ -982,6 +991,7 @@ const MapInner = memo(function MapInner({
           layers={layers}
           activeLayerId={activeLayerId}
           unassignedCount={unassignedCount}
+          onZoomToLayer={onZoomToLayer}
         />
       )}
 
