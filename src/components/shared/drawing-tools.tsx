@@ -29,7 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ArrowDownUp, CheckSquare, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, HelpCircle, Palette, Search, Square, Trash2, Upload, X } from "lucide-react";
+import { ArrowDownUp, CheckSquare, ChevronDown, ChevronUp, Download, Eye, EyeOff, GripVertical, HelpCircle, Palette, Search, Square, Trash2, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -1176,6 +1176,7 @@ interface LayerManagementSectionProps {
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   onOpenConflicts?: () => void;
   onPreviewPostalCode?: (postalCode: string | null) => void;
+  plzFindInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 function LayerManagementSection({
@@ -1210,6 +1211,7 @@ function LayerManagementSection({
   addPostalCodesToLayer,
   onOpenConflicts,
   onPreviewPostalCode,
+  plzFindInputRef: externalPlzFindInputRef,
 }: LayerManagementSectionProps) {
   const { isLocked, toggleLock } = useLockedLayers(areaId);
 
@@ -1282,6 +1284,8 @@ function LayerManagementSection({
 
   // PLZ quick-find: search which layer(s) contain a given code
   const [plzFindQuery, setPlzFindQuery] = useState("");
+  const internalPlzFindInputRef = useRef<HTMLInputElement | null>(null);
+  const plzFindInputRef = externalPlzFindInputRef ?? internalPlzFindInputRef;
   const plzFindResults = useMemo(() => {
     const q = plzFindQuery.trim().replace(/\D/g, "");
     if (q.length < 2) return null;
@@ -1824,8 +1828,33 @@ function LayerManagementSection({
                     {layerStats.duplicateCodes}✕ doppelt
                   </span>
                 )}
-                <span>
+                <span className="flex items-center gap-1.5">
                   <span className="font-medium text-foreground">{layerStats.totalCodes}</span> gesamt
+                  <button
+                    type="button"
+                    title="Statistiken als CSV exportieren"
+                    className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => {
+                      const rows = ["Gebiet,PLZ-Anzahl,Anteil"];
+                      const total = layerStats.totalCodes;
+                      for (const layer of optimisticLayers) {
+                        const count = layer.postalCodes?.length ?? 0;
+                        const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+                        rows.push(`"${layer.name.replace(/"/g, '""')}",${count},${pct}%`);
+                      }
+                      rows.push(`"Gesamt",${total},100.0%`);
+                      const csv = rows.join("\n");
+                      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "plz-statistiken.csv";
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    <Download className="h-2.5 w-2.5" />
+                  </button>
                 </span>
               </div>
               {/* PLZ range */}
@@ -1867,7 +1896,7 @@ function LayerManagementSection({
               )}
               {/* Keyboard hint */}
               <div className="text-[9px] text-muted-foreground/60 text-right">
-                Alt+↑↓ Gebiet wechseln · Ctrl+V PLZ einfügen
+                Alt+↑↓ Gebiet wechseln · Ctrl+V PLZ einfügen · / PLZ suchen
               </div>
             </div>
           )}
@@ -1877,6 +1906,7 @@ function LayerManagementSection({
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
               <Input
+                ref={plzFindInputRef}
                 value={plzFindQuery}
                 onChange={(e) => setPlzFindQuery(e.target.value)}
                 placeholder="PLZ suchen…"
@@ -2057,6 +2087,7 @@ const LayerDialogs = memo(function LayerDialogs({
             {[
               { keys: ["Alt", "↑ / ↓"], desc: "Gebiet wechseln" },
               { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
+              { keys: ["/"], desc: "PLZ-Suche fokussieren" },
               { keys: ["Esc"], desc: "Zeichenmodus beenden" },
               { keys: ["Enter"], desc: "Polygon abschließen" },
               { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
@@ -2249,6 +2280,9 @@ function DrawingToolsImpl({
   onLayerSelectRef.current = onLayerSelect;
   const guardedAddRef = useRef(guardedAddPostalCodesToLayer);
   guardedAddRef.current = guardedAddPostalCodesToLayer;
+  const dispatchUIRef = useRef(dispatchUI);
+  dispatchUIRef.current = dispatchUI;
+  const plzFindInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleOpenKeyboardHelp = useCallback(
     () => dispatchUI({ type: "OPEN_KEYBOARD_HELP" }),
@@ -2257,9 +2291,23 @@ function DrawingToolsImpl({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      const isInInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+
+      // / key: focus PLZ quick-find
+      if (e.key === "/" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        dispatchUIRef.current({ type: "SET_LAYERS_OPEN", open: true });
+        // Defer focus until after collapsible opens
+        setTimeout(() => {
+          plzFindInputRef.current?.focus();
+          plzFindInputRef.current?.select();
+        }, 50);
+        return;
+      }
+
+      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+      if (isInInput) return;
       const currentLayers = layersRef.current;
       if (!currentLayers.length) return;
       const currentIdx = currentLayers.findIndex((l) => l.id === activeLayerIdRef.current);
@@ -2458,6 +2506,7 @@ function DrawingToolsImpl({
             handleBulkDelete={handleBulkDelete}
             handleBulkVisibility={handleBulkVisibility}
             onPreviewPostalCode={onPreviewPostalCode}
+            plzFindInputRef={plzFindInputRef}
           />
         )}
 
