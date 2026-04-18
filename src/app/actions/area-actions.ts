@@ -2510,3 +2510,15 @@ export async function listAreasForCopyAction(): ServerActionResponse<
     return { success: false, error: String(err) };
   }
 }
+
+export async function getLayerHistoryAction(layerId: number) {
+  "use server";
+  try {
+    const { getLayerRecentChanges } =
+      await import("../../lib/db/data-functions");
+    const rows = await getLayerRecentChanges(layerId, 10);
+    return { success: true as const, data: rows };
+  } catch (err) {
+    return { success: false as const, error: String(err) };
+  }
+}

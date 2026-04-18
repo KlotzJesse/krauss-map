@@ -1,7 +1,7 @@
 import "server-only";
 // Database functions for data loading - to be used directly in server components
 // These replace the server actions for GET operations
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { cacheTag, cacheLife } from "next/cache";
 
 import { db } from "../db";
@@ -338,7 +338,42 @@ export async function getChangeSummaries(
   }
 }
 
-// Undo/redo status — uses jsonb_array_length instead of fetching full stacks
+// Recent changes for a specific layer (for layer activity history popup)
+export async function getLayerRecentChanges(layerId: number, limit = 10) {
+  "use cache";
+  cacheLife("seconds");
+  cacheTag(`layer-${layerId}-history`);
+  try {
+    return await db
+      .select({
+        changeType: areaChanges.changeType,
+        createdAt: areaChanges.createdAt,
+        createdBy: areaChanges.createdBy,
+        isUndone: areaChanges.isUndone,
+        postalCodeCount: sql<number>`coalesce(jsonb_array_length(${areaChanges.changeData}->'postalCodes'), 0)`,
+        sampleCodes: sql<
+          string[] | null
+        >`(${areaChanges.changeData}->'postalCodes')::jsonb`,
+      })
+      .from(areaChanges)
+      .where(
+        and(
+          eq(areaChanges.entityId, layerId),
+          inArray(areaChanges.changeType, [
+            "add_postal_codes",
+            "remove_postal_codes",
+          ]),
+          eq(areaChanges.isUndone, "false")
+        )
+      )
+      .orderBy(desc(areaChanges.createdAt))
+      .limit(limit);
+  } catch (error) {
+    console.error("Error fetching layer changes:", error);
+    throw new Error("Failed to fetch layer changes", { cause: error });
+  }
+}
+
 export async function getUndoRedoStatus(areaId: number) {
   "use cache";
   cacheLife("seconds");

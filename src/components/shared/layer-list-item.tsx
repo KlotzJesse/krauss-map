@@ -4,6 +4,7 @@ import { IconPalette } from "@tabler/icons-react";
 import {
   ArrowRightLeft,
   CheckSquare,
+  Clock,
   Copy,
   CopyPlus,
   Download,
@@ -12,6 +13,7 @@ import {
   Focus,
   GitMerge,
   GripVertical,
+  History,
   List,
   Loader2,
   Lock,
@@ -25,9 +27,10 @@ import {
   X,
 } from "lucide-react";
 import type { RefObject } from "react";
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import { toast } from "sonner";
 
+import { getLayerHistoryAction } from "@/app/actions/area-actions";
 import {
   ColorPicker,
   ColorPickerEyeDropper,
@@ -269,6 +272,27 @@ export const LayerListItem = memo(function LayerListItem({
   const [selectedPlzCodes, setSelectedPlzCodes] = useState<Set<string>>(
     new Set()
   );
+  type HistoryRow = {
+    changeType: string;
+    createdAt: string;
+    createdBy: string | null;
+    isUndone: string;
+    postalCodeCount: number;
+    sampleCodes: string[] | null;
+  };
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<HistoryRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await getLayerHistoryAction(layer.id);
+      if (res.success) setHistoryItems(res.data);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [layer.id]);
   const isVisible = layer.isVisible !== "false";
   const currentOpacity = layer.opacity ?? 70;
   const postalCodes = layer.postalCodes ?? [];
@@ -876,6 +900,98 @@ export const LayerListItem = memo(function LayerListItem({
                 </TooltipContent>
               </Tooltip>
             )}
+
+            {/* Layer activity history */}
+            <Popover
+              open={historyOpen}
+              onOpenChange={(open) => {
+                setHistoryOpen(open);
+                if (open) loadHistory();
+              }}
+            >
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-5 w-5"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Verlauf dieser Ebene"
+                  />
+                }
+              >
+                <History className="h-3 w-3" />
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-72 p-2"
+                align="end"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  Änderungshistorie
+                </p>
+                {historyLoading && (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                {!historyLoading && historyItems.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-3">
+                    Keine Änderungen aufgezeichnet
+                  </p>
+                )}
+                {!historyLoading && historyItems.length > 0 && (
+                  <div className="space-y-1 max-h-52 overflow-y-auto">
+                    {historyItems.map((item, i) => {
+                      const isAdd = item.changeType === "add_postal_codes";
+                      const codes = Array.isArray(item.sampleCodes)
+                        ? (item.sampleCodes as string[])
+                        : [];
+                      const preview =
+                        codes.slice(0, 3).join(", ") +
+                        (codes.length > 3 ? ` +${codes.length - 3}` : "");
+                      const date = item.createdAt
+                        ? new Date(item.createdAt).toLocaleDateString("de-DE", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "";
+                      return (
+                        <div
+                          key={i}
+                          className="flex items-start gap-1.5 text-xs py-1 border-b last:border-0"
+                        >
+                          <span
+                            className={cn(
+                              "shrink-0 mt-0.5 font-bold",
+                              isAdd ? "text-green-600" : "text-red-500"
+                            )}
+                          >
+                            {isAdd ? "+" : "−"}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="font-medium">
+                              {item.postalCodeCount} PLZ
+                            </span>
+                            {preview && (
+                              <span className="text-muted-foreground ml-1 truncate block">
+                                {preview}
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground shrink-0 tabular-nums">
+                            {date}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
 
             {/* Layer lock */}
             {onToggleLock && (
