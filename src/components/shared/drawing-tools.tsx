@@ -749,6 +749,7 @@ function useDrawingToolsActions({
       .map((layer) => ({
         layerName: layer.name,
         postalCodes: layer.postalCodes!.map((pc) => pc.postalCode),
+        color: layer.color,
       }));
     if (!layersWithCodes.length) {
       toast.warning("Keine Ebenen mit Postleitzahlen zum Exportieren");

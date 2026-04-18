@@ -11,6 +11,7 @@ import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action
 interface LayerExportData {
   layerName: string;
   postalCodes: string[];
+  color?: string;
   areaName?: string;
 }
 
@@ -151,7 +152,7 @@ export async function exportLayersXLSX(
     const wb = XLSX.utils.book_new();
 
     // Create a sheet for each layer
-    layers.forEach(({ layerName, postalCodes }) => {
+    layers.forEach(({ layerName, postalCodes, color }) => {
       // Transform postal codes into the 3 required formats
       const sheetData = postalCodes.map((plz) => {
         const plzFormatted = formatPostalCode(plz, country);
@@ -161,14 +162,18 @@ export async function exportLayersXLSX(
         return [plzFormatted, plzWithPrefix, plzWithPrefixAndComma];
       });
 
-      // Add header row
-      const wsData = [
+      // Add header row (include color column if available)
+      const wsData: (string | null)[][] = [
         [
           `PLZ ohne ${prefix}-`,
           `PLZ mit ${prefix}-`,
           `PLZ mit ${prefix}- und Komma`,
+          ...(color ? ["Ebenenfarbe"] : []),
         ],
-        ...sheetData,
+        ...sheetData.map((row, i) => [
+          ...row,
+          ...(color ? [i === 0 ? color : null] : []),
+        ]),
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(wsData);
