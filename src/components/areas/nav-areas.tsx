@@ -46,6 +46,7 @@ import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action
 import { AreaListItem } from "./area-list-item";
 import { CreateAreaDialog } from "./create-area-dialog";
 import { PlzSearch } from "./plz-search";
+import { TagBadge } from "./tag-badge";
 
 interface NavAreasState {
   createDialogOpen: boolean;
@@ -186,6 +187,18 @@ export function NavAreas({
 
   const [showArchived, setShowArchived] = useReducer((v: boolean) => !v, false);
   const [areaSearch, setAreaSearch] = useState("");
+  const [activeTagId, setActiveTagId] = useState<number | null>(null);
+
+  // Collect all unique tags across all areas
+  const allTags = useMemo(() => {
+    const tagMap = new Map<number, { id: number; name: string; color: string }>();
+    for (const area of optimisticAreas) {
+      for (const tag of area.tags ?? []) {
+        if (!tagMap.has(tag.id)) tagMap.set(tag.id, tag);
+      }
+    }
+    return [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [optimisticAreas]);
 
   const baseVisibleAreas = showArchived
     ? optimisticAreas
@@ -193,16 +206,19 @@ export function NavAreas({
 
   const visibleAreas = useMemo(() => {
     const q = areaSearch.trim().toLowerCase();
-    const filtered = q
+    let filtered = q
       ? baseVisibleAreas.filter((a) => a.name.toLowerCase().includes(q))
       : baseVisibleAreas;
+    if (activeTagId !== null) {
+      filtered = filtered.filter((a) => a.tags?.some((t) => t.id === activeTagId));
+    }
     // Sort pinned areas to top, preserve original order within groups
     return [...filtered].sort((a, b) => {
       const pa = isPinned(a.id) ? 0 : 1;
       const pb = isPinned(b.id) ? 0 : 1;
       return pa - pb;
     });
-  }, [baseVisibleAreas, areaSearch, isPinned]);
+  }, [baseVisibleAreas, areaSearch, activeTagId, isPinned]);
 
   const archivedCount = optimisticAreas.filter((a) => a.isArchived === "true").length;
 
@@ -386,6 +402,21 @@ export function NavAreas({
                 </button>
               )}
             </div>
+            {allTags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {allTags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => setActiveTagId(activeTagId === tag.id ? null : tag.id)}
+                    className={`transition-opacity ${activeTagId !== null && activeTagId !== tag.id ? "opacity-40" : ""}`}
+                    title={activeTagId === tag.id ? "Filter entfernen" : `Nur „${tag.name}" anzeigen`}
+                  >
+                    <TagBadge name={tag.name} color={tag.color} small className="cursor-pointer hover:brightness-110" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <SidebarGroupContent>
@@ -406,7 +437,7 @@ export function NavAreas({
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}
-            {!isLoading && visibleAreas.length === 0 && areaSearch && (
+            {!isLoading && visibleAreas.length === 0 && (areaSearch || activeTagId !== null) && (
               <SidebarMenuItem>
                 <span className="px-2 text-xs text-muted-foreground">Keine Treffer</span>
               </SidebarMenuItem>
