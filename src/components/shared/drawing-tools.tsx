@@ -2666,8 +2666,24 @@ function LayerManagementSection({
                       <span className="font-medium truncate max-w-[80px]">
                         {r.name}
                       </span>
-                      <span className="text-muted-foreground ml-auto font-mono">
-                        {r.matchingCodes.join(", ")}
+                      <span className="text-muted-foreground ml-auto font-mono flex gap-0.5 flex-wrap justify-end">
+                        {r.matchingCodes.map((code) => (
+                          <button
+                            key={code}
+                            type="button"
+                            title={`Zur PLZ ${code} springen`}
+                            className="hover:text-foreground hover:underline transition-colors cursor-pointer"
+                            onClick={() => {
+                              onPreviewPostalCode?.(code);
+                              setTimeout(
+                                () => onPreviewPostalCode?.(null),
+                                2000
+                              );
+                            }}
+                          >
+                            {code}
+                          </button>
+                        ))}
                         {r.matchingCodes.length === 5 ? "…" : ""}
                       </span>
                     </div>
