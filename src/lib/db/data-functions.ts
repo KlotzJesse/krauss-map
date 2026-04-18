@@ -44,6 +44,17 @@ export async function getAreas() {
           INNER JOIN area_tags at ON at.id = ata.tag_id
           WHERE ata.area_id = "areas"."id"
         )`.as("tags"),
+        conflictCount: sql<number>`(
+          SELECT COUNT(DISTINCT own.postal_code)::int
+          FROM area_layer_postal_codes own
+          INNER JOIN area_layers ol ON ol.id = own.layer_id AND ol.area_id = "areas"."id"
+          WHERE EXISTS (
+            SELECT 1 FROM area_layer_postal_codes other
+            INNER JOIN area_layers tl ON tl.id = other.layer_id AND tl.area_id != "areas"."id"
+            INNER JOIN areas a2 ON a2.id = tl.area_id AND a2.is_archived = 'false'
+            WHERE other.postal_code = own.postal_code
+          )
+        )`.as("conflictCount"),
       })
       .from(areas)
       .orderBy(desc(areas.updatedAt));
