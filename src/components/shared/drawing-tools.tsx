@@ -398,6 +398,8 @@ export interface DrawingToolsProps {
   onPreviewPostalCode?: (postalCode: string | null) => void;
   /** Callback to zoom the map to a layer's postal code extent. */
   onZoomToLayer?: (layerId: number) => void;
+  /** Callback to highlight specific postal codes on the map (e.g. for prefix preview). */
+  onHighlightCodes?: (codes: Set<string> | null) => void;
 }
 
 // --- UI state reducer ---
@@ -1487,6 +1489,7 @@ interface LayerManagementSectionProps {
   newLayerInputRef?: React.RefObject<HTMLInputElement | null>;
   allCodesSet?: Set<string>;
   onLayerUpdate?: () => void;
+  onHighlightCodes?: (codes: Set<string> | null) => void;
   handleExportLayerCSV?: (
     layerId: number,
     layerName: string,
@@ -1536,6 +1539,7 @@ function LayerManagementSection({
   newLayerInputRef: externalNewLayerInputRef,
   allCodesSet,
   onLayerUpdate,
+  onHighlightCodes,
   handleExportLayerCSV,
 }: LayerManagementSectionProps) {
   const { isLocked, toggleLock } = useLockedLayers(areaId);
@@ -1808,6 +1812,17 @@ function LayerManagementSection({
     toast.success(`${toAdd.length} PLZ hinzugefügt`);
     setPrefixInput("");
   }, [addPostalCodesToLayer, activeLayerId, optimisticLayers, prefixMatches]);
+
+  // Sync prefix matches to map highlight
+  useEffect(() => {
+    if (!onHighlightCodes) return;
+    if (prefixMatches && prefixMatches.length > 0) {
+      onHighlightCodes(new Set(prefixMatches));
+    } else {
+      onHighlightCodes(null);
+    }
+    return () => onHighlightCodes(null);
+  }, [prefixMatches, onHighlightCodes]);
 
   // Layer templates dialog
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
@@ -3296,6 +3311,7 @@ function DrawingToolsImpl({
   undoRedoStatus,
   onPreviewPostalCode,
   onZoomToLayer,
+  onHighlightCodes,
 }: DrawingToolsProps) {
   const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
 
@@ -4046,6 +4062,7 @@ function DrawingToolsImpl({
             newLayerInputRef={newLayerInputRef}
             allCodesSet={allCodesSet}
             onLayerUpdate={onLayerUpdate}
+            onHighlightCodes={onHighlightCodes}
             handleExportLayerCSV={handleExportLayerCSV}
           />
         )}

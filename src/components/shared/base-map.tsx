@@ -766,6 +766,7 @@ const MapInner = memo(function MapInner({
                 undoRedoStatus={initialUndoRedoStatus}
                 onPreviewPostalCode={onSetPreviewPostalCode}
                 onZoomToLayer={onZoomToLayer}
+                onHighlightCodes={setHighlightedConflictCodes}
               />
             </Suspense>
           </DrawingToolsErrorBoundary>
