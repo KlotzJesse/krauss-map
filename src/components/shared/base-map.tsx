@@ -166,6 +166,7 @@ const MapInner = memo(function MapInner({
   areaName,
   areaDescription,
   previewPostalCode,
+  onSetPreviewPostalCode,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
   isViewingVersion,
@@ -368,6 +369,7 @@ const MapInner = memo(function MapInner({
                 changes={changes}
                 onOpenConflicts={handleOpenConflicts}
                 undoRedoStatus={initialUndoRedoStatus}
+                onPreviewPostalCode={onSetPreviewPostalCode}
               />
             </Suspense>
           </DrawingToolsErrorBoundary>
@@ -472,6 +474,7 @@ const BaseMapComponent = ({
   areaName,
   areaDescription,
   previewPostalCode,
+  onSetPreviewPostalCode,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
   isViewingVersion = false,
@@ -564,6 +567,7 @@ const BaseMapComponent = ({
               areaName={areaName}
               areaDescription={areaDescription}
               previewPostalCode={previewPostalCode}
+              onSetPreviewPostalCode={onSetPreviewPostalCode}
               addPostalCodesToLayer={addPostalCodesToLayer}
               removePostalCodesFromLayer={removePostalCodesFromLayer}
               isViewingVersion={isViewingVersion}

@@ -46,6 +46,7 @@ import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import { isLightColor } from "@/lib/utils/layer-colors";
+import { getLargestPolygonCentroid } from "@/lib/utils/map-data";
 
 const AddressAutocompleteEnhanced = dynamic(
   () =>
@@ -422,6 +423,24 @@ export function PostalCodesViewClientWithLayers({
     [setMapCenterZoom]
   );
 
+  const handleBadgePreviewPostalCode = useCallback(
+    (postalCode: string | null) => {
+      setPreviewPostalCode(postalCode);
+      if (postalCode && data) {
+        const feature = data.features.find(
+          (f) => f.properties?.code === postalCode
+        );
+        if (feature) {
+          const [lng, lat] = getLargestPolygonCentroid(
+            feature as import("geojson").Feature<Polygon | MultiPolygon>
+          );
+          setMapCenterZoom([lng, lat], 11);
+        }
+      }
+    },
+    [data, setMapCenterZoom]
+  );
+
   const handleGranularityChange = useCallback(
     (newGranularity: string) => {
       if (newGranularity === defaultGranularity) {
@@ -544,6 +563,7 @@ export function PostalCodesViewClientWithLayers({
             areaName={areaName ?? undefined}
             areaDescription={areaDescription}
             previewPostalCode={previewPostalCode}
+            onSetPreviewPostalCode={handleBadgePreviewPostalCode}
             addPostalCodesToLayer={addPostalCodesToLayer}
             removePostalCodesFromLayer={removePostalCodesFromLayer}
             isViewingVersion={isViewingVersion}

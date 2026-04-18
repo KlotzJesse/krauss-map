@@ -91,6 +91,7 @@ interface LayerListItemProps {
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   isLocked?: boolean;
   onToggleLock?: (layerId: number) => void;
+  onPreviewPostalCode?: (postalCode: string | null) => void;
 }
 
 function LayerColorPickerContent({
@@ -222,6 +223,7 @@ export const LayerListItem = memo(function LayerListItem({
   dragHandleProps,
   isLocked = false,
   onToggleLock,
+  onPreviewPostalCode,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -672,7 +674,9 @@ export const LayerListItem = memo(function LayerListItem({
               filteredCodes.map((pc) => (
                 <span
                   key={pc.postalCode}
-                  className="inline-flex items-center gap-0.5 text-[10px] bg-muted rounded px-1.5 py-0.5 leading-none group/badge"
+                  className="inline-flex items-center gap-0.5 text-[10px] bg-muted rounded px-1.5 py-0.5 leading-none group/badge cursor-pointer"
+                  onMouseEnter={() => onPreviewPostalCode?.(pc.postalCode)}
+                  onMouseLeave={() => onPreviewPostalCode?.(null)}
                 >
                   {pc.postalCode}
                   {onMovePlz && otherLayers.length > 0 && (

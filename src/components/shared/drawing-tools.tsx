@@ -288,6 +288,9 @@ export interface DrawingToolsProps {
 
   /** Callback to open the conflict resolution panel (managed by parent). */
   onOpenConflicts?: () => void;
+
+  /** Callback to set the hovered PLZ for map preview. */
+  onPreviewPostalCode?: (postalCode: string | null) => void;
 }
 
 // --- UI state reducer ---
@@ -1172,6 +1175,7 @@ interface LayerManagementSectionProps {
   handleBulkVisibility: (layerIds: number[], visible: boolean) => void;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   onOpenConflicts?: () => void;
+  onPreviewPostalCode?: (postalCode: string | null) => void;
 }
 
 function LayerManagementSection({
@@ -1205,6 +1209,7 @@ function LayerManagementSection({
   handleBulkVisibility,
   addPostalCodesToLayer,
   onOpenConflicts,
+  onPreviewPostalCode,
 }: LayerManagementSectionProps) {
   const { isLocked, toggleLock } = useLockedLayers(areaId);
 
@@ -1750,6 +1755,7 @@ function LayerManagementSection({
                    onToggleSelect={selectMode ? toggleSelect : undefined}
                    isLocked={isLocked(layer.id)}
                    onToggleLock={toggleLock}
+                   onPreviewPostalCode={onPreviewPostalCode}
                  />
                ))
              ) : (
@@ -1797,6 +1803,7 @@ function LayerManagementSection({
                       onToggleSelect={selectMode ? toggleSelect : undefined}
                       isLocked={isLocked(layer.id)}
                       onToggleLock={toggleLock}
+                      onPreviewPostalCode={onPreviewPostalCode}
                     />
                   ))}
                 </SortableContext>
@@ -2131,6 +2138,7 @@ function DrawingToolsImpl({
   changes = EMPTY_ARRAY,
   onOpenConflicts,
   undoRedoStatus,
+  onPreviewPostalCode,
 }: DrawingToolsProps) {
   const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
 
@@ -2449,6 +2457,7 @@ function DrawingToolsImpl({
             onOpenConflicts={onOpenConflicts}
             handleBulkDelete={handleBulkDelete}
             handleBulkVisibility={handleBulkVisibility}
+            onPreviewPostalCode={onPreviewPostalCode}
           />
         )}
 
