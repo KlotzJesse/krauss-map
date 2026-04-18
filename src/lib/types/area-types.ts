@@ -10,7 +10,9 @@ export type Area = InferSelectModel<typeof areas>;
 export type AreaSummary = Pick<
   Area,
   "id" | "name" | "granularity" | "isArchived" | "updatedAt" | "country"
->;
+> & {
+  postalCodeCount?: number | null;
+};
 
 export type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];

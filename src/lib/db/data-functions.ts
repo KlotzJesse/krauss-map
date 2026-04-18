@@ -8,6 +8,7 @@ import { db } from "../db";
 import {
   areas,
   areaLayers,
+  areaLayerPostalCodes,
   areaVersions,
   areaChanges,
   areaUndoStacks,
@@ -18,17 +19,23 @@ export async function getAreas() {
   cacheLife("minutes");
   cacheTag("areas");
   try {
-    const result = await db.query.areas.findMany({
-      columns: {
-        id: true,
-        name: true,
-        granularity: true,
-        isArchived: true,
-        updatedAt: true,
-        country: true,
-      },
-      orderBy: (areas, { desc }) => [desc(areas.updatedAt)],
-    });
+    const result = await db
+      .select({
+        id: areas.id,
+        name: areas.name,
+        granularity: areas.granularity,
+        isArchived: areas.isArchived,
+        updatedAt: areas.updatedAt,
+        country: areas.country,
+        postalCodeCount: sql<number>`(
+          SELECT COUNT(*)::int
+          FROM ${areaLayerPostalCodes} alpc
+          INNER JOIN ${areaLayers} al ON al.id = alpc.layer_id
+          WHERE al.area_id = ${areas.id}
+        )`.as("postalCodeCount"),
+      })
+      .from(areas)
+      .orderBy(desc(areas.updatedAt));
     return result;
   } catch (error) {
     console.error("Error fetching areas:", error);

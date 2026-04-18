@@ -138,7 +138,12 @@ export const AreaListItem = memo(
                 <span className="truncate">{area.name}</span>
                 <LinkPendingIndicator />
               </Link>
-              <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+              {!!area.postalCodeCount && (
+                <span className="shrink-0 text-[9px] font-medium text-muted-foreground bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity">
+                  {area.postalCodeCount}
+                </span>
+              )}
+              <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0">
                 <AreaItemDropdown
                   area={area}
                   onStartRename={onStartRename}
@@ -157,7 +162,8 @@ export const AreaListItem = memo(
     if (
       prev.area.id !== next.area.id ||
       prev.area.name !== next.area.name ||
-      prev.area.country !== next.area.country
+      prev.area.country !== next.area.country ||
+      prev.area.postalCodeCount !== next.area.postalCodeCount
     ) {
       return false;
     }
