@@ -2375,7 +2375,7 @@ const LayerDialogs = memo(function LayerDialogs({
           </DialogHeader>
           <div className="space-y-3 text-sm">
             {[
-              { keys: ["Alt", "↑ / ↓"], desc: "Gebiet wechseln" },
+              { keys: ["Alt", "↑ / ↓"], desc: "Ebene wechseln" },
               { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
               { keys: ["Ctrl", "C"], desc: "PLZ der aktiven Ebene kopieren" },
               { keys: ["/"], desc: "PLZ-Suche fokussieren" },

@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getAreas } from "@/lib/db/data-functions";
+import { ExportAllAreasButton } from "./export-all-areas-button";
 
 export async function PostalCodesOverview() {
   const areas = await getAreas();
@@ -41,11 +42,14 @@ export async function PostalCodesOverview() {
     <div className="h-full overflow-auto p-6 pt-8">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold mb-1">Übersicht</h1>
-          <p className="text-muted-foreground text-sm">
-            Gesamtüberblick aller Gebiete und PLZ-Zuordnungen
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-1">Übersicht</h1>
+            <p className="text-muted-foreground text-sm">
+              Gesamtüberblick aller Gebiete und PLZ-Zuordnungen
+            </p>
+          </div>
+          {activeAreas.length > 0 && <ExportAllAreasButton />}
         </div>
 
         {/* Stats row */}
