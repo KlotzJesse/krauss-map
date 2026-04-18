@@ -11,6 +11,7 @@ import {
   areaVersions,
   areaChanges,
   areaUndoStacks,
+  postalCodes,
 } from "../schema/schema";
 
 export async function getAreas() {
@@ -33,6 +34,12 @@ export async function getAreas() {
           INNER JOIN area_layers al ON al.id = alpc.layer_id
           WHERE al.area_id = "areas"."id"
         )`.as("postalCodeCount"),
+        uniquePostalCodeCount: sql<number>`(
+          SELECT COUNT(DISTINCT alpc.postal_code)::int
+          FROM area_layer_postal_codes alpc
+          INNER JOIN area_layers al ON al.id = alpc.layer_id
+          WHERE al.area_id = "areas"."id"
+        )`.as("uniquePostalCodeCount"),
         layerCount: sql<number>`(
           SELECT COUNT(*)::int
           FROM area_layers al
@@ -55,6 +62,13 @@ export async function getAreas() {
             WHERE other.postal_code = own.postal_code
           )
         )`.as("conflictCount"),
+        totalPostalCodeCount: sql<number>`(
+          SELECT COUNT(*)::int
+          FROM postal_codes pc
+          WHERE pc.granularity = "areas"."granularity"
+            AND pc.country = "areas"."country"
+            AND pc.is_active = 'true'
+        )`.as("totalPostalCodeCount"),
       })
       .from(areas)
       .orderBy(desc(areas.updatedAt));

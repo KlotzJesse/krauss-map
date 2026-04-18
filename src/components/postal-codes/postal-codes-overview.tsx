@@ -95,7 +95,23 @@ export async function PostalCodesOverview() {
   }
 
   // Recent (sorted by updatedAt desc)
-  const recent = activeAreas.slice(0, 5);
+  const recent = activeAreas.slice(0, 6);
+
+  // Areas with coverage %
+  const areasWithCoverage = activeAreas
+    .filter((a) => (a.totalPostalCodeCount ?? 0) > 0)
+    .map((a) => ({
+      ...a,
+      coveragePct: Math.min(
+        100,
+        Math.round(
+          ((a.uniquePostalCodeCount ?? 0) / (a.totalPostalCodeCount ?? 1)) *
+            100
+        )
+      ),
+    }))
+    .sort((a, b) => b.coveragePct - a.coveragePct)
+    .slice(0, 5);
 
   // Conflict areas (sorted by conflict ratio)
   const conflictAreas = activeAreas
@@ -212,36 +228,70 @@ export async function PostalCodesOverview() {
                   </div>
                 ) : (
                   <ul className="divide-y divide-border">
-                    {recent.map((area) => (
-                      <li key={area.id}>
-                        <Link
-                          href={`/postal-codes/${area.id}` as Route}
-                          className="flex items-center gap-3 py-2.5 hover:bg-muted/40 rounded-md px-2 -mx-2 transition-colors group"
-                        >
-                          <IconFolder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="flex-1 text-sm font-medium truncate">
-                            {area.name}
-                          </span>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground shrink-0">
-                            {area.country && (
-                              <span className="uppercase font-mono">
-                                {area.country}
-                              </span>
-                            )}
-                            {!!area.postalCodeCount && (
-                              <span className="bg-muted rounded px-1 py-0.5">
-                                {area.postalCodeCount} PLZ
-                              </span>
-                            )}
-                            {!!area.layerCount && (
-                              <span className="bg-muted rounded px-1 py-0.5">
-                                {area.layerCount}L
-                              </span>
-                            )}
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
+                    {recent.map((area) => {
+                      const totalPc = area.totalPostalCodeCount ?? 0;
+                      const assigned = area.uniquePostalCodeCount ?? 0;
+                      const coveragePct =
+                        totalPc > 0
+                          ? Math.min(100, Math.round((assigned / totalPc) * 100))
+                          : null;
+                      return (
+                        <li key={area.id}>
+                          <Link
+                            href={`/postal-codes/${area.id}` as Route}
+                            className="flex items-center gap-3 py-2.5 hover:bg-muted/40 rounded-md px-2 -mx-2 transition-colors group"
+                          >
+                            <IconFolder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium truncate">
+                                  {area.name}
+                                </span>
+                              </div>
+                              {coveragePct !== null && (
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                      className={cn(
+                                        "h-full rounded-full transition-all",
+                                        coveragePct >= 80
+                                          ? "bg-green-500"
+                                          : coveragePct >= 50
+                                            ? "bg-primary"
+                                            : coveragePct >= 20
+                                              ? "bg-amber-500"
+                                              : "bg-muted-foreground/40"
+                                      )}
+                                      style={{ width: `${coveragePct}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[9px] text-muted-foreground tabular-nums shrink-0">
+                                    {coveragePct}%
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground shrink-0">
+                              {area.country && (
+                                <span className="uppercase font-mono">
+                                  {area.country}
+                                </span>
+                              )}
+                              {!!assigned && (
+                                <span className="bg-muted rounded px-1 py-0.5">
+                                  {assigned} PLZ
+                                </span>
+                              )}
+                              {!!area.layerCount && (
+                                <span className="bg-muted rounded px-1 py-0.5">
+                                  {area.layerCount}L
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </CardContent>
@@ -354,6 +404,62 @@ export async function PostalCodesOverview() {
                         {stats.count} Geb.
                       </span>
                     </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {areasWithCoverage.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <IconMapPin className="h-4 w-4 text-primary" />
+                    Top Abdeckung
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Gebiete nach PLZ-Abdeckung
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2">
+                  {areasWithCoverage.map((area) => (
+                    <Link
+                      key={area.id}
+                      href={`/postal-codes/${area.id}` as Route}
+                      className="flex items-center gap-2 hover:bg-muted/40 rounded-md px-1.5 py-1 -mx-1.5 transition-colors group"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <span className="text-xs font-medium truncate">
+                            {area.name}
+                          </span>
+                          <span
+                            className={cn(
+                              "shrink-0 text-[9px] font-bold rounded px-1.5 py-0.5 leading-none",
+                              area.coveragePct >= 80
+                                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
+                                : area.coveragePct >= 50
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
+                                  : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {area.coveragePct}%
+                          </span>
+                        </div>
+                        <div className="h-1 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              area.coveragePct >= 80
+                                ? "bg-green-500"
+                                : area.coveragePct >= 50
+                                  ? "bg-primary"
+                                  : "bg-amber-500"
+                            )}
+                            style={{ width: `${area.coveragePct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </Link>
                   ))}
                 </CardContent>
               </Card>

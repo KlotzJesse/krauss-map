@@ -18,8 +18,10 @@ export type AreaSummary = Pick<
   | "description"
 > & {
   postalCodeCount?: number | null;
+  uniquePostalCodeCount?: number | null;
   layerCount?: number | null;
   conflictCount?: number | null;
+  totalPostalCodeCount?: number | null;
   tags?: { id: number; name: string; color: string }[];
 };
 
