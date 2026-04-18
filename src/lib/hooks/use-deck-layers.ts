@@ -935,9 +935,20 @@ export function useDeckLayers({
     unassignedFeaturesData,
   ]);
 
+  /** Count of postal codes not assigned to any layer (computed regardless of showUnassigned) */
+  const unassignedCount = useMemo(() => {
+    let count = 0;
+    for (const f of data.features) {
+      const code = getFeatureCode(f);
+      if (code && !allAssignedCodeSet.has(code)) count++;
+    }
+    return count;
+  }, [data, allAssignedCodeSet]);
+
   return {
     deckLayers,
     onHover,
     hoverTooltip,
+    unassignedCount,
   } as const;
 }

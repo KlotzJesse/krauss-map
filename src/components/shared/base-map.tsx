@@ -152,10 +152,11 @@ class MapRecoveryBoundary extends Component<
   }
 }
 
-function MapLegend({ layers, activeLayerId }: { layers: BaseMapProps["layers"]; activeLayerId?: number | null }) {
+function MapLegend({ layers, activeLayerId, unassignedCount }: { layers: BaseMapProps["layers"]; activeLayerId?: number | null; unassignedCount?: number }) {
   const [collapsed, setCollapsed] = useState(false);
   const visibleLayers = layers.filter((l) => l.isVisible !== "false" && (l.postalCodes?.length ?? 0) > 0);
-  if (visibleLayers.length === 0) return null;
+  const showUnassignedEntry = (unassignedCount ?? 0) > 0;
+  if (visibleLayers.length === 0 && !showUnassignedEntry) return null;
 
   return (
     <div className="absolute bottom-4 right-4 z-10 print:hidden">
@@ -186,6 +187,16 @@ function MapLegend({ layers, activeLayerId }: { layers: BaseMapProps["layers"]; 
                 <span className="text-[9px] text-muted-foreground shrink-0 ml-auto">{l.postalCodes?.length ?? 0}</span>
               </div>
             ))}
+            {showUnassignedEntry && (
+              <div className="flex items-center gap-1.5 border-t border-border/50 pt-1 mt-1">
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-sm shrink-0 border border-red-300"
+                  style={{ backgroundColor: "rgba(239,68,68,0.25)" }}
+                />
+                <span className="text-[10px] text-muted-foreground truncate leading-tight italic">Nicht zugeordnet</span>
+                <span className="text-[9px] text-red-500 shrink-0 ml-auto">{unassignedCount?.toLocaleString("de-DE")}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -414,7 +425,7 @@ const MapInner = memo(function MapInner({
       : undefined;
 
   // deck.gl layers (polygons, fills, hover, preview) — cursor managed via direct DOM ref
-  const { deckLayers, onHover, hoverTooltip } = useDeckLayers({
+  const { deckLayers, onHover, hoverTooltip, unassignedCount } = useDeckLayers({
     data,
     statesData,
     countryShapesData,
@@ -661,16 +672,21 @@ const MapInner = memo(function MapInner({
         <button
           type="button"
           onClick={() => setShowUnassigned(!showUnassigned)}
-          title={showUnassigned ? "Freie PLZ ausblenden" : "Freie PLZ anzeigen (nicht zugeordnet)"}
+          title={showUnassigned ? "Freie PLZ ausblenden" : `Freie PLZ anzeigen — ${unassignedCount.toLocaleString("de-DE")} nicht zugeordnet`}
           aria-label="Nicht zugeordnete PLZ anzeigen/ausblenden"
           className={cn(
-            "flex items-center justify-center w-8 h-8 rounded-md border shadow-sm transition-colors",
+            "flex items-center gap-1.5 px-2 h-8 rounded-md border shadow-sm transition-colors text-xs font-medium",
             showUnassigned
               ? "bg-red-100 border-red-300 text-red-600 hover:bg-red-50"
-              : "bg-white/90 border-border text-muted-foreground hover:bg-white hover:text-foreground"
+              : unassignedCount > 0
+                ? "bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100"
+                : "bg-white/90 border-border text-muted-foreground hover:bg-white hover:text-foreground"
           )}
         >
           {showUnassigned ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          {unassignedCount > 0 && (
+            <span>{unassignedCount.toLocaleString("de-DE")}</span>
+          )}
         </button>
       </div>
 
@@ -693,7 +709,7 @@ const MapInner = memo(function MapInner({
 
       {/* Map layer legend — bottom right */}
       {layers && layers.some((l) => (l.postalCodes?.length ?? 0) > 0) && (
-        <MapLegend layers={layers} activeLayerId={activeLayerId} />
+        <MapLegend layers={layers} activeLayerId={activeLayerId} unassignedCount={unassignedCount} />
       )}
 
       {/* Hover tooltip */}
