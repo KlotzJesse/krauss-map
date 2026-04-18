@@ -122,17 +122,24 @@ interface LayerListItemProps {
 function LayerColorPickerContent({
   currentColor,
   currentOpacity,
+  usedColors,
   onConfirm,
   onOpacityChange,
 }: {
   currentColor: string;
   currentOpacity: number;
+  usedColors?: string[];
   onConfirm: (hex: string) => void;
   onOpacityChange?: (opacity: number) => void;
 }) {
   const [pending, setPending] = useState(currentColor);
   const [pickerKey, setPickerKey] = useState(0);
   const [opacity, setOpacity] = useState(currentOpacity);
+
+  const usedSet = useMemo(
+    () => new Set((usedColors ?? []).map((c) => c.toLowerCase())),
+    [usedColors]
+  );
 
   return (
     <div className="w-60 space-y-3">
@@ -147,24 +154,42 @@ function LayerColorPickerContent({
         </span>
       </div>
 
-      {/* Preset swatches */}
-      <div className="grid grid-cols-8 gap-1">
-        {DEFAULT_LAYER_COLORS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            className="h-6 w-6 rounded border-2 transition-transform hover:scale-110"
-            style={{
-              backgroundColor: c,
-              borderColor: pending === c ? "currentColor" : "transparent",
-            }}
-            onClick={() => {
-              setPending(c);
-              setPickerKey((k) => k + 1);
-              onConfirm(c);
-            }}
-          />
-        ))}
+      {/* Preset swatches — unused colors first, used colors dimmed */}
+      <div>
+        <div className="text-[10px] text-muted-foreground mb-1">
+          Palette (● = bereits verwendet)
+        </div>
+        <div className="grid grid-cols-8 gap-1">
+          {DEFAULT_LAYER_COLORS.map((c) => {
+            const isUsed = usedSet.has(c.toLowerCase());
+            return (
+              <button
+                key={c}
+                type="button"
+                title={isUsed ? `${c} (in Benutzung)` : c}
+                className={`h-6 w-6 rounded border-2 transition-transform hover:scale-110 relative ${isUsed ? "opacity-40" : "ring-0"}`}
+                style={{
+                  backgroundColor: c,
+                  borderColor:
+                    pending.toLowerCase() === c.toLowerCase()
+                      ? "currentColor"
+                      : "transparent",
+                }}
+                onClick={() => {
+                  setPending(c);
+                  setPickerKey((k) => k + 1);
+                  onConfirm(c);
+                }}
+              >
+                {isUsed && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-foreground/50 text-[6px] flex items-center justify-center text-background leading-none">
+                    ●
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Full color picker */}
@@ -623,6 +648,7 @@ export const LayerListItem = memo(function LayerListItem({
                 <LayerColorPickerContent
                   currentColor={layer.color}
                   currentOpacity={currentOpacity}
+                  usedColors={otherLayers.map((l) => l.color)}
                   onConfirm={(hex) => {
                     onColorChange(layer.id, hex);
                     setColorPickerOpen(false);

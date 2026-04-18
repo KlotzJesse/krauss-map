@@ -2913,6 +2913,7 @@ const LayerDialogs = memo(function LayerDialogs({
                 items: [
                   { keys: ["F1–F9"], desc: "Direkt zu Ebene 1–9 wechseln" },
                   { keys: ["Alt", "↑ / ↓"], desc: "Ebene wechseln" },
+                  { keys: ["S"], desc: "Aktive Ebene solo / alle einblenden" },
                   { keys: ["N"], desc: "Neue Ebene anlegen" },
                   { keys: ["D"], desc: "Aktive Ebene duplizieren" },
                   { keys: ["E"], desc: "Sichtbarkeit umschalten" },
@@ -3248,6 +3249,10 @@ function DrawingToolsImpl({
   handleToggleVisibilityRef.current = handleToggleVisibility;
   const handleDeleteLayerRef = useRef(handleDeleteLayer);
   handleDeleteLayerRef.current = handleDeleteLayer;
+  const handleSoloLayerRef = useRef(handleSoloLayer);
+  handleSoloLayerRef.current = handleSoloLayer;
+  const handleShowAllLayersRef = useRef(handleShowAllLayers);
+  handleShowAllLayersRef.current = handleShowAllLayers;
   const countryRef = useRef(country);
   countryRef.current = country;
   const dispatchFormRef = useRef(dispatchForm);
@@ -3393,6 +3398,30 @@ function DrawingToolsImpl({
       if (e.key === "?" && !isInInput && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         dispatchUIRef.current({ type: "OPEN_KEYBOARD_HELP" });
+        return;
+      }
+
+      // S key: solo active layer (or show all if already soloed)
+      if (
+        e.key === "s" &&
+        !isInInput &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        const id = activeLayerIdRef.current;
+        if (id) {
+          e.preventDefault();
+          const currentLayers = layersRef.current;
+          const allOthersHidden = currentLayers
+            .filter((l) => l.id !== id)
+            .every((l) => l.isVisible === "false");
+          if (allOthersHidden) {
+            handleShowAllLayersRef.current();
+          } else {
+            handleSoloLayerRef.current(id);
+          }
+        }
         return;
       }
 
