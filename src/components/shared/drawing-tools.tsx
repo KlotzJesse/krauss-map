@@ -76,6 +76,7 @@ import {
   exportAreaDataAction,
   importAreaFromDataAction,
   balanceLayersAction,
+  fixDuplicateCodeAction,
 } from "@/app/actions/area-actions";
 import {
   batchUpdateVisibilityAction,
@@ -1801,61 +1802,62 @@ function LayerManagementSection({
   );
 
   // Per-layer duplicate postal code counts + overall stats
-  const { duplicateCountByLayer, duplicateCodeMap, layerStats } = useMemo(() => {
-    const counts = new Map<number, number>();
-    const codeToLayers = new Map<string, number[]>();
-    let totalCodes = 0;
-    let minCode = "";
-    let maxCode = "";
-    for (const layer of optimisticLayers) {
-      if (!layer.postalCodes) continue;
-      totalCodes += layer.postalCodes.length;
-      for (const pc of layer.postalCodes) {
-        const existing = codeToLayers.get(pc.postalCode);
-        if (existing) {
-          existing.push(layer.id);
-        } else {
-          codeToLayers.set(pc.postalCode, [layer.id]);
-        }
-        if (!minCode || pc.postalCode < minCode) minCode = pc.postalCode;
-        if (!maxCode || pc.postalCode > maxCode) maxCode = pc.postalCode;
-      }
-    }
-    let duplicateCodeCount = 0;
-    for (const [, layerIds] of codeToLayers) {
-      if (layerIds.length > 1) {
-        duplicateCodeCount++;
-        for (const id of layerIds) {
-          counts.set(id, (counts.get(id) ?? 0) + 1);
+  const { duplicateCountByLayer, duplicateCodeMap, layerStats } =
+    useMemo(() => {
+      const counts = new Map<number, number>();
+      const codeToLayers = new Map<string, number[]>();
+      let totalCodes = 0;
+      let minCode = "";
+      let maxCode = "";
+      for (const layer of optimisticLayers) {
+        if (!layer.postalCodes) continue;
+        totalCodes += layer.postalCodes.length;
+        for (const pc of layer.postalCodes) {
+          const existing = codeToLayers.get(pc.postalCode);
+          if (existing) {
+            existing.push(layer.id);
+          } else {
+            codeToLayers.set(pc.postalCode, [layer.id]);
+          }
+          if (!minCode || pc.postalCode < minCode) minCode = pc.postalCode;
+          if (!maxCode || pc.postalCode > maxCode) maxCode = pc.postalCode;
         }
       }
-    }
+      let duplicateCodeCount = 0;
+      for (const [, layerIds] of codeToLayers) {
+        if (layerIds.length > 1) {
+          duplicateCodeCount++;
+          for (const id of layerIds) {
+            counts.set(id, (counts.get(id) ?? 0) + 1);
+          }
+        }
+      }
 
-    // PLZ prefix distribution (first 2 digits)
-    const prefixCounts = new Map<string, number>();
-    for (const [code] of codeToLayers) {
-      const prefix = code.slice(0, 2);
-      prefixCounts.set(prefix, (prefixCounts.get(prefix) ?? 0) + 1);
-    }
-    const prefixDistribution = [...prefixCounts.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([prefix, count]) => ({ prefix, count }));
+      // PLZ prefix distribution (first 2 digits)
+      const prefixCounts = new Map<string, number>();
+      for (const [code] of codeToLayers) {
+        const prefix = code.slice(0, 2);
+        prefixCounts.set(prefix, (prefixCounts.get(prefix) ?? 0) + 1);
+      }
+      const prefixDistribution = [...prefixCounts.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([prefix, count]) => ({ prefix, count }));
 
-    return {
-      duplicateCountByLayer: counts,
-      duplicateCodeMap: new Map(
-        [...codeToLayers.entries()].filter(([, ids]) => ids.length > 1)
-      ),
-      layerStats: {
-        uniqueCodes: codeToLayers.size,
-        totalCodes,
-        duplicateCodes: duplicateCodeCount,
-        minCode,
-        maxCode,
-        prefixDistribution,
-      },
-    };
-  }, [optimisticLayers]);
+      return {
+        duplicateCountByLayer: counts,
+        duplicateCodeMap: new Map(
+          [...codeToLayers.entries()].filter(([, ids]) => ids.length > 1)
+        ),
+        layerStats: {
+          uniqueCodes: codeToLayers.size,
+          totalCodes,
+          duplicateCodes: duplicateCodeCount,
+          minCode,
+          maxCode,
+          prefixDistribution,
+        },
+      };
+    }, [optimisticLayers]);
 
   return (
     <>
@@ -2519,45 +2521,96 @@ function LayerManagementSection({
                     <span className="text-[9px] text-amber-500 font-medium uppercase tracking-wide">
                       Doppelte PLZ ({duplicateCodeMap.size})
                     </span>
-                    <button
-                      type="button"
-                      className="text-[9px] text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowDuplicates(false)}
-                    >
-                      ✕
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        className="text-[9px] text-amber-500 hover:text-amber-600 font-medium hover:underline"
+                        title="Alle Duplikate automatisch bereinigen"
+                        onClick={async () => {
+                          for (const [
+                            code,
+                            layerIds,
+                          ] of duplicateCodeMap.entries()) {
+                            await fixDuplicateCodeAction(
+                              areaId,
+                              code,
+                              layerIds
+                            );
+                          }
+                          onLayerUpdate?.();
+                          setShowDuplicates(false);
+                        }}
+                      >
+                        Alle fixen
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[9px] text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowDuplicates(false)}
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                   <div className="max-h-28 overflow-y-auto space-y-0.5">
-                    {[...duplicateCodeMap.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([code, layerIds]) => (
-                      <div key={code} className="flex items-center gap-1 text-[10px]">
-                        <button
-                          type="button"
-                          className="font-mono font-medium text-amber-500 hover:underline"
-                          title={`PLZ ${code} auf der Karte anzeigen`}
-                          onClick={() => {
-                            onPreviewPostalCode?.(code);
-                            setTimeout(() => onPreviewPostalCode?.(null), 2000);
-                          }}
+                    {[...duplicateCodeMap.entries()]
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([code, layerIds]) => (
+                        <div
+                          key={code}
+                          className="flex items-center gap-1 text-[10px]"
                         >
-                          {code}
-                        </button>
-                        <span className="text-muted-foreground">in</span>
-                        <span className="flex gap-0.5 flex-wrap">
-                          {layerIds.map((id: number) => {
-                            const l = optimisticLayers.find((x) => x.id === id);
-                            return l ? (
-                              <span
-                                key={id}
-                                className="px-1 rounded text-[9px] font-medium"
-                                style={{ backgroundColor: l.color + "33", color: l.color }}
-                              >
-                                {l.name}
-                              </span>
-                            ) : null;
-                          })}
-                        </span>
-                      </div>
-                    ))}
+                          <button
+                            type="button"
+                            className="font-mono font-medium text-amber-500 hover:underline"
+                            title={`PLZ ${code} auf der Karte anzeigen`}
+                            onClick={() => {
+                              onPreviewPostalCode?.(code);
+                              setTimeout(
+                                () => onPreviewPostalCode?.(null),
+                                2000
+                              );
+                            }}
+                          >
+                            {code}
+                          </button>
+                          <span className="text-muted-foreground">in</span>
+                          <span className="flex gap-0.5 flex-wrap flex-1">
+                            {layerIds.map((id: number) => {
+                              const l = optimisticLayers.find(
+                                (x) => x.id === id
+                              );
+                              return l ? (
+                                <span
+                                  key={id}
+                                  className="px-1 rounded text-[9px] font-medium"
+                                  style={{
+                                    backgroundColor: l.color + "33",
+                                    color: l.color,
+                                  }}
+                                >
+                                  {l.name}
+                                </span>
+                              ) : null;
+                            })}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-[9px] text-muted-foreground hover:text-amber-500 shrink-0"
+                            title="Duplikat bereinigen (behalte Ebene mit den meisten PLZ)"
+                            onClick={async () => {
+                              await fixDuplicateCodeAction(
+                                areaId,
+                                code,
+                                layerIds
+                              );
+                              onLayerUpdate?.();
+                            }}
+                          >
+                            Fix
+                          </button>
+                        </div>
+                      ))}
                   </div>
                 </div>
               )}

@@ -252,6 +252,7 @@ export function NavAreas({
 
   const [showArchived, setShowArchived] = useReducer((v: boolean) => !v, false);
   const [areaSearch, setAreaSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [activeTagId, setActiveTagId] = useState<number | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [groupByTag, setGroupByTag] = useReducer((v: boolean) => !v, false);
@@ -405,6 +406,25 @@ export function NavAreas({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [visibleAreas, currentAreaIdFromRoute, router]);
+
+  // "/" key to focus search input
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "/") return;
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   const handleStartRename = useCallback(
     (area: AreaSummary, e: React.MouseEvent) => {
@@ -695,10 +715,11 @@ export function NavAreas({
             <div className="relative flex items-center">
               <IconSearch className="absolute left-2 h-3 w-3 text-muted-foreground pointer-events-none" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={areaSearch}
                 onChange={(e) => setAreaSearch(e.target.value)}
-                placeholder="Gebiete filtern…"
+                placeholder="Gebiete filtern… (/)"
                 className="w-full h-6 pl-6 pr-5 text-xs bg-muted/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-colors"
               />
               {areaSearch && (

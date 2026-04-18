@@ -1405,6 +1405,72 @@ export async function balanceLayersAction(
   }
 }
 
+/**
+ * Removes a postal code from all layers except the one with the most codes.
+ * Returns the layerId that kept the code.
+ */
+export async function fixDuplicateCodeAction(
+  areaId: number,
+  postalCode: string,
+  layerIds: number[]
+): ServerActionResponse<{ keptLayerId: number }> {
+  try {
+    if (!areaId || !postalCode || layerIds.length < 2) {
+      return { success: false, error: "Invalid parameters" };
+    }
+
+    const result = await db.transaction(async (tx) => {
+      // Find which layer has the most codes (keep that one)
+      const layers = await tx.query.areaLayers.findMany({
+        where: and(
+          eq(areaLayers.areaId, areaId),
+          inArray(areaLayers.id, layerIds)
+        ),
+        with: { postalCodes: { columns: { postalCode: true } } },
+      });
+
+      if (layers.length === 0) throw new Error("No layers found");
+
+      // Keep the layer with the most codes
+      const keptLayer = layers.reduce((best, l) =>
+        (l.postalCodes?.length ?? 0) >= (best.postalCodes?.length ?? 0)
+          ? l
+          : best
+      );
+
+      const removeFromLayerIds = layerIds.filter((id) => id !== keptLayer.id);
+
+      for (const layerId of removeFromLayerIds) {
+        await tx
+          .delete(areaLayerPostalCodes)
+          .where(
+            and(
+              eq(areaLayerPostalCodes.layerId, layerId),
+              eq(areaLayerPostalCodes.postalCode, postalCode)
+            )
+          );
+        await recordChangeWithTx(tx, areaId, {
+          changeType: "remove_postal_codes",
+          entityType: "postal_code",
+          entityId: layerId,
+          changeData: { postalCodes: [postalCode], layerId },
+          previousData: { postalCodes: [postalCode] },
+        });
+      }
+
+      return { keptLayerId: keptLayer.id };
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}-change-history`);
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error fixing duplicate code:", error);
+    return { success: false, error: "Failed to fix duplicate" };
+  }
+}
+
 export async function geoprocessAction(data: {
   mode: "all" | "holes" | "expand";
 
