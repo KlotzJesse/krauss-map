@@ -586,6 +586,24 @@ const MapInner = memo(function MapInner({
     setMapCenterZoom([centerLng, centerLat], zoom);
   }, [data, layers, setMapCenterZoom]);
 
+  // G key: zoom to fit all layers
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "g" && e.key !== "G") return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
+      handleFitAllLayers();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleFitAllLayers]);
+
   // startTransition-wrapped handlers to defer heavy subtree re-renders
   const handleShowTools = useStableCallback(() =>
     startTransition(() => interactions.showTools())
@@ -714,8 +732,8 @@ const MapInner = memo(function MapInner({
           <button
             type="button"
             onClick={handleFitAllLayers}
-            title="Alle Ebenen anzeigen"
-            aria-label="Karte auf alle Ebenen ausrichten"
+            title="Alle Ebenen anzeigen (G)"
+            aria-label="Karte auf alle Ebenen ausrichten (G)"
             className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
           >
             <Maximize2 className="h-4 w-4" />

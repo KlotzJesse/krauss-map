@@ -2810,6 +2810,7 @@ const LayerDialogs = memo(function LayerDialogs({
               { keys: ["Ctrl", "B"], desc: "Kartenlesezeichen öffnen" },
               { keys: ["?"], desc: "Tastaturkürzel anzeigen" },
               { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
+              { keys: ["G"], desc: "Alle Ebenen anzeigen (Fit all)" },
               { keys: ["N"], desc: "Neues Gebiet anlegen" },
               { keys: ["D"], desc: "Aktive Ebene duplizieren" },
               { keys: ["E"], desc: "Sichtbarkeit umschalten" },
