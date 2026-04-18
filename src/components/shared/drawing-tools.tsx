@@ -41,6 +41,7 @@ import {
   GripVertical,
   HelpCircle,
   Palette,
+  Scale,
   Search,
   Square,
   TriangleAlert,
@@ -74,6 +75,7 @@ import {
   exportAreaGeoJSONAction,
   exportAreaDataAction,
   importAreaFromDataAction,
+  balanceLayersAction,
 } from "@/app/actions/area-actions";
 import {
   batchUpdateVisibilityAction,
@@ -1536,6 +1538,43 @@ function LayerManagementSection({
   const [layerSortMode, setLayerSortMode] = useState<
     "default" | "name" | "count-desc" | "count-asc"
   >("default");
+
+  const [isBalancing, setIsBalancing] = useState(false);
+  const [, startBalanceTransition] = useTransition();
+  const handleBalanceLayers = useCallback(() => {
+    if (!areaId || optimisticLayers.length < 2) return;
+    const layerIdsWithCodes = optimisticLayers
+      .filter((l) => (l.postalCodes?.length ?? 0) > 0)
+      .map((l) => l.id);
+    if (layerIdsWithCodes.length < 2) {
+      toast.error("Mindestens 2 Ebenen mit PLZ benötigt");
+      return;
+    }
+    startBalanceTransition(async () => {
+      setIsBalancing(true);
+      try {
+        const res = await balanceLayersAction(areaId, layerIdsWithCodes);
+        if (!res.success) {
+          toast.error(res.error ?? "Fehler beim Ausgleichen");
+          return;
+        }
+        const totalMoved = (res.data ?? []).reduce(
+          (s, m) => s + m.codes.length,
+          0
+        );
+        if (totalMoved === 0) {
+          toast.success("Ebenen sind bereits ausgeglichen");
+        } else {
+          toast.success(`${totalMoved} PLZ verschoben — Ebenen ausgeglichen`);
+          onLayerUpdate?.();
+        }
+      } catch {
+        toast.error("Fehler beim Ausgleichen");
+      } finally {
+        setIsBalancing(false);
+      }
+    });
+  }, [areaId, optimisticLayers, onLayerUpdate, startBalanceTransition]);
   const filteredLayers = useMemo(() => {
     const q = layerSearch.trim().toLowerCase();
     let result = q
@@ -2523,6 +2562,20 @@ function LayerManagementSection({
                       );
                     })}
                 </div>
+              )}
+              {/* Balance PLZ button — shown when 2+ layers have codes */}
+              {optimisticLayers.filter((l) => (l.postalCodes?.length ?? 0) > 0)
+                .length > 1 && (
+                <button
+                  type="button"
+                  disabled={isBalancing}
+                  onClick={handleBalanceLayers}
+                  className="w-full flex items-center justify-center gap-1.5 text-[10px] px-2 py-1 rounded border border-dashed border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="PLZ gleichmäßig auf alle Ebenen verteilen"
+                >
+                  <Scale className="h-3 w-3" />
+                  {isBalancing ? "Wird ausgeglichen…" : "Ebenen ausgleichen"}
+                </button>
               )}
               {/* PLZ prefix distribution (2-digit) — compact sparkline */}
               {layerStats.prefixDistribution.length > 1 && (

@@ -1259,6 +1259,152 @@ export async function removePostalCodesFromLayerAction(
 
 // ===============================
 
+export async function balanceLayersAction(
+  areaId: number,
+  layerIds: number[]
+): ServerActionResponse<
+  { fromLayerId: number; toLayerId: number; codes: string[] }[]
+> {
+  "use server";
+  try {
+    if (!areaId || layerIds.length < 2) {
+      return { success: false, error: "Need at least 2 layers to balance" };
+    }
+
+    const result = await db.transaction(async (tx) => {
+      // Fetch all layers with their postal codes
+      const layerData = await Promise.all(
+        layerIds.map(async (id) => {
+          const codes = await tx
+            .select({ postalCode: areaLayerPostalCodes.postalCode })
+            .from(areaLayerPostalCodes)
+            .where(eq(areaLayerPostalCodes.layerId, id));
+          return { id, codes: codes.map((r) => r.postalCode) };
+        })
+      );
+
+      // Verify all layers belong to the area
+      const validLayers = await tx
+        .select({ id: areaLayers.id })
+        .from(areaLayers)
+        .where(
+          and(eq(areaLayers.areaId, areaId), inArray(areaLayers.id, layerIds))
+        );
+      if (validLayers.length !== layerIds.length) {
+        throw new Error("Some layers do not belong to this area");
+      }
+
+      const allCodes = layerData.flatMap((l) => l.codes);
+      const totalCodes = allCodes.length;
+      if (totalCodes === 0) return [];
+
+      const n = layerIds.length;
+      const base = Math.floor(totalCodes / n);
+      const extras = totalCodes % n;
+
+      // Compute target sizes: first `extras` layers get base+1, rest get base
+      const targets = layerIds.map((_, i) => (i < extras ? base + 1 : base));
+
+      // Flatten all codes in round-robin order across layers for stable distribution
+      const flatCodes = layerData.flatMap((l) => l.codes);
+
+      // New assignments: split flatCodes into chunks per target size
+      const newAssignments: string[][] = [];
+      let offset = 0;
+      for (const t of targets) {
+        newAssignments.push(flatCodes.slice(offset, offset + t));
+        offset += t;
+      }
+
+      // Compute moves: for each layer, what codes need to be removed / added
+      const moves: {
+        fromLayerId: number;
+        toLayerId: number;
+        codes: string[];
+      }[] = [];
+
+      for (let i = 0; i < layerIds.length; i++) {
+        const currentSet = new Set(layerData[i].codes);
+        const targetSet = new Set(newAssignments[i]);
+
+        // Codes to remove from this layer (not in new assignment)
+        const toRemove = layerData[i].codes.filter((c) => !targetSet.has(c));
+        // Codes to add to this layer (in new assignment but not currently there)
+        const toAdd = newAssignments[i].filter((c) => !currentSet.has(c));
+
+        // Find which layers currently own the codes we need to add
+        for (const code of toAdd) {
+          const fromLayer = layerData.find((l) => l.codes.includes(code));
+          if (fromLayer && fromLayer.id !== layerIds[i]) {
+            const existing = moves.find(
+              (m) =>
+                m.fromLayerId === fromLayer.id && m.toLayerId === layerIds[i]
+            );
+            if (existing) existing.codes.push(code);
+            else
+              moves.push({
+                fromLayerId: fromLayer.id,
+                toLayerId: layerIds[i],
+                codes: [code],
+              });
+          }
+        }
+
+        if (toRemove.length > 0) {
+          // These will be handled as the inverse move above; skip self-removals
+        }
+      }
+
+      if (moves.length === 0) return moves;
+
+      // Apply all moves in one transaction
+      for (const move of moves) {
+        await tx
+          .delete(areaLayerPostalCodes)
+          .where(
+            and(
+              eq(areaLayerPostalCodes.layerId, move.fromLayerId),
+              inArray(areaLayerPostalCodes.postalCode, move.codes)
+            )
+          );
+        await tx
+          .insert(areaLayerPostalCodes)
+          .values(
+            move.codes.map((c) => ({ layerId: move.toLayerId, postalCode: c }))
+          )
+          .onConflictDoNothing();
+
+        // Record each move as a change
+        await recordChangeWithTx(tx, areaId, {
+          changeType: "remove_postal_codes",
+          entityType: "postal_code",
+          entityId: move.fromLayerId,
+          changeData: { postalCodes: move.codes, layerId: move.fromLayerId },
+          previousData: { postalCodes: move.codes },
+        });
+        await recordChangeWithTx(tx, areaId, {
+          changeType: "add_postal_codes",
+          entityType: "postal_code",
+          entityId: move.toLayerId,
+          changeData: { postalCodes: move.codes, layerId: move.toLayerId },
+          previousData: {},
+        });
+      }
+
+      return moves;
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}-undo-redo`);
+    updateTag(`area-${areaId}-change-history`);
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error balancing layers:", error);
+    return { success: false, error: "Failed to balance layers" };
+  }
+}
+
 export async function geoprocessAction(data: {
   mode: "all" | "holes" | "expand";
 
