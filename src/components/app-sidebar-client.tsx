@@ -7,6 +7,7 @@ import * as React from "react";
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
 import { NavAreas } from "@/components/areas/nav-areas";
 import { NavMain } from "@/components/nav-main";
+import { CommandPalette } from "@/components/shared/command-palette";
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
 import {
   Sidebar,
@@ -80,6 +81,7 @@ export function AppSidebarClient({
         open={createAreaDialogOpen}
         onOpenChange={setCreateAreaDialogOpen}
       />
+      <CommandPalette areas={areas} onCreateArea={handleCreateArea} />
     </>
   );
 }
