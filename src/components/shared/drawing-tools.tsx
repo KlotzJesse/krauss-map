@@ -523,14 +523,28 @@ function useDrawingToolsActions({
 
   const [_isPending, startTransition] = useTransition();
 
-  const [ui, dispatchUI] = useReducer(drawingToolsUIReducer, {
-    layersOpen: !!areaId,
-    regionsOpen: false,
-    showVersionHistory: false,
-    showCreateVersion: false,
-    showLayerMerge: false,
-    showKeyboardHelp: false,
-    isFilling: false,
+  const [ui, dispatchUI] = useReducer(drawingToolsUIReducer, undefined, () => {
+    let layersOpen = !!areaId;
+    let regionsOpen = false;
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("drawing-tools-ui");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as { layersOpen?: boolean; regionsOpen?: boolean };
+          layersOpen = parsed.layersOpen ?? layersOpen;
+          regionsOpen = parsed.regionsOpen ?? false;
+        } catch { /* ignore */ }
+      }
+    }
+    return {
+      layersOpen,
+      regionsOpen,
+      showVersionHistory: false,
+      showCreateVersion: false,
+      showLayerMerge: false,
+      showKeyboardHelp: false,
+      isFilling: false,
+    };
   });
 
   const {
@@ -1247,7 +1261,14 @@ function LayerManagementSection({
     [dispatchUI]
   );
   const handleSetLayersOpen = useCallback(
-    (open: boolean) => dispatchUI({ type: "SET_LAYERS_OPEN", open }),
+    (open: boolean) => {
+      dispatchUI({ type: "SET_LAYERS_OPEN", open });
+      try {
+        const saved = localStorage.getItem("drawing-tools-ui");
+        const prev = saved ? JSON.parse(saved) : {};
+        localStorage.setItem("drawing-tools-ui", JSON.stringify({ ...prev, layersOpen: open }));
+      } catch { /* ignore */ }
+    },
     [dispatchUI]
   );
 
@@ -2310,7 +2331,14 @@ function DrawingToolsImpl({
   });
 
   const handleSetRegionsOpen = useCallback(
-    (open: boolean) => dispatchUI({ type: "SET_REGIONS_OPEN", open }),
+    (open: boolean) => {
+      dispatchUI({ type: "SET_REGIONS_OPEN", open });
+      try {
+        const saved = localStorage.getItem("drawing-tools-ui");
+        const prev = saved ? JSON.parse(saved) : {};
+        localStorage.setItem("drawing-tools-ui", JSON.stringify({ ...prev, regionsOpen: open }));
+      } catch { /* ignore */ }
+    },
     [dispatchUI]
   );
   const handleClearAllWithToast = useCallback(() => {
