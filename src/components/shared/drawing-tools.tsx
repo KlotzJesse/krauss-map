@@ -1383,6 +1383,8 @@ function LayerManagementSection({
     const counts = new Map<number, number>();
     const codeToLayers = new Map<string, number[]>();
     let totalCodes = 0;
+    let minCode = "";
+    let maxCode = "";
     for (const layer of optimisticLayers) {
       if (!layer.postalCodes) continue;
       totalCodes += layer.postalCodes.length;
@@ -1393,6 +1395,8 @@ function LayerManagementSection({
         } else {
           codeToLayers.set(pc.postalCode, [layer.id]);
         }
+        if (!minCode || pc.postalCode < minCode) minCode = pc.postalCode;
+        if (!maxCode || pc.postalCode > maxCode) maxCode = pc.postalCode;
       }
     }
     let duplicateCodeCount = 0;
@@ -1410,6 +1414,8 @@ function LayerManagementSection({
         uniqueCodes: codeToLayers.size,
         totalCodes,
         duplicateCodes: duplicateCodeCount,
+        minCode,
+        maxCode,
       },
     };
   }, [optimisticLayers]);
@@ -1800,6 +1806,15 @@ function LayerManagementSection({
                   <span className="font-medium text-foreground">{layerStats.totalCodes}</span> gesamt
                 </span>
               </div>
+              {/* PLZ range */}
+              {layerStats.minCode && layerStats.maxCode && layerStats.minCode !== layerStats.maxCode && (
+                <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <span>Bereich:</span>
+                  <span className="font-mono font-medium text-foreground">{layerStats.minCode}</span>
+                  <span>–</span>
+                  <span className="font-mono font-medium text-foreground">{layerStats.maxCode}</span>
+                </div>
+              )}
               {/* Per-layer mini bar chart */}
               {optimisticLayers.length > 1 && (
                 <div className="space-y-0.5">
@@ -1821,7 +1836,8 @@ function LayerManagementSection({
                               style={{ width: `${pct}%`, backgroundColor: layer.color }}
                             />
                           </div>
-                          <span className="text-muted-foreground w-6 text-right">{count}</span>
+                          <span className="text-muted-foreground w-8 text-right tabular-nums">{pct.toFixed(0)}%</span>
+                          <span className="text-muted-foreground w-6 text-right tabular-nums">{count}</span>
                         </div>
                       );
                     })}
@@ -1829,7 +1845,7 @@ function LayerManagementSection({
               )}
               {/* Keyboard hint */}
               <div className="text-[9px] text-muted-foreground/60 text-right">
-                Alt+↑↓ Gebiet wechseln
+                Alt+↑↓ Gebiet wechseln · Ctrl+V PLZ einfügen
               </div>
             </div>
           )}
