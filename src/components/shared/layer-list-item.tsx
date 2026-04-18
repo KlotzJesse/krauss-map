@@ -464,6 +464,17 @@ export const LayerListItem = memo(function LayerListItem({
             <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
               {layer.postalCodes?.length ?? 0}
             </Badge>
+            {allCodesSet &&
+              allCodesSet.size > 0 &&
+              (layer.postalCodes?.length ?? 0) > 0 && (
+                <span className="text-[9px] text-muted-foreground tabular-nums">
+                  {(
+                    ((layer.postalCodes?.length ?? 0) / allCodesSet.size) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </span>
+              )}
             {duplicateCount > 0 && (
               <Tooltip>
                 <TooltipTrigger

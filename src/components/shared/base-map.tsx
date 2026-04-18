@@ -63,6 +63,12 @@ import type {
 } from "@/types/base-map";
 
 import { Button } from "../ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { DeckGLOverlay } from "./deck-gl-overlay";
 import { MapBookmarks } from "./map-bookmarks";
 
@@ -379,9 +385,13 @@ const MapInner = memo(function MapInner({
   initialUndoRedoStatus,
   onCycleMapStyle,
   mapStyleLabel,
+  mapStyles,
+  onSetMapStyle,
 }: Omit<BaseMapProps, "center" | "zoom"> & {
   onCycleMapStyle?: () => void;
   mapStyleLabel?: string;
+  mapStyles?: readonly { id: string; label: string }[];
+  onSetMapStyle?: (id: string) => void;
 }) {
   const { current: mapRef } = useMap();
   const rawMapRef = useRef<maplibregl.Map | null>(null);
@@ -806,15 +816,35 @@ const MapInner = memo(function MapInner({
           />
         </button>
         {onCycleMapStyle && (
-          <button
-            type="button"
-            onClick={onCycleMapStyle}
-            title={`Kartenstil: ${mapStyleLabel ?? ""} (wechseln)`}
-            aria-label="Kartenstil wechseln"
-            className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
-          >
-            <Layers className="h-4 w-4" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  title={`Kartenstil: ${mapStyleLabel ?? ""}`}
+                  aria-label="Kartenstil wählen"
+                  className="flex items-center gap-1.5 px-2 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground text-xs font-medium"
+                />
+              }
+            >
+              <Layers className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{mapStyleLabel}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-32">
+              {(mapStyles ?? []).map((s) => (
+                <DropdownMenuItem
+                  key={s.id}
+                  onClick={() => onSetMapStyle?.(s.id)}
+                  className={cn(
+                    "text-xs",
+                    s.label === mapStyleLabel && "font-semibold text-primary"
+                  )}
+                >
+                  {s.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         <button
           type="button"
@@ -1080,6 +1110,11 @@ const BaseMapComponent = ({
               initialUndoRedoStatus={initialUndoRedoStatus}
               onCycleMapStyle={handleCycleMapStyle}
               mapStyleLabel={MAP_STYLES.find((s) => s.id === mapStyleId)?.label}
+              mapStyles={MAP_STYLES}
+              onSetMapStyle={(id) => {
+                setMapStyleId(id as MapStyleId);
+                localStorage.setItem("map-style-id", id);
+              }}
             />
           </Map>
         </MapRecoveryBoundary>
