@@ -240,6 +240,45 @@ export async function copyPostalCodesCSV(
   });
 }
 
+/**
+ * Downloads the postal codes of a single layer as a CSV file.
+ */
+export async function downloadLayerCSV(
+  layerName: string,
+  postalCodes: string[],
+  country: CountryCode = "DE"
+) {
+  const config = getCountryConfig(country);
+  const prefix = config.prefix;
+
+  const downloadPromise = async () => {
+    const lines = [
+      `PLZ,${prefix}-PLZ`,
+      ...postalCodes.map((code) => {
+        const clean = code.replace(/^[A-Z]{1,2}-?/i, "");
+        const formatted = formatPostalCode(clean, country);
+        return `${formatted},${prefix}-${formatted}`;
+      }),
+    ];
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${layerName.replace(/[^a-zA-Z0-9-_äöüÄÖÜß]/g, "_")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return `${postalCodes.length} PLZ als CSV heruntergeladen`;
+  };
+
+  return executeAction(downloadPromise(), {
+    loading: `📥 Exportiere Layer...`,
+    success: (msg: string) => msg,
+    error: "CSV-Export fehlgeschlagen",
+  });
+}
+
 interface MultiAreaExportRow {
   areaName: string;
   layerName: string;

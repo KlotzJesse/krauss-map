@@ -142,6 +142,7 @@ import type {
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import {
   copyPostalCodesCSV,
+  downloadLayerCSV,
   exportLayersPDF,
   exportLayersXLSX,
 } from "@/lib/utils/export-utils";
@@ -1407,6 +1408,11 @@ interface LayerManagementSectionProps {
   newLayerInputRef?: React.RefObject<HTMLInputElement | null>;
   allCodesSet?: Set<string>;
   onLayerUpdate?: () => void;
+  handleExportLayerCSV?: (
+    layerId: number,
+    layerName: string,
+    codes: string[]
+  ) => void;
 }
 
 function LayerManagementSection({
@@ -1451,6 +1457,7 @@ function LayerManagementSection({
   newLayerInputRef: externalNewLayerInputRef,
   allCodesSet,
   onLayerUpdate,
+  handleExportLayerCSV,
 }: LayerManagementSectionProps) {
   const { isLocked, toggleLock } = useLockedLayers(areaId);
 
@@ -2312,6 +2319,7 @@ function LayerManagementSection({
                   allCodesSet={allCodesSet}
                   onBulkMovePlz={handleBulkMovePlz}
                   onBulkRemovePlz={handleBulkRemovePlz}
+                  onExportCSV={handleExportLayerCSV}
                 />
               ))
             ) : (
@@ -2390,6 +2398,7 @@ function LayerManagementSection({
                       allCodesSet={allCodesSet}
                       onBulkMovePlz={handleBulkMovePlz}
                       onBulkRemovePlz={handleBulkRemovePlz}
+                      onExportCSV={handleExportLayerCSV}
                     />
                   ))}
                 </SortableContext>
@@ -3122,6 +3131,13 @@ function DrawingToolsImpl({
     []
   );
 
+  const handleExportLayerCSV = useCallback(
+    (layerId: number, layerName: string, codes: string[]) => {
+      void downloadLayerCSV(layerName, codes, country ?? "DE");
+    },
+    [country]
+  );
+
   const handleConfirmCopyToArea = useCallback(
     (targetAreaId: number, newName: string) => {
       const layerId = copyLayerDialog.layerId;
@@ -3564,6 +3580,7 @@ function DrawingToolsImpl({
             newLayerInputRef={newLayerInputRef}
             allCodesSet={allCodesSet}
             onLayerUpdate={onLayerUpdate}
+            handleExportLayerCSV={handleExportLayerCSV}
           />
         )}
 

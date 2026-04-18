@@ -6,6 +6,7 @@ import {
   CheckSquare,
   Copy,
   CopyPlus,
+  Download,
   Eye,
   EyeOff,
   Focus,
@@ -111,6 +112,7 @@ interface LayerListItemProps {
     codes: string[]
   ) => void;
   onBulkRemovePlz?: (layerId: number, codes: string[]) => void;
+  onExportCSV?: (layerId: number, layerName: string, codes: string[]) => void;
 }
 
 function LayerColorPickerContent({
@@ -249,6 +251,7 @@ export const LayerListItem = memo(function LayerListItem({
   allCodesSet,
   onBulkMovePlz,
   onBulkRemovePlz,
+  onExportCSV,
   onCopyToArea,
   onMergeLayer,
 }: LayerListItemProps) {
@@ -765,6 +768,34 @@ export const LayerListItem = memo(function LayerListItem({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>PLZ aus CSV/Text importieren</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Export CSV */}
+            {onExportCSV && postalCodes.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onExportCSV(
+                          layer.id,
+                          layer.name,
+                          postalCodes.map((pc) => pc.postalCode)
+                        );
+                      }}
+                    />
+                  }
+                >
+                  <Download className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Als CSV herunterladen</p>
                 </TooltipContent>
               </Tooltip>
             )}
