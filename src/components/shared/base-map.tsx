@@ -63,6 +63,7 @@ import type {
 
 import { Button } from "../ui/button";
 import { DeckGLOverlay } from "./deck-gl-overlay";
+import { MapBookmarks } from "./map-bookmarks";
 
 // Lazy-loaded conflict resolution panel (side panel, not modal)
 const ConflictResolutionPanel = dynamic(
@@ -394,6 +395,13 @@ const MapInner = memo(function MapInner({
     const zoom = config?.zoom ?? 5;
     setMapCenterZoom(center, zoom);
   }, [country, setMapCenterZoom]);
+
+  const handleBookmarkJump = useCallback(
+    (center: [number, number], zoom: number) => {
+      setMapCenterZoom(center, zoom);
+    },
+    [setMapCenterZoom]
+  );
 
   const handleGeolocate = useCallback(() => {
     if (!navigator.geolocation) return;
@@ -772,6 +780,22 @@ const MapInner = memo(function MapInner({
             <span>{unassignedCount.toLocaleString("de-DE")}</span>
           )}
         </button>
+        <MapBookmarks
+          getCurrentView={() => {
+            const map = rawMapRef.current;
+            if (!map)
+              return {
+                center: [10.4515, 51.1657] as [number, number],
+                zoom: 5,
+              };
+            const c = map.getCenter();
+            return {
+              center: [c.lng, c.lat] as [number, number],
+              zoom: map.getZoom(),
+            };
+          }}
+          onJumpTo={handleBookmarkJump}
+        />
       </div>
 
       {/* PLZ search overlay — top right */}
