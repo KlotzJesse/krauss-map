@@ -1309,13 +1309,21 @@ function LayerManagementSection({
 
   const hasHiddenLayers = optimisticLayers.some((l) => l.isVisible === "false");
   const [layerSearch, setLayerSearch] = useState("");
+  const [layerSortMode, setLayerSortMode] = useState<"default" | "name" | "count-desc" | "count-asc">("default");
   const filteredLayers = useMemo(() => {
     const q = layerSearch.trim().toLowerCase();
-    if (!q) return optimisticLayers;
-    return optimisticLayers.filter((l) => l.name.toLowerCase().includes(q));
-  }, [optimisticLayers, layerSearch]);
+    let result = q ? optimisticLayers.filter((l) => l.name.toLowerCase().includes(q)) : [...optimisticLayers];
+    if (layerSortMode === "name") {
+      result = [...result].sort((a, b) => a.name.localeCompare(b.name, "de"));
+    } else if (layerSortMode === "count-desc") {
+      result = [...result].sort((a, b) => (b.postalCodes?.length ?? 0) - (a.postalCodes?.length ?? 0));
+    } else if (layerSortMode === "count-asc") {
+      result = [...result].sort((a, b) => (a.postalCodes?.length ?? 0) - (b.postalCodes?.length ?? 0));
+    }
+    return result;
+  }, [optimisticLayers, layerSearch, layerSortMode]);
 
-  const isDragDisabled = !!layerSearch.trim();
+  const isDragDisabled = !!layerSearch.trim() || layerSortMode !== "default";
 
   // PLZ quick-find: search which layer(s) contain a given code
   const [plzFindQuery, setPlzFindQuery] = useState("");
@@ -1771,23 +1779,48 @@ function LayerManagementSection({
 
           {/* Layer search — shown when there are enough layers to scroll */}
           {optimisticLayers.length >= 5 && (
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-              <Input
-                value={layerSearch}
-                onChange={(e) => setLayerSearch(e.target.value)}
-                placeholder="Gebiete filtern…"
-                className="h-7 text-xs pl-7 pr-6"
-              />
-              {layerSearch && (
-                <button
-                  type="button"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground"
-                  onClick={() => setLayerSearch("")}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
+            <div className="flex items-center gap-1">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={layerSearch}
+                  onChange={(e) => setLayerSearch(e.target.value)}
+                  placeholder="Gebiete filtern…"
+                  className="h-7 text-xs pl-7 pr-6"
+                />
+                {layerSearch && (
+                  <button
+                    type="button"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground"
+                    onClick={() => setLayerSearch("")}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              <Tooltip>
+                <TooltipTrigger render={
+                  <button
+                    type="button"
+                    className={`shrink-0 h-7 w-7 flex items-center justify-center rounded border text-muted-foreground transition-colors hover:bg-muted ${layerSortMode !== "default" ? "border-primary/50 bg-primary/5 text-primary" : "border-transparent"}`}
+                    onClick={() => {
+                      setLayerSortMode((m) =>
+                        m === "default" ? "name" : m === "name" ? "count-desc" : m === "count-desc" ? "count-asc" : "default"
+                      );
+                    }}
+                  />
+                }>
+                  <ArrowDownUp className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {layerSortMode === "default" ? "Sortieren: Standard" :
+                     layerSortMode === "name" ? "Sortiert: A–Z" :
+                     layerSortMode === "count-desc" ? "Sortiert: PLZ ↓" :
+                     "Sortiert: PLZ ↑"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
 
