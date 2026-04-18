@@ -12,7 +12,7 @@ import {
 } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { RefObject } from "react";
 
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
@@ -86,6 +86,14 @@ export const AreaListItem = memo(
     onAreaClick,
   }: AreaListItemProps) {
     const isArchived = area.isArchived === "true";
+    const itemRef = useRef<HTMLLIElement>(null);
+
+    useEffect(() => {
+      if (isCurrentRoute && itemRef.current) {
+        itemRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }, [isCurrentRoute]);
+
     if (isEditing) {
       return (
         <SidebarMenuItem>
@@ -149,7 +157,7 @@ export const AreaListItem = memo(
     }
 
     return (
-      <SidebarMenuItem>
+      <SidebarMenuItem ref={itemRef}>
         <AreaItemMenu
           area={area}
           onStartRename={onStartRename}
@@ -165,7 +173,7 @@ export const AreaListItem = memo(
                 isSelectable && isSelected
                   ? "bg-primary/10 text-primary"
                   : isCurrentRoute && !isSelectable
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium border-l-2 border-sidebar-primary/40 !pl-[6px]"
+                    ? "bg-primary/10 text-sidebar-foreground font-semibold border-l-2 border-primary !pl-[6px]"
                     : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
               } ${isArchived ? "opacity-50" : ""} ${isSelectable ? "cursor-pointer select-none" : ""}`}
               onClick={

@@ -126,6 +126,7 @@ interface LayerListItemProps {
   onSetGroup?: (layerId: number, groupName: string | null) => void;
   existingGroups?: string[];
   layerIndex?: number; // 0-based position in layer list (for F-key shortcut badge)
+  maxLayerPLZ?: number; // max PLZ count across all layers — used for relative coverage bar
 }
 
 function LayerColorPickerContent({
@@ -297,6 +298,7 @@ export const LayerListItem = memo(function LayerListItem({
   onCopyToArea,
   onMergeLayer,
   layerIndex,
+  maxLayerPLZ,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -1281,6 +1283,21 @@ export const LayerListItem = memo(function LayerListItem({
           <p className="text-[10px] text-muted-foreground/70 italic truncate leading-tight mt-0.5 pl-[18px] pr-1 pb-0.5">
             {layer.notes.split("\n")[0].trim()}
           </p>
+        )}
+        {maxLayerPLZ != null && maxLayerPLZ > 0 && (
+          <div
+            className="absolute bottom-0 left-0 right-0 h-[2px] rounded-b overflow-hidden"
+            aria-hidden
+          >
+            <div
+              className="h-full rounded-b transition-all duration-500"
+              style={{
+                width: `${Math.round(((layer.postalCodes?.length ?? 0) / maxLayerPLZ) * 100)}%`,
+                backgroundColor: layer.color,
+                opacity: 0.55,
+              }}
+            />
+          </div>
         )}
       </div>
 

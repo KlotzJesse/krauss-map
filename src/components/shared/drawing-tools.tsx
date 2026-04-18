@@ -1946,6 +1946,15 @@ function LayerManagementSection({
     return [...groups].sort();
   }, [optimisticLayers]);
 
+  const maxLayerPLZ = useMemo(
+    () =>
+      optimisticLayers.reduce(
+        (max, l) => Math.max(max, l.postalCodes?.length ?? 0),
+        0
+      ),
+    [optimisticLayers]
+  );
+
   // PLZ cross-layer finder: when search looks like a 5-digit postal code
   const plzSearchResults = useMemo(() => {
     const q = layerSearch.trim();
@@ -2872,6 +2881,7 @@ function LayerManagementSection({
                         onSetGroup={handleSetLayerGroup}
                         existingGroups={existingGroups}
                         layerIndex={layerIndex}
+                        maxLayerPLZ={maxLayerPLZ}
                       />
                     ))),
               ])
@@ -3071,6 +3081,7 @@ function LayerManagementSection({
                             onSetGroup={handleSetLayerGroup}
                             existingGroups={existingGroups}
                             layerIndex={layerIndex}
+                            maxLayerPLZ={maxLayerPLZ}
                           />
                         ))),
                   ])}
