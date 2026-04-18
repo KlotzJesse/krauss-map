@@ -41,6 +41,7 @@ import {
   Folder,
   GripVertical,
   HelpCircle,
+  MapPin,
   Palette,
   Scale,
   Search,
@@ -1929,6 +1930,15 @@ function LayerManagementSection({
     return [...groups].sort();
   }, [optimisticLayers]);
 
+  // PLZ cross-layer finder: when search looks like a 5-digit postal code
+  const plzSearchResults = useMemo(() => {
+    const q = layerSearch.trim();
+    if (!/^\d{5}$/.test(q)) return null;
+    return optimisticLayers
+      .filter((l) => l.postalCodes?.some((pc) => pc.postalCode === q))
+      .map((l) => ({ id: l.id, name: l.name, color: l.color ?? "#6366f1" }));
+  }, [layerSearch, optimisticLayers]);
+
   const openDiffDialog = useCallback(
     (layerId: number) => {
       const other = optimisticLayers.find((l) => l.id !== layerId);
@@ -2543,6 +2553,41 @@ function LayerManagementSection({
 
           {/* Layer list */}
           <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+            {plzSearchResults !== null && (
+              <div className="mx-1 mb-1 rounded-md border bg-muted/30 px-2 py-1.5 text-xs">
+                <div className="flex items-center gap-1 mb-1 text-muted-foreground font-medium">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  <span>PLZ {layerSearch.trim()}</span>
+                </div>
+                {plzSearchResults.length === 0 ? (
+                  <p className="text-muted-foreground/70 text-[11px]">
+                    Nicht in diesem Gebiet vergeben
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    {plzSearchResults.map((lr) => (
+                      <button
+                        key={lr.id}
+                        type="button"
+                        className="flex items-center gap-1.5 text-left hover:bg-muted rounded px-1 py-0.5 transition-colors"
+                        onClick={() => {
+                          onPreviewPostalCode?.(layerSearch.trim());
+                        }}
+                      >
+                        <span
+                          className="h-2 w-2 rounded-full shrink-0"
+                          style={{ backgroundColor: lr.color }}
+                        />
+                        <span className="truncate text-foreground">
+                          {lr.name}
+                        </span>
+                        <MapPin className="h-2.5 w-2.5 shrink-0 ml-auto text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {filteredLayers.length === 0 && layerSearch ? (
               <p className="text-xs text-muted-foreground text-center py-3">
                 Keine Gebiete gefunden
