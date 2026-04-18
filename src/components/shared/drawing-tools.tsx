@@ -1161,6 +1161,24 @@ function LayerManagementSection({
 
   const isDragDisabled = !!layerSearch.trim();
 
+  // PLZ quick-find: search which layer(s) contain a given code
+  const [plzFindQuery, setPlzFindQuery] = useState("");
+  const plzFindResults = useMemo(() => {
+    const q = plzFindQuery.trim().replace(/\D/g, "");
+    if (q.length < 2) return null;
+    return optimisticLayers
+      .filter((l) => l.postalCodes?.some((pc) => pc.postalCode.startsWith(q)))
+      .map((l) => ({
+        id: l.id,
+        name: l.name,
+        color: l.color,
+        matchingCodes: (l.postalCodes ?? [])
+          .filter((pc) => pc.postalCode.startsWith(q))
+          .map((pc) => pc.postalCode)
+          .slice(0, 5),
+      }));
+  }, [plzFindQuery, optimisticLayers]);
+
   // Bulk select state
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -1689,6 +1707,41 @@ function LayerManagementSection({
               </div>
             </div>
           )}
+
+          {/* PLZ quick-find */}
+          <div className="border-t pt-1.5 mt-0.5">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+              <Input
+                value={plzFindQuery}
+                onChange={(e) => setPlzFindQuery(e.target.value)}
+                placeholder="PLZ suchen…"
+                className="h-6 text-[10px] pl-6 pr-2"
+                maxLength={5}
+              />
+            </div>
+            {plzFindResults !== null && (
+              <div className="mt-1 space-y-0.5">
+                {plzFindResults.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground py-0.5">Keine Treffer</p>
+                ) : (
+                  plzFindResults.map((r) => (
+                    <div key={r.id} className="flex items-start gap-1.5 text-[10px]">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0 mt-0.5"
+                        style={{ backgroundColor: r.color }}
+                      />
+                      <span className="font-medium truncate max-w-[80px]">{r.name}</span>
+                      <span className="text-muted-foreground ml-auto font-mono">
+                        {r.matchingCodes.join(", ")}
+                        {r.matchingCodes.length === 5 ? "…" : ""}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </CollapsibleContent>
       </Collapsible>
 
