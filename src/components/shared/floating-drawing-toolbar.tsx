@@ -43,6 +43,7 @@ interface FloatingDrawingToolbarProps {
     undoCount: number;
     redoCount: number;
   };
+  isPanelOpen?: boolean;
 }
 
 const drawingModes = [
@@ -130,6 +131,7 @@ export function FloatingDrawingToolbar({
   areaId,
   onModeChange,
   initialUndoRedoStatus,
+  isPanelOpen = false,
 }: FloatingDrawingToolbarProps) {
   const handleModeClick = useStableCallback((modeId: string) => {
     const terraDrawMode = (
@@ -173,13 +175,15 @@ export function FloatingDrawingToolbar({
             })}
           </div>
         </div>
-        <div className="pointer-events-auto">
-          <UndoRedoToolbar
-            areaId={areaId!}
-            variant="floating"
-            initialStatus={initialUndoRedoStatus}
-          />
-        </div>
+        {!isPanelOpen && (
+          <div className="pointer-events-auto">
+            <UndoRedoToolbar
+              areaId={areaId!}
+              variant="floating"
+              initialStatus={initialUndoRedoStatus}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

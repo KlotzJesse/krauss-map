@@ -190,13 +190,11 @@ function MapLegend({
   onZoomToLayer?: (layerId: number) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-  const visibleLayers = layers.filter(
-    (l) => l.isVisible !== "false" && (l.postalCodes?.length ?? 0) > 0
-  );
+  const allLayers = layers.filter((l) => (l.postalCodes?.length ?? 0) > 0);
   const showUnassignedEntry = (unassignedCount ?? 0) > 0;
-  if (visibleLayers.length === 0 && !showUnassignedEntry) return null;
+  if (allLayers.length === 0 && !showUnassignedEntry) return null;
 
-  const totalPLZ = visibleLayers.reduce(
+  const totalPLZ = allLayers.reduce(
     (s, x) => s + (x.postalCodes?.length ?? 0),
     0
   );
@@ -214,21 +212,23 @@ function MapLegend({
         </button>
         {!collapsed && (
           <div className="px-2.5 pb-2 space-y-0.5 max-h-48 overflow-y-auto">
-            {visibleLayers.map((l) => {
+            {allLayers.map((l) => {
               const count = l.postalCodes?.length ?? 0;
               const pct =
                 totalPLZ > 0 ? Math.round((count / totalPLZ) * 100) : 0;
               const isActive = activeLayerId === l.id;
+              const isHidden = l.isVisible === "false";
               return (
                 <button
                   key={l.id}
                   type="button"
-                  title={`${l.name} — ${count} PLZ · Klicken zum Zentrieren`}
+                  title={`${l.name} — ${count} PLZ · Klicken zum Zentrieren${isHidden ? " (ausgeblendet)" : ""}`}
                   onClick={() => onZoomToLayer?.(l.id)}
                   className={cn(
                     "w-full flex items-center gap-1.5 text-left rounded transition-colors",
                     "hover:bg-muted/70 cursor-pointer",
-                    isActive ? "font-semibold bg-muted/60 px-1 -mx-1" : "px-0"
+                    isActive ? "font-semibold bg-muted/60 px-1 -mx-1" : "px-0",
+                    isHidden && "opacity-40"
                   )}
                 >
                   <span
@@ -238,6 +238,9 @@ function MapLegend({
                   <span className="text-[10px] text-foreground truncate leading-tight flex-1">
                     {l.name}
                   </span>
+                  {isHidden && (
+                    <EyeOff className="h-2.5 w-2.5 shrink-0 text-muted-foreground/60" />
+                  )}
                   <span className="text-[9px] text-muted-foreground shrink-0 tabular-nums">
                     {count}
                   </span>
@@ -761,6 +764,7 @@ const MapInner = memo(function MapInner({
         onModeChange={interactions.handleDrawingModeChange}
         areaId={areaId}
         initialUndoRedoStatus={initialUndoRedoStatus}
+        isPanelOpen={interactions.isDrawingToolsVisible}
       />
       {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
       {interactions.editingFeatureId && (
