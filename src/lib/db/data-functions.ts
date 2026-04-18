@@ -8,7 +8,6 @@ import { db } from "../db";
 import {
   areas,
   areaLayers,
-  areaLayerPostalCodes,
   areaVersions,
   areaChanges,
   areaUndoStacks,
@@ -29,9 +28,9 @@ export async function getAreas() {
         country: areas.country,
         postalCodeCount: sql<number>`(
           SELECT COUNT(*)::int
-          FROM ${areaLayerPostalCodes} alpc
-          INNER JOIN ${areaLayers} al ON al.id = alpc.layer_id
-          WHERE al.area_id = ${areas.id}
+          FROM area_layer_postal_codes alpc
+          INNER JOIN area_layers al ON al.id = alpc.layer_id
+          WHERE al.area_id = "areas"."id"
         )`.as("postalCodeCount"),
       })
       .from(areas)

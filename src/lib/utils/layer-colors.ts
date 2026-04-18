@@ -73,30 +73,39 @@ function colorDistance(
 }
 
 /**
+ * Country border + national colors reserved to avoid layer-color clashes.
+ * These are always factored into color distance calculations.
+ */
+const RESERVED_BASE_COLORS = [
+  "#2563eb", // DE country border blue
+  "#dc2626", // AT country border red
+  "#0d9488", // CH country border teal
+];
+
+/**
  * Generate the next high-contrast color given existing layer colors.
  * Uses a greedy approach: pick the hue that maximizes minimum distance
- * to all existing colors.
+ * to all existing colors and reserved map border colors.
  */
 export function generateNextColor(existingColors: string[]): string {
-  if (existingColors.length === 0) {
-    return "#3b82f6"; // Default blue
-  }
+  // Always include reserved colors to avoid clashing with map borders
+  const allColors = [...RESERVED_BASE_COLORS, ...existingColors];
 
-  const existingHsl = existingColors.map((c) => hexToHsl(c));
+  const existingHsl = allColors.map((c) => hexToHsl(c));
 
   // Sample candidate hues at fine granularity
   const CANDIDATES = 72; // Every 5 degrees
   let bestColor = "#3b82f6";
   let bestMinDist = -1;
 
-  // Try multiple saturation/lightness combos — vivid but not harsh
+  // Try multiple saturation/lightness combos — muted jewel tones: rich but not harsh
   const slCombos: [number, number][] = [
-    [65, 68], // Medium soft
-    [70, 72], // Slightly lighter
-    [60, 65], // Muted mid
-    [72, 70], // Balanced
-    [63, 67], // Calm vivid
-    [68, 74], // Light-mid
+    [62, 58], // Core jewel
+    [65, 60], // Slightly lighter
+    [58, 57], // Deeper muted
+    [67, 61], // Brighter jewel
+    [60, 59], // Balanced
+    [64, 62], // Light jewel
   ];
 
   for (const [s, l] of slCombos) {
@@ -131,9 +140,9 @@ export function generatePalette(count: number): string[] {
 
   for (let i = 0; i < count; i++) {
     const hue = (i * GOLDEN_ANGLE) % 360;
-    // Alternate saturation and lightness for variety — vivid but not harsh
-    const saturation = 62 + (i % 3) * 7; // 62, 69, 76
-    const lightness = 66 + (i % 3) * 4; // 66, 70, 74
+    // Muted jewel tones: L=56-62%, S=58-66% — rich contrast without harshness
+    const saturation = 58 + (i % 4) * 3; // 58, 61, 64, 67
+    const lightness = 56 + (i % 3) * 3;  // 56, 59, 62
     colors.push(hslToHex(hue, saturation, lightness));
   }
 

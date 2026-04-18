@@ -429,6 +429,8 @@ export async function updateLayerAction(
 
     orderIndex?: number;
 
+    notes?: string | null;
+
     postalCodes?: string[];
   },
 

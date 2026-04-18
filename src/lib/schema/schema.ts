@@ -489,6 +489,8 @@ export const areaLayers = pgTable(
 
     orderIndex: integer("order_index").notNull().default(0), // For layer ordering
 
+    notes: text("notes"), // Optional notes/description for the layer
+
     createdAt: timestamp("created_at", { mode: "string" })
       .defaultNow()
 
