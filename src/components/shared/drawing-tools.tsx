@@ -1939,6 +1939,34 @@ function LayerManagementSection({
       .map((l) => ({ id: l.id, name: l.name, color: l.color ?? "#6366f1" }));
   }, [layerSearch, optimisticLayers]);
 
+  // Group export: combine all PLZ in a group into one CSV
+  const handleExportGroupCSV = useCallback(
+    (groupName: string) => {
+      const groupLayers = optimisticLayers.filter(
+        (l) => l.groupName === groupName
+      );
+      const allCodes = new Set<string>();
+      const rows: string[][] = [["PLZ", "Gebiet", "Gruppe"]];
+      for (const layer of groupLayers) {
+        for (const pc of layer.postalCodes ?? []) {
+          if (!allCodes.has(pc.postalCode)) {
+            allCodes.add(pc.postalCode);
+            rows.push([pc.postalCode, layer.name, groupName]);
+          }
+        }
+      }
+      const csv = rows.map((r) => r.join(";")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `gruppe-${groupName.replace(/\s+/g, "_")}-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    [optimisticLayers]
+  );
+
   const openDiffDialog = useCallback(
     (layerId: number) => {
       const other = optimisticLayers.find((l) => l.id !== layerId);
@@ -2657,7 +2685,22 @@ function LayerManagementSection({
                         )}
                         <span className="text-[10px] text-muted-foreground/60 shrink-0">
                           {gLayers.length}
+                          {" · "}
+                          {gLayers.reduce(
+                            (sum, l) => sum + (l.postalCodes?.length ?? 0),
+                            0
+                          )}{" "}
+                          PLZ
                         </span>
+                        <button
+                          type="button"
+                          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
+                          onClick={() => handleExportGroupCSV(gName)}
+                          aria-label="Gruppe als CSV exportieren"
+                          title="Gruppe als CSV exportieren"
+                        >
+                          <Download className="h-3 w-3" />
+                        </button>
                         <button
                           type="button"
                           className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
@@ -2832,7 +2875,22 @@ function LayerManagementSection({
                             )}
                             <span className="text-[10px] text-muted-foreground/60 shrink-0">
                               {gLayers.length}
+                              {" · "}
+                              {gLayers.reduce(
+                                (sum, l) => sum + (l.postalCodes?.length ?? 0),
+                                0
+                              )}{" "}
+                              PLZ
                             </span>
+                            <button
+                              type="button"
+                              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
+                              onClick={() => handleExportGroupCSV(gName)}
+                              aria-label="Gruppe als CSV exportieren"
+                              title="Gruppe als CSV exportieren"
+                            >
+                              <Download className="h-3 w-3" />
+                            </button>
                             <button
                               type="button"
                               className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
