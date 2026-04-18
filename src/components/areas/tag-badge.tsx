@@ -10,7 +10,13 @@ interface TagBadgeProps {
   className?: string;
 }
 
-export function TagBadge({ name, color, onRemove, small = false, className }: TagBadgeProps) {
+export function TagBadge({
+  name,
+  color,
+  onRemove,
+  small = false,
+  className,
+}: TagBadgeProps) {
   const hex = color.startsWith("#") ? color : `#${color}`;
 
   // Determine text color based on background luminance
@@ -29,7 +35,10 @@ export function TagBadge({ name, color, onRemove, small = false, className }: Ta
       {onRemove && (
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
           className="rounded-full hover:opacity-70 transition-opacity"
           aria-label={`Tag ${name} entfernen`}
         >

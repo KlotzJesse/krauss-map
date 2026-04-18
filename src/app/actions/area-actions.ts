@@ -324,7 +324,6 @@ export async function exportAreaGeoJSONAction(
   }
 }
 
-
 /** Area data format for JSON export/import (no geometry blobs, just PLZ codes). */
 export interface AreaExportData {
   version: 1;
@@ -332,6 +331,7 @@ export interface AreaExportData {
   description?: string | null;
   granularity: string;
   country: string;
+  tags?: Array<{ name: string; color: string }>;
   layers: Array<{
     name: string;
     color: string;
@@ -354,6 +354,9 @@ export async function exportAreaDataAction(
           orderBy: (l, { asc }) => [asc(l.orderIndex)],
           with: { postalCodes: true },
         },
+        tagAssignments: {
+          with: { tag: true },
+        },
       },
     });
 
@@ -365,6 +368,11 @@ export async function exportAreaDataAction(
       description: area.description,
       granularity: area.granularity ?? "5digit",
       country: area.country ?? "DE",
+      tags:
+        area.tagAssignments?.map((ta) => ({
+          name: ta.tag.name,
+          color: ta.tag.color,
+        })) ?? [],
       layers: area.layers.map((l) => ({
         name: l.name,
         color: l.color,
@@ -409,6 +417,33 @@ export async function importAreaFromDataAction(
         .returning();
 
       newAreaId = newArea.id;
+
+      // Import tags: find or create each tag, then assign to area
+      if (Array.isArray(raw.tags) && raw.tags.length > 0) {
+        for (const tagData of raw.tags) {
+          if (!tagData.name?.trim()) continue;
+          // Find existing tag by name (case-insensitive) or create it
+          const existing = await tx.query.areaTags.findFirst({
+            where: (t, { sql: s }) =>
+              s`lower(${t.name}) = lower(${tagData.name.trim()})`,
+          });
+          const tagId =
+            existing?.id ??
+            (
+              await tx
+                .insert(areaTags)
+                .values({
+                  name: tagData.name.trim(),
+                  color: tagData.color ?? "#6366f1",
+                })
+                .returning()
+            )[0].id;
+          await tx
+            .insert(areaTagAssignments)
+            .values({ areaId: newArea.id, tagId })
+            .onConflictDoNothing();
+        }
+      }
 
       for (const layerData of raw.layers) {
         const [newLayer] = await tx
@@ -1753,7 +1788,11 @@ export async function saveLayerTemplateAction(
     }));
     const [template] = await db
       .insert(layerTemplates)
-      .values({ name: name.trim(), description: description?.trim() ?? null, layers: templateLayers })
+      .values({
+        name: name.trim(),
+        description: description?.trim() ?? null,
+        layers: templateLayers,
+      })
       .returning();
     return { success: true, data: { id: template.id } };
   } catch (error) {
@@ -1763,7 +1802,9 @@ export async function saveLayerTemplateAction(
 }
 
 /** Get all layer templates */
-export async function getLayerTemplatesAction(): ServerActionResponse<SelectLayerTemplates[]> {
+export async function getLayerTemplatesAction(): ServerActionResponse<
+  SelectLayerTemplates[]
+> {
   try {
     const templates = await db.query.layerTemplates.findMany({
       orderBy: layerTemplates.createdAt,
@@ -1808,12 +1849,16 @@ export async function applyLayerTemplateAction(
         where: eq(areaLayers.areaId, areaId),
         with: { postalCodes: { columns: { postalCode: true } } },
       });
-      const existingByName = new Map(existingLayers.map((l) => [l.name.toLowerCase(), l]));
+      const existingByName = new Map(
+        existingLayers.map((l) => [l.name.toLowerCase(), l])
+      );
 
       // Remove all existing layers
       const existingIds = existingLayers.map((l) => l.id);
       if (existingIds.length > 0) {
-        await tx.delete(areaLayerPostalCodes).where(inArray(areaLayerPostalCodes.layerId, existingIds));
+        await tx
+          .delete(areaLayerPostalCodes)
+          .where(inArray(areaLayerPostalCodes.layerId, existingIds));
         await tx.delete(areaLayers).where(eq(areaLayers.areaId, areaId));
       }
 
@@ -2008,7 +2053,9 @@ export interface AreaTagWithCount {
   areaCount: number;
 }
 
-export async function getAllTagsAction(): ServerActionResponse<AreaTagWithCount[]> {
+export async function getAllTagsAction(): ServerActionResponse<
+  AreaTagWithCount[]
+> {
   try {
     const rows = await db
       .select({
@@ -2029,7 +2076,9 @@ export async function getAllTagsAction(): ServerActionResponse<AreaTagWithCount[
   }
 }
 
-export async function getAreaTagsAction(areaId: number): ServerActionResponse<{ id: number; name: string; color: string }[]> {
+export async function getAreaTagsAction(
+  areaId: number
+): ServerActionResponse<{ id: number; name: string; color: string }[]> {
   try {
     const rows = await db
       .select({ id: areaTags.id, name: areaTags.name, color: areaTags.color })
@@ -2044,12 +2093,19 @@ export async function getAreaTagsAction(areaId: number): ServerActionResponse<{ 
   }
 }
 
-export async function createTagAction(name: string, color: string): ServerActionResponse<{ id: number; name: string; color: string }> {
+export async function createTagAction(
+  name: string,
+  color: string
+): ServerActionResponse<{ id: number; name: string; color: string }> {
   try {
     const [tag] = await db
       .insert(areaTags)
       .values({ name: name.trim().slice(0, 50), color })
-      .returning({ id: areaTags.id, name: areaTags.name, color: areaTags.color });
+      .returning({
+        id: areaTags.id,
+        name: areaTags.name,
+        color: areaTags.color,
+      });
 
     updateTag("tags");
     return { success: true, data: tag };
@@ -2058,7 +2114,9 @@ export async function createTagAction(name: string, color: string): ServerAction
   }
 }
 
-export async function deleteTagAction(tagId: number): ServerActionResponse<void> {
+export async function deleteTagAction(
+  tagId: number
+): ServerActionResponse<void> {
   try {
     await db.delete(areaTags).where(eq(areaTags.id, tagId));
     updateTag("tags");
@@ -2068,7 +2126,10 @@ export async function deleteTagAction(tagId: number): ServerActionResponse<void>
   }
 }
 
-export async function assignTagToAreaAction(areaId: number, tagId: number): ServerActionResponse<void> {
+export async function assignTagToAreaAction(
+  areaId: number,
+  tagId: number
+): ServerActionResponse<void> {
   try {
     await db
       .insert(areaTagAssignments)
@@ -2083,14 +2144,70 @@ export async function assignTagToAreaAction(areaId: number, tagId: number): Serv
   }
 }
 
-export async function removeTagFromAreaAction(areaId: number, tagId: number): ServerActionResponse<void> {
+export async function removeTagFromAreaAction(
+  areaId: number,
+  tagId: number
+): ServerActionResponse<void> {
   try {
     await db
       .delete(areaTagAssignments)
-      .where(and(eq(areaTagAssignments.areaId, areaId), eq(areaTagAssignments.tagId, tagId)));
+      .where(
+        and(
+          eq(areaTagAssignments.areaId, areaId),
+          eq(areaTagAssignments.tagId, tagId)
+        )
+      );
 
     updateTag(`area-${areaId}-tags`);
     updateTag("tags");
+    return { success: true, data: undefined };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function bulkAssignTagToAreasAction(
+  areaIds: number[],
+  tagId: number
+): ServerActionResponse<void> {
+  if (!areaIds.length) return { success: true, data: undefined };
+  try {
+    await db
+      .insert(areaTagAssignments)
+      .values(areaIds.map((areaId) => ({ areaId, tagId })))
+      .onConflictDoNothing();
+
+    for (const areaId of areaIds) {
+      updateTag(`area-${areaId}-tags`);
+    }
+    updateTag("tags");
+    updateTag("areas");
+    return { success: true, data: undefined };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function bulkRemoveTagFromAreasAction(
+  areaIds: number[],
+  tagId: number
+): ServerActionResponse<void> {
+  if (!areaIds.length) return { success: true, data: undefined };
+  try {
+    await db
+      .delete(areaTagAssignments)
+      .where(
+        and(
+          inArray(areaTagAssignments.areaId, areaIds),
+          eq(areaTagAssignments.tagId, tagId)
+        )
+      );
+
+    for (const areaId of areaIds) {
+      updateTag(`area-${areaId}-tags`);
+    }
+    updateTag("tags");
+    updateTag("areas");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };

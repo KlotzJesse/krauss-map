@@ -46,7 +46,13 @@ interface LayerTemplatesDialogProps {
   onOpenChange: (open: boolean) => void;
   areaId: number;
   /** Current layers (name, color) for the "save as template" preview */
-  currentLayers: Array<{ name: string; color: string; opacity: number; orderIndex: number; notes?: string | null }>;
+  currentLayers: Array<{
+    name: string;
+    color: string;
+    opacity: number;
+    orderIndex: number;
+    notes?: string | null;
+  }>;
   onApplied?: () => void;
 }
 
@@ -63,8 +69,12 @@ export function LayerTemplatesDialog({
   const [saveDescription, setSaveDescription] = useState("");
   const [isSaving, startSaving] = useTransition();
   const [isApplying, startApplying] = useTransition();
-  const [deleteTarget, setDeleteTarget] = useState<SelectLayerTemplates | null>(null);
-  const [applyTarget, setApplyTarget] = useState<SelectLayerTemplates | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SelectLayerTemplates | null>(
+    null
+  );
+  const [applyTarget, setApplyTarget] = useState<SelectLayerTemplates | null>(
+    null
+  );
   const [isDeleting, startDeleting] = useTransition();
 
   const loadTemplates = useCallback(async () => {
@@ -81,7 +91,11 @@ export function LayerTemplatesDialog({
   const handleSave = () => {
     if (!saveName.trim()) return;
     startSaving(async () => {
-      const result = await saveLayerTemplateAction(areaId, saveName.trim(), saveDescription.trim() || undefined);
+      const result = await saveLayerTemplateAction(
+        areaId,
+        saveName.trim(),
+        saveDescription.trim() || undefined
+      );
       if (result.success) {
         toast.success("Vorlage gespeichert");
         setSaveName("");
@@ -132,7 +146,8 @@ export function LayerTemplatesDialog({
               Ebenen-Vorlagen
             </DialogTitle>
             <DialogDescription>
-              Speichere die aktuelle Ebenenstruktur als Vorlage oder wende eine gespeicherte Vorlage auf dieses Gebiet an.
+              Speichere die aktuelle Ebenenstruktur als Vorlage oder wende eine
+              gespeicherte Vorlage auf dieses Gebiet an.
             </DialogDescription>
           </DialogHeader>
 
@@ -142,7 +157,9 @@ export function LayerTemplatesDialog({
               Aktuelle Struktur speichern
             </p>
             {currentLayers.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">Keine Ebenen vorhanden</p>
+              <p className="text-xs text-muted-foreground italic">
+                Keine Ebenen vorhanden
+              </p>
             ) : (
               <div className="flex flex-wrap gap-1 mb-2">
                 {currentLayers.map((l, i) => (
@@ -166,7 +183,9 @@ export function LayerTemplatesDialog({
               onChange={(e) => setSaveName(e.target.value)}
               className="h-7 text-xs"
               maxLength={80}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSave();
+              }}
             />
             <Input
               placeholder="Beschreibung (optional)…"
@@ -179,7 +198,9 @@ export function LayerTemplatesDialog({
               size="sm"
               className="h-7 text-xs w-full"
               onClick={handleSave}
-              disabled={!saveName.trim() || currentLayers.length === 0 || isSaving}
+              disabled={
+                !saveName.trim() || currentLayers.length === 0 || isSaving
+              }
             >
               <Plus className="h-3 w-3 mr-1" />
               Als Vorlage speichern
@@ -194,7 +215,9 @@ export function LayerTemplatesDialog({
               Gespeicherte Vorlagen
             </p>
             {isLoading ? (
-              <p className="text-xs text-muted-foreground text-center py-3">Lädt…</p>
+              <p className="text-xs text-muted-foreground text-center py-3">
+                Lädt…
+              </p>
             ) : templates.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4 italic">
                 Noch keine Vorlagen gespeichert
@@ -211,7 +234,9 @@ export function LayerTemplatesDialog({
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium truncate">{t.name}</p>
                         {t.description && (
-                          <p className="text-xs text-muted-foreground truncate">{t.description}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {t.description}
+                          </p>
                         )}
                         <div className="flex flex-wrap gap-0.5 mt-1">
                           {layers.map((l, i) => (
@@ -222,8 +247,12 @@ export function LayerTemplatesDialog({
                               title={l.name}
                             />
                           ))}
-                          <Badge variant="secondary" className="text-[10px] px-1 py-0 h-3 ml-1">
-                            {layers.length} Ebene{layers.length !== 1 ? "n" : ""}
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-1 py-0 h-3 ml-1"
+                          >
+                            {layers.length} Ebene
+                            {layers.length !== 1 ? "n" : ""}
                           </Badge>
                         </div>
                       </div>
@@ -257,19 +286,27 @@ export function LayerTemplatesDialog({
       </Dialog>
 
       {/* Apply confirmation */}
-      <AlertDialog open={!!applyTarget} onOpenChange={(o) => { if (!o) setApplyTarget(null); }}>
+      <AlertDialog
+        open={!!applyTarget}
+        onOpenChange={(o) => {
+          if (!o) setApplyTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Vorlage anwenden?</AlertDialogTitle>
             <AlertDialogDescription>
               Die Ebenenstruktur dieses Gebiets wird durch die Vorlage{" "}
-              <strong>„{applyTarget?.name}"</strong> ersetzt. PLZ-Zuweisungen werden
-              beibehalten, sofern ein Ebenenname übereinstimmt. Alle anderen PLZ werden
-              nicht gelöscht, aber den Ebenen ggf. neu zugewiesen.
+              <strong>„{applyTarget?.name}"</strong> ersetzt. PLZ-Zuweisungen
+              werden beibehalten, sofern ein Ebenenname übereinstimmt. Alle
+              anderen PLZ werden nicht gelöscht, aber den Ebenen ggf. neu
+              zugewiesen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isApplying}>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel disabled={isApplying}>
+              Abbrechen
+            </AlertDialogCancel>
             <AlertDialogAction onClick={handleApply} disabled={isApplying}>
               {isApplying ? "Wird angewendet…" : "Anwenden"}
             </AlertDialogAction>
@@ -278,16 +315,24 @@ export function LayerTemplatesDialog({
       </AlertDialog>
 
       {/* Delete confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Vorlage löschen?</AlertDialogTitle>
             <AlertDialogDescription>
-              Die Vorlage <strong>„{deleteTarget?.name}"</strong> wird dauerhaft gelöscht.
+              Die Vorlage <strong>„{deleteTarget?.name}"</strong> wird dauerhaft
+              gelöscht.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>
+              Abbrechen
+            </AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? "Wird gelöscht…" : "Löschen"}
             </AlertDialogAction>

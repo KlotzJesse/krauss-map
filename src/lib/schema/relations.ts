@@ -16,6 +16,7 @@ export const areasRelations = relations(areas, ({ many, one }) => ({
   versions: many(areaVersions),
   layers: many(areaLayers),
   changes: many(areaChanges),
+  tagAssignments: many(areaTagAssignments),
   undoStack: one(areaUndoStacks, {
     fields: [areas.id],
     references: [areaUndoStacks.areaId],
@@ -89,13 +90,16 @@ export const areaTagsRelations = relations(areaTags, ({ many }) => ({
   assignments: many(areaTagAssignments),
 }));
 
-export const areaTagAssignmentsRelations = relations(areaTagAssignments, ({ one }) => ({
-  area: one(areas, {
-    fields: [areaTagAssignments.areaId],
-    references: [areas.id],
-  }),
-  tag: one(areaTags, {
-    fields: [areaTagAssignments.tagId],
-    references: [areaTags.id],
-  }),
-}));
+export const areaTagAssignmentsRelations = relations(
+  areaTagAssignments,
+  ({ one }) => ({
+    area: one(areas, {
+      fields: [areaTagAssignments.areaId],
+      references: [areas.id],
+    }),
+    tag: one(areaTags, {
+      fields: [areaTagAssignments.tagId],
+      references: [areaTags.id],
+    }),
+  })
+);

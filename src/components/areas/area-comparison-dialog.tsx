@@ -39,18 +39,44 @@ interface AreaComparisonDialogProps {
   defaultAreaId?: number;
 }
 
-function StatCell({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
+function StatCell({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string | number;
+  highlight?: boolean;
+}) {
   return (
-    <div className={cn("text-center px-2 py-2 rounded-md", highlight && "bg-primary/5")}>
-      <div className={cn("text-xl font-bold tabular-nums", highlight && "text-primary")}>
+    <div
+      className={cn(
+        "text-center px-2 py-2 rounded-md",
+        highlight && "bg-primary/5"
+      )}
+    >
+      <div
+        className={cn(
+          "text-xl font-bold tabular-nums",
+          highlight && "text-primary"
+        )}
+      >
         {typeof value === "number" ? value.toLocaleString("de-DE") : value}
       </div>
-      <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">{label}</div>
+      <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+        {label}
+      </div>
     </div>
   );
 }
 
-function LayerBar({ layer, max }: { layer: { name: string; color: string; postalCodeCount: number }; max: number }) {
+function LayerBar({
+  layer,
+  max,
+}: {
+  layer: { name: string; color: string; postalCodeCount: number };
+  max: number;
+}) {
   const pct = max > 0 ? (layer.postalCodeCount / max) * 100 : 0;
   return (
     <div className="flex items-center gap-2 text-xs">
@@ -58,7 +84,9 @@ function LayerBar({ layer, max }: { layer: { name: string; color: string; postal
         className="inline-block w-2 h-2 rounded-sm shrink-0 border border-black/10"
         style={{ backgroundColor: layer.color }}
       />
-      <span className="truncate flex-1 text-foreground/80 max-w-[120px]">{layer.name}</span>
+      <span className="truncate flex-1 text-foreground/80 max-w-[120px]">
+        {layer.name}
+      </span>
       <div className="flex items-center gap-1.5 shrink-0 w-28">
         <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
           <div
@@ -80,7 +108,9 @@ export function AreaComparisonDialog({
   areas,
   defaultAreaId,
 }: AreaComparisonDialogProps) {
-  const [areaIdA, setAreaIdA] = useState<string>(defaultAreaId?.toString() ?? "");
+  const [areaIdA, setAreaIdA] = useState<string>(
+    defaultAreaId?.toString() ?? ""
+  );
   const [areaIdB, setAreaIdB] = useState<string>("");
   const [result, setResult] = useState<AreaComparisonResult | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -97,7 +127,10 @@ export function AreaComparisonDialog({
       return;
     }
     startTransition(async () => {
-      const res = await getAreaComparisonAction(Number(areaIdA), Number(areaIdB));
+      const res = await getAreaComparisonAction(
+        Number(areaIdA),
+        Number(areaIdB)
+      );
       if (res.success && res.data) {
         setResult(res.data);
       } else {
@@ -133,7 +166,13 @@ export function AreaComparisonDialog({
 
         {/* Selector row */}
         <div className="flex items-center gap-2 mt-2">
-          <Select value={areaIdA} onValueChange={(v) => { setAreaIdA(v ?? ""); setResult(null); }}>
+          <Select
+            value={areaIdA}
+            onValueChange={(v) => {
+              setAreaIdA(v ?? "");
+              setResult(null);
+            }}
+          >
             <SelectTrigger className="flex-1 h-8 text-sm">
               <SelectValue placeholder="Gebiet A wählen…" />
             </SelectTrigger>
@@ -141,7 +180,11 @@ export function AreaComparisonDialog({
               {activeAreas.map((a) => (
                 <SelectItem key={a.id} value={a.id.toString()}>
                   {a.name}
-                  {a.country && <span className="text-muted-foreground ml-1 text-xs">({a.country.toUpperCase()})</span>}
+                  {a.country && (
+                    <span className="text-muted-foreground ml-1 text-xs">
+                      ({a.country.toUpperCase()})
+                    </span>
+                  )}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -156,7 +199,13 @@ export function AreaComparisonDialog({
             <IconArrowsExchange className="h-4 w-4" />
           </button>
 
-          <Select value={areaIdB} onValueChange={(v) => { setAreaIdB(v ?? ""); setResult(null); }}>
+          <Select
+            value={areaIdB}
+            onValueChange={(v) => {
+              setAreaIdB(v ?? "");
+              setResult(null);
+            }}
+          >
             <SelectTrigger className="flex-1 h-8 text-sm">
               <SelectValue placeholder="Gebiet B wählen…" />
             </SelectTrigger>
@@ -164,14 +213,24 @@ export function AreaComparisonDialog({
               {activeAreas.map((a) => (
                 <SelectItem key={a.id} value={a.id.toString()}>
                   {a.name}
-                  {a.country && <span className="text-muted-foreground ml-1 text-xs">({a.country.toUpperCase()})</span>}
+                  {a.country && (
+                    <span className="text-muted-foreground ml-1 text-xs">
+                      ({a.country.toUpperCase()})
+                    </span>
+                  )}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Button size="sm" onClick={handleCompare} disabled={isPending || !areaIdA || !areaIdB}>
-            {isPending && <IconLoader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+          <Button
+            size="sm"
+            onClick={handleCompare}
+            disabled={isPending || !areaIdA || !areaIdB}
+          >
+            {isPending && (
+              <IconLoader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+            )}
             Vergleichen
           </Button>
         </div>
@@ -212,19 +271,25 @@ export function AreaComparisonDialog({
                   <div className="text-2xl font-bold text-orange-500 tabular-nums">
                     {result.overlapCount.toLocaleString("de-DE")}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">PLZ in beiden</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    PLZ in beiden
+                  </div>
                 </div>
 
                 <div className="w-full space-y-0.5">
                   <div className="flex items-center gap-1 text-[10px]">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block shrink-0" />
                     <span className="text-muted-foreground">nur A:</span>
-                    <span className="font-medium tabular-nums ml-auto">{result.onlyInA.toLocaleString("de-DE")}</span>
+                    <span className="font-medium tabular-nums ml-auto">
+                      {result.onlyInA.toLocaleString("de-DE")}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 text-[10px]">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block shrink-0" />
                     <span className="text-muted-foreground">nur B:</span>
-                    <span className="font-medium tabular-nums ml-auto">{result.onlyInB.toLocaleString("de-DE")}</span>
+                    <span className="font-medium tabular-nums ml-auto">
+                      {result.onlyInB.toLocaleString("de-DE")}
+                    </span>
                   </div>
                 </div>
 
@@ -234,13 +299,17 @@ export function AreaComparisonDialog({
                     <div className="relative h-2 rounded-full overflow-hidden bg-muted">
                       <div
                         className="absolute inset-y-0 left-0 bg-primary/60 rounded-l-full"
-                        style={{ width: `${(result.a.totalPlz / Math.max(result.a.totalPlz, result.b.totalPlz)) * 100}%` }}
+                        style={{
+                          width: `${(result.a.totalPlz / Math.max(result.a.totalPlz, result.b.totalPlz)) * 100}%`,
+                        }}
                       />
                     </div>
                     <div className="relative h-2 rounded-full overflow-hidden bg-muted mt-0.5">
                       <div
                         className="absolute inset-y-0 left-0 bg-blue-500/60 rounded-l-full"
-                        style={{ width: `${(result.b.totalPlz / Math.max(result.a.totalPlz, result.b.totalPlz)) * 100}%` }}
+                        style={{
+                          width: `${(result.b.totalPlz / Math.max(result.a.totalPlz, result.b.totalPlz)) * 100}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -278,7 +347,9 @@ export function AreaComparisonDialog({
                   Layer — {result.a.name}
                 </h4>
                 {result.a.layers.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">Keine Layer</p>
+                  <p className="text-xs text-muted-foreground italic">
+                    Keine Layer
+                  </p>
                 ) : (
                   <div className="space-y-1.5">
                     {result.a.layers.map((l) => (
@@ -293,7 +364,9 @@ export function AreaComparisonDialog({
                   Layer — {result.b.name}
                 </h4>
                 {result.b.layers.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">Keine Layer</p>
+                  <p className="text-xs text-muted-foreground italic">
+                    Keine Layer
+                  </p>
                 ) : (
                   <div className="space-y-1.5">
                     {result.b.layers.map((l) => (

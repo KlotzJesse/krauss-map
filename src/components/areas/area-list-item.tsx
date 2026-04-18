@@ -1,6 +1,15 @@
 "use client";
 
-import { IconArchive, IconCheck, IconFolder, IconPin, IconPinFilled, IconX } from "@tabler/icons-react";
+import {
+  IconArchive,
+  IconCheck,
+  IconCheckbox,
+  IconFolder,
+  IconPin,
+  IconPinFilled,
+  IconSquare,
+  IconX,
+} from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { memo } from "react";
@@ -10,8 +19,9 @@ import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator
 import { Button } from "@/components/ui/button";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
 import type { AreaSummary } from "@/lib/types/area-types";
-import { TagBadge } from "./tag-badge";
+
 import { AreaItemDropdown, AreaItemMenu } from "./area-item-menu";
+import { TagBadge } from "./tag-badge";
 
 function relativeTime(date: Date | string | null | undefined): string {
   if (!date) return "";
@@ -38,6 +48,9 @@ interface AreaListItemProps {
   editInputRef: RefObject<HTMLInputElement | null>;
   isCurrentRoute: boolean;
   isPinned?: boolean;
+  isSelectable?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (areaId: number) => void;
   onTogglePin?: (areaId: number) => void;
   onStartRename: (area: AreaSummary, e: React.MouseEvent) => void;
   onConfirmRename: (areaId: number) => void;
@@ -57,6 +70,9 @@ export const AreaListItem = memo(
     editInputRef,
     isCurrentRoute,
     isPinned = false,
+    isSelectable = false,
+    isSelected = false,
+    onToggleSelect,
     onTogglePin,
     onStartRename,
     onConfirmRename,
@@ -138,77 +154,138 @@ export const AreaListItem = memo(
           onStartDelete={onStartDelete}
           onDuplicate={onDuplicate}
           onArchive={onArchive}
+          disabled={isSelectable}
         >
           <div className="group/item relative flex flex-col w-full">
             <div
               className={`flex items-center gap-2 w-full h-8 px-2 rounded-md transition-colors ${
-                isCurrentRoute
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-              } ${isArchived ? "opacity-50" : ""}`}
-              onDoubleClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onStartRename(area, e);
-              }}
+                isSelectable && isSelected
+                  ? "bg-primary/10 text-primary"
+                  : isCurrentRoute && !isSelectable
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              } ${isArchived ? "opacity-50" : ""} ${isSelectable ? "cursor-pointer select-none" : ""}`}
+              onClick={
+                isSelectable
+                  ? (e) => {
+                      e.preventDefault();
+                      onToggleSelect?.(area.id);
+                    }
+                  : undefined
+              }
+              onDoubleClick={
+                isSelectable
+                  ? undefined
+                  : (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onStartRename(area, e);
+                    }
+              }
             >
-              {isArchived ? (
-                <IconArchive className="h-4 w-4 shrink-0 text-muted-foreground" title="Archiviert" />
+              {isSelectable ? (
+                <span className="h-4 w-4 shrink-0 flex items-center justify-center text-primary">
+                  {isSelected ? (
+                    <IconCheckbox className="h-4 w-4" />
+                  ) : (
+                    <IconSquare className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </span>
+              ) : isArchived ? (
+                <IconArchive
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  title="Archiviert"
+                />
               ) : (
-                <IconFolder className="h-4 w-4 shrink-0 text-muted-foreground" title={area.updatedAt ? `Geändert: ${relativeTime(area.updatedAt)}` : undefined} />
+                <IconFolder
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  title={
+                    area.updatedAt
+                      ? `Geändert: ${relativeTime(area.updatedAt)}`
+                      : undefined
+                  }
+                />
               )}
-              <Link
-                href={`/postal-codes/${area.id}` as Route}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAreaClick(area);
-                }}
-                className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
-              >
-                <span className={`truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}>{area.name}</span>
-                <LinkPendingIndicator />
-              </Link>
-              {!!area.postalCodeCount && (
-                <span className="shrink-0 text-[9px] font-medium text-muted-foreground bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity" title={`${area.postalCodeCount} PLZ`}>
+              {isSelectable ? (
+                <span
+                  className={`flex-1 text-sm font-medium min-w-0 truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}
+                >
+                  {area.name}
+                </span>
+              ) : (
+                <Link
+                  href={`/postal-codes/${area.id}` as Route}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAreaClick(area);
+                  }}
+                  className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
+                >
+                  <span
+                    className={`truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}
+                  >
+                    {area.name}
+                  </span>
+                  <LinkPendingIndicator />
+                </Link>
+              )}
+              {!isSelectable && !!area.postalCodeCount && (
+                <span
+                  className="shrink-0 text-[9px] font-medium text-muted-foreground bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity"
+                  title={`${area.postalCodeCount} PLZ`}
+                >
                   {area.postalCodeCount}
                 </span>
               )}
-              {!!area.layerCount && (
-                <span className="shrink-0 text-[9px] font-medium text-muted-foreground/60 bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity" title={`${area.layerCount} Gebiete`}>
+              {!isSelectable && !!area.layerCount && (
+                <span
+                  className="shrink-0 text-[9px] font-medium text-muted-foreground/60 bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity"
+                  title={`${area.layerCount} Gebiete`}
+                >
                   {area.layerCount}L
                 </span>
               )}
-              {isPinned && (
+              {!isSelectable && isPinned && (
                 <IconPinFilled className="shrink-0 h-2.5 w-2.5 text-amber-500 group-hover/item:opacity-0 transition-opacity" />
               )}
-              <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0 flex items-center">
-                {onTogglePin && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onTogglePin(area.id); }}
-                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-amber-500 transition-colors"
-                    title={isPinned ? "Anheften aufheben" : "Anheften"}
-                  >
-                    {isPinned ? (
-                      <IconPinFilled className="h-3 w-3 text-amber-500" />
-                    ) : (
-                      <IconPin className="h-3 w-3" />
-                    )}
-                  </button>
-                )}
-                <AreaItemDropdown
-                  area={area}
-                  onStartRename={onStartRename}
-                  onStartDelete={onStartDelete}
-                  onDuplicate={onDuplicate}
-                  onArchive={onArchive}
-                />
-              </div>
+              {!isSelectable && (
+                <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0 flex items-center">
+                  {onTogglePin && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTogglePin(area.id);
+                      }}
+                      className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-amber-500 transition-colors"
+                      title={isPinned ? "Anheften aufheben" : "Anheften"}
+                    >
+                      {isPinned ? (
+                        <IconPinFilled className="h-3 w-3 text-amber-500" />
+                      ) : (
+                        <IconPin className="h-3 w-3" />
+                      )}
+                    </button>
+                  )}
+                  <AreaItemDropdown
+                    area={area}
+                    onStartRename={onStartRename}
+                    onStartDelete={onStartDelete}
+                    onDuplicate={onDuplicate}
+                    onArchive={onArchive}
+                  />
+                </div>
+              )}
             </div>
             {area.tags && area.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 px-2 pb-1">
                 {area.tags.map((tag) => (
-                  <TagBadge key={tag.id} name={tag.name} color={tag.color} className="text-[9px] px-1 py-0 h-3.5" />
+                  <TagBadge
+                    key={tag.id}
+                    name={tag.name}
+                    color={tag.color}
+                    className="text-[9px] px-1 py-0 h-3.5"
+                  />
                 ))}
               </div>
             )}
@@ -235,6 +312,12 @@ export const AreaListItem = memo(
       return false;
     }
     if (prev.isEditing !== next.isEditing) {
+      return false;
+    }
+    if (prev.isSelectable !== next.isSelectable) {
+      return false;
+    }
+    if (prev.isSelected !== next.isSelected) {
       return false;
     }
     // Only compare edit props when actually editing

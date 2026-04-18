@@ -399,11 +399,17 @@ export async function mergeLayersAction(
     // Fetch both layers
     const [source, target] = await Promise.all([
       db.query.areaLayers.findFirst({
-        where: and(eq(areaLayers.id, sourceLayerId), eq(areaLayers.areaId, areaId)),
+        where: and(
+          eq(areaLayers.id, sourceLayerId),
+          eq(areaLayers.areaId, areaId)
+        ),
         with: { postalCodes: true },
       }),
       db.query.areaLayers.findFirst({
-        where: and(eq(areaLayers.id, targetLayerId), eq(areaLayers.areaId, areaId)),
+        where: and(
+          eq(areaLayers.id, targetLayerId),
+          eq(areaLayers.areaId, areaId)
+        ),
         with: { postalCodes: true },
       }),
     ]);
@@ -412,7 +418,9 @@ export async function mergeLayersAction(
       return { success: false, error: "Layer not found" };
     }
 
-    const targetExistingCodes = new Set(target.postalCodes?.map((pc) => pc.postalCode) ?? []);
+    const targetExistingCodes = new Set(
+      target.postalCodes?.map((pc) => pc.postalCode) ?? []
+    );
     const codesToAdd = (source.postalCodes ?? [])
       .map((pc) => pc.postalCode)
       .filter((code) => !targetExistingCodes.has(code));
@@ -421,14 +429,21 @@ export async function mergeLayersAction(
     if (codesToAdd.length > 0) {
       await db
         .insert(areaLayerPostalCodes)
-        .values(codesToAdd.map((code) => ({ layerId: targetLayerId, postalCode: code })))
+        .values(
+          codesToAdd.map((code) => ({
+            layerId: targetLayerId,
+            postalCode: code,
+          }))
+        )
         .onConflictDoNothing();
     }
 
     // Delete source layer (cascade deletes its postal codes)
     await db
       .delete(areaLayers)
-      .where(and(eq(areaLayers.id, sourceLayerId), eq(areaLayers.areaId, areaId)));
+      .where(
+        and(eq(areaLayers.id, sourceLayerId), eq(areaLayers.areaId, areaId))
+      );
 
     await recordChangeAction(areaId, {
       changeType: "merge_layers",

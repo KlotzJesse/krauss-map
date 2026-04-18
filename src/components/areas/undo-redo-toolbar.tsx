@@ -72,7 +72,8 @@ export function UndoRedoToolbar({
   // Keyboard shortcuts: Ctrl+Z = undo, Ctrl+Shift+Z / Ctrl+Y = redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isInInput = document.activeElement instanceof HTMLInputElement ||
+      const isInInput =
+        document.activeElement instanceof HTMLInputElement ||
         document.activeElement instanceof HTMLTextAreaElement ||
         (document.activeElement as HTMLElement)?.isContentEditable;
       if (isInInput) return;
@@ -91,7 +92,13 @@ export function UndoRedoToolbar({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo, optimisticStatus.canUndo, optimisticStatus.canRedo, isLoading]);
+  }, [
+    undo,
+    redo,
+    optimisticStatus.canUndo,
+    optimisticStatus.canRedo,
+    isLoading,
+  ]);
 
   if (!areaId) {
     return null;

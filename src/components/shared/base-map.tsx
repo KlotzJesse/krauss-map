@@ -1,7 +1,19 @@
 "use no memo";
-import { Camera, Home, Layers, LocateFixed, Maximize2, Printer, PlusIcon, Eye, EyeOff, Search, X } from "lucide-react";
+import {
+  Camera,
+  Home,
+  Layers,
+  LocateFixed,
+  Maximize2,
+  Printer,
+  PlusIcon,
+  Eye,
+  EyeOff,
+  Search,
+  X,
+} from "lucide-react";
+import maplibregl from "maplibre-gl";
 import dynamic from "next/dynamic";
-import { cn } from "@/lib/utils";
 import {
   Component,
   memo,
@@ -15,13 +27,13 @@ import {
 } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Map, useMap } from "react-map-gl/maplibre";
-import maplibregl from "maplibre-gl";
 
-import "maplibre-gl/dist/maplibre-gl.css";
 import {
   DrawingToolsErrorBoundary,
   MapErrorBoundary,
 } from "@/components/ui/error-boundaries";
+
+import "maplibre-gl/dist/maplibre-gl.css";
 import { DrawingToolsSkeleton } from "@/components/ui/loading-skeletons";
 import {
   COUNTRY_CONFIGS,
@@ -42,6 +54,7 @@ import {
   useActiveLayerState,
   useSetMapCenterZoom,
 } from "@/lib/url-state/map-state";
+import { cn } from "@/lib/utils";
 import type {
   BaseMapProps,
   MapErrorMessageProps,
@@ -152,9 +165,19 @@ class MapRecoveryBoundary extends Component<
   }
 }
 
-function MapLegend({ layers, activeLayerId, unassignedCount }: { layers: BaseMapProps["layers"]; activeLayerId?: number | null; unassignedCount?: number }) {
+function MapLegend({
+  layers,
+  activeLayerId,
+  unassignedCount,
+}: {
+  layers: BaseMapProps["layers"];
+  activeLayerId?: number | null;
+  unassignedCount?: number;
+}) {
   const [collapsed, setCollapsed] = useState(false);
-  const visibleLayers = layers.filter((l) => l.isVisible !== "false" && (l.postalCodes?.length ?? 0) > 0);
+  const visibleLayers = layers.filter(
+    (l) => l.isVisible !== "false" && (l.postalCodes?.length ?? 0) > 0
+  );
   const showUnassignedEntry = (unassignedCount ?? 0) > 0;
   if (visibleLayers.length === 0 && !showUnassignedEntry) return null;
 
@@ -183,8 +206,12 @@ function MapLegend({ layers, activeLayerId, unassignedCount }: { layers: BaseMap
                   className="inline-block w-2.5 h-2.5 rounded-sm shrink-0 border border-black/10"
                   style={{ backgroundColor: l.color }}
                 />
-                <span className="text-[10px] text-foreground truncate leading-tight">{l.name}</span>
-                <span className="text-[9px] text-muted-foreground shrink-0 ml-auto">{l.postalCodes?.length ?? 0}</span>
+                <span className="text-[10px] text-foreground truncate leading-tight">
+                  {l.name}
+                </span>
+                <span className="text-[9px] text-muted-foreground shrink-0 ml-auto">
+                  {l.postalCodes?.length ?? 0}
+                </span>
               </div>
             ))}
             {showUnassignedEntry && (
@@ -193,8 +220,12 @@ function MapLegend({ layers, activeLayerId, unassignedCount }: { layers: BaseMap
                   className="inline-block w-2.5 h-2.5 rounded-sm shrink-0 border border-red-300"
                   style={{ backgroundColor: "rgba(239,68,68,0.25)" }}
                 />
-                <span className="text-[10px] text-muted-foreground truncate leading-tight italic">Nicht zugeordnet</span>
-                <span className="text-[9px] text-red-500 shrink-0 ml-auto">{unassignedCount?.toLocaleString("de-DE")}</span>
+                <span className="text-[10px] text-muted-foreground truncate leading-tight italic">
+                  Nicht zugeordnet
+                </span>
+                <span className="text-[9px] text-red-500 shrink-0 ml-auto">
+                  {unassignedCount?.toLocaleString("de-DE")}
+                </span>
               </div>
             )}
           </div>
@@ -204,7 +235,12 @@ function MapLegend({ layers, activeLayerId, unassignedCount }: { layers: BaseMap
   );
 }
 
-import type { FeatureCollection, Polygon, MultiPolygon, Feature } from "geojson";
+import type {
+  FeatureCollection,
+  Polygon,
+  MultiPolygon,
+  Feature,
+} from "geojson";
 
 function PlzSearch({
   data,
@@ -220,47 +256,59 @@ function PlzSearch({
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSearch = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    const code = query.trim();
-    if (!code || !mapRef) return;
-    const key = country ? `${country}:${code}` : code;
-    const features = featureIndex?.get(key) ?? featureIndex?.get(code);
-    if (!features || features.length === 0) return;
-    // Compute bounding box of first feature
-    const allCoords: number[][] = [];
-    for (const ft of features) {
-      const geom = ft.geometry;
-      if (geom.type === "Polygon") {
-        for (const ring of geom.coordinates) {
-          for (const c of ring) allCoords.push(c);
-        }
-      } else if (geom.type === "MultiPolygon") {
-        for (const poly of geom.coordinates) {
-          for (const ring of poly) {
+  const handleSearch = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const code = query.trim();
+      if (!code || !mapRef) return;
+      const key = country ? `${country}:${code}` : code;
+      const features = featureIndex?.get(key) ?? featureIndex?.get(code);
+      if (!features || features.length === 0) return;
+      // Compute bounding box of first feature
+      const allCoords: number[][] = [];
+      for (const ft of features) {
+        const geom = ft.geometry;
+        if (geom.type === "Polygon") {
+          for (const ring of geom.coordinates) {
             for (const c of ring) allCoords.push(c);
+          }
+        } else if (geom.type === "MultiPolygon") {
+          for (const poly of geom.coordinates) {
+            for (const ring of poly) {
+              for (const c of ring) allCoords.push(c);
+            }
           }
         }
       }
-    }
-    if (allCoords.length === 0) return;
-    const lngs = allCoords.map((c) => c[0]);
-    const lats = allCoords.map((c) => c[1]);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    mapRef.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 80, duration: 800 });
-    setOpen(false);
-    setQuery("");
-  }, [query, mapRef, featureIndex, country]);
+      if (allCoords.length === 0) return;
+      const lngs = allCoords.map((c) => c[0]);
+      const lats = allCoords.map((c) => c[1]);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      mapRef.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        { padding: 80, duration: 800 }
+      );
+      setOpen(false);
+      setQuery("");
+    },
+    [query, mapRef, featureIndex, country]
+  );
 
   return (
     <div className="absolute top-4 right-4 z-10 print:hidden">
       {!open ? (
         <button
           type="button"
-          onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+          onClick={() => {
+            setOpen(true);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
           title="PLZ suchen und anspringen"
           aria-label="PLZ suchen"
           className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
@@ -268,7 +316,10 @@ function PlzSearch({
           <Search className="h-4 w-4" />
         </button>
       ) : (
-        <form onSubmit={handleSearch} className="flex items-center gap-1 bg-white/95 border border-border rounded-lg shadow-md px-2 py-1">
+        <form
+          onSubmit={handleSearch}
+          className="flex items-center gap-1 bg-white/95 border border-border rounded-lg shadow-md px-2 py-1"
+        >
           <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <input
             ref={inputRef}
@@ -277,11 +328,16 @@ function PlzSearch({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="PLZ eingeben…"
             className="text-xs outline-none bg-transparent w-28 placeholder:text-muted-foreground"
-            onKeyDown={(e) => e.key === "Escape" && (setOpen(false), setQuery(""))}
+            onKeyDown={(e) =>
+              e.key === "Escape" && (setOpen(false), setQuery(""))
+            }
           />
           <button
             type="button"
-            onClick={() => { setOpen(false); setQuery(""); }}
+            onClick={() => {
+              setOpen(false);
+              setQuery("");
+            }}
             aria-label="Suche schließen"
             className="text-muted-foreground hover:text-foreground"
           >
@@ -321,7 +377,10 @@ const MapInner = memo(function MapInner({
   initialUndoRedoStatus,
   onCycleMapStyle,
   mapStyleLabel,
-}: Omit<BaseMapProps, "center" | "zoom"> & { onCycleMapStyle?: () => void; mapStyleLabel?: string }) {
+}: Omit<BaseMapProps, "center" | "zoom"> & {
+  onCycleMapStyle?: () => void;
+  mapStyleLabel?: string;
+}) {
   const { current: mapRef } = useMap();
   const rawMapRef = useRef<maplibregl.Map | null>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -331,7 +390,7 @@ const MapInner = memo(function MapInner({
 
   const handleRecenter = useCallback(() => {
     const config = country ? COUNTRY_CONFIGS[country] : undefined;
-    const center = config?.center ?? [10.4515, 51.1657] as [number, number];
+    const center = config?.center ?? ([10.4515, 51.1657] as [number, number]);
     const zoom = config?.zoom ?? 5;
     setMapCenterZoom(center, zoom);
   }, [country, setMapCenterZoom]);
@@ -378,7 +437,9 @@ const MapInner = memo(function MapInner({
     rawMapRef.current = raw;
     mapCanvasRef.current = raw.getCanvas();
 
-    const navControl = new maplibregl.NavigationControl({ visualizePitch: false });
+    const navControl = new maplibregl.NavigationControl({
+      visualizePitch: false,
+    });
     raw.addControl(navControl, "bottom-right");
 
     const handleLoad = () => setIsMapLoaded(true);
@@ -391,7 +452,11 @@ const MapInner = memo(function MapInner({
 
     return () => {
       raw.off("load", handleLoad);
-      try { raw.removeControl(navControl); } catch { /* already removed */ }
+      try {
+        raw.removeControl(navControl);
+      } catch {
+        /* already removed */
+      }
       setIsMapLoaded(false);
     };
   }, [mapRef]);
@@ -476,18 +541,22 @@ const MapInner = memo(function MapInner({
     );
     if (allCodes.size === 0) return;
 
-    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+    let minLng = Infinity,
+      maxLng = -Infinity,
+      minLat = Infinity,
+      maxLat = -Infinity;
     let found = false;
 
     for (const feature of data.features) {
       if (!allCodes.has(feature.properties?.code)) continue;
       found = true;
       const geom = feature.geometry;
-      const rings: number[][][] = geom.type === "Polygon"
-        ? geom.coordinates
-        : geom.type === "MultiPolygon"
-          ? geom.coordinates.flat()
-          : [];
+      const rings: number[][][] =
+        geom.type === "Polygon"
+          ? geom.coordinates
+          : geom.type === "MultiPolygon"
+            ? geom.coordinates.flat()
+            : [];
       for (const ring of rings) {
         for (const [lng, lat] of ring) {
           if (lng < minLng) minLng = lng;
@@ -502,7 +571,10 @@ const MapInner = memo(function MapInner({
     const centerLng = (minLng + maxLng) / 2;
     const centerLat = (minLat + maxLat) / 2;
     const span = Math.max(maxLng - minLng, maxLat - minLat);
-    const zoom = Math.max(5, Math.min(13, Math.round(Math.log2(360 / span)) - 1));
+    const zoom = Math.max(
+      5,
+      Math.min(13, Math.round(Math.log2(360 / span)) - 1)
+    );
     setMapCenterZoom([centerLng, centerLat], zoom);
   }, [data, layers, setMapCenterZoom]);
 
@@ -630,7 +702,7 @@ const MapInner = memo(function MapInner({
         >
           <Printer className="h-4 w-4" />
         </button>
-        {(layers?.some((l) => (l.postalCodes?.length ?? 0) > 0)) && (
+        {layers?.some((l) => (l.postalCodes?.length ?? 0) > 0) && (
           <button
             type="button"
             onClick={handleFitAllLayers}
@@ -658,7 +730,9 @@ const MapInner = memo(function MapInner({
           disabled={isGeolocating}
           className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-wait"
         >
-          <LocateFixed className={`h-4 w-4 ${isGeolocating ? "animate-pulse" : ""}`} />
+          <LocateFixed
+            className={`h-4 w-4 ${isGeolocating ? "animate-pulse" : ""}`}
+          />
         </button>
         {onCycleMapStyle && (
           <button
@@ -674,7 +748,11 @@ const MapInner = memo(function MapInner({
         <button
           type="button"
           onClick={() => setShowUnassigned(!showUnassigned)}
-          title={showUnassigned ? "Freie PLZ ausblenden" : `Freie PLZ anzeigen — ${unassignedCount.toLocaleString("de-DE")} nicht zugeordnet`}
+          title={
+            showUnassigned
+              ? "Freie PLZ ausblenden"
+              : `Freie PLZ anzeigen — ${unassignedCount.toLocaleString("de-DE")} nicht zugeordnet`
+          }
           aria-label="Nicht zugeordnete PLZ anzeigen/ausblenden"
           className={cn(
             "flex items-center gap-1.5 px-2 h-8 rounded-md border shadow-sm transition-colors text-xs font-medium",
@@ -685,7 +763,11 @@ const MapInner = memo(function MapInner({
                 : "bg-white/90 border-border text-muted-foreground hover:bg-white hover:text-foreground"
           )}
         >
-          {showUnassigned ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          {showUnassigned ? (
+            <EyeOff className="h-4 w-4" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
           {unassignedCount > 0 && (
             <span>{unassignedCount.toLocaleString("de-DE")}</span>
           )}
@@ -693,7 +775,11 @@ const MapInner = memo(function MapInner({
       </div>
 
       {/* PLZ search overlay — top right */}
-      <PlzSearch data={data} featureIndex={optimizations.featureIndex} country={country} />
+      <PlzSearch
+        data={data}
+        featureIndex={optimizations.featureIndex}
+        country={country}
+      />
 
       {/* Conflict resolution panel — right side, next to the map */}
       <Activity mode={showConflicts ? "visible" : "hidden"}>
@@ -711,7 +797,11 @@ const MapInner = memo(function MapInner({
 
       {/* Map layer legend — bottom right */}
       {layers && layers.some((l) => (l.postalCodes?.length ?? 0) > 0) && (
-        <MapLegend layers={layers} activeLayerId={activeLayerId} unassignedCount={unassignedCount} />
+        <MapLegend
+          layers={layers}
+          activeLayerId={activeLayerId}
+          unassignedCount={unassignedCount}
+        />
       )}
 
       {/* Hover tooltip */}
@@ -721,7 +811,9 @@ const MapInner = memo(function MapInner({
           style={{ left: hoverTooltip.x + 12, top: hoverTooltip.y - 10 }}
         >
           <div className="bg-popover/95 border border-border rounded shadow-md px-2 py-1.5 text-xs min-w-[80px]">
-            <div className="font-mono font-semibold text-foreground">{hoverTooltip.code}</div>
+            <div className="font-mono font-semibold text-foreground">
+              {hoverTooltip.code}
+            </div>
             {hoverTooltip.layers.length > 0 && (
               <div className="mt-1 space-y-0.5">
                 {hoverTooltip.layers.map((l) => (
@@ -730,7 +822,9 @@ const MapInner = memo(function MapInner({
                       className="inline-block w-2 h-2 rounded-full shrink-0"
                       style={{ backgroundColor: l.color }}
                     />
-                    <span className="text-muted-foreground truncate max-w-[140px]">{l.name}</span>
+                    <span className="text-muted-foreground truncate max-w-[140px]">
+                      {l.name}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -778,8 +872,16 @@ const BaseMapComponent = ({
 
   const MAP_STYLES = [
     { id: "colorful", label: "Bunt", url: "/versatilescolorful.json" },
-    { id: "light", label: "Hell", url: "https://tiles.versatiles.org/styles/colorful/style.json" },
-    { id: "neutrino", label: "Minimal", url: "https://demotiles.maplibre.org/style.json" },
+    {
+      id: "light",
+      label: "Hell",
+      url: "https://tiles.versatiles.org/styles/colorful/style.json",
+    },
+    {
+      id: "neutrino",
+      label: "Minimal",
+      url: "https://demotiles.maplibre.org/style.json",
+    },
   ] as const;
   type MapStyleId = (typeof MAP_STYLES)[number]["id"];
 
@@ -791,7 +893,9 @@ const BaseMapComponent = ({
     return "colorful";
   });
 
-  const currentMapStyle = MAP_STYLES.find((s) => s.id === mapStyleId)?.url ?? "/versatilescolorful.json";
+  const currentMapStyle =
+    MAP_STYLES.find((s) => s.id === mapStyleId)?.url ??
+    "/versatilescolorful.json";
 
   const handleCycleMapStyle = useCallback(() => {
     const idx = MAP_STYLES.findIndex((s) => s.id === mapStyleId);

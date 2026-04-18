@@ -1,6 +1,11 @@
 "use client";
 
-import { IconArchive, IconFolder, IconPlus, IconSearch } from "@tabler/icons-react";
+import {
+  IconArchive,
+  IconFolder,
+  IconPlus,
+  IconSearch,
+} from "@tabler/icons-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -70,16 +75,17 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
                 <IconFolder className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>{area.name}</span>
                 {area.country && (
-                  <span className="text-[10px] text-muted-foreground/60 uppercase ml-1">{area.country}</span>
+                  <span className="text-[10px] text-muted-foreground/60 uppercase ml-1">
+                    {area.country}
+                  </span>
                 )}
               </CommandItem>
             ))}
           </CommandGroup>
         )}
 
-        {activeAreas.length > 0 && (onCreateArea || archivedAreas.length > 0) && (
-          <CommandSeparator />
-        )}
+        {activeAreas.length > 0 &&
+          (onCreateArea || archivedAreas.length > 0) && <CommandSeparator />}
 
         <CommandGroup heading="Aktionen">
           {onCreateArea && (
@@ -108,9 +114,13 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
                   onSelect={() => handleSelect(area.id)}
                 >
                   <IconArchive className="h-3.5 w-3.5 text-muted-foreground/50" />
-                  <span className="line-through text-muted-foreground">{area.name}</span>
+                  <span className="line-through text-muted-foreground">
+                    {area.name}
+                  </span>
                   {area.country && (
-                    <span className="text-[10px] text-muted-foreground/40 uppercase ml-1">{area.country}</span>
+                    <span className="text-[10px] text-muted-foreground/40 uppercase ml-1">
+                      {area.country}
+                    </span>
                   )}
                 </CommandItem>
               ))}
@@ -122,7 +132,9 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
         <kbd className="rounded border border-border px-1">↑↓</kbd> navigieren
         <kbd className="rounded border border-border px-1">↵</kbd> öffnen
         <kbd className="rounded border border-border px-1">Esc</kbd> schließen
-        <span className="ml-auto"><kbd className="rounded border border-border px-1">⌘K</kbd></span>
+        <span className="ml-auto">
+          <kbd className="rounded border border-border px-1">⌘K</kbd>
+        </span>
       </div>
     </CommandDialog>
   );

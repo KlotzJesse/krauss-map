@@ -3,8 +3,8 @@
 import { IconMapPin, IconSearch, IconX } from "@tabler/icons-react";
 import Link from "next/link";
 import { useCallback, useState, useTransition } from "react";
-import { useDebounce } from "use-debounce";
 import { useEffect } from "react";
+import { useDebounce } from "use-debounce";
 
 import {
   searchPostalCodeInAreasAction,
@@ -65,7 +65,9 @@ export function PlzSearch() {
       {(results.length > 0 || notFound) && (
         <div className="mt-1 rounded-md border bg-popover shadow-sm text-xs overflow-hidden">
           {notFound && !isPending && (
-            <div className="px-3 py-2 text-muted-foreground">Nicht gefunden</div>
+            <div className="px-3 py-2 text-muted-foreground">
+              Nicht gefunden
+            </div>
           )}
           {results.map((r) => (
             <Link

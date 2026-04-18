@@ -452,7 +452,10 @@ export function useDeckLayers({
 
   // Unassigned feature data — postal codes not in any layer.
   const unassignedFeaturesData = useMemo(() => {
-    if (!showUnassigned) return EMPTY_FEATURE_COLLECTION as FeatureCollection<Polygon | MultiPolygon>;
+    if (!showUnassigned)
+      return EMPTY_FEATURE_COLLECTION as FeatureCollection<
+        Polygon | MultiPolygon
+      >;
     const allCodes = new Set<string>();
     for (const f of data.features) {
       const code = getFeatureCode(f);
@@ -567,7 +570,9 @@ export function useDeckLayers({
           // Resolve which layers contain this code
           const rawCode = code.includes(":") ? code.split(":")[1] : code;
           const matchingLayers = (layersRef.current ?? [])
-            .filter((l) => l.postalCodes?.some((pc) => pc.postalCode === rawCode))
+            .filter((l) =>
+              l.postalCodes?.some((pc) => pc.postalCode === rawCode)
+            )
             .map((l) => ({ name: l.name, color: l.color }));
           // Always update tooltip position
           setHoverTooltip({

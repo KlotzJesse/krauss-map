@@ -91,6 +91,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error("ZIP export error:", error);
-    return NextResponse.json({ error: "Export fehlgeschlagen" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Export fehlgeschlagen" },
+      { status: 500 }
+    );
   }
 }

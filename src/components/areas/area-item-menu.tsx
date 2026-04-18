@@ -33,6 +33,7 @@ interface AreaItemMenuProps {
   onDuplicate: (area: AreaSummary) => void;
   onArchive: (area: AreaSummary, archive: boolean) => void;
   children: React.ReactNode;
+  disabled?: boolean;
 }
 
 /** Shared menu items rendered identically in both ContextMenu and DropdownMenu */
@@ -85,7 +86,11 @@ export const AreaItemMenu = memo(function AreaItemMenu({
   onDuplicate,
   onArchive,
   children,
+  disabled = false,
 }: AreaItemMenuProps) {
+  if (disabled) {
+    return <>{children}</>;
+  }
   return (
     <ContextMenu>
       <ContextMenuTrigger className="w-full">{children}</ContextMenuTrigger>

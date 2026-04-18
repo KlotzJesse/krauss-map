@@ -34,7 +34,6 @@ import {
   ColorPickerOutput,
   ColorPickerSelection,
 } from "@/components/kibo-ui/color-picker";
-import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +42,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
   TooltipContent,
@@ -84,7 +84,11 @@ interface LayerListItemProps {
   onToggleVisibility?: (layerId: number, visible: boolean) => void;
   onSoloLayer?: (layerId: number) => void;
   onRemovePostalCode?: (layerId: number, postalCode: string) => void;
-  onMovePlz?: (fromLayerId: number, toLayerId: number, postalCode: string) => void;
+  onMovePlz?: (
+    fromLayerId: number,
+    toLayerId: number,
+    postalCode: string
+  ) => void;
   otherLayers?: { id: number; name: string; color: string }[];
   onImportCSV?: (layerId: number) => void;
   onNotesChange?: (layerId: number, notes: string) => void;
@@ -98,7 +102,11 @@ interface LayerListItemProps {
   onClearPLZ?: (layerId: number) => void;
   onAddPlzRange?: (layerId: number, codes: string[]) => void;
   allCodesSet?: Set<string>;
-  onBulkMovePlz?: (fromLayerId: number, toLayerId: number, codes: string[]) => void;
+  onBulkMovePlz?: (
+    fromLayerId: number,
+    toLayerId: number,
+    codes: string[]
+  ) => void;
   onBulkRemovePlz?: (layerId: number, codes: string[]) => void;
 }
 
@@ -248,7 +256,9 @@ export const LayerListItem = memo(function LayerListItem({
   const [rangeInput, setRangeInput] = useState("");
   const [rangeInputVisible, setRangeInputVisible] = useState(false);
   const [plzSelectMode, setPlzSelectMode] = useState(false);
-  const [selectedPlzCodes, setSelectedPlzCodes] = useState<Set<string>>(new Set());
+  const [selectedPlzCodes, setSelectedPlzCodes] = useState<Set<string>>(
+    new Set()
+  );
   const isVisible = layer.isVisible !== "false";
   const currentOpacity = layer.opacity ?? 70;
   const postalCodes = layer.postalCodes ?? [];
@@ -266,9 +276,7 @@ export const LayerListItem = memo(function LayerListItem({
       const prefix = pc.postalCode.slice(0, 2);
       map.set(prefix, (map.get(prefix) ?? 0) + 1);
     }
-    return [...map.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
   }, [postalCodes]);
 
   const existingCodesSet = useMemo(
@@ -468,7 +476,12 @@ export const LayerListItem = memo(function LayerListItem({
             )}
           </div>
 
-          <div className={cn("flex items-center gap-0.5 transition-opacity", isLocked ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+          <div
+            className={cn(
+              "flex items-center gap-0.5 transition-opacity",
+              isLocked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}
+          >
             {/* Solo — show only this layer */}
             {onSoloLayer && (
               <Tooltip>
@@ -649,7 +662,11 @@ export const LayerListItem = memo(function LayerListItem({
                   <List className="h-3 w-3" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{codesExpanded ? "PLZ-Liste schließen" : "PLZ-Liste anzeigen"}</p>
+                  <p>
+                    {codesExpanded
+                      ? "PLZ-Liste schließen"
+                      : "PLZ-Liste anzeigen"}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -703,7 +720,9 @@ export const LayerListItem = memo(function LayerListItem({
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{notesExpanded ? "Notizen schließen" : "Notizen bearbeiten"}</p>
+                  <p>
+                    {notesExpanded ? "Notizen schließen" : "Notizen bearbeiten"}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -734,7 +753,11 @@ export const LayerListItem = memo(function LayerListItem({
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{isLocked ? "Ebene gesperrt – entsperren?" : "Ebene sperren"}</p>
+                  <p>
+                    {isLocked
+                      ? "Ebene gesperrt – entsperren?"
+                      : "Ebene sperren"}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -774,20 +797,32 @@ export const LayerListItem = memo(function LayerListItem({
           {/* PLZ prefix distribution */}
           {prefixDistribution.length > 0 && (
             <div className="mt-1.5 mb-2">
-              <div className="text-[9px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Top-Regionen (2-stellig)</div>
+              <div className="text-[9px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">
+                Top-Regionen (2-stellig)
+              </div>
               <div className="space-y-0.5">
                 {prefixDistribution.map(([prefix, count]) => {
-                  const pct = postalCodes.length > 0 ? (count / postalCodes.length) * 100 : 0;
+                  const pct =
+                    postalCodes.length > 0
+                      ? (count / postalCodes.length) * 100
+                      : 0;
                   return (
                     <div key={prefix} className="flex items-center gap-1.5">
-                      <span className="font-mono text-[10px] w-6 text-right text-muted-foreground shrink-0">{prefix}x</span>
+                      <span className="font-mono text-[10px] w-6 text-right text-muted-foreground shrink-0">
+                        {prefix}x
+                      </span>
                       <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
-                          style={{ width: `${pct}%`, backgroundColor: layer.color }}
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: layer.color,
+                          }}
                         />
                       </div>
-                      <span className="text-[10px] tabular-nums text-muted-foreground w-5 text-right shrink-0">{count}</span>
+                      <span className="text-[10px] tabular-nums text-muted-foreground w-5 text-right shrink-0">
+                        {count}
+                      </span>
                     </div>
                   );
                 })}
@@ -825,10 +860,14 @@ export const LayerListItem = memo(function LayerListItem({
                 }}
                 className={cn(
                   "text-[10px] transition-colors",
-                  plzSelectMode ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                  plzSelectMode
+                    ? "text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {plzSelectMode ? `${selectedPlzCodes.size} ausgewählt` : "Mehrere auswählen"}
+                {plzSelectMode
+                  ? `${selectedPlzCodes.size} ausgewählt`
+                  : "Mehrere auswählen"}
               </button>
               {plzSelectMode && selectedPlzCodes.size > 0 && (
                 <div className="flex items-center gap-1">
@@ -846,9 +885,13 @@ export const LayerListItem = memo(function LayerListItem({
                         e.target.value = "";
                       }}
                     >
-                      <option value="" disabled>Verschieben nach…</option>
+                      <option value="" disabled>
+                        Verschieben nach…
+                      </option>
                       {otherLayers.map((ol) => (
-                        <option key={ol.id} value={ol.id}>{ol.name}</option>
+                        <option key={ol.id} value={ol.id}>
+                          {ol.name}
+                        </option>
                       ))}
                     </select>
                   )}
@@ -867,7 +910,11 @@ export const LayerListItem = memo(function LayerListItem({
                   )}
                   <button
                     type="button"
-                    onClick={() => setSelectedPlzCodes(new Set(filteredCodes.map((c) => c.postalCode)))}
+                    onClick={() =>
+                      setSelectedPlzCodes(
+                        new Set(filteredCodes.map((c) => c.postalCode))
+                      )
+                    }
                     className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Alle
@@ -891,16 +938,29 @@ export const LayerListItem = memo(function LayerListItem({
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted"
                   )}
-                  onClick={plzSelectMode ? () => {
-                    const next = new Set(selectedPlzCodes);
-                    if (next.has(pc.postalCode)) next.delete(pc.postalCode);
-                    else next.add(pc.postalCode);
-                    setSelectedPlzCodes(next);
-                  } : undefined}
-                  onMouseEnter={() => !plzSelectMode && onPreviewPostalCode?.(pc.postalCode)}
-                  onMouseLeave={() => !plzSelectMode && onPreviewPostalCode?.(null)}
+                  onClick={
+                    plzSelectMode
+                      ? () => {
+                          const next = new Set(selectedPlzCodes);
+                          if (next.has(pc.postalCode))
+                            next.delete(pc.postalCode);
+                          else next.add(pc.postalCode);
+                          setSelectedPlzCodes(next);
+                        }
+                      : undefined
+                  }
+                  onMouseEnter={() =>
+                    !plzSelectMode && onPreviewPostalCode?.(pc.postalCode)
+                  }
+                  onMouseLeave={() =>
+                    !plzSelectMode && onPreviewPostalCode?.(null)
+                  }
                   role={plzSelectMode ? "checkbox" : undefined}
-                  aria-checked={plzSelectMode ? selectedPlzCodes.has(pc.postalCode) : undefined}
+                  aria-checked={
+                    plzSelectMode
+                      ? selectedPlzCodes.has(pc.postalCode)
+                      : undefined
+                  }
                 >
                   {pc.postalCode}
                   {!plzSelectMode && onMovePlz && otherLayers.length > 0 && (
@@ -921,21 +981,29 @@ export const LayerListItem = memo(function LayerListItem({
                           title={`PLZ ${pc.postalCode} verschieben`}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <option value="" disabled>Verschieben nach…</option>
+                          <option value="" disabled>
+                            Verschieben nach…
+                          </option>
                           {otherLayers.map((ol) => (
-                            <option key={ol.id} value={ol.id}>{ol.name}</option>
+                            <option key={ol.id} value={ol.id}>
+                              {ol.name}
+                            </option>
                           ))}
                         </select>
                         <ArrowRightLeft className="h-2 w-2 text-muted-foreground" />
                       </TooltipTrigger>
-                      <TooltipContent><p>PLZ verschieben</p></TooltipContent>
+                      <TooltipContent>
+                        <p>PLZ verschieben</p>
+                      </TooltipContent>
                     </Tooltip>
                   )}
                   {!plzSelectMode && onRemovePostalCode && (
                     <button
                       type="button"
                       className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors"
-                      onClick={() => onRemovePostalCode(layer.id, pc.postalCode)}
+                      onClick={() =>
+                        onRemovePostalCode(layer.id, pc.postalCode)
+                      }
                       aria-label={`PLZ ${pc.postalCode} entfernen`}
                     >
                       <X className="h-2 w-2" />
@@ -956,7 +1024,10 @@ export const LayerListItem = memo(function LayerListItem({
                     onChange={(e) => setRangeInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleAddRange();
-                      if (e.key === "Escape") { setRangeInputVisible(false); setRangeInput(""); }
+                      if (e.key === "Escape") {
+                        setRangeInputVisible(false);
+                        setRangeInput("");
+                      }
                     }}
                     placeholder="z.B. 10115-10179, 20, 30001"
                     className="flex-1 h-6 text-[10px] bg-muted rounded px-2 border-0 outline-none focus:ring-1 focus:ring-primary"
@@ -972,7 +1043,10 @@ export const LayerListItem = memo(function LayerListItem({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setRangeInputVisible(false); setRangeInput(""); }}
+                    onClick={() => {
+                      setRangeInputVisible(false);
+                      setRangeInput("");
+                    }}
                     className="p-0.5 text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-3 w-3" />

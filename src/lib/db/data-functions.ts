@@ -368,7 +368,9 @@ export type CrossAreaDuplicate = {
  * Find PLZ codes in the given area that also appear in other non-archived areas.
  * Returns deduplicated list of (postalCode, otherAreaId, otherAreaName).
  */
-export async function getCrossAreaDuplicates(areaId: number): Promise<CrossAreaDuplicate[]> {
+export async function getCrossAreaDuplicates(
+  areaId: number
+): Promise<CrossAreaDuplicate[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag(`area-${areaId}-duplicates`, "areas");
@@ -406,7 +408,9 @@ export interface RecentActivityItem {
   createdAt: string;
 }
 
-export async function getRecentActivity(limit = 12): Promise<RecentActivityItem[]> {
+export async function getRecentActivity(
+  limit = 12
+): Promise<RecentActivityItem[]> {
   "use cache";
   cacheLife("seconds");
   cacheTag("recent-activity");
@@ -432,7 +436,9 @@ export async function getRecentActivity(limit = 12): Promise<RecentActivityItem[
   }
 }
 
-export async function getAreaTags(areaId: number): Promise<{ id: number; name: string; color: string }[]> {
+export async function getAreaTags(
+  areaId: number
+): Promise<{ id: number; name: string; color: string }[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag(`area-${areaId}-tags`);
@@ -444,7 +450,11 @@ export async function getAreaTags(areaId: number): Promise<{ id: number; name: s
       WHERE ata.area_id = ${areaId}
       ORDER BY at.name
     `);
-    return result.rows as unknown as { id: number; name: string; color: string }[];
+    return result.rows as unknown as {
+      id: number;
+      name: string;
+      color: string;
+    }[];
   } catch {
     return [];
   }

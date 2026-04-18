@@ -142,7 +142,7 @@ export function generatePalette(count: number): string[] {
     const hue = (i * GOLDEN_ANGLE) % 360;
     // Muted jewel tones: L=56-62%, S=58-66% — rich contrast without harshness
     const saturation = 58 + (i % 4) * 3; // 58, 61, 64, 67
-    const lightness = 56 + (i % 3) * 3;  // 56, 59, 62
+    const lightness = 56 + (i % 3) * 3; // 56, 59, 62
     colors.push(hslToHex(hue, saturation, lightness));
   }
 
@@ -158,7 +158,9 @@ export function reassignAllColors(
   theme?: string
 ): Map<number, string> {
   const count = layers.length;
-  const palette = theme ? generateThemePalette(theme, count) : generatePalette(count);
+  const palette = theme
+    ? generateThemePalette(theme, count)
+    : generatePalette(count);
   const result = new Map<number, string>();
 
   for (let i = 0; i < count; i++) {
@@ -206,13 +208,16 @@ export const COLOR_THEMES: { id: string; label: string; sample: string[] }[] = [
 
 function generateThemePalette(theme: string, count: number): string[] {
   const GOLDEN_ANGLE = 137.508;
-  const themeParams: Record<string, { s: number; l: number; hueOffset: number }> = {
-    jewel:   { s: 62, l: 58, hueOffset: 0 },
-    pastel:  { s: 60, l: 78, hueOffset: 20 },
-    vivid:   { s: 80, l: 48, hueOffset: 0 },
-    earthy:  { s: 22, l: 52, hueOffset: 30 },
-    ocean:   { s: 75, l: 48, hueOffset: 190 },
-    autumn:  { s: 78, l: 50, hueOffset: 20 },
+  const themeParams: Record<
+    string,
+    { s: number; l: number; hueOffset: number }
+  > = {
+    jewel: { s: 62, l: 58, hueOffset: 0 },
+    pastel: { s: 60, l: 78, hueOffset: 20 },
+    vivid: { s: 80, l: 48, hueOffset: 0 },
+    earthy: { s: 22, l: 52, hueOffset: 30 },
+    ocean: { s: 75, l: 48, hueOffset: 190 },
+    autumn: { s: 78, l: 50, hueOffset: 20 },
   };
 
   const params = themeParams[theme] ?? themeParams.jewel;

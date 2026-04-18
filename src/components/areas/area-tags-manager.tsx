@@ -1,16 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { Tag, Plus, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { TagBadge } from "./tag-badge";
+
 import {
   getAllTagsAction,
   assignTagToAreaAction,
@@ -19,6 +12,15 @@ import {
   deleteTagAction,
   type AreaTagWithCount,
 } from "@/app/actions/area-actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+import { TagBadge } from "./tag-badge";
 
 interface AreaTagsManagerProps {
   areaId: number;
@@ -26,8 +28,16 @@ interface AreaTagsManagerProps {
 }
 
 const TAG_COLORS = [
-  "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#06b6d4", "#f97316", "#ec4899", "#84cc16", "#6366f1",
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#06b6d4",
+  "#f97316",
+  "#ec4899",
+  "#84cc16",
+  "#6366f1",
 ];
 
 export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
@@ -57,7 +67,9 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
     startTransition(async () => {
       const res = await assignTagToAreaAction(areaId, tag.id);
       if (res.success) {
-        setTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)));
+        setTags((prev) =>
+          [...prev, tag].sort((a, b) => a.name.localeCompare(b.name))
+        );
         toast.success(`Tag „${tag.name}" hinzugefügt`);
       } else {
         toast.error("Tag konnte nicht hinzugefügt werden");
@@ -88,7 +100,11 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
         setNewTagName("");
         toast.success(`Tag „${trimmed}" erstellt`);
       } else {
-        toast.error(res.error?.includes("unique") ? "Tag-Name bereits vergeben" : "Tag konnte nicht erstellt werden");
+        toast.error(
+          res.error?.includes("unique")
+            ? "Tag-Name bereits vergeben"
+            : "Tag konnte nicht erstellt werden"
+        );
       }
     });
   };
@@ -106,7 +122,9 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
     });
   };
 
-  const unassignedTags = allTags.filter((t) => !tags.some((assigned) => assigned.id === t.id));
+  const unassignedTags = allTags.filter(
+    (t) => !tags.some((assigned) => assigned.id === t.id)
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -128,12 +146,16 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
           <Plus className="h-3 w-3" />
         </PopoverTrigger>
         <PopoverContent className="w-72 p-3" align="start">
-          <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Tags verwalten</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+            Tags verwalten
+          </p>
 
           {/* Existing tags to assign */}
           {unassignedTags.length > 0 && (
             <div className="mb-3">
-              <p className="text-xs text-muted-foreground mb-1.5">Vorhandene Tags</p>
+              <p className="text-xs text-muted-foreground mb-1.5">
+                Vorhandene Tags
+              </p>
               <div className="flex flex-wrap gap-1">
                 {unassignedTags.map((tag) => (
                   <div key={tag.id} className="flex items-center gap-0.5 group">
@@ -160,12 +182,16 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
 
           {/* Create new tag */}
           <div className="border-t pt-3">
-            <p className="text-xs text-muted-foreground mb-1.5">Neuen Tag erstellen</p>
+            <p className="text-xs text-muted-foreground mb-1.5">
+              Neuen Tag erstellen
+            </p>
             <div className="flex gap-2 items-center mb-2">
               <Input
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreate();
+                }}
                 placeholder="Tag-Name…"
                 className="h-7 text-xs flex-1"
                 maxLength={50}

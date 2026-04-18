@@ -82,13 +82,19 @@ function formatRelativeTime(dateStr: string): string {
 function getChangeDetail(item: RecentActivityItem): string | null {
   const d = item.changeData;
   if (!d) return null;
-  if (item.changeType === "add_postal_codes" || item.changeType === "remove_postal_codes") {
+  if (
+    item.changeType === "add_postal_codes" ||
+    item.changeType === "remove_postal_codes"
+  ) {
     const codes = Array.isArray(d.codes) ? (d.codes as string[]) : [];
     if (codes.length === 0) return null;
     if (codes.length <= 3) return codes.join(", ");
     return `${codes.slice(0, 2).join(", ")} +${codes.length - 2}`;
   }
-  if (item.changeType === "create_layer" || item.changeType === "update_layer") {
+  if (
+    item.changeType === "create_layer" ||
+    item.changeType === "update_layer"
+  ) {
     return typeof d.name === "string" ? d.name : null;
   }
   if (item.changeType === "delete_layer") {
@@ -138,9 +144,7 @@ export function RecentActivityFeed({ items }: RecentActivityFeedProps) {
                 href={`/postal-codes/${item.areaId}`}
                 className="flex items-start gap-2 px-1.5 py-1 rounded hover:bg-accent/60 transition-colors group/item"
               >
-                <Icon
-                  className={cn("h-3 w-3 mt-0.5 shrink-0", meta.color)}
-                />
+                <Icon className={cn("h-3 w-3 mt-0.5 shrink-0", meta.color)} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1 min-w-0">
                     <span className="text-[10px] font-medium text-foreground truncate">

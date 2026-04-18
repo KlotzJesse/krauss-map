@@ -1,6 +1,14 @@
 "use client";
 
-import { IconArchive, IconPlus, IconSearch, IconX } from "@tabler/icons-react";
+import {
+  IconArchive,
+  IconCheckbox,
+  IconPlus,
+  IconSearch,
+  IconSquare,
+  IconTags,
+  IconX,
+} from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
 import {
   useOptimistic,
@@ -19,6 +27,8 @@ import {
   deleteAreaAction,
   duplicateAreaAction,
   archiveAreaAction,
+  bulkAssignTagToAreasAction,
+  bulkRemoveTagFromAreasAction,
 } from "@/app/actions/area-actions";
 import {
   AlertDialog,
@@ -166,7 +176,12 @@ export function NavAreas({
     areas,
     (
       currentAreas: AreaSummary[],
-      update: { type: "rename" | "delete" | "archive"; id: number; name?: string; isArchived?: string }
+      update: {
+        type: "rename" | "delete" | "archive";
+        id: number;
+        name?: string;
+        isArchived?: string;
+      }
     ) => {
       if (update.type === "rename" && update.name) {
         return currentAreas.map((area) =>
@@ -178,7 +193,9 @@ export function NavAreas({
       }
       if (update.type === "archive") {
         return currentAreas.map((area) =>
-          area.id === update.id ? { ...area, isArchived: update.isArchived ?? "false" } : area
+          area.id === update.id
+            ? { ...area, isArchived: update.isArchived ?? "false" }
+            : area
         );
       }
       return currentAreas;
@@ -188,10 +205,17 @@ export function NavAreas({
   const [showArchived, setShowArchived] = useReducer((v: boolean) => !v, false);
   const [areaSearch, setAreaSearch] = useState("");
   const [activeTagId, setActiveTagId] = useState<number | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedAreaIds, setSelectedAreaIds] = useState<Set<number>>(
+    new Set()
+  );
 
   // Collect all unique tags across all areas
   const allTags = useMemo(() => {
-    const tagMap = new Map<number, { id: number; name: string; color: string }>();
+    const tagMap = new Map<
+      number,
+      { id: number; name: string; color: string }
+    >();
     for (const area of optimisticAreas) {
       for (const tag of area.tags ?? []) {
         if (!tagMap.has(tag.id)) tagMap.set(tag.id, tag);
@@ -210,7 +234,9 @@ export function NavAreas({
       ? baseVisibleAreas.filter((a) => a.name.toLowerCase().includes(q))
       : baseVisibleAreas;
     if (activeTagId !== null) {
-      filtered = filtered.filter((a) => a.tags?.some((t) => t.id === activeTagId));
+      filtered = filtered.filter((a) =>
+        a.tags?.some((t) => t.id === activeTagId)
+      );
     }
     // Sort pinned areas to top, preserve original order within groups
     return [...filtered].sort((a, b) => {
@@ -220,7 +246,9 @@ export function NavAreas({
     });
   }, [baseVisibleAreas, areaSearch, activeTagId, isPinned]);
 
-  const archivedCount = optimisticAreas.filter((a) => a.isArchived === "true").length;
+  const archivedCount = optimisticAreas.filter(
+    (a) => a.isArchived === "true"
+  ).length;
 
   const [_isPending, startTransition] = useTransition();
 
@@ -311,15 +339,74 @@ export function NavAreas({
   const handleArchive = useCallback(
     (area: AreaSummary, archive: boolean) => {
       startTransition(async () => {
-        updateOptimisticAreas({ type: "archive", id: area.id, isArchived: archive ? "true" : "false" });
+        updateOptimisticAreas({
+          type: "archive",
+          id: area.id,
+          isArchived: archive ? "true" : "false",
+        });
         await executeAction(archiveAreaAction(area.id, archive), {
-          loading: archive ? `Archiviere "${area.name}"...` : `Stelle "${area.name}" wieder her...`,
-          success: archive ? `"${area.name}" archiviert` : `"${area.name}" wiederhergestellt`,
+          loading: archive
+            ? `Archiviere "${area.name}"...`
+            : `Stelle "${area.name}" wieder her...`,
+          success: archive
+            ? `"${area.name}" archiviert`
+            : `"${area.name}" wiederhergestellt`,
           error: "Fehler beim Archivieren",
         });
       });
     },
     [startTransition]
+  );
+
+  const handleToggleSelectMode = useCallback(() => {
+    setSelectMode((v) => !v);
+    setSelectedAreaIds(new Set());
+  }, []);
+
+  const handleToggleSelectArea = useCallback((areaId: number) => {
+    setSelectedAreaIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(areaId)) {
+        next.delete(areaId);
+      } else {
+        next.add(areaId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedAreaIds(new Set(visibleAreas.map((a) => a.id)));
+  }, [visibleAreas]);
+
+  const handleBulkAssignTag = useCallback(
+    (tagId: number) => {
+      const ids = [...selectedAreaIds];
+      if (!ids.length) return;
+      startTransition(async () => {
+        await executeAction(bulkAssignTagToAreasAction(ids, tagId), {
+          loading: `Weise Tag zu...`,
+          success: `Tag ${ids.length} Gebiet(en) zugewiesen`,
+          error: "Zuweisung fehlgeschlagen",
+        });
+      });
+    },
+    [selectedAreaIds, startTransition]
+  );
+
+  const handleBulkRemoveTag = useCallback(
+    (tagId: number) => {
+      const ids = [...selectedAreaIds];
+      if (!ids.length) return;
+      startTransition(async () => {
+        await executeAction(bulkRemoveTagFromAreasAction(ids, tagId), {
+          loading: `Entferne Tag...`,
+          success: `Tag von ${ids.length} Gebiet(en) entfernt`,
+          error: "Entfernen fehlgeschlagen",
+        });
+      });
+    },
+    [selectedAreaIds, startTransition]
   );
 
   const handleConfirmDelete = async () => {
@@ -359,7 +446,11 @@ export function NavAreas({
                   type="button"
                   onClick={setShowArchived}
                   className={`hover:bg-sidebar-accent rounded p-0.5 relative ${showArchived ? "text-amber-500" : "text-muted-foreground"}`}
-                  title={showArchived ? "Archivierte ausblenden" : `${archivedCount} archivierte anzeigen`}
+                  title={
+                    showArchived
+                      ? "Archivierte ausblenden"
+                      : `${archivedCount} archivierte anzeigen`
+                  }
                 >
                   <IconArchive className="h-3.5 w-3.5" />
                   {!showArchived && (
@@ -369,6 +460,18 @@ export function NavAreas({
                   )}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={handleToggleSelectMode}
+                className={`hover:bg-sidebar-accent rounded p-0.5 ${selectMode ? "text-primary" : "text-muted-foreground"}`}
+                title={
+                  selectMode
+                    ? "Auswahlmodus beenden"
+                    : "Mehrere Gebiete auswählen"
+                }
+              >
+                <IconTags className="h-3.5 w-3.5" />
+              </button>
               <button
                 type="button"
                 onClick={() => dispatch({ type: "OPEN_CREATE" })}
@@ -408,11 +511,22 @@ export function NavAreas({
                   <button
                     key={tag.id}
                     type="button"
-                    onClick={() => setActiveTagId(activeTagId === tag.id ? null : tag.id)}
+                    onClick={() =>
+                      setActiveTagId(activeTagId === tag.id ? null : tag.id)
+                    }
                     className={`transition-opacity ${activeTagId !== null && activeTagId !== tag.id ? "opacity-40" : ""}`}
-                    title={activeTagId === tag.id ? "Filter entfernen" : `Nur „${tag.name}" anzeigen`}
+                    title={
+                      activeTagId === tag.id
+                        ? "Filter entfernen"
+                        : `Nur „${tag.name}" anzeigen`
+                    }
                   >
-                    <TagBadge name={tag.name} color={tag.color} small className="cursor-pointer hover:brightness-110" />
+                    <TagBadge
+                      name={tag.name}
+                      color={tag.color}
+                      small
+                      className="cursor-pointer hover:brightness-110"
+                    />
                   </button>
                 ))}
               </div>
@@ -420,28 +534,100 @@ export function NavAreas({
           </div>
         )}
         <SidebarGroupContent>
+          {selectMode && (
+            <div className="px-2 pb-2 pt-1 border-b border-border/50">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-foreground">
+                  {selectedAreaIds.size > 0
+                    ? `${selectedAreaIds.size} ausgewählt`
+                    : "Gebiete auswählen"}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="text-[10px] text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-muted transition-colors"
+                  >
+                    Alle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAreaIds(new Set())}
+                    className="text-[10px] text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-muted transition-colors"
+                    disabled={selectedAreaIds.size === 0}
+                  >
+                    Keine
+                  </button>
+                </div>
+              </div>
+              {allTags.length > 0 && selectedAreaIds.size > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground">
+                    Tag zuweisen / entfernen:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {allTags.map((tag) => (
+                      <div key={tag.id} className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleBulkAssignTag(tag.id)}
+                          title={`Tag „${tag.name}" zuweisen`}
+                        >
+                          <TagBadge
+                            name={tag.name}
+                            color={tag.color}
+                            small
+                            className="cursor-pointer hover:brightness-110"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleBulkRemoveTag(tag.id)}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          title={`Tag „${tag.name}" entfernen`}
+                        >
+                          <IconX className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {allTags.length === 0 && (
+                <p className="text-[10px] text-muted-foreground italic">
+                  Noch keine Tags vorhanden
+                </p>
+              )}
+            </div>
+          )}
           <SidebarMenu>
             {isLoading && (
               <SidebarMenuItem>
                 <SidebarMenuButton disabled>Lade...</SidebarMenuButton>
               </SidebarMenuItem>
             )}
-            {!isLoading && visibleAreas.length === 0 && optimisticAreas.length === 0 && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => dispatch({ type: "OPEN_CREATE" })}
-                  className="text-muted-foreground"
-                >
-                  <IconPlus className="h-4 w-4" />
-                  <span>Erstes Gebiet erstellen</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {!isLoading && visibleAreas.length === 0 && (areaSearch || activeTagId !== null) && (
-              <SidebarMenuItem>
-                <span className="px-2 text-xs text-muted-foreground">Keine Treffer</span>
-              </SidebarMenuItem>
-            )}
+            {!isLoading &&
+              visibleAreas.length === 0 &&
+              optimisticAreas.length === 0 && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => dispatch({ type: "OPEN_CREATE" })}
+                    className="text-muted-foreground"
+                  >
+                    <IconPlus className="h-4 w-4" />
+                    <span>Erstes Gebiet erstellen</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            {!isLoading &&
+              visibleAreas.length === 0 &&
+              (areaSearch || activeTagId !== null) && (
+                <SidebarMenuItem>
+                  <span className="px-2 text-xs text-muted-foreground">
+                    Keine Treffer
+                  </span>
+                </SidebarMenuItem>
+              )}
             {!isLoading &&
               visibleAreas.map((area) => (
                 <AreaListItem
@@ -452,6 +638,9 @@ export function NavAreas({
                   editInputRef={editInputRef}
                   isCurrentRoute={currentAreaIdFromRoute === String(area.id)}
                   isPinned={isPinned(area.id)}
+                  isSelectable={selectMode}
+                  isSelected={selectedAreaIds.has(area.id)}
+                  onToggleSelect={handleToggleSelectArea}
                   onTogglePin={togglePin}
                   onStartRename={handleStartRename}
                   onConfirmRename={handleConfirmRename}

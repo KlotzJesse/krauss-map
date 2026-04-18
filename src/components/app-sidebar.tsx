@@ -20,5 +20,11 @@ export async function AppSidebar(props: AppSidebarProps) {
     getRecentActivity(12),
   ]);
 
-  return <AppSidebarClient areas={areas} recentActivity={recentActivity} {...props} />;
+  return (
+    <AppSidebarClient
+      areas={areas}
+      recentActivity={recentActivity}
+      {...props}
+    />
+  );
 }

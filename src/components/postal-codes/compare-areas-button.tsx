@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 const AreaComparisonDialog = dynamic(
-  () => import("@/components/areas/area-comparison-dialog").then((m) => m.AreaComparisonDialog),
+  () =>
+    import("@/components/areas/area-comparison-dialog").then(
+      (m) => m.AreaComparisonDialog
+    ),
   { ssr: false }
 );
 
@@ -33,11 +36,7 @@ export function CompareAreasButton({ areas }: CompareAreasButtonProps) {
         <IconChartBar className="h-3.5 w-3.5" />
         Vergleichen
       </Button>
-      <AreaComparisonDialog
-        open={open}
-        onOpenChange={setOpen}
-        areas={areas}
-      />
+      <AreaComparisonDialog open={open} onOpenChange={setOpen} areas={areas} />
     </>
   );
 }

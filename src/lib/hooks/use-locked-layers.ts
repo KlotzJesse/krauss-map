@@ -29,8 +29,8 @@ function writeToStorage(areaId: number | string, locked: Set<number>): void {
 }
 
 export function useLockedLayers(areaId: number | string) {
-  const [lockedLayerIds, setLockedLayerIds] = useState<Set<number>>(
-    () => readFromStorage(areaId)
+  const [lockedLayerIds, setLockedLayerIds] = useState<Set<number>>(() =>
+    readFromStorage(areaId)
   );
 
   // Sync from storage when areaId changes

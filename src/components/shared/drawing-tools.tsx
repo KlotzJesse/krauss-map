@@ -1,15 +1,6 @@
 "use client";
 
 import {
-  IconAlertTriangle,
-  IconClock,
-  IconDeviceFloppy,
-  IconGitMerge,
-  IconHistory,
-  IconLayoutColumns,
-  IconPlus,
-} from "@tabler/icons-react";
-import {
   DndContext,
   PointerSensor,
   closestCenter,
@@ -18,19 +9,45 @@ import {
 } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
 import {
+  restrictToParentElement,
+  restrictToVerticalAxis,
+} from "@dnd-kit/modifiers";
+import {
   SortableContext,
   arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import {
-  restrictToParentElement,
-  restrictToVerticalAxis,
-} from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  IconAlertTriangle,
+  IconClock,
+  IconDeviceFloppy,
+  IconGitMerge,
+  IconHistory,
+  IconLayoutColumns,
+  IconPlus,
+} from "@tabler/icons-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ArrowDownUp, CheckSquare, ChevronDown, ChevronUp, Download, Eye, EyeOff, GripVertical, HelpCircle, Palette, Search, Square, TriangleAlert, Trash2, Upload, X } from "lucide-react";
+import {
+  ArrowDownUp,
+  CheckSquare,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Eye,
+  EyeOff,
+  GripVertical,
+  HelpCircle,
+  Palette,
+  Search,
+  Square,
+  TriangleAlert,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -57,11 +74,14 @@ import {
   exportAreaDataAction,
   importAreaFromDataAction,
 } from "@/app/actions/area-actions";
-import { batchUpdateVisibilityAction, mergeLayersAction } from "@/app/actions/layer-actions";
+import {
+  batchUpdateVisibilityAction,
+  mergeLayersAction,
+} from "@/app/actions/layer-actions";
+import { AreaTagsManager } from "@/components/areas/area-tags-manager";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
 import { LayerListItem } from "@/components/shared/layer-list-item";
-import { AreaTagsManager } from "@/components/areas/area-tags-manager";
 import { PendingRegionsSection } from "@/components/shared/pending-regions-section";
 import {
   AlertDialog,
@@ -75,6 +95,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -90,18 +122,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -119,8 +139,16 @@ import type {
   areaLayers,
 } from "@/lib/schema/schema";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
-import { copyPostalCodesCSV, exportLayersPDF, exportLayersXLSX } from "@/lib/utils/export-utils";
-import { COLOR_THEMES, generateNextColor, reassignAllColors } from "@/lib/utils/layer-colors";
+import {
+  copyPostalCodesCSV,
+  exportLayersPDF,
+  exportLayersXLSX,
+} from "@/lib/utils/export-utils";
+import {
+  COLOR_THEMES,
+  generateNextColor,
+  reassignAllColors,
+} from "@/lib/utils/layer-colors";
 
 const EMPTY_ARRAY: never[] = [];
 
@@ -542,10 +570,15 @@ function useDrawingToolsActions({
       const saved = localStorage.getItem("drawing-tools-ui");
       if (saved) {
         try {
-          const parsed = JSON.parse(saved) as { layersOpen?: boolean; regionsOpen?: boolean };
+          const parsed = JSON.parse(saved) as {
+            layersOpen?: boolean;
+            regionsOpen?: boolean;
+          };
           layersOpen = parsed.layersOpen ?? layersOpen;
           regionsOpen = parsed.regionsOpen ?? false;
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
     return {
@@ -1012,7 +1045,9 @@ function useDrawingToolsActions({
       updateOptimisticLayers({ type: "reorder", layers: withNewIndices });
       try {
         await Promise.all(
-          withNewIndices.map((l) => updateLayer(l.id, { orderIndex: l.orderIndex }))
+          withNewIndices.map((l) =>
+            updateLayer(l.id, { orderIndex: l.orderIndex })
+          )
         );
         onLayerUpdate?.();
         toast.success("Gebiete nach PLZ-Anzahl sortiert");
@@ -1022,13 +1057,15 @@ function useDrawingToolsActions({
     });
   };
 
-  const handleRemovePostalCodeFromLayer = (layerId: number, postalCode: string) => {
+  const handleRemovePostalCodeFromLayer = (
+    layerId: number,
+    postalCode: string
+  ) => {
     if (!removePostalCodesFromLayer) return;
     startTransition(async () => {
       const layer = optimisticLayers.find((l) => l.id === layerId);
-      const updated = layer?.postalCodes?.filter(
-        (pc) => pc.postalCode !== postalCode
-      ) ?? [];
+      const updated =
+        layer?.postalCodes?.filter((pc) => pc.postalCode !== postalCode) ?? [];
       updateOptimisticLayers({
         type: "update",
         id: layerId,
@@ -1043,24 +1080,35 @@ function useDrawingToolsActions({
     });
   };
 
-  const handleClearLayerPLZ = useCallback((layerId: number) => {
-    if (!removePostalCodesFromLayer) return;
-    const layer = optimisticLayers.find((l) => l.id === layerId);
-    const codes = layer?.postalCodes?.map((pc) => pc.postalCode) ?? [];
-    if (codes.length === 0) return;
-    startTransition(async () => {
-      updateOptimisticLayers({ type: "update", id: layerId, layer: { postalCodes: [] } });
-      try {
-        await removePostalCodesFromLayer(layerId, codes);
-        onLayerUpdate?.();
-        toast.success(`${codes.length} PLZ entfernt`);
-      } catch {
-        toast.error("Fehler beim Leeren des Layers");
-      }
-    });
-  }, [optimisticLayers, removePostalCodesFromLayer, onLayerUpdate]);
+  const handleClearLayerPLZ = useCallback(
+    (layerId: number) => {
+      if (!removePostalCodesFromLayer) return;
+      const layer = optimisticLayers.find((l) => l.id === layerId);
+      const codes = layer?.postalCodes?.map((pc) => pc.postalCode) ?? [];
+      if (codes.length === 0) return;
+      startTransition(async () => {
+        updateOptimisticLayers({
+          type: "update",
+          id: layerId,
+          layer: { postalCodes: [] },
+        });
+        try {
+          await removePostalCodesFromLayer(layerId, codes);
+          onLayerUpdate?.();
+          toast.success(`${codes.length} PLZ entfernt`);
+        } catch {
+          toast.error("Fehler beim Leeren des Layers");
+        }
+      });
+    },
+    [optimisticLayers, removePostalCodesFromLayer, onLayerUpdate]
+  );
 
-  const handleMovePlz = (fromLayerId: number, toLayerId: number, postalCode: string) => {
+  const handleMovePlz = (
+    fromLayerId: number,
+    toLayerId: number,
+    postalCode: string
+  ) => {
     if (!addPostalCodesToLayer || !removePostalCodesFromLayer) return;
     startTransition(async () => {
       // Optimistically: remove from source, add to target
@@ -1070,12 +1118,19 @@ function useDrawingToolsActions({
       updateOptimisticLayers({
         type: "update",
         id: fromLayerId,
-        layer: { postalCodes: fromLayer.postalCodes?.filter((pc) => pc.postalCode !== postalCode) ?? [] },
+        layer: {
+          postalCodes:
+            fromLayer.postalCodes?.filter(
+              (pc) => pc.postalCode !== postalCode
+            ) ?? [],
+        },
       });
       updateOptimisticLayers({
         type: "update",
         id: toLayerId,
-        layer: { postalCodes: [...(toLayer.postalCodes ?? []), { postalCode }] },
+        layer: {
+          postalCodes: [...(toLayer.postalCodes ?? []), { postalCode }],
+        },
       });
       try {
         await addPostalCodesToLayer(toLayerId, [postalCode]);
@@ -1099,8 +1154,17 @@ function useDrawingToolsActions({
     });
   };
 
-  const handleBulkMovePlz = (fromLayerId: number, toLayerId: number, codes: string[]) => {
-    if (!addPostalCodesToLayer || !removePostalCodesFromLayer || codes.length === 0) return;
+  const handleBulkMovePlz = (
+    fromLayerId: number,
+    toLayerId: number,
+    codes: string[]
+  ) => {
+    if (
+      !addPostalCodesToLayer ||
+      !removePostalCodesFromLayer ||
+      codes.length === 0
+    )
+      return;
     startTransition(async () => {
       const fromLayer = optimisticLayers.find((l) => l.id === fromLayerId);
       const toLayer = optimisticLayers.find((l) => l.id === toLayerId);
@@ -1109,14 +1173,26 @@ function useDrawingToolsActions({
       updateOptimisticLayers({
         type: "update",
         id: fromLayerId,
-        layer: { postalCodes: fromLayer.postalCodes?.filter((pc) => !codeSet.has(pc.postalCode)) ?? [] },
+        layer: {
+          postalCodes:
+            fromLayer.postalCodes?.filter(
+              (pc) => !codeSet.has(pc.postalCode)
+            ) ?? [],
+        },
       });
-      const existingTarget = new Set(toLayer.postalCodes?.map((pc) => pc.postalCode) ?? []);
+      const existingTarget = new Set(
+        toLayer.postalCodes?.map((pc) => pc.postalCode) ?? []
+      );
       const newForTarget = codes.filter((c) => !existingTarget.has(c));
       updateOptimisticLayers({
         type: "update",
         id: toLayerId,
-        layer: { postalCodes: [...(toLayer.postalCodes ?? []), ...newForTarget.map((c) => ({ postalCode: c }))] },
+        layer: {
+          postalCodes: [
+            ...(toLayer.postalCodes ?? []),
+            ...newForTarget.map((c) => ({ postalCode: c })),
+          ],
+        },
       });
       try {
         await addPostalCodesToLayer(toLayerId, codes);
@@ -1138,7 +1214,11 @@ function useDrawingToolsActions({
       updateOptimisticLayers({
         type: "update",
         id: layerId,
-        layer: { postalCodes: layer.postalCodes?.filter((pc) => !codeSet.has(pc.postalCode)) ?? [] },
+        layer: {
+          postalCodes:
+            layer.postalCodes?.filter((pc) => !codeSet.has(pc.postalCode)) ??
+            [],
+        },
       });
       try {
         await removePostalCodesFromLayer(layerId, codes);
@@ -1225,7 +1305,10 @@ function useDrawingToolsActions({
 
 type SortableLayerListItemProps = React.ComponentProps<typeof LayerListItem>;
 
-function SortableLayerListItem({ layer, ...props }: SortableLayerListItemProps) {
+function SortableLayerListItem({
+  layer,
+  ...props
+}: SortableLayerListItemProps) {
   const {
     attributes,
     listeners,
@@ -1244,7 +1327,12 @@ function SortableLayerListItem({ layer, ...props }: SortableLayerListItemProps) 
     <div ref={setNodeRef} style={style}>
       <LayerListItem
         layer={layer}
-        dragHandleProps={{ ...attributes, ...listeners } as React.HTMLAttributes<HTMLButtonElement>}
+        dragHandleProps={
+          {
+            ...attributes,
+            ...listeners,
+          } as React.HTMLAttributes<HTMLButtonElement>
+        }
         {...props}
       />
     </div>
@@ -1275,13 +1363,24 @@ interface LayerManagementSectionProps {
   handleReassignColors: (theme?: string) => void;
   handleReorderLayers: (oldIndex: number, newIndex: number) => void;
   handleSortByCount: () => void;
-  handleRemovePostalCodeFromLayer?: (layerId: number, postalCode: string) => void;
-  handleMovePlz?: (fromLayerId: number, toLayerId: number, postalCode: string) => void;
+  handleRemovePostalCodeFromLayer?: (
+    layerId: number,
+    postalCode: string
+  ) => void;
+  handleMovePlz?: (
+    fromLayerId: number,
+    toLayerId: number,
+    postalCode: string
+  ) => void;
   handleNotesChange?: (layerId: number, notes: string) => void;
   handleClearLayerPLZ?: (layerId: number) => void;
   handleBulkDelete: (layerIds: number[]) => void;
   handleBulkVisibility: (layerIds: number[], visible: boolean) => void;
-  handleBulkMovePlz?: (fromLayerId: number, toLayerId: number, codes: string[]) => void;
+  handleBulkMovePlz?: (
+    fromLayerId: number,
+    toLayerId: number,
+    codes: string[]
+  ) => void;
   handleBulkRemovePlz?: (layerId: number, codes: string[]) => void;
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
   onOpenConflicts?: () => void;
@@ -1359,8 +1458,13 @@ function LayerManagementSection({
       try {
         const saved = localStorage.getItem("drawing-tools-ui");
         const prev = saved ? JSON.parse(saved) : {};
-        localStorage.setItem("drawing-tools-ui", JSON.stringify({ ...prev, layersOpen: open }));
-      } catch { /* ignore */ }
+        localStorage.setItem(
+          "drawing-tools-ui",
+          JSON.stringify({ ...prev, layersOpen: open })
+        );
+      } catch {
+        /* ignore */
+      }
     },
     [dispatchUI]
   );
@@ -1402,16 +1506,24 @@ function LayerManagementSection({
 
   const hasHiddenLayers = optimisticLayers.some((l) => l.isVisible === "false");
   const [layerSearch, setLayerSearch] = useState("");
-  const [layerSortMode, setLayerSortMode] = useState<"default" | "name" | "count-desc" | "count-asc">("default");
+  const [layerSortMode, setLayerSortMode] = useState<
+    "default" | "name" | "count-desc" | "count-asc"
+  >("default");
   const filteredLayers = useMemo(() => {
     const q = layerSearch.trim().toLowerCase();
-    let result = q ? optimisticLayers.filter((l) => l.name.toLowerCase().includes(q)) : [...optimisticLayers];
+    let result = q
+      ? optimisticLayers.filter((l) => l.name.toLowerCase().includes(q))
+      : [...optimisticLayers];
     if (layerSortMode === "name") {
       result = [...result].sort((a, b) => a.name.localeCompare(b.name, "de"));
     } else if (layerSortMode === "count-desc") {
-      result = [...result].sort((a, b) => (b.postalCodes?.length ?? 0) - (a.postalCodes?.length ?? 0));
+      result = [...result].sort(
+        (a, b) => (b.postalCodes?.length ?? 0) - (a.postalCodes?.length ?? 0)
+      );
     } else if (layerSortMode === "count-asc") {
-      result = [...result].sort((a, b) => (a.postalCodes?.length ?? 0) - (b.postalCodes?.length ?? 0));
+      result = [...result].sort(
+        (a, b) => (a.postalCodes?.length ?? 0) - (b.postalCodes?.length ?? 0)
+      );
     }
     return result;
   }, [optimisticLayers, layerSearch, layerSortMode]);
@@ -1419,7 +1531,9 @@ function LayerManagementSection({
   const isDragDisabled = !!layerSearch.trim() || layerSortMode !== "default";
 
   // Cross-area PLZ duplicate detection — fetched lazily when layers section is open
-  const [crossAreaDuplicates, setCrossAreaDuplicates] = useState<{ postalCode: string; otherAreaId: number; otherAreaName: string }[]>([]);
+  const [crossAreaDuplicates, setCrossAreaDuplicates] = useState<
+    { postalCode: string; otherAreaId: number; otherAreaName: string }[]
+  >([]);
   const [crossAreaLoaded, setCrossAreaLoaded] = useState(false);
   useEffect(() => {
     if (!areaId || crossAreaLoaded) return;
@@ -1440,7 +1554,10 @@ function LayerManagementSection({
       if (existing) {
         existing.codes.push(d.postalCode);
       } else {
-        map.set(d.otherAreaName, { areaId: d.otherAreaId, codes: [d.postalCode] });
+        map.set(d.otherAreaName, {
+          areaId: d.otherAreaId,
+          codes: [d.postalCode],
+        });
       }
     }
     return map;
@@ -1502,7 +1619,9 @@ function LayerManagementSection({
 
   // CSV import dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importTargetLayerId, setImportTargetLayerId] = useState<number | null>(null);
+  const [importTargetLayerId, setImportTargetLayerId] = useState<number | null>(
+    null
+  );
   const [importText, setImportText] = useState("");
   const [importPending, setImportPending] = useState(false);
 
@@ -1530,10 +1649,13 @@ function LayerManagementSection({
   }, [prefixInput, allCodesSet]);
 
   const handleAddByPrefix = useCallback(async () => {
-    if (!addPostalCodesToLayer || !activeLayerId || !prefixMatches?.length) return;
+    if (!addPostalCodesToLayer || !activeLayerId || !prefixMatches?.length)
+      return;
     // Filter out already-assigned codes from active layer
     const activeLayer = optimisticLayers.find((l) => l.id === activeLayerId);
-    const existing = new Set(activeLayer?.postalCodes?.map((pc) => pc.postalCode) ?? []);
+    const existing = new Set(
+      activeLayer?.postalCodes?.map((pc) => pc.postalCode) ?? []
+    );
     const toAdd = prefixMatches.filter((c) => !existing.has(c));
     if (toAdd.length === 0) {
       toast.info("Alle PLZ bereits in dieser Ebene");
@@ -1583,7 +1705,9 @@ function LayerManagementSection({
       const reader = new FileReader();
       reader.onload = (ev) => {
         setImportText((prev) =>
-          prev ? `${prev}\n${ev.target?.result}` : String(ev.target?.result ?? "")
+          prev
+            ? `${prev}\n${ev.target?.result}`
+            : String(ev.target?.result ?? "")
         );
       };
       reader.readAsText(file);
@@ -1691,7 +1815,10 @@ function LayerManagementSection({
                     onClick={() =>
                       hasHiddenLayers
                         ? handleShowAllLayers()
-                        : handleBulkVisibility(optimisticLayers.map((l) => l.id), false)
+                        : handleBulkVisibility(
+                            optimisticLayers.map((l) => l.id),
+                            false
+                          )
                     }
                     variant="ghost"
                     size="sm"
@@ -1805,7 +1932,11 @@ function LayerManagementSection({
             <div className="flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs">
               <button
                 type="button"
-                onClick={selectedIds.size === filteredLayers.length ? clearSelection : selectAll}
+                onClick={
+                  selectedIds.size === filteredLayers.length
+                    ? clearSelection
+                    : selectAll
+                }
                 className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
               >
                 {selectedIds.size === filteredLayers.length ? (
@@ -1813,28 +1944,62 @@ function LayerManagementSection({
                 ) : (
                   <Square className="h-3 w-3" />
                 )}
-                <span className="font-medium">{selectedIds.size > 0 ? `${selectedIds.size} ausgewählt` : "Alle"}</span>
+                <span className="font-medium">
+                  {selectedIds.size > 0
+                    ? `${selectedIds.size} ausgewählt`
+                    : "Alle"}
+                </span>
               </button>
               {selectedIds.size > 0 && (
                 <>
                   <span className="text-border mx-1">|</span>
                   <Tooltip>
-                    <TooltipTrigger render={<button type="button" onClick={handleBulkShowSelected} className="p-0.5 rounded hover:bg-muted" />}>
+                    <TooltipTrigger
+                      render={
+                        <button
+                          type="button"
+                          onClick={handleBulkShowSelected}
+                          className="p-0.5 rounded hover:bg-muted"
+                        />
+                      }
+                    >
                       <Eye className="h-3 w-3" />
                     </TooltipTrigger>
-                    <TooltipContent><p>Einblenden</p></TooltipContent>
+                    <TooltipContent>
+                      <p>Einblenden</p>
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip>
-                    <TooltipTrigger render={<button type="button" onClick={handleBulkHideSelected} className="p-0.5 rounded hover:bg-muted" />}>
+                    <TooltipTrigger
+                      render={
+                        <button
+                          type="button"
+                          onClick={handleBulkHideSelected}
+                          className="p-0.5 rounded hover:bg-muted"
+                        />
+                      }
+                    >
                       <EyeOff className="h-3 w-3" />
                     </TooltipTrigger>
-                    <TooltipContent><p>Ausblenden</p></TooltipContent>
+                    <TooltipContent>
+                      <p>Ausblenden</p>
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip>
-                    <TooltipTrigger render={<button type="button" onClick={handleBulkDeleteSelected} className="p-0.5 rounded hover:bg-muted text-destructive" />}>
+                    <TooltipTrigger
+                      render={
+                        <button
+                          type="button"
+                          onClick={handleBulkDeleteSelected}
+                          className="p-0.5 rounded hover:bg-muted text-destructive"
+                        />
+                      }
+                    >
                       <Trash2 className="h-3 w-3" />
                     </TooltipTrigger>
-                    <TooltipContent><p>{selectedIds.size} Gebiete löschen</p></TooltipContent>
+                    <TooltipContent>
+                      <p>{selectedIds.size} Gebiete löschen</p>
+                    </TooltipContent>
                   </Tooltip>
                 </>
               )}
@@ -1990,25 +2155,36 @@ function LayerManagementSection({
                 )}
               </div>
               <Tooltip>
-                <TooltipTrigger render={
-                  <button
-                    type="button"
-                    className={`shrink-0 h-7 w-7 flex items-center justify-center rounded border text-muted-foreground transition-colors hover:bg-muted ${layerSortMode !== "default" ? "border-primary/50 bg-primary/5 text-primary" : "border-transparent"}`}
-                    onClick={() => {
-                      setLayerSortMode((m) =>
-                        m === "default" ? "name" : m === "name" ? "count-desc" : m === "count-desc" ? "count-asc" : "default"
-                      );
-                    }}
-                  />
-                }>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      className={`shrink-0 h-7 w-7 flex items-center justify-center rounded border text-muted-foreground transition-colors hover:bg-muted ${layerSortMode !== "default" ? "border-primary/50 bg-primary/5 text-primary" : "border-transparent"}`}
+                      onClick={() => {
+                        setLayerSortMode((m) =>
+                          m === "default"
+                            ? "name"
+                            : m === "name"
+                              ? "count-desc"
+                              : m === "count-desc"
+                                ? "count-asc"
+                                : "default"
+                        );
+                      }}
+                    />
+                  }
+                >
                   <ArrowDownUp className="h-3 w-3" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    {layerSortMode === "default" ? "Sortieren: Standard" :
-                     layerSortMode === "name" ? "Sortiert: A–Z" :
-                     layerSortMode === "count-desc" ? "Sortiert: PLZ ↓" :
-                     "Sortiert: PLZ ↑"}
+                    {layerSortMode === "default"
+                      ? "Sortieren: Standard"
+                      : layerSortMode === "name"
+                        ? "Sortiert: A–Z"
+                        : layerSortMode === "count-desc"
+                          ? "Sortiert: PLZ ↓"
+                          : "Sortiert: PLZ ↑"}
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -2020,22 +2196,32 @@ function LayerManagementSection({
             <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-2.5 py-2 text-xs">
               <div className="flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-400 mb-1">
                 <TriangleAlert className="h-3 w-3 shrink-0" />
-                <span>{crossAreaDuplicates.length} PLZ auch in anderen Gebieten</span>
+                <span>
+                  {crossAreaDuplicates.length} PLZ auch in anderen Gebieten
+                </span>
               </div>
               <ul className="space-y-0.5 text-amber-600 dark:text-amber-500">
-                {[...crossAreaDuplicatesByArea.entries()].map(([areaName, { areaId: otherAreaId, codes }]) => (
-                  <li key={areaName} className="flex items-baseline gap-1 min-w-0">
-                    <a
-                      href={`/postal-codes/${otherAreaId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium truncate underline-offset-2 hover:underline shrink-0 max-w-[120px]"
+                {[...crossAreaDuplicatesByArea.entries()].map(
+                  ([areaName, { areaId: otherAreaId, codes }]) => (
+                    <li
+                      key={areaName}
+                      className="flex items-baseline gap-1 min-w-0"
                     >
-                      {areaName}
-                    </a>
-                    <span className="text-[10px]">{codes.slice(0, 5).join(", ")}{codes.length > 5 ? ` +${codes.length - 5}` : ""}</span>
-                  </li>
-                ))}
+                      <a
+                        href={`/postal-codes/${otherAreaId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium truncate underline-offset-2 hover:underline shrink-0 max-w-[120px]"
+                      >
+                        {areaName}
+                      </a>
+                      <span className="text-[10px]">
+                        {codes.slice(0, 5).join(", ")}
+                        {codes.length > 5 ? ` +${codes.length - 5}` : ""}
+                      </span>
+                    </li>
+                  )
+                )}
               </ul>
             </div>
           )}
@@ -2057,7 +2243,9 @@ function LayerManagementSection({
                   editingLayerId={form.editingLayerId}
                   editingLayerName={form.editingLayerName}
                   editLayerInputRef={editLayerInputRef}
-                  onSelect={(id) => { if (!selectMode) onLayerSelect?.(id); }}
+                  onSelect={(id) => {
+                    if (!selectMode) onLayerSelect?.(id);
+                  }}
                   onStartEdit={(id, name) =>
                     dispatchForm({ type: "START_EDIT", layerId: id, name })
                   }
@@ -2071,26 +2259,37 @@ function LayerManagementSection({
                   onDelete={handleDeleteLayer}
                   onDuplicateLayer={handleDuplicateLayer}
                   onToggleVisibility={handleToggleVisibility}
-                   onSoloLayer={handleSoloLayer}
-                   onRemovePostalCode={guardedRemovePostalCode}
-                   onImportCSV={addPostalCodesToLayer ? guardedImportCSV : undefined}
-                   onNotesChange={handleNotesChange}
-                   onMovePlz={handleMovePlz}
-                   otherLayers={optimisticLayers.filter((l) => l.id !== layer.id).map((l) => ({ id: l.id, name: l.name, color: l.color }))}
-                   isSelected={selectMode ? selectedIds.has(layer.id) : undefined}
-                   onToggleSelect={selectMode ? toggleSelect : undefined}
-                   isLocked={isLocked(layer.id)}
-                   onToggleLock={toggleLock}
-                   onPreviewPostalCode={onPreviewPostalCode}
-                   onZoomToLayer={onZoomToLayer}
-                   onClearPLZ={handleClearLayerPLZ}
-                   onAddPlzRange={addPostalCodesToLayer ? (layerId, codes) => addPostalCodesToLayer(layerId, codes) : undefined}
-                   allCodesSet={allCodesSet}
-                   onBulkMovePlz={handleBulkMovePlz}
-                   onBulkRemovePlz={handleBulkRemovePlz}
-                 />
-               ))
-             ) : (
+                  onSoloLayer={handleSoloLayer}
+                  onRemovePostalCode={guardedRemovePostalCode}
+                  onImportCSV={
+                    addPostalCodesToLayer ? guardedImportCSV : undefined
+                  }
+                  onNotesChange={handleNotesChange}
+                  onMovePlz={handleMovePlz}
+                  otherLayers={optimisticLayers
+                    .filter((l) => l.id !== layer.id)
+                    .map((l) => ({ id: l.id, name: l.name, color: l.color }))}
+                  isSelected={
+                    selectMode ? selectedIds.has(layer.id) : undefined
+                  }
+                  onToggleSelect={selectMode ? toggleSelect : undefined}
+                  isLocked={isLocked(layer.id)}
+                  onToggleLock={toggleLock}
+                  onPreviewPostalCode={onPreviewPostalCode}
+                  onZoomToLayer={onZoomToLayer}
+                  onClearPLZ={handleClearLayerPLZ}
+                  onAddPlzRange={
+                    addPostalCodesToLayer
+                      ? (layerId, codes) =>
+                          addPostalCodesToLayer(layerId, codes)
+                      : undefined
+                  }
+                  allCodesSet={allCodesSet}
+                  onBulkMovePlz={handleBulkMovePlz}
+                  onBulkRemovePlz={handleBulkRemovePlz}
+                />
+              ))
+            ) : (
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -2111,7 +2310,9 @@ function LayerManagementSection({
                       editingLayerId={form.editingLayerId}
                       editingLayerName={form.editingLayerName}
                       editLayerInputRef={editLayerInputRef}
-                      onSelect={(id) => { if (!selectMode) onLayerSelect?.(id); }}
+                      onSelect={(id) => {
+                        if (!selectMode) onLayerSelect?.(id);
+                      }}
                       onStartEdit={(id, name) =>
                         dispatchForm({ type: "START_EDIT", layerId: id, name })
                       }
@@ -2127,18 +2328,33 @@ function LayerManagementSection({
                       onToggleVisibility={handleToggleVisibility}
                       onSoloLayer={handleSoloLayer}
                       onRemovePostalCode={guardedRemovePostalCode}
-                      onImportCSV={addPostalCodesToLayer ? guardedImportCSV : undefined}
+                      onImportCSV={
+                        addPostalCodesToLayer ? guardedImportCSV : undefined
+                      }
                       onNotesChange={handleNotesChange}
                       onMovePlz={handleMovePlz}
-                      otherLayers={optimisticLayers.filter((l) => l.id !== layer.id).map((l) => ({ id: l.id, name: l.name, color: l.color }))}
-                      isSelected={selectMode ? selectedIds.has(layer.id) : undefined}
+                      otherLayers={optimisticLayers
+                        .filter((l) => l.id !== layer.id)
+                        .map((l) => ({
+                          id: l.id,
+                          name: l.name,
+                          color: l.color,
+                        }))}
+                      isSelected={
+                        selectMode ? selectedIds.has(layer.id) : undefined
+                      }
                       onToggleSelect={selectMode ? toggleSelect : undefined}
                       isLocked={isLocked(layer.id)}
                       onToggleLock={toggleLock}
                       onPreviewPostalCode={onPreviewPostalCode}
                       onZoomToLayer={onZoomToLayer}
                       onClearPLZ={handleClearLayerPLZ}
-                      onAddPlzRange={addPostalCodesToLayer ? (layerId, codes) => addPostalCodesToLayer(layerId, codes) : undefined}
+                      onAddPlzRange={
+                        addPostalCodesToLayer
+                          ? (layerId, codes) =>
+                              addPostalCodesToLayer(layerId, codes)
+                          : undefined
+                      }
                       allCodesSet={allCodesSet}
                       onBulkMovePlz={handleBulkMovePlz}
                       onBulkRemovePlz={handleBulkRemovePlz}
@@ -2155,7 +2371,10 @@ function LayerManagementSection({
               {/* Summary row */}
               <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                 <span>
-                  <span className="font-medium text-foreground">{layerStats.uniqueCodes}</span> eindeutige PLZ
+                  <span className="font-medium text-foreground">
+                    {layerStats.uniqueCodes}
+                  </span>{" "}
+                  eindeutige PLZ
                 </span>
                 {layerStats.duplicateCodes > 0 && (
                   <span className="text-amber-500 font-medium">
@@ -2163,7 +2382,10 @@ function LayerManagementSection({
                   </span>
                 )}
                 <span className="flex items-center gap-1.5">
-                  <span className="font-medium text-foreground">{layerStats.totalCodes}</span> gesamt
+                  <span className="font-medium text-foreground">
+                    {layerStats.totalCodes}
+                  </span>{" "}
+                  gesamt
                   <button
                     type="button"
                     title="Statistiken als CSV exportieren"
@@ -2173,12 +2395,19 @@ function LayerManagementSection({
                       const total = layerStats.totalCodes;
                       for (const layer of optimisticLayers) {
                         const count = layer.postalCodes?.length ?? 0;
-                        const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
-                        rows.push(`"${layer.name.replace(/"/g, '""')}",${count},${pct}%`);
+                        const pct =
+                          total > 0
+                            ? ((count / total) * 100).toFixed(1)
+                            : "0.0";
+                        rows.push(
+                          `"${layer.name.replace(/"/g, '""')}",${count},${pct}%`
+                        );
                       }
                       rows.push(`"Gesamt",${total},100.0%`);
                       const csv = rows.join("\n");
-                      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                      const blob = new Blob([csv], {
+                        type: "text/csv;charset=utf-8;",
+                      });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
@@ -2192,25 +2421,41 @@ function LayerManagementSection({
                 </span>
               </div>
               {/* PLZ range */}
-              {layerStats.minCode && layerStats.maxCode && layerStats.minCode !== layerStats.maxCode && (
-                <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <span>Bereich:</span>
-                  <span className="font-mono font-medium text-foreground">{layerStats.minCode}</span>
-                  <span>–</span>
-                  <span className="font-mono font-medium text-foreground">{layerStats.maxCode}</span>
-                </div>
-              )}
+              {layerStats.minCode &&
+                layerStats.maxCode &&
+                layerStats.minCode !== layerStats.maxCode && (
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <span>Bereich:</span>
+                    <span className="font-mono font-medium text-foreground">
+                      {layerStats.minCode}
+                    </span>
+                    <span>–</span>
+                    <span className="font-mono font-medium text-foreground">
+                      {layerStats.maxCode}
+                    </span>
+                  </div>
+                )}
               {/* Per-layer mini bar chart */}
               {optimisticLayers.length > 1 && (
                 <div className="space-y-0.5">
                   {optimisticLayers
                     .filter((l) => (l.postalCodes?.length ?? 0) > 0)
-                    .sort((a, b) => (b.postalCodes?.length ?? 0) - (a.postalCodes?.length ?? 0))
+                    .sort(
+                      (a, b) =>
+                        (b.postalCodes?.length ?? 0) -
+                        (a.postalCodes?.length ?? 0)
+                    )
                     .map((layer) => {
                       const count = layer.postalCodes?.length ?? 0;
-                      const pct = layerStats.totalCodes > 0 ? (count / layerStats.totalCodes) * 100 : 0;
+                      const pct =
+                        layerStats.totalCodes > 0
+                          ? (count / layerStats.totalCodes) * 100
+                          : 0;
                       return (
-                        <div key={layer.id} className="flex items-center gap-1.5 text-[10px]">
+                        <div
+                          key={layer.id}
+                          className="flex items-center gap-1.5 text-[10px]"
+                        >
                           <span
                             className="w-2 h-2 rounded-full shrink-0"
                             style={{ backgroundColor: layer.color }}
@@ -2218,11 +2463,18 @@ function LayerManagementSection({
                           <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all"
-                              style={{ width: `${pct}%`, backgroundColor: layer.color }}
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor: layer.color,
+                              }}
                             />
                           </div>
-                          <span className="text-muted-foreground w-8 text-right tabular-nums">{pct.toFixed(0)}%</span>
-                          <span className="text-muted-foreground w-6 text-right tabular-nums">{count}</span>
+                          <span className="text-muted-foreground w-8 text-right tabular-nums">
+                            {pct.toFixed(0)}%
+                          </span>
+                          <span className="text-muted-foreground w-6 text-right tabular-nums">
+                            {count}
+                          </span>
                         </div>
                       );
                     })}
@@ -2231,28 +2483,50 @@ function LayerManagementSection({
               {/* PLZ prefix distribution (2-digit) — compact sparkline */}
               {layerStats.prefixDistribution.length > 1 && (
                 <div className="space-y-0.5">
-                  <div className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">PLZ-Verteilung nach Vorwahl</div>
+                  <div className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">
+                    PLZ-Verteilung nach Vorwahl
+                  </div>
                   <div className="flex items-end gap-px h-8 overflow-x-auto">
                     {(() => {
-                      const max = Math.max(...layerStats.prefixDistribution.map((p) => p.count));
-                      return layerStats.prefixDistribution.map(({ prefix, count }) => (
-                        <div
-                          key={prefix}
-                          className="flex flex-col items-center gap-px flex-1 min-w-[8px] group"
-                          title={`${prefix}xxx: ${count} PLZ`}
-                        >
+                      const max = Math.max(
+                        ...layerStats.prefixDistribution.map((p) => p.count)
+                      );
+                      return layerStats.prefixDistribution.map(
+                        ({ prefix, count }) => (
                           <div
-                            className="w-full rounded-sm bg-primary/60 group-hover:bg-primary transition-colors"
-                            style={{ height: `${Math.max(2, (count / max) * 24)}px` }}
-                          />
-                        </div>
-                      ));
+                            key={prefix}
+                            className="flex flex-col items-center gap-px flex-1 min-w-[8px] group"
+                            title={`${prefix}xxx: ${count} PLZ`}
+                          >
+                            <div
+                              className="w-full rounded-sm bg-primary/60 group-hover:bg-primary transition-colors"
+                              style={{
+                                height: `${Math.max(2, (count / max) * 24)}px`,
+                              }}
+                            />
+                          </div>
+                        )
+                      );
                     })()}
                   </div>
                   <div className="flex justify-between text-[8px] text-muted-foreground/60">
                     <span>{layerStats.prefixDistribution[0]?.prefix}xx</span>
-                    <span>{layerStats.prefixDistribution[Math.floor(layerStats.prefixDistribution.length / 2)]?.prefix}xx</span>
-                    <span>{layerStats.prefixDistribution[layerStats.prefixDistribution.length - 1]?.prefix}xx</span>
+                    <span>
+                      {
+                        layerStats.prefixDistribution[
+                          Math.floor(layerStats.prefixDistribution.length / 2)
+                        ]?.prefix
+                      }
+                      xx
+                    </span>
+                    <span>
+                      {
+                        layerStats.prefixDistribution[
+                          layerStats.prefixDistribution.length - 1
+                        ]?.prefix
+                      }
+                      xx
+                    </span>
                   </div>
                 </div>
               )}
@@ -2279,15 +2553,22 @@ function LayerManagementSection({
             {plzFindResults !== null && (
               <div className="mt-1 space-y-0.5">
                 {plzFindResults.length === 0 ? (
-                  <p className="text-[10px] text-muted-foreground py-0.5">Keine Treffer</p>
+                  <p className="text-[10px] text-muted-foreground py-0.5">
+                    Keine Treffer
+                  </p>
                 ) : (
                   plzFindResults.map((r) => (
-                    <div key={r.id} className="flex items-start gap-1.5 text-[10px]">
+                    <div
+                      key={r.id}
+                      className="flex items-start gap-1.5 text-[10px]"
+                    >
                       <span
                         className="w-2 h-2 rounded-full shrink-0 mt-0.5"
                         style={{ backgroundColor: r.color }}
                       />
-                      <span className="font-medium truncate max-w-[80px]">{r.name}</span>
+                      <span className="font-medium truncate max-w-[80px]">
+                        {r.name}
+                      </span>
                       <span className="text-muted-foreground ml-auto font-mono">
                         {r.matchingCodes.join(", ")}
                         {r.matchingCodes.length === 5 ? "…" : ""}
@@ -2300,33 +2581,45 @@ function LayerManagementSection({
           </div>
 
           {/* PLZ prefix / range bulk-add */}
-          {allCodesSet && allCodesSet.size > 0 && activeLayerId && addPostalCodesToLayer && (
-            <div className="border-t pt-1.5 mt-0.5">
-              <div className="flex gap-1">
-                <div className="relative flex-1">
-                  <Input
-                    value={prefixInput}
-                    onChange={(e) => setPrefixInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && prefixMatches?.length) handleAddByPrefix(); }}
-                    placeholder="Präfix (80) oder Bereich (80-89)"
-                    className="h-6 text-[10px] pr-2"
-                    maxLength={9}
-                  />
+          {allCodesSet &&
+            allCodesSet.size > 0 &&
+            activeLayerId &&
+            addPostalCodesToLayer && (
+              <div className="border-t pt-1.5 mt-0.5">
+                <div className="flex gap-1">
+                  <div className="relative flex-1">
+                    <Input
+                      value={prefixInput}
+                      onChange={(e) => setPrefixInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && prefixMatches?.length)
+                          handleAddByPrefix();
+                      }}
+                      placeholder="Präfix (80) oder Bereich (80-89)"
+                      className="h-6 text-[10px] pr-2"
+                      maxLength={9}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddByPrefix}
+                    disabled={!prefixMatches?.length}
+                    className="h-6 px-2 text-[10px] rounded border border-input bg-background hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed shrink-0 font-medium"
+                  >
+                    {prefixMatches !== null
+                      ? `+${prefixMatches.length}`
+                      : "Hinzufügen"}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddByPrefix}
-                  disabled={!prefixMatches?.length}
-                  className="h-6 px-2 text-[10px] rounded border border-input bg-background hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed shrink-0 font-medium"
-                >
-                  {prefixMatches !== null ? `+${prefixMatches.length}` : "Hinzufügen"}
-                </button>
+                {prefixInput.trim() &&
+                  prefixMatches !== null &&
+                  prefixMatches.length === 0 && (
+                    <p className="text-[9px] text-muted-foreground mt-0.5">
+                      Keine PLZ gefunden
+                    </p>
+                  )}
               </div>
-              {prefixInput.trim() && prefixMatches !== null && prefixMatches.length === 0 && (
-                <p className="text-[9px] text-muted-foreground mt-0.5">Keine PLZ gefunden</p>
-              )}
-            </div>
-          )}
+            )}
         </CollapsibleContent>
       </Collapsible>
 
@@ -2336,7 +2629,8 @@ function LayerManagementSection({
           <AlertDialogHeader>
             <AlertDialogTitle>PLZ importieren</AlertDialogTitle>
             <AlertDialogDescription>
-              Füge PLZ ein oder lade eine Datei hoch — getrennt durch Komma, Semikolon, Leerzeichen oder Zeilenumbruch.
+              Füge PLZ ein oder lade eine Datei hoch — getrennt durch Komma,
+              Semikolon, Leerzeichen oder Zeilenumbruch.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 py-1">
@@ -2359,9 +2653,14 @@ function LayerManagementSection({
             </label>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={importPending}>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel disabled={importPending}>
+              Abbrechen
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); handleImportCSV(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleImportCSV();
+              }}
               disabled={importPending || !importText.trim()}
             >
               {importPending ? "Importiere…" : "Importieren"}
@@ -2378,7 +2677,8 @@ function LayerManagementSection({
         currentLayers={optimisticLayers.map((l) => ({
           name: l.name,
           color: l.color,
-          opacity: typeof l.opacity === "number" ? l.opacity : Number(l.opacity ?? 70),
+          opacity:
+            typeof l.opacity === "number" ? l.opacity : Number(l.opacity ?? 70),
           orderIndex: l.orderIndex,
           notes: l.notes ?? null,
         }))}
@@ -2430,7 +2730,9 @@ const LayerDialogs = memo(function LayerDialogs({
   );
   const handleKeyboardHelpOpenChange = useCallback(
     (open: boolean) =>
-      dispatchUI(open ? { type: "OPEN_KEYBOARD_HELP" } : { type: "CLOSE_KEYBOARD_HELP" }),
+      dispatchUI(
+        open ? { type: "OPEN_KEYBOARD_HELP" } : { type: "CLOSE_KEYBOARD_HELP" }
+      ),
     [dispatchUI]
   );
   const handleDeleteOpenChange = useCallback(
@@ -2485,7 +2787,9 @@ const LayerDialogs = memo(function LayerDialogs({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Tastaturkürzel</DialogTitle>
-            <DialogDescription>Alle verfügbaren Shortcuts in der Kartenansicht</DialogDescription>
+            <DialogDescription>
+              Alle verfügbaren Shortcuts in der Kartenansicht
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             {[
@@ -2675,8 +2979,13 @@ function DrawingToolsImpl({
       try {
         const saved = localStorage.getItem("drawing-tools-ui");
         const prev = saved ? JSON.parse(saved) : {};
-        localStorage.setItem("drawing-tools-ui", JSON.stringify({ ...prev, regionsOpen: open }));
-      } catch { /* ignore */ }
+        localStorage.setItem(
+          "drawing-tools-ui",
+          JSON.stringify({ ...prev, regionsOpen: open })
+        );
+      } catch {
+        /* ignore */
+      }
     },
     [dispatchUI]
   );
@@ -2702,7 +3011,8 @@ function DrawingToolsImpl({
     if (!postalCodesData?.features) return new Set();
     const s = new Set<string>();
     for (const f of postalCodesData.features) {
-      const code = f.properties?.code ?? f.properties?.postal_code ?? f.properties?.PLZ;
+      const code =
+        f.properties?.code ?? f.properties?.postal_code ?? f.properties?.PLZ;
       if (typeof code === "string") s.add(code);
     }
     return s;
@@ -2741,10 +3051,19 @@ function DrawingToolsImpl({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      const isInInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+      const isInInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
 
       // / key: focus PLZ quick-find
-      if (e.key === "/" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (
+        e.key === "/" &&
+        !isInInput &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
         dispatchUIRef.current({ type: "SET_LAYERS_OPEN", open: true });
         // Defer focus until after collapsible opens
@@ -2756,14 +3075,26 @@ function DrawingToolsImpl({
       }
 
       // F key: zoom to active layer
-      if (e.key === "f" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (
+        e.key === "f" &&
+        !isInInput &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         const id = activeLayerIdRef.current;
         if (id) onZoomToLayerRef.current?.(id);
         return;
       }
 
       // N key: focus new layer input
-      if (e.key === "n" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (
+        e.key === "n" &&
+        !isInInput &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
         dispatchUIRef.current({ type: "SET_LAYERS_OPEN", open: true });
         setTimeout(() => {
@@ -2774,24 +3105,44 @@ function DrawingToolsImpl({
       }
 
       // D key: duplicate active layer
-      if (e.key === "d" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (
+        e.key === "d" &&
+        !isInInput &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         const id = activeLayerIdRef.current;
         if (id) handleDuplicateLayerRef.current(id);
         return;
       }
 
       // E key: toggle visibility of active layer
-      if (e.key === "e" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (
+        e.key === "e" &&
+        !isInInput &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         const id = activeLayerIdRef.current;
         const activeLayer = layersRef.current.find((l) => l.id === id);
         if (activeLayer) {
-          handleToggleVisibilityRef.current(activeLayer.id, activeLayer.isVisible !== "true");
+          handleToggleVisibilityRef.current(
+            activeLayer.id,
+            activeLayer.isVisible !== "true"
+          );
         }
         return;
       }
 
       // Delete / Backspace: delete active layer (only when not in input)
-      if ((e.key === "Delete" || e.key === "Backspace") && !isInInput && !e.ctrlKey && !e.metaKey) {
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        !isInInput &&
+        !e.ctrlKey &&
+        !e.metaKey
+      ) {
         const id = activeLayerIdRef.current;
         if (id) handleDeleteLayerRef.current(id);
         return;
@@ -2803,13 +3154,22 @@ function DrawingToolsImpl({
         const activeLayer = layersRef.current.find((l) => l.id === id);
         if (activeLayer) {
           e.preventDefault();
-          dispatchFormRef.current({ type: "START_EDIT", layerId: activeLayer.id, name: activeLayer.name });
+          dispatchFormRef.current({
+            type: "START_EDIT",
+            layerId: activeLayer.id,
+            name: activeLayer.name,
+          });
         }
         return;
       }
 
       // Ctrl+C / Cmd+C: copy active layer PLZ to clipboard (when not in input)
-      if (e.key === "c" && !isInInput && (e.ctrlKey || e.metaKey) && !e.altKey) {
+      if (
+        e.key === "c" &&
+        !isInInput &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey
+      ) {
         const id = activeLayerIdRef.current;
         const activeLayer = layersRef.current.find((l) => l.id === id);
         if (!activeLayer?.postalCodes?.length) return;
@@ -2830,10 +3190,16 @@ function DrawingToolsImpl({
       if (isInInput) return;
       const currentLayers = layersRef.current;
       if (!currentLayers.length) return;
-      const currentIdx = currentLayers.findIndex((l) => l.id === activeLayerIdRef.current);
-      const nextIdx = e.key === "ArrowUp"
-        ? Math.max(0, (currentIdx === -1 ? 0 : currentIdx) - 1)
-        : Math.min(currentLayers.length - 1, (currentIdx === -1 ? 0 : currentIdx) + 1);
+      const currentIdx = currentLayers.findIndex(
+        (l) => l.id === activeLayerIdRef.current
+      );
+      const nextIdx =
+        e.key === "ArrowUp"
+          ? Math.max(0, (currentIdx === -1 ? 0 : currentIdx) - 1)
+          : Math.min(
+              currentLayers.length - 1,
+              (currentIdx === -1 ? 0 : currentIdx) + 1
+            );
       if (nextIdx !== currentIdx) {
         e.preventDefault();
         onLayerSelectRef.current?.(currentLayers[nextIdx].id);
@@ -2843,7 +3209,12 @@ function DrawingToolsImpl({
     const handlePaste = (e: ClipboardEvent) => {
       const target = e.target as HTMLElement;
       // Only intercept paste outside text inputs
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
       const addFn = guardedAddRef.current;
       const layerId = activeLayerIdRef.current;
       if (!addFn || !layerId) return;
@@ -2895,7 +3266,9 @@ function DrawingToolsImpl({
         <CardTitle className="text-base">Kartentools</CardTitle>
         {areaName && (
           <div className="mt-0.5">
-            <p className="text-xs font-medium text-foreground truncate">{areaName}</p>
+            <p className="text-xs font-medium text-foreground truncate">
+              {areaName}
+            </p>
             {descEditing ? (
               <textarea
                 // biome-ignore lint/a11y/noAutofocus: intentional focus on inline edit
@@ -2904,8 +3277,14 @@ function DrawingToolsImpl({
                 onChange={(e) => setDescDraft(e.target.value)}
                 onBlur={handleDescriptionSave}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleDescriptionSave(); }
-                  if (e.key === "Escape") { setDescEditing(false); setDescDraft(areaDescription ?? ""); }
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleDescriptionSave();
+                  }
+                  if (e.key === "Escape") {
+                    setDescEditing(false);
+                    setDescDraft(areaDescription ?? "");
+                  }
                 }}
                 placeholder="Beschreibung hinzufügen…"
                 rows={2}
@@ -2914,16 +3293,28 @@ function DrawingToolsImpl({
             ) : (
               <button
                 type="button"
-                onClick={() => { if (areaId && !isViewingVersion) setDescEditing(true); }}
+                onClick={() => {
+                  if (areaId && !isViewingVersion) setDescEditing(true);
+                }}
                 title={isViewingVersion ? undefined : "Beschreibung bearbeiten"}
                 className="w-full text-left mt-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors truncate"
               >
-                {descDraft || (isViewingVersion ? "" : <span className="italic opacity-50">Beschreibung hinzufügen…</span>)}
+                {descDraft ||
+                  (isViewingVersion ? (
+                    ""
+                  ) : (
+                    <span className="italic opacity-50">
+                      Beschreibung hinzufügen…
+                    </span>
+                  ))}
               </button>
             )}
             {areaId && !isViewingVersion && (
               <div className="mt-1.5">
-                <AreaTagsManager areaId={areaId} initialTags={initialAreaTags} />
+                <AreaTagsManager
+                  areaId={areaId}
+                  initialTags={initialAreaTags}
+                />
               </div>
             )}
           </div>

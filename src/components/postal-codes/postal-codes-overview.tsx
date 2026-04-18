@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { getAreas, getRecentActivity } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
+
 import { CompareAreasButton } from "./compare-areas-button";
 import { ExportAllAreasButton } from "./export-all-areas-button";
 
@@ -75,7 +76,10 @@ export async function PostalCodesOverview() {
 
   const activeAreas = areas.filter((a) => a.isArchived !== "true");
   const archivedAreas = areas.filter((a) => a.isArchived === "true");
-  const totalPLZ = activeAreas.reduce((s, a) => s + (a.postalCodeCount ?? 0), 0);
+  const totalPLZ = activeAreas.reduce(
+    (s, a) => s + (a.postalCodeCount ?? 0),
+    0
+  );
   const totalLayers = activeAreas.reduce((s, a) => s + (a.layerCount ?? 0), 0);
 
   // Country breakdown
@@ -83,7 +87,10 @@ export async function PostalCodesOverview() {
   for (const a of activeAreas) {
     const c = a.country ?? "?";
     const prev = countryMap.get(c) ?? { count: 0, plz: 0 };
-    countryMap.set(c, { count: prev.count + 1, plz: prev.plz + (a.postalCodeCount ?? 0) });
+    countryMap.set(c, {
+      count: prev.count + 1,
+      plz: prev.plz + (a.postalCodeCount ?? 0),
+    });
   }
 
   // Recent (sorted by updatedAt desc)
@@ -114,11 +121,15 @@ export async function PostalCodesOverview() {
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-2 mb-1">
                 <IconFolders className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Gebiete</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  Gebiete
+                </span>
               </div>
               <div className="text-3xl font-bold">{activeAreas.length}</div>
               {archivedAreas.length > 0 && (
-                <div className="text-xs text-muted-foreground mt-1">{archivedAreas.length} archiviert</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {archivedAreas.length} archiviert
+                </div>
               )}
             </CardContent>
           </Card>
@@ -126,27 +137,39 @@ export async function PostalCodesOverview() {
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-2 mb-1">
                 <IconMap className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Layer</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  Layer
+                </span>
               </div>
               <div className="text-3xl font-bold">{totalLayers}</div>
-              <div className="text-xs text-muted-foreground mt-1">gesamt aktiv</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                gesamt aktiv
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-2 mb-1">
                 <IconMapPin className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">PLZ</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  PLZ
+                </span>
               </div>
-              <div className="text-3xl font-bold">{totalPLZ.toLocaleString("de-DE")}</div>
-              <div className="text-xs text-muted-foreground mt-1">Zuordnungen gesamt</div>
+              <div className="text-3xl font-bold">
+                {totalPLZ.toLocaleString("de-DE")}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Zuordnungen gesamt
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-base">🌍</span>
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Länder</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  Länder
+                </span>
               </div>
               <div className="text-3xl font-bold">{countryMap.size}</div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -164,7 +187,8 @@ export async function PostalCodesOverview() {
                 <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   Gebiete
                   <Link
-                    href="/" className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors"
+                    href="/"
+                    className="text-xs text-muted-foreground font-normal hover:text-foreground transition-colors"
                   >
                     Alle anzeigen →
                   </Link>
@@ -184,16 +208,24 @@ export async function PostalCodesOverview() {
                           className="flex items-center gap-3 py-2.5 hover:bg-muted/40 rounded-md px-2 -mx-2 transition-colors group"
                         >
                           <IconFolder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="flex-1 text-sm font-medium truncate">{area.name}</span>
+                          <span className="flex-1 text-sm font-medium truncate">
+                            {area.name}
+                          </span>
                           <div className="flex items-center gap-2 text-[10px] text-muted-foreground shrink-0">
                             {area.country && (
-                              <span className="uppercase font-mono">{area.country}</span>
+                              <span className="uppercase font-mono">
+                                {area.country}
+                              </span>
                             )}
                             {!!area.postalCodeCount && (
-                              <span className="bg-muted rounded px-1 py-0.5">{area.postalCodeCount} PLZ</span>
+                              <span className="bg-muted rounded px-1 py-0.5">
+                                {area.postalCodeCount} PLZ
+                              </span>
                             )}
                             {!!area.layerCount && (
-                              <span className="bg-muted rounded px-1 py-0.5">{area.layerCount}L</span>
+                              <span className="bg-muted rounded px-1 py-0.5">
+                                {area.layerCount}L
+                              </span>
                             )}
                           </div>
                         </Link>
@@ -216,14 +248,27 @@ export async function PostalCodesOverview() {
                 <CardContent className="pt-0">
                   <ul className="space-y-1">
                     {recentActivity.map((item, i) => {
-                      const Icon = CHANGE_ICONS[item.changeType] ?? IconActivity;
-                      const colorClass = CHANGE_COLORS[item.changeType] ?? "text-muted-foreground bg-muted";
-                      const label = CHANGE_LABELS[item.changeType] ?? item.changeType.replaceAll("_", " ");
+                      const Icon =
+                        CHANGE_ICONS[item.changeType] ?? IconActivity;
+                      const colorClass =
+                        CHANGE_COLORS[item.changeType] ??
+                        "text-muted-foreground bg-muted";
+                      const label =
+                        CHANGE_LABELS[item.changeType] ??
+                        item.changeType.replaceAll("_", " ");
                       const d = item.changeData;
-                      const codes = item.changeType.includes("postal") && Array.isArray(d?.codes) ? d.codes as string[] : null;
+                      const codes =
+                        item.changeType.includes("postal") &&
+                        Array.isArray(d?.codes)
+                          ? (d.codes as string[])
+                          : null;
                       const detail = codes
-                        ? (codes.length <= 3 ? codes.join(", ") : `${codes.slice(0, 2).join(", ")} +${codes.length - 2}`)
-                        : (typeof d?.name === "string" ? d.name : null);
+                        ? codes.length <= 3
+                          ? codes.join(", ")
+                          : `${codes.slice(0, 2).join(", ")} +${codes.length - 2}`
+                        : typeof d?.name === "string"
+                          ? d.name
+                          : null;
 
                       return (
                         <li key={i}>
@@ -231,17 +276,31 @@ export async function PostalCodesOverview() {
                             href={`/postal-codes/${item.areaId}` as Route}
                             className="flex items-start gap-3 px-2 py-1.5 -mx-2 rounded-md hover:bg-muted/40 transition-colors"
                           >
-                            <span className={cn("inline-flex items-center justify-center h-6 w-6 rounded-md shrink-0 mt-0.5", colorClass)}>
+                            <span
+                              className={cn(
+                                "inline-flex items-center justify-center h-6 w-6 rounded-md shrink-0 mt-0.5",
+                                colorClass
+                              )}
+                            >
                               <Icon className="h-3 w-3" />
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-medium text-foreground truncate">{item.areaName}</span>
-                                <span className="text-[10px] text-muted-foreground shrink-0">{formatRelativeTime(item.createdAt)}</span>
+                                <span className="text-xs font-medium text-foreground truncate">
+                                  {item.areaName}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground shrink-0">
+                                  {formatRelativeTime(item.createdAt)}
+                                </span>
                               </div>
                               <div className="text-[11px] text-muted-foreground">
                                 {label}
-                                {detail && <span className="text-foreground/60"> · {detail}</span>}
+                                {detail && (
+                                  <span className="text-foreground/60">
+                                    {" "}
+                                    · {detail}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </Link>
@@ -259,16 +318,25 @@ export async function PostalCodesOverview() {
             {countryMap.size > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold">Nach Land</CardTitle>
+                  <CardTitle className="text-sm font-semibold">
+                    Nach Land
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-2">
                   {[...countryMap.entries()].map(([country, stats]) => (
-                    <div key={country} className="flex items-center gap-2 text-sm">
-                      <span className="w-8 font-mono text-xs font-bold uppercase text-muted-foreground">{country}</span>
+                    <div
+                      key={country}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <span className="w-8 font-mono text-xs font-bold uppercase text-muted-foreground">
+                        {country}
+                      </span>
                       <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full"
-                          style={{ width: `${(stats.count / activeAreas.length) * 100}%` }}
+                          style={{
+                            width: `${(stats.count / activeAreas.length) * 100}%`,
+                          }}
                         />
                       </div>
                       <span className="text-xs text-muted-foreground shrink-0">
@@ -282,8 +350,12 @@ export async function PostalCodesOverview() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">Schnellaktionen</CardTitle>
-                <CardDescription className="text-xs">Verwende ⌘K für schnelle Navigation</CardDescription>
+                <CardTitle className="text-sm font-semibold">
+                  Schnellaktionen
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Verwende ⌘K für schnelle Navigation
+                </CardDescription>
               </CardHeader>
               <CardContent className="pt-0 space-y-1.5">
                 <div className="text-xs text-muted-foreground space-y-1">

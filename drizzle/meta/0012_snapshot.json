@@ -98,9 +98,7 @@
         "api_cache_cache_key_unique": {
           "name": "api_cache_cache_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "cache_key"
-          ]
+          "columns": ["cache_key"]
         }
       },
       "policies": {},
@@ -233,12 +231,8 @@
           "name": "fk_area_changes_area_id",
           "tableFrom": "area_changes",
           "tableTo": "areas",
-          "columnsFrom": [
-            "area_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["area_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -246,14 +240,8 @@
           "name": "fk_area_changes_version",
           "tableFrom": "area_changes",
           "tableTo": "area_versions",
-          "columnsFrom": [
-            "version_area_id",
-            "version_number"
-          ],
-          "columnsTo": [
-            "area_id",
-            "version_number"
-          ],
+          "columnsFrom": ["version_area_id", "version_number"],
+          "columnsTo": ["area_id", "version_number"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -360,12 +348,8 @@
           "name": "fk_area_layer_postal_codes_postal_code_id",
           "tableFrom": "area_layer_postal_codes",
           "tableTo": "postal_codes",
-          "columnsFrom": [
-            "postal_code_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["postal_code_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -375,10 +359,7 @@
         "area_layer_postal_codes_layer_id_postal_code_unique": {
           "name": "area_layer_postal_codes_layer_id_postal_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "layer_id",
-            "postal_code"
-          ]
+          "columns": ["layer_id", "postal_code"]
         }
       },
       "policies": {},
@@ -588,9 +569,7 @@
         "area_undo_stacks_area_id_unique": {
           "name": "area_undo_stacks_area_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "area_id"
-          ]
+          "columns": ["area_id"]
         }
       },
       "policies": {},
@@ -768,10 +747,7 @@
       "compositePrimaryKeys": {
         "area_versions_area_id_version_number_pk": {
           "name": "area_versions_area_id_version_number_pk",
-          "columns": [
-            "area_id",
-            "version_number"
-          ]
+          "columns": ["area_id", "version_number"]
         }
       },
       "uniqueConstraints": {},
@@ -1084,9 +1060,7 @@
         "country_shapes_country_unique": {
           "name": "country_shapes_country_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "country"
-          ]
+          "columns": ["country"]
         }
       },
       "policies": {},
@@ -1492,11 +1466,7 @@
         "postal_codes_country_granularity_code_unique": {
           "name": "postal_codes_country_granularity_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "country",
-            "granularity",
-            "code"
-          ]
+          "columns": ["country", "granularity", "code"]
         }
       },
       "policies": {},
@@ -1648,10 +1618,7 @@
         "states_country_code_unique": {
           "name": "states_country_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "country",
-            "code"
-          ]
+          "columns": ["country", "code"]
         }
       },
       "policies": {},

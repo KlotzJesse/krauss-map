@@ -692,18 +692,27 @@ export const layerTemplates = pgTable(
     name: varchar({ length: 255 }).notNull(),
     description: text(),
     /** JSON array of { name, color, opacity, orderIndex, notes } objects */
-    layers: jsonb("layers").notNull().$type<Array<{
-      name: string;
-      color: string;
-      opacity: number;
-      orderIndex: number;
-      notes?: string | null;
-    }>>(),
-    createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
+    layers: jsonb("layers").notNull().$type<
+      Array<{
+        name: string;
+        color: string;
+        opacity: number;
+        orderIndex: number;
+        notes?: string | null;
+      }>
+    >(),
+    createdAt: timestamp("created_at", { mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
-    index("idx_layer_templates_name").using("btree", table.name.asc().nullsLast()),
+    index("idx_layer_templates_name").using(
+      "btree",
+      table.name.asc().nullsLast()
+    ),
   ]
 );
 
@@ -802,11 +811,11 @@ export const areaTags = pgTable(
     id: integer().primaryKey().generatedAlwaysAsIdentity().notNull(),
     name: varchar({ length: 50 }).notNull(),
     color: varchar({ length: 20 }).notNull().default("#3b82f6"),
-    createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { mode: "string" })
+      .defaultNow()
+      .notNull(),
   },
-  (table) => [
-    index("idx_area_tags_name").on(table.name),
-  ]
+  (table) => [index("idx_area_tags_name").on(table.name)]
 );
 
 export const areaTagAssignments = pgTable(
