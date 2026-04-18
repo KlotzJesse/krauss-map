@@ -165,8 +165,8 @@ export const AreaListItem = memo(
                 isSelectable && isSelected
                   ? "bg-primary/10 text-primary"
                   : isCurrentRoute && !isSelectable
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium border-l-2 border-sidebar-primary/40 !pl-[6px]"
+                    : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
               } ${isArchived ? "opacity-50" : ""} ${isSelectable ? "cursor-pointer select-none" : ""}`}
               onClick={
                 isSelectable
