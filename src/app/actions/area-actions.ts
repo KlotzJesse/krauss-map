@@ -696,6 +696,8 @@ export async function updateLayerAction(
 
     notes?: string | null;
 
+    groupName?: string | null;
+
     postalCodes?: string[];
   },
 
@@ -719,7 +721,8 @@ export async function updateLayerAction(
         data.opacity !== undefined ||
         data.isVisible !== undefined ||
         data.orderIndex !== undefined ||
-        data.notes !== undefined
+        data.notes !== undefined ||
+        data.groupName !== undefined
       ) {
         await tx
 
@@ -741,6 +744,8 @@ export async function updateLayerAction(
             }),
 
             ...(data.notes !== undefined && { notes: data.notes }),
+
+            ...(data.groupName !== undefined && { groupName: data.groupName }),
           })
 
           .where(eq(areaLayers.id, layerId));

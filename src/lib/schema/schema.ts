@@ -491,6 +491,8 @@ export const areaLayers = pgTable(
 
     notes: text("notes"), // Optional notes/description for the layer
 
+    groupName: varchar("group_name", { length: 255 }), // Optional group label for collapsible sections
+
     createdAt: timestamp("created_at", { mode: "string" })
       .defaultNow()
 

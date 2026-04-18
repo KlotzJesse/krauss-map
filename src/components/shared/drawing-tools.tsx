@@ -38,6 +38,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  Folder,
   GripVertical,
   HelpCircle,
   Palette,
@@ -1251,6 +1252,21 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleSetLayerGroup = (layerId: number, groupName: string | null) => {
+    startTransition(async () => {
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { groupName: groupName ?? undefined },
+      });
+      try {
+        await updateLayer(layerId, { groupName: groupName || null });
+      } catch {
+        toast.error("Fehler beim Speichern der Gruppe");
+      }
+    });
+  };
+
   const handleBulkMovePlz = (
     fromLayerId: number,
     toLayerId: number,
@@ -1390,6 +1406,7 @@ function useDrawingToolsActions({
     handleRemovePostalCodeFromLayer,
     handleMovePlz,
     handleNotesChange,
+    handleSetLayerGroup,
     handleClearLayerPLZ,
     handleExportGeoJSON,
     handleExportData,
@@ -1474,6 +1491,7 @@ interface LayerManagementSectionProps {
     postalCode: string
   ) => void;
   handleNotesChange?: (layerId: number, notes: string) => void;
+  handleSetLayerGroup?: (layerId: number, groupName: string | null) => void;
   handleClearLayerPLZ?: (layerId: number) => void;
   handleBulkDelete: (layerIds: number[]) => void;
   handleBulkVisibility: (layerIds: number[], visible: boolean) => void;
@@ -1529,6 +1547,7 @@ function LayerManagementSection({
   handleRemovePostalCodeFromLayer,
   handleMovePlz,
   handleNotesChange,
+  handleSetLayerGroup,
   handleClearLayerPLZ,
   handleBulkDelete,
   handleBulkVisibility,
@@ -1836,6 +1855,52 @@ function LayerManagementSection({
     layerAId: number | null;
     layerBId: number | null;
   }>({ open: false, layerAId: null, layerBId: null });
+
+  // Layer groups — collapsed state
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    new Set()
+  );
+  const toggleGroupCollapse = useCallback((groupName: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupName)) next.delete(groupName);
+      else next.add(groupName);
+      return next;
+    });
+  }, []);
+
+  // Group layers by groupName; null/empty = ungrouped (shown last)
+  const groupedLayers = useMemo(() => {
+    const groups = new Map<string | null, typeof filteredLayers>();
+    for (const layer of filteredLayers) {
+      const key = layer.groupName ?? null;
+      const existing = groups.get(key);
+      if (existing) existing.push(layer);
+      else groups.set(key, [layer]);
+    }
+    // Sort: named groups first (alphabetically), then ungrouped
+    const sorted: Array<{
+      name: string | null;
+      layers: typeof filteredLayers;
+    }> = [];
+    const keys = [...groups.keys()].sort((a, b) => {
+      if (a === null) return 1;
+      if (b === null) return -1;
+      return a.localeCompare(b);
+    });
+    for (const key of keys) {
+      sorted.push({ name: key, layers: groups.get(key)! });
+    }
+    return sorted;
+  }, [filteredLayers]);
+
+  const existingGroups = useMemo(() => {
+    const groups = new Set<string>();
+    for (const layer of optimisticLayers) {
+      if (layer.groupName) groups.add(layer.groupName);
+    }
+    return [...groups].sort();
+  }, [optimisticLayers]);
 
   const openDiffDialog = useCallback(
     (layerId: number) => {
@@ -2456,72 +2521,116 @@ function LayerManagementSection({
                 Keine Gebiete gefunden
               </p>
             ) : isDragDisabled ? (
-              filteredLayers.map((layer, layerIndex) => (
-                <LayerListItem
-                  key={layer.id}
-                  layer={layer}
-                  activeLayerId={activeLayerId}
-                  isLayerSwitchPending={isLayerSwitchPending}
-                  duplicateCount={duplicateCountByLayer.get(layer.id) ?? 0}
-                  editingLayerId={form.editingLayerId}
-                  editingLayerName={form.editingLayerName}
-                  editLayerInputRef={editLayerInputRef}
-                  onSelect={(id) => {
-                    if (!selectMode) onLayerSelect?.(id);
-                  }}
-                  onStartEdit={(id, name) =>
-                    dispatchForm({ type: "START_EDIT", layerId: id, name })
-                  }
-                  onConfirmEdit={handleRenameLayer}
-                  onCancelEdit={() => dispatchForm({ type: "CANCEL_EDIT" })}
-                  onEditNameChange={(name) =>
-                    dispatchForm({ type: "SET_EDIT_NAME", name })
-                  }
-                  onColorChange={handleColorChange}
-                  onOpacityChange={handleOpacityChange}
-                  onDelete={handleDeleteLayer}
-                  onDuplicateLayer={handleDuplicateLayer}
-                  onCopyToArea={handleOpenCopyToArea}
-                  onMergeLayer={
-                    optimisticLayers.filter((l) => l.id !== layer.id).length > 0
-                      ? handleOpenMergeLayers
-                      : undefined
-                  }
-                  onToggleVisibility={handleToggleVisibility}
-                  onSoloLayer={handleSoloLayer}
-                  onRemovePostalCode={guardedRemovePostalCode}
-                  onImportCSV={
-                    addPostalCodesToLayer ? guardedImportCSV : undefined
-                  }
-                  onNotesChange={handleNotesChange}
-                  onMovePlz={handleMovePlz}
-                  otherLayers={optimisticLayers
-                    .filter((l) => l.id !== layer.id)
-                    .map((l) => ({ id: l.id, name: l.name, color: l.color }))}
-                  isSelected={
-                    selectMode ? selectedIds.has(layer.id) : undefined
-                  }
-                  onToggleSelect={selectMode ? toggleSelect : undefined}
-                  isLocked={isLocked(layer.id)}
-                  onToggleLock={toggleLock}
-                  onPreviewPostalCode={onPreviewPostalCode}
-                  onZoomToLayer={onZoomToLayer}
-                  onClearPLZ={handleClearLayerPLZ}
-                  onAddPlzRange={
-                    addPostalCodesToLayer
-                      ? (layerId, codes) =>
-                          addPostalCodesToLayer(layerId, codes)
-                      : undefined
-                  }
-                  allCodesSet={allCodesSet}
-                  onBulkMovePlz={handleBulkMovePlz}
-                  onBulkRemovePlz={handleBulkRemovePlz}
-                  onExportCSV={handleExportLayerCSV}
-                  onSplitLayer={handleSplitLayer}
-                  onCompareLayer={openDiffDialog}
-                  layerIndex={layerIndex}
-                />
-              ))
+              groupedLayers.flatMap(({ name: gName, layers: gLayers }) => [
+                ...(gName !== null
+                  ? [
+                      <div
+                        key={`group-${gName}`}
+                        className="flex items-center gap-1.5 px-1 py-0.5 mt-1 first:mt-0"
+                      >
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors min-w-0 flex-1"
+                          onClick={() => toggleGroupCollapse(gName)}
+                        >
+                          <span
+                            className={`transition-transform ${collapsedGroups.has(gName) ? "" : "rotate-90"}`}
+                          >
+                            ▶
+                          </span>
+                          <Folder className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{gName}</span>
+                          <span className="text-[10px] text-muted-foreground/70">
+                            ({gLayers.length})
+                          </span>
+                        </button>
+                      </div>,
+                    ]
+                  : []),
+                ...(collapsedGroups.has(gName ?? "") && gName !== null
+                  ? []
+                  : gLayers.map((layer, layerIndex) => (
+                      <LayerListItem
+                        key={layer.id}
+                        layer={layer}
+                        activeLayerId={activeLayerId}
+                        isLayerSwitchPending={isLayerSwitchPending}
+                        duplicateCount={
+                          duplicateCountByLayer.get(layer.id) ?? 0
+                        }
+                        editingLayerId={form.editingLayerId}
+                        editingLayerName={form.editingLayerName}
+                        editLayerInputRef={editLayerInputRef}
+                        onSelect={(id) => {
+                          if (!selectMode) onLayerSelect?.(id);
+                        }}
+                        onStartEdit={(id, name) =>
+                          dispatchForm({
+                            type: "START_EDIT",
+                            layerId: id,
+                            name,
+                          })
+                        }
+                        onConfirmEdit={handleRenameLayer}
+                        onCancelEdit={() =>
+                          dispatchForm({ type: "CANCEL_EDIT" })
+                        }
+                        onEditNameChange={(name) =>
+                          dispatchForm({ type: "SET_EDIT_NAME", name })
+                        }
+                        onColorChange={handleColorChange}
+                        onOpacityChange={handleOpacityChange}
+                        onDelete={handleDeleteLayer}
+                        onDuplicateLayer={handleDuplicateLayer}
+                        onCopyToArea={handleOpenCopyToArea}
+                        onMergeLayer={
+                          optimisticLayers.filter((l) => l.id !== layer.id)
+                            .length > 0
+                            ? handleOpenMergeLayers
+                            : undefined
+                        }
+                        onToggleVisibility={handleToggleVisibility}
+                        onSoloLayer={handleSoloLayer}
+                        onRemovePostalCode={guardedRemovePostalCode}
+                        onImportCSV={
+                          addPostalCodesToLayer ? guardedImportCSV : undefined
+                        }
+                        onNotesChange={handleNotesChange}
+                        onMovePlz={handleMovePlz}
+                        otherLayers={optimisticLayers
+                          .filter((l) => l.id !== layer.id)
+                          .map((l) => ({
+                            id: l.id,
+                            name: l.name,
+                            color: l.color,
+                          }))}
+                        isSelected={
+                          selectMode ? selectedIds.has(layer.id) : undefined
+                        }
+                        onToggleSelect={selectMode ? toggleSelect : undefined}
+                        isLocked={isLocked(layer.id)}
+                        onToggleLock={toggleLock}
+                        onPreviewPostalCode={onPreviewPostalCode}
+                        onZoomToLayer={onZoomToLayer}
+                        onClearPLZ={handleClearLayerPLZ}
+                        onAddPlzRange={
+                          addPostalCodesToLayer
+                            ? (layerId, codes) =>
+                                addPostalCodesToLayer(layerId, codes)
+                            : undefined
+                        }
+                        allCodesSet={allCodesSet}
+                        onBulkMovePlz={handleBulkMovePlz}
+                        onBulkRemovePlz={handleBulkRemovePlz}
+                        onExportCSV={handleExportLayerCSV}
+                        onSplitLayer={handleSplitLayer}
+                        onCompareLayer={openDiffDialog}
+                        onSetGroup={handleSetLayerGroup}
+                        existingGroups={existingGroups}
+                        layerIndex={layerIndex}
+                      />
+                    ))),
+              ])
             ) : (
               <DndContext
                 sensors={sensors}
@@ -2533,77 +2642,120 @@ function LayerManagementSection({
                   items={optimisticLayers.map((l) => l.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {optimisticLayers.map((layer, layerIndex) => (
-                    <SortableLayerListItem
-                      key={layer.id}
-                      layer={layer}
-                      activeLayerId={activeLayerId}
-                      isLayerSwitchPending={isLayerSwitchPending}
-                      duplicateCount={duplicateCountByLayer.get(layer.id) ?? 0}
-                      editingLayerId={form.editingLayerId}
-                      editingLayerName={form.editingLayerName}
-                      editLayerInputRef={editLayerInputRef}
-                      onSelect={(id) => {
-                        if (!selectMode) onLayerSelect?.(id);
-                      }}
-                      onStartEdit={(id, name) =>
-                        dispatchForm({ type: "START_EDIT", layerId: id, name })
-                      }
-                      onConfirmEdit={handleRenameLayer}
-                      onCancelEdit={() => dispatchForm({ type: "CANCEL_EDIT" })}
-                      onEditNameChange={(name) =>
-                        dispatchForm({ type: "SET_EDIT_NAME", name })
-                      }
-                      onColorChange={handleColorChange}
-                      onOpacityChange={handleOpacityChange}
-                      onDelete={handleDeleteLayer}
-                      onDuplicateLayer={handleDuplicateLayer}
-                      onCopyToArea={handleOpenCopyToArea}
-                      onMergeLayer={
-                        optimisticLayers.filter((l) => l.id !== layer.id)
-                          .length > 0
-                          ? handleOpenMergeLayers
-                          : undefined
-                      }
-                      onToggleVisibility={handleToggleVisibility}
-                      onSoloLayer={handleSoloLayer}
-                      onRemovePostalCode={guardedRemovePostalCode}
-                      onImportCSV={
-                        addPostalCodesToLayer ? guardedImportCSV : undefined
-                      }
-                      onNotesChange={handleNotesChange}
-                      onMovePlz={handleMovePlz}
-                      otherLayers={optimisticLayers
-                        .filter((l) => l.id !== layer.id)
-                        .map((l) => ({
-                          id: l.id,
-                          name: l.name,
-                          color: l.color,
-                        }))}
-                      isSelected={
-                        selectMode ? selectedIds.has(layer.id) : undefined
-                      }
-                      onToggleSelect={selectMode ? toggleSelect : undefined}
-                      isLocked={isLocked(layer.id)}
-                      onToggleLock={toggleLock}
-                      onPreviewPostalCode={onPreviewPostalCode}
-                      onZoomToLayer={onZoomToLayer}
-                      onClearPLZ={handleClearLayerPLZ}
-                      onAddPlzRange={
-                        addPostalCodesToLayer
-                          ? (layerId, codes) =>
-                              addPostalCodesToLayer(layerId, codes)
-                          : undefined
-                      }
-                      allCodesSet={allCodesSet}
-                      onBulkMovePlz={handleBulkMovePlz}
-                      onBulkRemovePlz={handleBulkRemovePlz}
-                      onExportCSV={handleExportLayerCSV}
-                      onSplitLayer={handleSplitLayer}
-                      onCompareLayer={openDiffDialog}
-                      layerIndex={layerIndex}
-                    />
-                  ))}
+                  {groupedLayers.flatMap(({ name: gName, layers: gLayers }) => [
+                    ...(gName !== null
+                      ? [
+                          <div
+                            key={`group-${gName}`}
+                            className="flex items-center gap-1.5 px-1 py-0.5 mt-1 first:mt-0"
+                          >
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors min-w-0 flex-1"
+                              onClick={() => toggleGroupCollapse(gName)}
+                            >
+                              <span
+                                className={`transition-transform ${collapsedGroups.has(gName) ? "" : "rotate-90"}`}
+                              >
+                                ▶
+                              </span>
+                              <Folder className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{gName}</span>
+                              <span className="text-[10px] text-muted-foreground/70">
+                                ({gLayers.length})
+                              </span>
+                            </button>
+                          </div>,
+                        ]
+                      : []),
+                    ...(collapsedGroups.has(gName ?? "") && gName !== null
+                      ? []
+                      : gLayers.map((layer, layerIndex) => (
+                          <SortableLayerListItem
+                            key={layer.id}
+                            layer={layer}
+                            activeLayerId={activeLayerId}
+                            isLayerSwitchPending={isLayerSwitchPending}
+                            duplicateCount={
+                              duplicateCountByLayer.get(layer.id) ?? 0
+                            }
+                            editingLayerId={form.editingLayerId}
+                            editingLayerName={form.editingLayerName}
+                            editLayerInputRef={editLayerInputRef}
+                            onSelect={(id) => {
+                              if (!selectMode) onLayerSelect?.(id);
+                            }}
+                            onStartEdit={(id, name) =>
+                              dispatchForm({
+                                type: "START_EDIT",
+                                layerId: id,
+                                name,
+                              })
+                            }
+                            onConfirmEdit={handleRenameLayer}
+                            onCancelEdit={() =>
+                              dispatchForm({ type: "CANCEL_EDIT" })
+                            }
+                            onEditNameChange={(name) =>
+                              dispatchForm({ type: "SET_EDIT_NAME", name })
+                            }
+                            onColorChange={handleColorChange}
+                            onOpacityChange={handleOpacityChange}
+                            onDelete={handleDeleteLayer}
+                            onDuplicateLayer={handleDuplicateLayer}
+                            onCopyToArea={handleOpenCopyToArea}
+                            onMergeLayer={
+                              optimisticLayers.filter((l) => l.id !== layer.id)
+                                .length > 0
+                                ? handleOpenMergeLayers
+                                : undefined
+                            }
+                            onToggleVisibility={handleToggleVisibility}
+                            onSoloLayer={handleSoloLayer}
+                            onRemovePostalCode={guardedRemovePostalCode}
+                            onImportCSV={
+                              addPostalCodesToLayer
+                                ? guardedImportCSV
+                                : undefined
+                            }
+                            onNotesChange={handleNotesChange}
+                            onMovePlz={handleMovePlz}
+                            otherLayers={optimisticLayers
+                              .filter((l) => l.id !== layer.id)
+                              .map((l) => ({
+                                id: l.id,
+                                name: l.name,
+                                color: l.color,
+                              }))}
+                            isSelected={
+                              selectMode ? selectedIds.has(layer.id) : undefined
+                            }
+                            onToggleSelect={
+                              selectMode ? toggleSelect : undefined
+                            }
+                            isLocked={isLocked(layer.id)}
+                            onToggleLock={toggleLock}
+                            onPreviewPostalCode={onPreviewPostalCode}
+                            onZoomToLayer={onZoomToLayer}
+                            onClearPLZ={handleClearLayerPLZ}
+                            onAddPlzRange={
+                              addPostalCodesToLayer
+                                ? (layerId, codes) =>
+                                    addPostalCodesToLayer(layerId, codes)
+                                : undefined
+                            }
+                            allCodesSet={allCodesSet}
+                            onBulkMovePlz={handleBulkMovePlz}
+                            onBulkRemovePlz={handleBulkRemovePlz}
+                            onExportCSV={handleExportLayerCSV}
+                            onSplitLayer={handleSplitLayer}
+                            onCompareLayer={openDiffDialog}
+                            onSetGroup={handleSetLayerGroup}
+                            existingGroups={existingGroups}
+                            layerIndex={layerIndex}
+                          />
+                        ))),
+                  ])}
                 </SortableContext>
               </DndContext>
             )}
@@ -3547,6 +3699,7 @@ function DrawingToolsImpl({
     handleRemovePostalCodeFromLayer,
     handleMovePlz,
     handleNotesChange,
+    handleSetLayerGroup,
     handleClearLayerPLZ,
     handleExportGeoJSON,
     handleExportData,
@@ -4235,6 +4388,7 @@ function DrawingToolsImpl({
             handleRemovePostalCodeFromLayer={handleRemovePostalCodeFromLayer}
             handleMovePlz={handleMovePlz}
             handleNotesChange={handleNotesChange}
+            handleSetLayerGroup={handleSetLayerGroup}
             handleClearLayerPLZ={handleClearLayerPLZ}
             addPostalCodesToLayer={guardedAddPostalCodesToLayer}
             onOpenConflicts={onOpenConflicts}

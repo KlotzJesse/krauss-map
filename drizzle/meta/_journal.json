@@ -113,6 +113,13 @@
       "when": 1776515264129,
       "tag": "0015_map_bookmarks",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1776520745118,
+      "tag": "0016_layer_groups",
+      "breakpoints": true
     }
   ]
 }

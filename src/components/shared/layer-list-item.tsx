@@ -11,6 +11,8 @@ import {
   Eye,
   EyeOff,
   Focus,
+  Folder,
+  FolderOpen,
   GitCompareArrows,
   GitMerge,
   GripVertical,
@@ -68,6 +70,7 @@ interface LayerListItemLayer {
   opacity?: number | null;
   isVisible?: string;
   notes?: string | null;
+  groupName?: string | null;
   postalCodes?: { postalCode: string }[];
 }
 
@@ -120,6 +123,8 @@ interface LayerListItemProps {
   onExportCSV?: (layerId: number, layerName: string, codes: string[]) => void;
   onSplitLayer?: (layerId: number, splitCount: number) => void;
   onCompareLayer?: (layerId: number) => void;
+  onSetGroup?: (layerId: number, groupName: string | null) => void;
+  existingGroups?: string[];
   layerIndex?: number; // 0-based position in layer list (for F-key shortcut badge)
 }
 
@@ -287,6 +292,8 @@ export const LayerListItem = memo(function LayerListItem({
   onExportCSV,
   onSplitLayer,
   onCompareLayer,
+  onSetGroup,
+  existingGroups = [],
   onCopyToArea,
   onMergeLayer,
   layerIndex,
@@ -294,6 +301,8 @@ export const LayerListItem = memo(function LayerListItem({
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [splitPopoverOpen, setSplitPopoverOpen] = useState(false);
+  const [groupPopoverOpen, setGroupPopoverOpen] = useState(false);
+  const [newGroupInput, setNewGroupInput] = useState("");
   const [codesExpanded, setCodesExpanded] = useState(false);
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [notesValue, setNotesValue] = useState(layer.notes ?? "");
@@ -842,6 +851,112 @@ export const LayerListItem = memo(function LayerListItem({
                   <p>Mit anderem Layer vergleichen</p>
                 </TooltipContent>
               </Tooltip>
+            )}
+
+            {onSetGroup && (
+              <Popover
+                open={groupPopoverOpen}
+                onOpenChange={setGroupPopoverOpen}
+              >
+                <Tooltip>
+                  <PopoverTrigger
+                    render={
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant={layer.groupName ? "secondary" : "outline"}
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        }
+                      >
+                        {layer.groupName ? (
+                          <FolderOpen className="h-3 w-3" />
+                        ) : (
+                          <Folder className="h-3 w-3" />
+                        )}
+                      </TooltipTrigger>
+                    }
+                  />
+                  <TooltipContent>
+                    <p>
+                      {layer.groupName
+                        ? `Gruppe: ${layer.groupName}`
+                        : "Gruppe zuweisen"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+                <PopoverContent className="w-52 p-2 space-y-1.5" side="top">
+                  <p className="text-xs font-medium text-muted-foreground px-1">
+                    Gruppe zuweisen
+                  </p>
+                  {existingGroups.length > 0 && (
+                    <div className="space-y-0.5">
+                      {existingGroups.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          className={`w-full text-left px-2 py-1 rounded text-xs hover:bg-accent transition-colors flex items-center gap-1.5 ${layer.groupName === g ? "bg-accent font-medium" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSetGroup(layer.id, g);
+                            setGroupPopoverOpen(false);
+                          }}
+                        >
+                          <Folder className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-1 pt-0.5">
+                    <input
+                      className="flex-1 text-xs border rounded px-2 py-1 bg-background min-w-0"
+                      placeholder="Neue Gruppe…"
+                      value={newGroupInput}
+                      onChange={(e) => setNewGroupInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === "Enter" && newGroupInput.trim()) {
+                          onSetGroup(layer.id, newGroupInput.trim());
+                          setNewGroupInput("");
+                          setGroupPopoverOpen(false);
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-6 w-6 shrink-0"
+                      disabled={!newGroupInput.trim()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!newGroupInput.trim()) return;
+                        onSetGroup(layer.id, newGroupInput.trim());
+                        setNewGroupInput("");
+                        setGroupPopoverOpen(false);
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  {layer.groupName && (
+                    <button
+                      type="button"
+                      className="w-full text-left px-2 py-1 rounded text-xs text-destructive hover:bg-destructive/10 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSetGroup(layer.id, null);
+                        setGroupPopoverOpen(false);
+                      }}
+                    >
+                      Aus Gruppe entfernen
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
             )}
 
             {onClearPLZ && postalCodes.length > 0 && (
