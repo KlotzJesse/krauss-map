@@ -11,6 +11,8 @@ import {
   GripVertical,
   List,
   Loader2,
+  Lock,
+  LockOpen,
   Square,
   StickyNote,
   TriangleAlert,
@@ -84,6 +86,8 @@ interface LayerListItemProps {
   isSelected?: boolean;
   onToggleSelect?: (layerId: number) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
+  isLocked?: boolean;
+  onToggleLock?: (layerId: number) => void;
 }
 
 function LayerColorPickerContent({
@@ -211,6 +215,8 @@ export const LayerListItem = memo(function LayerListItem({
   isSelected,
   onToggleSelect,
   dragHandleProps,
+  isLocked = false,
+  onToggleLock,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -236,7 +242,8 @@ export const LayerListItem = memo(function LayerListItem({
           ? "border-primary bg-accent shadow-sm"
           : "border-border hover:border-primary/50 hover:bg-accent/50",
         isOptimistic && "opacity-60 pointer-events-none",
-        !isVisible && "opacity-50"
+        !isVisible && "opacity-50",
+        isLocked && "ring-1 ring-amber-400/50"
       )}
     >
       <div
@@ -373,7 +380,7 @@ export const LayerListItem = memo(function LayerListItem({
             )}
           </div>
 
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className={cn("flex items-center gap-0.5 transition-opacity", isLocked ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
             {/* Solo — show only this layer */}
             {onSoloLayer && (
               <Tooltip>
@@ -586,6 +593,37 @@ export const LayerListItem = memo(function LayerListItem({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{notesExpanded ? "Notizen schließen" : "Notizen bearbeiten"}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Layer lock */}
+            {onToggleLock && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant={isLocked ? "secondary" : "outline"}
+                      size="icon"
+                      className={cn(
+                        "h-5 w-5",
+                        isLocked && "text-amber-600 border-amber-400"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleLock(layer.id);
+                      }}
+                    />
+                  }
+                >
+                  {isLocked ? (
+                    <Lock className="h-3 w-3" />
+                  ) : (
+                    <LockOpen className="h-3 w-3" />
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isLocked ? "Ebene gesperrt – entsperren?" : "Ebene sperren"}</p>
                 </TooltipContent>
               </Tooltip>
             )}

@@ -100,6 +100,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
+import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type {
   ChangeSummary,
@@ -1126,6 +1127,7 @@ interface LayerManagementSectionProps {
 }
 
 function LayerManagementSection({
+  areaId,
   optimisticLayers,
   ui,
   dispatchUI,
@@ -1155,6 +1157,8 @@ function LayerManagementSection({
   addPostalCodesToLayer,
   onOpenConflicts,
 }: LayerManagementSectionProps) {
+  const { isLocked, toggleLock } = useLockedLayers(areaId);
+
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
   const handleOpenConflicts = useCallback(
     () => onOpenConflicts?.(),
@@ -1175,6 +1179,28 @@ function LayerManagementSection({
   const handleSetLayersOpen = useCallback(
     (open: boolean) => dispatchUI({ type: "SET_LAYERS_OPEN", open }),
     [dispatchUI]
+  );
+
+  // Lock-guarded wrappers — no-op when the target layer is locked
+  const guardedRemovePostalCode = useCallback(
+    (layerId: number, postalCode: string) => {
+      if (isLocked(layerId)) {
+        toast.warning("Ebene ist gesperrt — PLZ entfernen nicht möglich");
+        return;
+      }
+      handleRemovePostalCodeFromLayer?.(layerId, postalCode);
+    },
+    [isLocked, handleRemovePostalCodeFromLayer]
+  );
+  const guardedImportCSV = useCallback(
+    (layerId: number) => {
+      if (isLocked(layerId)) {
+        toast.warning("Ebene ist gesperrt — Import nicht möglich");
+        return;
+      }
+      openImportDialog(layerId);
+    },
+    [isLocked]
   );
   const handleNewLayerNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -1660,11 +1686,13 @@ function LayerManagementSection({
                   onDuplicateLayer={handleDuplicateLayer}
                   onToggleVisibility={handleToggleVisibility}
                    onSoloLayer={handleSoloLayer}
-                   onRemovePostalCode={handleRemovePostalCodeFromLayer}
-                   onImportCSV={addPostalCodesToLayer ? openImportDialog : undefined}
+                   onRemovePostalCode={guardedRemovePostalCode}
+                   onImportCSV={addPostalCodesToLayer ? guardedImportCSV : undefined}
                    onNotesChange={handleNotesChange}
                    isSelected={selectMode ? selectedIds.has(layer.id) : undefined}
                    onToggleSelect={selectMode ? toggleSelect : undefined}
+                   isLocked={isLocked(layer.id)}
+                   onToggleLock={toggleLock}
                  />
                ))
              ) : (
@@ -1703,11 +1731,13 @@ function LayerManagementSection({
                       onDuplicateLayer={handleDuplicateLayer}
                       onToggleVisibility={handleToggleVisibility}
                       onSoloLayer={handleSoloLayer}
-                      onRemovePostalCode={handleRemovePostalCodeFromLayer}
-                      onImportCSV={addPostalCodesToLayer ? openImportDialog : undefined}
+                      onRemovePostalCode={guardedRemovePostalCode}
+                      onImportCSV={addPostalCodesToLayer ? guardedImportCSV : undefined}
                       onNotesChange={handleNotesChange}
                       isSelected={selectMode ? selectedIds.has(layer.id) : undefined}
                       onToggleSelect={selectMode ? toggleSelect : undefined}
+                      isLocked={isLocked(layer.id)}
+                      onToggleLock={toggleLock}
                     />
                   ))}
                 </SortableContext>
@@ -2030,6 +2060,18 @@ function DrawingToolsImpl({
   changes = EMPTY_ARRAY,
   onOpenConflicts,
 }: DrawingToolsProps) {
+  const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
+
+  // Intercept addPostalCodesToLayer to block writes on locked layers
+  const guardedAddPostalCodesToLayer = addPostalCodesToLayer
+    ? async (layerId: number, codes: string[]) => {
+        if (isLayerLocked(layerId)) {
+          toast.warning("Ebene ist gesperrt — PLZ hinzufügen nicht möglich");
+          return;
+        }
+        await addPostalCodesToLayer(layerId, codes);
+      }
+    : undefined;
   const {
     optimisticLayers,
     ui,
@@ -2067,7 +2109,7 @@ function DrawingToolsImpl({
     onLayerSelect,
     layers,
     onLayerUpdate,
-    addPostalCodesToLayer,
+    addPostalCodesToLayer: guardedAddPostalCodesToLayer,
     removePostalCodesFromLayer,
     pendingPostalCodes,
     onAddPending,
@@ -2245,7 +2287,7 @@ function DrawingToolsImpl({
             handleSortByCount={handleSortByCount}
             handleRemovePostalCodeFromLayer={handleRemovePostalCodeFromLayer}
             handleNotesChange={handleNotesChange}
-            addPostalCodesToLayer={addPostalCodesToLayer}
+            addPostalCodesToLayer={guardedAddPostalCodesToLayer}
             onOpenConflicts={onOpenConflicts}
             handleBulkDelete={handleBulkDelete}
             handleBulkVisibility={handleBulkVisibility}
