@@ -1222,6 +1222,7 @@ interface LayerManagementSectionProps {
   onZoomToLayer?: (layerId: number) => void;
   plzFindInputRef?: React.RefObject<HTMLInputElement | null>;
   newLayerInputRef?: React.RefObject<HTMLInputElement | null>;
+  allCodesSet?: Set<string>;
 }
 
 function LayerManagementSection({
@@ -1260,6 +1261,7 @@ function LayerManagementSection({
   onZoomToLayer,
   plzFindInputRef: externalPlzFindInputRef,
   newLayerInputRef: externalNewLayerInputRef,
+  allCodesSet,
 }: LayerManagementSectionProps) {
   const { isLocked, toggleLock } = useLockedLayers(areaId);
 
@@ -1953,6 +1955,8 @@ function LayerManagementSection({
                    onPreviewPostalCode={onPreviewPostalCode}
                    onZoomToLayer={onZoomToLayer}
                    onClearPLZ={handleClearLayerPLZ}
+                   onAddPlzRange={addPostalCodesToLayer ? (layerId, codes) => addPostalCodesToLayer(layerId, codes) : undefined}
+                   allCodesSet={allCodesSet}
                  />
                ))
              ) : (
@@ -2003,6 +2007,8 @@ function LayerManagementSection({
                       onPreviewPostalCode={onPreviewPostalCode}
                       onZoomToLayer={onZoomToLayer}
                       onClearPLZ={handleClearLayerPLZ}
+                      onAddPlzRange={addPostalCodesToLayer ? (layerId, codes) => addPostalCodesToLayer(layerId, codes) : undefined}
+                      allCodesSet={allCodesSet}
                     />
                   ))}
                 </SortableContext>
@@ -2315,6 +2321,8 @@ const LayerDialogs = memo(function LayerDialogs({
               { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
               { keys: ["N"], desc: "Neues Gebiet anlegen" },
               { keys: ["D"], desc: "Aktive Ebene duplizieren" },
+              { keys: ["E"], desc: "Sichtbarkeit umschalten" },
+              { keys: ["Del"], desc: "Aktive Ebene löschen" },
               { keys: ["F2"], desc: "Aktive Ebene umbenennen" },
               { keys: ["Esc"], desc: "Zeichenmodus beenden" },
               { keys: ["Enter"], desc: "Polygon abschließen" },
@@ -2509,6 +2517,16 @@ function DrawingToolsImpl({
   );
 
   // Keyboard shortcut: Alt+ArrowUp/Down switches active layer
+  const allCodesSet = useMemo<Set<string>>(() => {
+    if (!postalCodesData?.features) return new Set();
+    const s = new Set<string>();
+    for (const f of postalCodesData.features) {
+      const code = f.properties?.code ?? f.properties?.postal_code ?? f.properties?.PLZ;
+      if (typeof code === "string") s.add(code);
+    }
+    return s;
+  }, [postalCodesData]);
+
   const layersRef = useRef(layers);
   layersRef.current = layers;
   const activeLayerIdRef = useRef(activeLayerId);
@@ -2525,6 +2543,10 @@ function DrawingToolsImpl({
   const newLayerInputRef = useRef<HTMLInputElement | null>(null);
   const handleDuplicateLayerRef = useRef(handleDuplicateLayer);
   handleDuplicateLayerRef.current = handleDuplicateLayer;
+  const handleToggleVisibilityRef = useRef(handleToggleVisibility);
+  handleToggleVisibilityRef.current = handleToggleVisibility;
+  const handleDeleteLayerRef = useRef(handleDeleteLayer);
+  handleDeleteLayerRef.current = handleDeleteLayer;
   const countryRef = useRef(country);
   countryRef.current = country;
   const dispatchFormRef = useRef(dispatchForm);
@@ -2574,6 +2596,23 @@ function DrawingToolsImpl({
       if (e.key === "d" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const id = activeLayerIdRef.current;
         if (id) handleDuplicateLayerRef.current(id);
+        return;
+      }
+
+      // E key: toggle visibility of active layer
+      if (e.key === "e" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const id = activeLayerIdRef.current;
+        const activeLayer = layersRef.current.find((l) => l.id === id);
+        if (activeLayer) {
+          handleToggleVisibilityRef.current(activeLayer.id, activeLayer.isVisible !== "true");
+        }
+        return;
+      }
+
+      // Delete / Backspace: delete active layer (only when not in input)
+      if ((e.key === "Delete" || e.key === "Backspace") && !isInInput && !e.ctrlKey && !e.metaKey) {
+        const id = activeLayerIdRef.current;
+        if (id) handleDeleteLayerRef.current(id);
         return;
       }
 
@@ -2803,6 +2842,7 @@ function DrawingToolsImpl({
             onZoomToLayer={onZoomToLayer}
             plzFindInputRef={plzFindInputRef}
             newLayerInputRef={newLayerInputRef}
+            allCodesSet={allCodesSet}
           />
         )}
 

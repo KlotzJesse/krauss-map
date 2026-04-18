@@ -14,6 +14,7 @@ import {
   Loader2,
   Lock,
   LockOpen,
+  Plus,
   Square,
   StickyNote,
   Trash2,
@@ -95,6 +96,8 @@ interface LayerListItemProps {
   onPreviewPostalCode?: (postalCode: string | null) => void;
   onZoomToLayer?: (layerId: number) => void;
   onClearPLZ?: (layerId: number) => void;
+  onAddPlzRange?: (layerId: number, codes: string[]) => void;
+  allCodesSet?: Set<string>;
 }
 
 function LayerColorPickerContent({
@@ -229,6 +232,8 @@ export const LayerListItem = memo(function LayerListItem({
   onPreviewPostalCode,
   onZoomToLayer,
   onClearPLZ,
+  onAddPlzRange,
+  allCodesSet,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -236,6 +241,8 @@ export const LayerListItem = memo(function LayerListItem({
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [notesValue, setNotesValue] = useState(layer.notes ?? "");
   const [codeSearch, setCodeSearch] = useState("");
+  const [rangeInput, setRangeInput] = useState("");
+  const [rangeInputVisible, setRangeInputVisible] = useState(false);
   const isVisible = layer.isVisible !== "false";
   const currentOpacity = layer.opacity ?? 70;
   const postalCodes = layer.postalCodes ?? [];
@@ -257,6 +264,57 @@ export const LayerListItem = memo(function LayerListItem({
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
   }, [postalCodes]);
+
+  const existingCodesSet = useMemo(
+    () => new Set(postalCodes.map((pc) => pc.postalCode)),
+    [postalCodes]
+  );
+
+  const handleAddRange = () => {
+    if (!onAddPlzRange || !allCodesSet) return;
+    const raw = rangeInput.trim();
+    if (!raw) return;
+
+    const newCodes: string[] = [];
+
+    for (const part of raw.split(/[,;\s]+/)) {
+      const segment = part.trim();
+      if (!segment) continue;
+
+      const dashMatch = /^(\d{4,5})-(\d{4,5})$/.exec(segment);
+      if (dashMatch) {
+        const from = Number.parseInt(dashMatch[1], 10);
+        const to = Number.parseInt(dashMatch[2], 10);
+        for (let n = from; n <= to; n++) {
+          const code = n.toString().padStart(dashMatch[1].length, "0");
+          if (allCodesSet.has(code) && !existingCodesSet.has(code)) {
+            newCodes.push(code);
+          }
+        }
+      } else if (/^\d{2,4}$/.test(segment)) {
+        // prefix match
+        for (const code of allCodesSet) {
+          if (code.startsWith(segment) && !existingCodesSet.has(code)) {
+            newCodes.push(code);
+          }
+        }
+      } else if (/^\d{5}$/.test(segment)) {
+        if (allCodesSet.has(segment) && !existingCodesSet.has(segment)) {
+          newCodes.push(segment);
+        }
+      }
+    }
+
+    if (newCodes.length === 0) {
+      toast.warning("Keine passenden PLZ gefunden");
+      return;
+    }
+
+    onAddPlzRange(layer.id, newCodes);
+    toast.success(`${newCodes.length} PLZ hinzugefügt`);
+    setRangeInput("");
+    setRangeInputVisible(false);
+  };
 
   return (
     <div
@@ -806,6 +864,51 @@ export const LayerListItem = memo(function LayerListItem({
               ))
             )}
           </div>
+          {/* PLZ range input */}
+          {onAddPlzRange && allCodesSet && (
+            <div className="mt-1.5">
+              {rangeInputVisible ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={rangeInput}
+                    onChange={(e) => setRangeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddRange();
+                      if (e.key === "Escape") { setRangeInputVisible(false); setRangeInput(""); }
+                    }}
+                    placeholder="z.B. 10115-10179, 20, 30001"
+                    className="flex-1 h-6 text-[10px] bg-muted rounded px-2 border-0 outline-none focus:ring-1 focus:ring-primary"
+                    // biome-ignore lint/a11y/noAutofocus: intentional focus on show
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddRange}
+                    className="h-6 px-1.5 text-[10px] bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                  >
+                    Hinzufügen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRangeInputVisible(false); setRangeInput(""); }}
+                    className="p-0.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setRangeInputVisible(true)}
+                  className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Plus className="h-2.5 w-2.5" />
+                  PLZ-Bereich hinzufügen
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
       {/* Notes section */}
