@@ -224,6 +224,16 @@ function StatsSection({ layers, postalCodesData }: StatsSectionProps) {
   const coverage =
     totalFeatures > 0 ? (assignedCount / totalFeatures) * 100 : 0;
 
+  // Build sorted layer sizes for bar chart
+  const layerSizes = layers
+    .map((l) => ({
+      name: l.name ?? `Layer ${l.id}`,
+      count: l.postalCodes?.length ?? 0,
+      color: l.color ?? "#6366f1",
+    }))
+    .sort((a, b) => b.count - a.count);
+  const maxCount = Math.max(...layerSizes.map((l) => l.count), 1);
+
   return (
     <>
       <Separator />
@@ -271,6 +281,33 @@ function StatsSection({ layers, postalCodesData }: StatsSectionProps) {
           <span>Gebiete</span>
           <span className="tabular-nums">{layers.length}</span>
         </div>
+        {layerSizes.length > 0 && (
+          <div className="space-y-1 pt-0.5">
+            <div className="text-[10px] font-semibold text-muted-foreground">
+              Layer-Verteilung
+            </div>
+            {layerSizes.map((layer) => (
+              <div key={layer.name} className="flex items-center gap-1.5">
+                <div className="w-16 shrink-0 truncate text-[10px] text-muted-foreground">
+                  {layer.name}
+                </div>
+                <div className="relative flex-1 h-3 rounded-sm bg-muted overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-sm transition-[width] duration-300"
+                    style={{
+                      width: `${(layer.count / maxCount) * 100}%`,
+                      backgroundColor: layer.color,
+                      opacity: 0.85,
+                    }}
+                  />
+                </div>
+                <div className="w-8 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+                  {layer.count}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
@@ -3080,6 +3117,10 @@ const LayerDialogs = memo(function LayerDialogs({
                     keys: ["Ctrl", "Shift", "P"],
                     desc: "PLZ-Präfix hinzufügen (z.B. 80 → alle 80xxx)",
                   },
+                  {
+                    keys: ["Ctrl", "A"],
+                    desc: "Alle nicht zugewiesenen PLZ zum aktiven Layer hinzufügen",
+                  },
                 ],
               },
               {
@@ -3385,6 +3426,8 @@ function DrawingToolsImpl({
   countryRef.current = country;
   const areaIdRef = useRef(areaId);
   areaIdRef.current = areaId;
+  const allCodesSetRef = useRef(allCodesSet);
+  allCodesSetRef.current = allCodesSet;
   const dispatchFormRef = useRef(dispatchForm);
   dispatchFormRef.current = dispatchForm;
 
@@ -3564,6 +3607,38 @@ function DrawingToolsImpl({
           e.preventDefault();
           onLayerSelectRef.current?.(currentLayers[idx].id);
         }
+        return;
+      }
+
+      // Ctrl+A: Add all unassigned visible PLZ to active layer
+      if (
+        e.key === "a" &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.shiftKey &&
+        !isInInput
+      ) {
+        e.preventDefault();
+        const layerId = activeLayerIdRef.current;
+        const addFn = guardedAddRef.current;
+        const allCodes = allCodesSetRef.current;
+        const currentLayers = layersRef.current;
+        if (!layerId || !addFn || !allCodes || allCodes.size === 0) return;
+        // Collect all assigned codes across all layers
+        const assignedCodes = new Set(
+          currentLayers.flatMap(
+            (l) => l.postalCodes?.map((pc) => pc.postalCode) ?? []
+          )
+        );
+        const unassigned = [...allCodes].filter((c) => !assignedCodes.has(c));
+        if (unassigned.length === 0) {
+          toast.info("Alle sichtbaren PLZ sind bereits zugewiesen");
+          return;
+        }
+        addFn(layerId, unassigned).then(() => {
+          toast.success(
+            `${unassigned.length} nicht zugewiesene PLZ zum aktiven Layer hinzugefügt`
+          );
+        });
         return;
       }
 
