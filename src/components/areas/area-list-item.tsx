@@ -59,6 +59,7 @@ interface AreaListItemProps {
   onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
   onDuplicate: (area: AreaSummary) => void;
   onArchive: (area: AreaSummary, archive: boolean) => void;
+  onEditNotes?: (area: AreaSummary) => void;
   onAreaClick: (area: AreaSummary) => void;
 }
 
@@ -81,6 +82,7 @@ export const AreaListItem = memo(
     onStartDelete,
     onDuplicate,
     onArchive,
+    onEditNotes,
     onAreaClick,
   }: AreaListItemProps) {
     const isArchived = area.isArchived === "true";
@@ -154,6 +156,7 @@ export const AreaListItem = memo(
           onStartDelete={onStartDelete}
           onDuplicate={onDuplicate}
           onArchive={onArchive}
+          onEditNotes={onEditNotes}
           disabled={isSelectable}
         >
           <div className="group/item relative flex flex-col w-full">
@@ -273,6 +276,7 @@ export const AreaListItem = memo(
                     onStartDelete={onStartDelete}
                     onDuplicate={onDuplicate}
                     onArchive={onArchive}
+                    onEditNotes={onEditNotes}
                   />
                 </div>
               )}
@@ -289,6 +293,11 @@ export const AreaListItem = memo(
                 ))}
               </div>
             )}
+            {area.description && !isSelectable && (
+              <p className="text-[10px] text-muted-foreground/60 truncate px-2 pb-1 leading-tight">
+                {area.description}
+              </p>
+            )}
           </div>
         </AreaItemMenu>
       </SidebarMenuItem>
@@ -301,7 +310,8 @@ export const AreaListItem = memo(
       prev.area.name !== next.area.name ||
       prev.area.country !== next.area.country ||
       prev.area.postalCodeCount !== next.area.postalCodeCount ||
-      prev.area.isArchived !== next.area.isArchived
+      prev.area.isArchived !== next.area.isArchived ||
+      prev.area.description !== next.area.description
     ) {
       return false;
     }

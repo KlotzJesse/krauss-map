@@ -26,6 +26,7 @@ export async function getAreas() {
         isArchived: areas.isArchived,
         updatedAt: areas.updatedAt,
         country: areas.country,
+        description: areas.description,
         postalCodeCount: sql<number>`(
           SELECT COUNT(*)::int
           FROM area_layer_postal_codes alpc

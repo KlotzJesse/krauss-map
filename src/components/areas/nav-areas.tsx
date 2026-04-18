@@ -29,8 +29,7 @@ import {
   archiveAreaAction,
   bulkAssignTagToAreasAction,
   bulkRemoveTagFromAreasAction,
-} from "@/app/actions/area-actions";
-import {
+} from "@/app/actions/area-actions";import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -40,6 +39,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -209,6 +217,9 @@ export function NavAreas({
   const [selectedAreaIds, setSelectedAreaIds] = useState<Set<number>>(
     new Set()
   );
+  const [notesArea, setNotesArea] = useState<AreaSummary | null>(null);
+  const [notesText, setNotesText] = useState("");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   // Collect all unique tags across all areas
   const allTags = useMemo(() => {
@@ -408,6 +419,26 @@ export function NavAreas({
     },
     [selectedAreaIds, startTransition]
   );
+
+  const handleEditNotes = useCallback((area: AreaSummary) => {
+    setNotesArea(area);
+    setNotesText(area.description ?? "");
+  }, []);
+
+  const handleSaveNotes = async () => {
+    if (!notesArea) return;
+    setIsSavingNotes(true);
+    await executeAction(
+      updateAreaAction(notesArea.id, { description: notesText }),
+      {
+        loading: "Speichere Notizen...",
+        success: "Notizen gespeichert",
+        error: "Speichern fehlgeschlagen",
+      }
+    );
+    setIsSavingNotes(false);
+    setNotesArea(null);
+  };
 
   const handleConfirmDelete = async () => {
     if (!areaToDelete) {
@@ -649,6 +680,7 @@ export function NavAreas({
                   onStartDelete={handleStartDelete}
                   onDuplicate={handleDuplicate}
                   onArchive={handleArchive}
+                  onEditNotes={handleEditNotes}
                   onAreaClick={handleAreaClick}
                 />
               ))}
@@ -702,6 +734,31 @@ export function NavAreas({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Notes editor dialog */}
+      <Dialog open={notesArea !== null} onOpenChange={(v) => { if (!v) setNotesArea(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Notizen — {notesArea?.name}</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={notesText}
+            onChange={(e) => setNotesText(e.target.value)}
+            placeholder="Notizen zu diesem Gebiet..."
+            rows={5}
+            className="resize-none"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNotesArea(null)} disabled={isSavingNotes}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleSaveNotes} disabled={isSavingNotes}>
+              {isSavingNotes ? "Speichere..." : "Speichern"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

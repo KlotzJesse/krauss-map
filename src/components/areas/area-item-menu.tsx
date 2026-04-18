@@ -6,6 +6,7 @@ import {
   IconCopy,
   IconDotsVertical,
   IconEdit,
+  IconFileText,
   IconTrash,
 } from "@tabler/icons-react";
 import { memo } from "react";
@@ -32,6 +33,7 @@ interface AreaItemMenuProps {
   onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
   onDuplicate: (area: AreaSummary) => void;
   onArchive: (area: AreaSummary, archive: boolean) => void;
+  onEditNotes?: (area: AreaSummary) => void;
   children: React.ReactNode;
   disabled?: boolean;
 }
@@ -43,6 +45,7 @@ function MenuItems({
   onStartDelete,
   onDuplicate,
   onArchive,
+  onEditNotes,
   variant,
 }: Omit<AreaItemMenuProps, "children"> & {
   variant: "context" | "dropdown";
@@ -58,6 +61,12 @@ function MenuItems({
         <IconEdit className="h-4 w-4 mr-2" />
         Umbenennen
       </Item>
+      {onEditNotes && (
+        <Item onClick={() => onEditNotes(area)}>
+          <IconFileText className="h-4 w-4 mr-2" />
+          Notizen bearbeiten
+        </Item>
+      )}
       <Item onClick={() => onDuplicate(area)}>
         <IconCopy className="h-4 w-4 mr-2" />
         Duplizieren
@@ -85,6 +94,7 @@ export const AreaItemMenu = memo(function AreaItemMenu({
   onStartDelete,
   onDuplicate,
   onArchive,
+  onEditNotes,
   children,
   disabled = false,
 }: AreaItemMenuProps) {
@@ -101,6 +111,7 @@ export const AreaItemMenu = memo(function AreaItemMenu({
           onStartDelete={onStartDelete}
           onDuplicate={onDuplicate}
           onArchive={onArchive}
+          onEditNotes={onEditNotes}
           variant="context"
         />
       </ContextMenuContent>
@@ -116,6 +127,7 @@ export const AreaItemDropdown = memo(
     onStartDelete,
     onDuplicate,
     onArchive,
+    onEditNotes,
   }: Omit<AreaItemMenuProps, "children">) {
     return (
       <DropdownMenu>
@@ -133,6 +145,7 @@ export const AreaItemDropdown = memo(
             onStartDelete={onStartDelete}
             onDuplicate={onDuplicate}
             onArchive={onArchive}
+            onEditNotes={onEditNotes}
             variant="dropdown"
           />
         </DropdownMenuContent>
@@ -145,5 +158,6 @@ export const AreaItemDropdown = memo(
     prev.onStartRename === next.onStartRename &&
     prev.onStartDelete === next.onStartDelete &&
     prev.onDuplicate === next.onDuplicate &&
-    prev.onArchive === next.onArchive
+    prev.onArchive === next.onArchive &&
+    prev.onEditNotes === next.onEditNotes
 );
