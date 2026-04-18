@@ -77,6 +77,7 @@ import {
   importAreaFromDataAction,
   balanceLayersAction,
   fixDuplicateCodeAction,
+  addPostalCodesByPrefixAction,
 } from "@/app/actions/area-actions";
 import {
   batchUpdateVisibilityAction,
@@ -3382,6 +3383,8 @@ function DrawingToolsImpl({
   handleShowAllLayersRef.current = handleShowAllLayers;
   const countryRef = useRef(country);
   countryRef.current = country;
+  const areaIdRef = useRef(areaId);
+  areaIdRef.current = areaId;
   const dispatchFormRef = useRef(dispatchForm);
   dispatchFormRef.current = dispatchForm;
 
@@ -3561,6 +3564,86 @@ function DrawingToolsImpl({
           e.preventDefault();
           onLayerSelectRef.current?.(currentLayers[idx].id);
         }
+        return;
+      }
+
+      // Ctrl+Shift+V: PLZ range insert (e.g. 80331-80339)
+      if (
+        e.key === "V" &&
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        !isInInput
+      ) {
+        e.preventDefault();
+        const layerId = activeLayerIdRef.current;
+        const addFn = guardedAddRef.current;
+        if (!layerId || !addFn) return;
+        const input = window.prompt(
+          'PLZ-Bereich eingeben (z.B. "80331-80339" oder "80331, 80332, 80339")'
+        );
+        if (!input) return;
+        // Parse range like 80331-80339 or 80331–80339
+        const rangeMatch = /^(\d{4,5})\s*[-–]\s*(\d{4,5})$/.exec(input.trim());
+        let codes: string[] = [];
+        if (rangeMatch) {
+          const from = parseInt(rangeMatch[1], 10);
+          const to = parseInt(rangeMatch[2], 10);
+          if (from <= to && to - from <= 500) {
+            for (let i = from; i <= to; i++) {
+              codes.push(String(i).padStart(rangeMatch[1].length, "0"));
+            }
+          }
+        } else {
+          codes = input
+            .split(/[\s,;]+/)
+            .map((s) => s.trim())
+            .filter((s) => /^\d{4,5}$/.test(s));
+        }
+        if (codes.length === 0) {
+          toast.error("Keine gültigen PLZ gefunden");
+          return;
+        }
+        addFn(layerId, codes).then(() => {
+          toast.success(`${codes.length} PLZ aus Bereich eingefügt`);
+        });
+        return;
+      }
+
+      // Ctrl+Shift+P: PLZ prefix add (e.g. "80" → all 80xxx)
+      if (
+        e.key === "P" &&
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        !isInInput
+      ) {
+        e.preventDefault();
+        const layerId = activeLayerIdRef.current;
+        const currentAreaId = areaIdRef.current;
+        if (!layerId || !currentAreaId) return;
+        const input = window.prompt(
+          'PLZ-Präfix eingeben (z.B. "80" → alle PLZ die mit 80 beginnen)'
+        );
+        if (!input) return;
+        const prefix = input.trim();
+        if (!/^\d{1,4}$/.test(prefix)) {
+          toast.error("Ungültiger Präfix — bitte 1–4 Ziffern eingeben");
+          return;
+        }
+        const toastId = toast.loading(`Füge PLZ mit Präfix "${prefix}" hinzu…`);
+        addPostalCodesByPrefixAction(currentAreaId, layerId, prefix).then(
+          (res) => {
+            toast.dismiss(toastId);
+            if (!res.success) {
+              toast.error(res.error ?? "Fehler beim Hinzufügen");
+            } else if ((res.data?.count ?? 0) === 0) {
+              toast.warning(`Keine neuen PLZ für Präfix "${prefix}" gefunden`);
+            } else {
+              toast.success(
+                `${res.data?.count} PLZ mit Präfix "${prefix}" eingefügt`
+              );
+            }
+          }
+        );
         return;
       }
 

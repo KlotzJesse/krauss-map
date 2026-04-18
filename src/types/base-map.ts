@@ -44,6 +44,7 @@ export interface BaseMapProps {
     undoCount: number;
     redoCount: number;
   };
+  onSnapshotReady?: (blob: Blob) => void;
 }
 
 export interface MapErrorMessageProps {

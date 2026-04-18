@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, like } from "drizzle-orm";
 import type { Route } from "next";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
@@ -1468,6 +1468,78 @@ export async function fixDuplicateCodeAction(
   } catch (error) {
     console.error("Error fixing duplicate code:", error);
     return { success: false, error: "Failed to fix duplicate" };
+  }
+}
+
+/**
+ * Adds all postal codes matching a prefix to a layer.
+ * Looks up matching codes from the postal_codes table for the area's granularity/country.
+ */
+export async function addPostalCodesByPrefixAction(
+  areaId: number,
+  layerId: number,
+  prefix: string
+): ServerActionResponse<{ count: number }> {
+  try {
+    if (!areaId || !layerId || !prefix || !/^\d{1,4}$/.test(prefix)) {
+      return { success: false, error: "Invalid parameters" };
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const area = await tx.query.areas.findFirst({
+        where: eq(areas.id, areaId),
+        columns: { id: true, country: true, granularity: true },
+      });
+      if (!area) throw new Error("Area not found");
+
+      const layer = await tx.query.areaLayers.findFirst({
+        where: and(eq(areaLayers.id, layerId), eq(areaLayers.areaId, areaId)),
+      });
+      if (!layer) throw new Error("Layer not found");
+
+      const matchingCodes = await tx
+        .select({ code: postalCodes.code })
+        .from(postalCodes)
+        .where(
+          and(
+            like(postalCodes.code, `${prefix}%`),
+            eq(postalCodes.granularity, area.granularity ?? "plz5"),
+            eq(postalCodes.country, area.country ?? "DE")
+          )
+        );
+
+      if (matchingCodes.length === 0) {
+        return { count: 0 };
+      }
+
+      const codes = matchingCodes.map((r) => r.code);
+      const insertedRows = await tx
+        .insert(areaLayerPostalCodes)
+        .values(codes.map((code) => ({ layerId, postalCode: code })))
+        .onConflictDoNothing()
+        .returning({ postalCode: areaLayerPostalCodes.postalCode });
+
+      const inserted = insertedRows.map((r) => r.postalCode);
+      if (inserted.length > 0) {
+        await recordChangeWithTx(tx, areaId, {
+          changeType: "add_postal_codes",
+          entityType: "postal_code",
+          entityId: layerId,
+          changeData: { postalCodes: inserted, layerId },
+          previousData: {},
+        });
+      }
+
+      return { count: inserted.length };
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}-change-history`);
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error adding codes by prefix:", error);
+    return { success: false, error: "Failed to add codes by prefix" };
   }
 }
 

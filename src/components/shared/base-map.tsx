@@ -387,11 +387,13 @@ const MapInner = memo(function MapInner({
   mapStyleLabel,
   mapStyles,
   onSetMapStyle,
+  onSnapshotReady,
 }: Omit<BaseMapProps, "center" | "zoom"> & {
   onCycleMapStyle?: () => void;
   mapStyleLabel?: string;
   mapStyles?: readonly { id: string; label: string }[];
   onSetMapStyle?: (id: string) => void;
+  onSnapshotReady?: (blob: Blob) => void;
 }) {
   const { current: mapRef } = useMap();
   const rawMapRef = useRef<maplibregl.Map | null>(null);
@@ -543,12 +545,18 @@ const MapInner = memo(function MapInner({
   const handleScreenshot = useCallback(() => {
     const canvas = rawMapRef.current?.getCanvas();
     if (!canvas) return;
+    if (onSnapshotReady) {
+      canvas.toBlob((blob) => {
+        if (blob) onSnapshotReady(blob);
+      }, "image/png");
+      return;
+    }
     const dataUrl = canvas.toDataURL("image/png");
     const a = document.createElement("a");
     a.href = dataUrl;
     a.download = `karte-${areaName ?? "export"}-${new Date().toISOString().slice(0, 10)}.png`;
     a.click();
-  }, [areaName]);
+  }, [areaName, onSnapshotReady]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -998,6 +1006,7 @@ const BaseMapComponent = ({
   versions,
   changes,
   initialUndoRedoStatus,
+  onSnapshotReady,
 }: BaseMapProps) => {
   const countryConfig = country ? COUNTRY_CONFIGS[country] : undefined;
   const effectiveCenter = center ?? countryConfig?.center ?? DACH_CENTER;
@@ -1134,6 +1143,7 @@ const BaseMapComponent = ({
                 setMapStyleId(id as MapStyleId);
                 localStorage.setItem("map-style-id", id);
               }}
+              onSnapshotReady={onSnapshotReady}
             />
           </Map>
         </MapRecoveryBoundary>
