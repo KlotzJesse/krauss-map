@@ -97,6 +97,22 @@ export async function getAreaName(id: number): Promise<string | null> {
   }
 }
 
+export async function getAreaDescription(id: number): Promise<string | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("areas", `area-${id}`);
+  try {
+    const row = await db.query.areas.findFirst({
+      where: eq(areas.id, id),
+      columns: { description: true },
+    });
+    return row?.description ?? null;
+  } catch (error) {
+    console.error("Error fetching area description:", error);
+    return null;
+  }
+}
+
 export async function getLayers(areaId: number) {
   "use cache";
   cacheLife("minutes");

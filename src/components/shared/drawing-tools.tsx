@@ -51,6 +51,7 @@ import {
   deleteLayerAction,
   duplicateLayerAction,
   updateLayerAction,
+  updateAreaAction,
   exportAreaGeoJSONAction,
   exportAreaDataAction,
   importAreaFromDataAction,
@@ -235,6 +236,8 @@ export interface DrawingToolsProps {
   areaId?: number;
 
   areaName?: string; // Optional area/project name for exports
+
+  areaDescription?: string | null; // Optional area description, editable inline
 
   activeLayerId?: number | null;
 
@@ -2083,6 +2086,7 @@ function DrawingToolsImpl({
   onRemovePending,
   areaId,
   areaName,
+  areaDescription,
   activeLayerId,
   onLayerSelect,
   layers = EMPTY_ARRAY,
@@ -2097,6 +2101,25 @@ function DrawingToolsImpl({
   onOpenConflicts,
 }: DrawingToolsProps) {
   const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
+
+  // Area description inline editing
+  const [descDraft, setDescDraft] = useState(areaDescription ?? "");
+  const [descEditing, setDescEditing] = useState(false);
+  // Sync draft when areaDescription changes (e.g., after server revalidation)
+  const prevAreaDescription = useRef(areaDescription);
+  if (prevAreaDescription.current !== areaDescription) {
+    prevAreaDescription.current = areaDescription;
+    if (!descEditing) setDescDraft(areaDescription ?? "");
+  }
+
+  const handleDescriptionSave = useCallback(async () => {
+    setDescEditing(false);
+    if (!areaId) return;
+    const trimmed = descDraft.trim();
+    if (trimmed === (areaDescription ?? "")) return;
+    await updateAreaAction(areaId, { description: trimmed || undefined });
+    onLayerUpdate?.();
+  }, [areaId, descDraft, areaDescription, onLayerUpdate]);
 
   // Intercept addPostalCodesToLayer to block writes on locked layers
   const guardedAddPostalCodesToLayer = addPostalCodesToLayer
@@ -2262,6 +2285,36 @@ function DrawingToolsImpl({
     >
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Kartentools</CardTitle>
+        {areaName && (
+          <div className="mt-0.5">
+            <p className="text-xs font-medium text-foreground truncate">{areaName}</p>
+            {descEditing ? (
+              <textarea
+                // biome-ignore lint/a11y/noAutofocus: intentional focus on inline edit
+                autoFocus
+                value={descDraft}
+                onChange={(e) => setDescDraft(e.target.value)}
+                onBlur={handleDescriptionSave}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleDescriptionSave(); }
+                  if (e.key === "Escape") { setDescEditing(false); setDescDraft(areaDescription ?? ""); }
+                }}
+                placeholder="Beschreibung hinzufügen…"
+                rows={2}
+                className="w-full mt-0.5 text-xs text-muted-foreground bg-muted border border-input rounded px-1.5 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => { if (areaId && !isViewingVersion) setDescEditing(true); }}
+                title={isViewingVersion ? undefined : "Beschreibung bearbeiten"}
+                className="w-full text-left mt-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors truncate"
+              >
+                {descDraft || (isViewingVersion ? "" : <span className="italic opacity-50">Beschreibung hinzufügen…</span>)}
+              </button>
+            )}
+          </div>
+        )}
         {isViewingVersion && (
           <div className="flex items-center gap-2 py-1">
             <Badge

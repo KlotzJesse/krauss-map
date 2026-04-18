@@ -164,6 +164,7 @@ const MapInner = memo(function MapInner({
   activeLayerId,
   areaId,
   areaName,
+  areaDescription,
   previewPostalCode,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
@@ -353,6 +354,7 @@ const MapInner = memo(function MapInner({
                 onRemovePending={interactions.removePendingFromSelection}
                 areaId={areaId ?? undefined}
                 areaName={areaName}
+                areaDescription={areaDescription}
                 activeLayerId={activeLayerId}
                 onLayerSelect={setActiveLayer}
                 isLayerSwitchPending={isLayerPending}
@@ -467,6 +469,7 @@ const BaseMapComponent = ({
   activeLayerId,
   areaId,
   areaName,
+  areaDescription,
   previewPostalCode,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
@@ -558,6 +561,7 @@ const BaseMapComponent = ({
               activeLayerId={activeLayerId}
               areaId={areaId}
               areaName={areaName}
+              areaDescription={areaDescription}
               previewPostalCode={previewPostalCode}
               addPostalCodesToLayer={addPostalCodesToLayer}
               removePostalCodesFromLayer={removePostalCodesFromLayer}

@@ -6,6 +6,7 @@ import type { CountryCode } from "@/lib/config/countries";
 import { DEFAULT_COUNTRY } from "@/lib/config/countries";
 import {
   getAreaName,
+  getAreaDescription,
   getLayers,
   getVersionSummaries,
   getChangeSummaries,
@@ -37,6 +38,7 @@ export default async function ServerPostalCodesView({
   // to avoid serializing ~9.6MB of GeoJSON into the RSC payload
   // States data also fetched client-side to avoid 246KB RSC payload bloat
   const areaNamePromise = getAreaName(areaId);
+  const areaDescriptionPromise = getAreaDescription(areaId);
   const layersPromise = getLayers(areaId);
   const versionsPromise = getVersionSummaries(areaId);
   const changesPromise = getChangeSummaries(areaId, { limit: 50 });
@@ -50,6 +52,7 @@ export default async function ServerPostalCodesView({
           country={country}
           areaId={areaId}
           areaNamePromise={areaNamePromise}
+          areaDescriptionPromise={areaDescriptionPromise}
           layersPromise={layersPromise}
           undoRedoStatusPromise={undoRedoStatusPromise}
           isViewingVersion={false}
