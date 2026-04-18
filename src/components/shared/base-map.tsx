@@ -1,5 +1,5 @@
 "use no memo";
-import { Camera, PlusIcon } from "lucide-react";
+import { Camera, Printer, PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   Component,
@@ -286,6 +286,10 @@ const MapInner = memo(function MapInner({
     a.click();
   }, [areaName]);
 
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
   // startTransition-wrapped handlers to defer heavy subtree re-renders
   const handleShowTools = useStableCallback(() =>
     startTransition(() => interactions.showTools())
@@ -385,8 +389,8 @@ const MapInner = memo(function MapInner({
         </div>
       </Activity>
 
-      {/* Screenshot button - bottom right */}
-      <div className="absolute bottom-4 right-4 z-10">
+      {/* Screenshot + Print buttons - bottom right */}
+      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-1">
         <button
           type="button"
           onClick={handleScreenshot}
@@ -395,6 +399,15 @@ const MapInner = memo(function MapInner({
           className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
         >
           <Camera className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={handlePrint}
+          title="Karte drucken"
+          aria-label="Karte drucken"
+          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground print:hidden"
+        >
+          <Printer className="h-4 w-4" />
         </button>
       </div>
 

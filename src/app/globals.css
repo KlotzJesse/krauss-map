@@ -1180,3 +1180,32 @@
     animation: none !important;
   }
 }
+
+/* Print layout — hide all UI chrome, show map full-page */
+@media print {
+  body {
+    background: white !important;
+  }
+
+  /* Hide sidebar, header, and all non-map elements */
+  nav,
+  header,
+  aside,
+  [data-sidebar],
+  [role="complementary"],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Map container: fill the page */
+  [role="region"][aria-label="Kartentools-Panel"],
+  [role="region"][aria-label="Kartentools-Panel"] * {
+    display: none !important;
+  }
+
+  /* The map canvas should be full-page */
+  canvas {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+  }
+}
