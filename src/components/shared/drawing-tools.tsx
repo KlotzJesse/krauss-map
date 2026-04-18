@@ -8,9 +8,28 @@ import {
   IconHistory,
   IconPlus,
 } from "@tabler/icons-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
+  restrictToParentElement,
+  restrictToVerticalAxis,
+} from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { ChevronDown, ChevronUp, Eye, Palette, Search, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, GripVertical, Palette, Search, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -425,9 +444,10 @@ function useDrawingToolsActions({
     (
       currentLayers: Layer[],
       update: {
-        type: "create" | "update" | "delete";
+        type: "create" | "update" | "delete" | "reorder";
         layer?: Partial<Layer>;
         id?: number;
+        layers?: Layer[];
       }
     ) => {
       if (update.type === "create" && update.layer) {
@@ -440,6 +460,9 @@ function useDrawingToolsActions({
       }
       if (update.type === "delete" && update.id) {
         return currentLayers.filter((l) => l.id !== update.id);
+      }
+      if (update.type === "reorder" && update.layers) {
+        return update.layers;
       }
       return currentLayers;
     }
@@ -832,6 +855,30 @@ function useDrawingToolsActions({
     });
   };
 
+  const handleReorderLayers = (oldIndex: number, newIndex: number) => {
+    startTransition(async () => {
+      const reordered = arrayMove(optimisticLayers, oldIndex, newIndex);
+      const withNewIndices = reordered.map((l, i) => ({
+        ...l,
+        orderIndex: i,
+      }));
+      updateOptimisticLayers({ type: "reorder", layers: withNewIndices });
+      const changedLayers = withNewIndices.filter(
+        (l, i) => optimisticLayers[i]?.id !== l.id
+      );
+      try {
+        await Promise.all(
+          changedLayers.map((l) =>
+            updateLayer(l.id, { orderIndex: l.orderIndex })
+          )
+        );
+        onLayerUpdate?.();
+      } catch {
+        toast.error("Fehler beim Speichern der Reihenfolge");
+      }
+    });
+  };
+
   return {
     optimisticLayers,
     ui,
@@ -854,7 +901,36 @@ function useDrawingToolsActions({
     handleShowAllLayers,
     handleReassignColors,
     handleOpacityChange,
+    handleReorderLayers,
   };
+}
+
+type SortableLayerListItemProps = React.ComponentProps<typeof LayerListItem>;
+
+function SortableLayerListItem({ layer, ...props }: SortableLayerListItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: layer.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : undefined,
+    zIndex: isDragging ? 10 : undefined,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <LayerListItem
+        layer={layer}
+        dragHandleProps={{ ...attributes, ...listeners } as React.HTMLAttributes<HTMLButtonElement>}
+        {...props}
+      />
+    </div>
+  );
 }
 
 interface LayerManagementSectionProps {
@@ -879,6 +955,7 @@ interface LayerManagementSectionProps {
   handleSoloLayer: (layerId: number) => void;
   handleShowAllLayers: () => void;
   handleReassignColors: () => void;
+  handleReorderLayers: (oldIndex: number, newIndex: number) => void;
   onOpenConflicts?: () => void;
 }
 
@@ -903,6 +980,7 @@ function LayerManagementSection({
   handleSoloLayer,
   handleShowAllLayers,
   handleReassignColors,
+  handleReorderLayers,
   onOpenConflicts,
 }: LayerManagementSectionProps) {
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
@@ -947,6 +1025,25 @@ function LayerManagementSection({
     if (!q) return optimisticLayers;
     return optimisticLayers.filter((l) => l.name.toLowerCase().includes(q));
   }, [optimisticLayers, layerSearch]);
+
+  const isDragDisabled = !!layerSearch.trim();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIndex = optimisticLayers.findIndex((l) => l.id === active.id);
+      const newIndex = optimisticLayers.findIndex((l) => l.id === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        handleReorderLayers(oldIndex, newIndex);
+      }
+    },
+    [optimisticLayers, handleReorderLayers]
+  );
 
   // Per-layer duplicate postal code counts
   const duplicateCountByLayer = useMemo(() => {
@@ -1171,7 +1268,7 @@ function LayerManagementSection({
               <p className="text-xs text-muted-foreground text-center py-3">
                 Keine Gebiete gefunden
               </p>
-            ) : (
+            ) : isDragDisabled ? (
               filteredLayers.map((layer) => (
                 <LayerListItem
                   key={layer.id}
@@ -1199,6 +1296,46 @@ function LayerManagementSection({
                   onSoloLayer={handleSoloLayer}
                 />
               ))
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              >
+                <SortableContext
+                  items={optimisticLayers.map((l) => l.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {optimisticLayers.map((layer) => (
+                    <SortableLayerListItem
+                      key={layer.id}
+                      layer={layer}
+                      activeLayerId={activeLayerId}
+                      isLayerSwitchPending={isLayerSwitchPending}
+                      duplicateCount={duplicateCountByLayer.get(layer.id) ?? 0}
+                      editingLayerId={form.editingLayerId}
+                      editingLayerName={form.editingLayerName}
+                      editLayerInputRef={editLayerInputRef}
+                      onSelect={(id) => onLayerSelect?.(id)}
+                      onStartEdit={(id, name) =>
+                        dispatchForm({ type: "START_EDIT", layerId: id, name })
+                      }
+                      onConfirmEdit={handleRenameLayer}
+                      onCancelEdit={() => dispatchForm({ type: "CANCEL_EDIT" })}
+                      onEditNameChange={(name) =>
+                        dispatchForm({ type: "SET_EDIT_NAME", name })
+                      }
+                      onColorChange={handleColorChange}
+                      onOpacityChange={handleOpacityChange}
+                      onDelete={handleDeleteLayer}
+                      onDuplicateLayer={handleDuplicateLayer}
+                      onToggleVisibility={handleToggleVisibility}
+                      onSoloLayer={handleSoloLayer}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         </CollapsibleContent>
@@ -1368,6 +1505,7 @@ function DrawingToolsImpl({
     handleSoloLayer,
     handleShowAllLayers,
     handleReassignColors,
+    handleReorderLayers,
   } = useDrawingToolsActions({
     areaId,
     areaName,
@@ -1489,6 +1627,7 @@ function DrawingToolsImpl({
             handleSoloLayer={handleSoloLayer}
             handleShowAllLayers={handleShowAllLayers}
             handleReassignColors={handleReassignColors}
+            handleReorderLayers={handleReorderLayers}
             onOpenConflicts={onOpenConflicts}
           />
         )}

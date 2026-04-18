@@ -40,6 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 import { copyPostalCodesCSV } from "@/lib/utils/export-utils";
 import { generatePalette } from "@/lib/utils/layer-colors";
+import { GripVertical } from "lucide-react";
 
 export const DEFAULT_LAYER_COLORS = generatePalette(16);
 
@@ -71,6 +72,7 @@ interface LayerListItemProps {
   onDuplicateLayer?: (layerId: number) => void;
   onToggleVisibility?: (layerId: number, visible: boolean) => void;
   onSoloLayer?: (layerId: number) => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }
 
 function LayerColorPickerContent({
@@ -192,6 +194,7 @@ export const LayerListItem = memo(function LayerListItem({
   onDuplicateLayer,
   onToggleVisibility,
   onSoloLayer,
+  dragHandleProps,
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -229,6 +232,18 @@ export const LayerListItem = memo(function LayerListItem({
       >
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            {/* Drag handle — shown when draggable */}
+            {dragHandleProps && (
+              <button
+                type="button"
+                className="shrink-0 p-0.5 rounded cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                aria-label="Gebiet verschieben"
+                onClick={(e) => e.stopPropagation()}
+                {...dragHandleProps}
+              >
+                <GripVertical className="h-3 w-3" />
+              </button>
+            )}
             {/* Visibility toggle — always visible */}
             {onToggleVisibility && (
               <button
