@@ -99,14 +99,14 @@ export function generateNextColor(existingColors: string[]): string {
   let bestColor = "#3b82f6";
   let bestMinDist = -1;
 
-  // Try multiple saturation/lightness combos — balanced cartographic tones: distinct but not overwhelming
+  // Try multiple saturation/lightness combos — vivid-but-pleasant cartographic tones
   const slCombos: [number, number][] = [
-    [52, 66], // Balanced mid-tone
-    [54, 64], // Slightly richer
-    [50, 68], // Softer
-    [56, 65], // Slightly more vivid
-    [48, 70], // Lighter
-    [55, 63], // Deep balanced
+    [65, 57], // Primary sweet-spot: punchy but not electric
+    [68, 55], // Slightly more vivid
+    [62, 60], // Softer punch
+    [70, 53], // Deep vivid
+    [60, 62], // Balanced mid
+    [67, 58], // Rich mid-tone
   ];
 
   for (const [s, l] of slCombos) {
@@ -141,9 +141,9 @@ export function generatePalette(count: number): string[] {
 
   for (let i = 0; i < count; i++) {
     const hue = (i * GOLDEN_ANGLE) % 360;
-    // Balanced cartographic tones: S=50-56%, L=64-68% — distinct without being overwhelming
-    const saturation = 50 + (i % 4) * 2; // 50, 52, 54, 56
-    const lightness = 64 + (i % 3) * 2; // 64, 66, 68
+    // Vivid-but-pleasant cartographic tones: punchy without being electric
+    const saturation = 63 + (i % 3) * 4; // 63, 67, 71
+    const lightness = 55 + (i % 2) * 5; // 55, 60
     colors.push(hslToHex(hue, saturation, lightness));
   }
 
@@ -194,7 +194,7 @@ export const COLOR_THEMES: { id: string; label: string; sample: string[] }[] = [
   {
     id: "jewel",
     label: "Juwel",
-    sample: ["#c26b6b", "#6fc97d", "#ac80d4", "#d4c46d", "#7dc9d9"],
+    sample: ["#d15b5b", "#5bc97d", "#9b6fd4", "#d4c44f", "#5bbfd9"],
   },
   {
     id: "pastel",
@@ -229,7 +229,7 @@ function generateThemePalette(theme: string, count: number): string[] {
     string,
     { s: number; l: number; hueOffset: number }
   > = {
-    jewel: { s: 52, l: 66, hueOffset: 0 },
+    jewel: { s: 65, l: 57, hueOffset: 0 },
     pastel: { s: 45, l: 78, hueOffset: 20 },
     vivid: { s: 80, l: 50, hueOffset: 0 },
     earthy: { s: 25, l: 54, hueOffset: 30 },

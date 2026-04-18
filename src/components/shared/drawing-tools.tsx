@@ -23,6 +23,7 @@ import {
   IconAlertTriangle,
   IconClock,
   IconDeviceFloppy,
+  IconDots,
   IconGitMerge,
   IconHistory,
   IconLayoutColumns,
@@ -2534,8 +2535,8 @@ function LayerManagementSection({
               )}
             </div>
           )}
-          {/* Layer action buttons */}
-          <div className="grid grid-cols-4 gap-1">
+          {/* Layer action buttons — Conflicts always visible; secondary actions in dropdown */}
+          <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -2543,84 +2544,65 @@ function LayerManagementSection({
                     onClick={handleOpenConflicts}
                     variant="outline"
                     size="sm"
-                    className="h-7 px-1.5"
+                    className="h-7 flex-1 gap-1.5 text-xs"
                   />
                 }
               >
-                <IconAlertTriangle className="h-3 w-3" />
+                <IconAlertTriangle className="h-3 w-3 shrink-0" />
+                Konflikte
               </TooltipTrigger>
               <TooltipContent>
                 <p>Konflikte anzeigen und lösen</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 render={
                   <Button
-                    onClick={handleOpenHistory}
                     variant="outline"
                     size="sm"
-                    className="h-7 px-1.5"
+                    className="h-7 w-7 p-0 shrink-0"
+                    title="Weitere Aktionen"
                   />
                 }
               >
-                <IconClock className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Versionsverlauf anzeigen</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    onClick={handleOpenVersion}
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-1.5"
-                  />
-                }
-              >
-                <IconDeviceFloppy className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Neue Version erstellen</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    onClick={handleOpenMerge}
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-1.5"
-                  />
-                }
-              >
-                <IconGitMerge className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Gebiete zusammenführen</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    onClick={() => setTemplatesDialogOpen(true)}
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-1.5"
-                  />
-                }
-              >
-                <IconLayoutColumns className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Ebenen-Vorlagen</p>
-              </TooltipContent>
-            </Tooltip>
+                <IconDots className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="text-xs">
+                  Weitere Aktionen
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleOpenHistory}
+                  className="gap-2 cursor-pointer"
+                >
+                  <IconClock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-sm">Versionsverlauf</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleOpenVersion}
+                  className="gap-2 cursor-pointer"
+                >
+                  <IconDeviceFloppy className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-sm">Version erstellen</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleOpenMerge}
+                  className="gap-2 cursor-pointer"
+                >
+                  <IconGitMerge className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-sm">Gebiete zusammenführen</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTemplatesDialogOpen(true)}
+                  className="gap-2 cursor-pointer"
+                >
+                  <IconLayoutColumns className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-sm">Ebenen-Vorlagen</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Create new layer */}
