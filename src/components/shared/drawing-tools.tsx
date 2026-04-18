@@ -6,6 +6,7 @@ import {
   IconDeviceFloppy,
   IconGitMerge,
   IconHistory,
+  IconLayoutColumns,
   IconPlus,
 } from "@tabler/icons-react";
 import {
@@ -141,6 +142,13 @@ const LayerMergeDialog = dynamic(
   () =>
     import("@/components/areas/layer-merge-dialog").then(
       (m) => m.LayerMergeDialog
+    ),
+  { ssr: false }
+);
+const LayerTemplatesDialog = dynamic(
+  () =>
+    import("@/components/areas/layer-templates-dialog").then(
+      (m) => m.LayerTemplatesDialog
     ),
   { ssr: false }
 );
@@ -1278,6 +1286,7 @@ interface LayerManagementSectionProps {
   plzFindInputRef?: React.RefObject<HTMLInputElement | null>;
   newLayerInputRef?: React.RefObject<HTMLInputElement | null>;
   allCodesSet?: Set<string>;
+  onLayerUpdate?: () => void;
 }
 
 function LayerManagementSection({
@@ -1319,6 +1328,7 @@ function LayerManagementSection({
   plzFindInputRef: externalPlzFindInputRef,
   newLayerInputRef: externalNewLayerInputRef,
   allCodesSet,
+  onLayerUpdate,
 }: LayerManagementSectionProps) {
   const { isLocked, toggleLock } = useLockedLayers(areaId);
 
@@ -1491,6 +1501,9 @@ function LayerManagementSection({
   const [importTargetLayerId, setImportTargetLayerId] = useState<number | null>(null);
   const [importText, setImportText] = useState("");
   const [importPending, setImportPending] = useState(false);
+
+  // Layer templates dialog
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
   const openImportDialog = useCallback((layerId: number) => {
     setImportTargetLayerId(layerId);
@@ -1853,6 +1866,23 @@ function LayerManagementSection({
               </TooltipTrigger>
               <TooltipContent>
                 <p>Gebiete zusammenführen</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={() => setTemplatesDialogOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-1.5"
+                  />
+                }
+              >
+                <IconLayoutColumns className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Ebenen-Vorlagen</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -2270,6 +2300,19 @@ function LayerManagementSection({
       </AlertDialog>
 
       <Separator />
+      <LayerTemplatesDialog
+        open={templatesDialogOpen}
+        onOpenChange={setTemplatesDialogOpen}
+        areaId={areaId}
+        currentLayers={optimisticLayers.map((l) => ({
+          name: l.name,
+          color: l.color,
+          opacity: typeof l.opacity === "number" ? l.opacity : Number(l.opacity ?? 70),
+          orderIndex: l.orderIndex,
+          notes: l.notes ?? null,
+        }))}
+        onApplied={() => onLayerUpdate?.()}
+      />
     </>
   );
 }
@@ -2908,6 +2951,7 @@ function DrawingToolsImpl({
             plzFindInputRef={plzFindInputRef}
             newLayerInputRef={newLayerInputRef}
             allCodesSet={allCodesSet}
+            onLayerUpdate={onLayerUpdate}
           />
         )}
 

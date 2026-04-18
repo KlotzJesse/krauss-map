@@ -11,6 +11,8 @@ import {
   areaLayers,
   areaLayerPostalCodes,
   postalCodes,
+  layerTemplates,
+  type SelectLayerTemplates,
 } from "../../lib/schema/schema";
 import { generateNextColor } from "../../lib/utils/layer-colors";
 import {
@@ -1719,5 +1721,139 @@ export async function searchPostalCodeInAreasAction(
   } catch (error) {
     console.error("Error searching PLZ:", error);
     return { success: false, error: "PLZ-Suche fehlgeschlagen" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Layer Template Actions
+// ---------------------------------------------------------------------------
+
+/** Save the layer structure of an area as a named template */
+export async function saveLayerTemplateAction(
+  areaId: number,
+  name: string,
+  description?: string
+): ServerActionResponse<{ id: number }> {
+  try {
+    const layers = await db.query.areaLayers.findMany({
+      where: eq(areaLayers.areaId, areaId),
+      orderBy: areaLayers.orderIndex,
+    });
+    if (layers.length === 0) {
+      return { success: false, error: "Gebiet hat keine Ebenen" };
+    }
+    const templateLayers = layers.map((l) => ({
+      name: l.name,
+      color: l.color,
+      opacity: Number(l.opacity ?? 0.7),
+      orderIndex: l.orderIndex,
+      notes: l.notes ?? null,
+    }));
+    const [template] = await db
+      .insert(layerTemplates)
+      .values({ name: name.trim(), description: description?.trim() ?? null, layers: templateLayers })
+      .returning();
+    return { success: true, data: { id: template.id } };
+  } catch (error) {
+    console.error("Error saving layer template:", error);
+    return { success: false, error: "Vorlage konnte nicht gespeichert werden" };
+  }
+}
+
+/** Get all layer templates */
+export async function getLayerTemplatesAction(): ServerActionResponse<SelectLayerTemplates[]> {
+  try {
+    const templates = await db.query.layerTemplates.findMany({
+      orderBy: layerTemplates.createdAt,
+    });
+    return { success: true, data: templates };
+  } catch (error) {
+    console.error("Error fetching layer templates:", error);
+    return { success: false, error: "Vorlagen konnten nicht geladen werden" };
+  }
+}
+
+/** Delete a layer template */
+export async function deleteLayerTemplateAction(
+  templateId: number
+): ServerActionResponse {
+  try {
+    await db.delete(layerTemplates).where(eq(layerTemplates.id, templateId));
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting layer template:", error);
+    return { success: false, error: "Vorlage konnte nicht gelöscht werden" };
+  }
+}
+
+/**
+ * Apply a template to an area: replaces existing layers (preserving postal codes by matching name)
+ * with the template's layer structure.
+ */
+export async function applyLayerTemplateAction(
+  templateId: number,
+  areaId: number
+): ServerActionResponse {
+  try {
+    const template = await db.query.layerTemplates.findFirst({
+      where: eq(layerTemplates.id, templateId),
+    });
+    if (!template) return { success: false, error: "Vorlage nicht gefunden" };
+
+    await db.transaction(async (tx) => {
+      // Fetch existing layers to preserve postal codes by name match
+      const existingLayers = await tx.query.areaLayers.findMany({
+        where: eq(areaLayers.areaId, areaId),
+        with: { postalCodes: { columns: { postalCode: true } } },
+      });
+      const existingByName = new Map(existingLayers.map((l) => [l.name.toLowerCase(), l]));
+
+      // Remove all existing layers
+      const existingIds = existingLayers.map((l) => l.id);
+      if (existingIds.length > 0) {
+        await tx.delete(areaLayerPostalCodes).where(inArray(areaLayerPostalCodes.layerId, existingIds));
+        await tx.delete(areaLayers).where(eq(areaLayers.areaId, areaId));
+      }
+
+      // Insert template layers and re-attach postal codes where name matches
+      const templateLayerDefs = template.layers as Array<{
+        name: string;
+        color: string;
+        opacity: number;
+        orderIndex: number;
+        notes?: string | null;
+      }>;
+
+      for (const def of templateLayerDefs) {
+        const [newLayer] = await tx
+          .insert(areaLayers)
+          .values({
+            areaId,
+            name: def.name,
+            color: def.color,
+            opacity: def.opacity,
+            isVisible: "true",
+            orderIndex: def.orderIndex,
+            notes: def.notes ?? null,
+          })
+          .returning();
+
+        const matched = existingByName.get(def.name.toLowerCase());
+        if (matched && matched.postalCodes && matched.postalCodes.length > 0) {
+          await tx.insert(areaLayerPostalCodes).values(
+            matched.postalCodes.map((pc) => ({
+              layerId: newLayer.id,
+              postalCode: pc.postalCode,
+            }))
+          );
+        }
+      }
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error applying layer template:", error);
+    return { success: false, error: "Vorlage konnte nicht angewendet werden" };
   }
 }

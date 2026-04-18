@@ -684,6 +684,29 @@ export const areaUndoStacks = pgTable(
   ]
 );
 
+/** Layer structure template — saves a set of named/colored layers for reuse across areas */
+export const layerTemplates = pgTable(
+  "layer_templates",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity().notNull(),
+    name: varchar({ length: 255 }).notNull(),
+    description: text(),
+    /** JSON array of { name, color, opacity, orderIndex, notes } objects */
+    layers: jsonb("layers").notNull().$type<Array<{
+      name: string;
+      color: string;
+      opacity: number;
+      orderIndex: number;
+      notes?: string | null;
+    }>>(),
+    createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_layer_templates_name").using("btree", table.name.asc().nullsLast()),
+  ]
+);
+
 // Type definitions for all tables
 
 export type SelectPerformanceMetrics = typeof performanceMetrics.$inferSelect;
@@ -766,3 +789,7 @@ export interface ChangeSummary {
 export type SelectAreaUndoStacks = typeof areaUndoStacks.$inferSelect;
 
 export type InsertAreaUndoStacks = typeof areaUndoStacks.$inferInsert;
+
+export type SelectLayerTemplates = typeof layerTemplates.$inferSelect;
+
+export type InsertLayerTemplates = typeof layerTemplates.$inferInsert;
