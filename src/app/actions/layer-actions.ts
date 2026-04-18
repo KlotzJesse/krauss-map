@@ -385,3 +385,74 @@ export async function removePostalCodesFromLayerAction(
     return { success: false, error: "Failed to remove postal codes" };
   }
 }
+
+/**
+ * Merge all postal codes from sourceLayerId into targetLayerId,
+ * then delete the source layer.
+ */
+export async function mergeLayersAction(
+  areaId: number,
+  sourceLayerId: number,
+  targetLayerId: number
+) {
+  try {
+    // Fetch both layers
+    const [source, target] = await Promise.all([
+      db.query.areaLayers.findFirst({
+        where: and(eq(areaLayers.id, sourceLayerId), eq(areaLayers.areaId, areaId)),
+        with: { postalCodes: true },
+      }),
+      db.query.areaLayers.findFirst({
+        where: and(eq(areaLayers.id, targetLayerId), eq(areaLayers.areaId, areaId)),
+        with: { postalCodes: true },
+      }),
+    ]);
+
+    if (!source || !target) {
+      return { success: false, error: "Layer not found" };
+    }
+
+    const targetExistingCodes = new Set(target.postalCodes?.map((pc) => pc.postalCode) ?? []);
+    const codesToAdd = (source.postalCodes ?? [])
+      .map((pc) => pc.postalCode)
+      .filter((code) => !targetExistingCodes.has(code));
+
+    // Insert new codes into target (skip duplicates)
+    if (codesToAdd.length > 0) {
+      await db
+        .insert(areaLayerPostalCodes)
+        .values(codesToAdd.map((code) => ({ layerId: targetLayerId, postalCode: code })))
+        .onConflictDoNothing();
+    }
+
+    // Delete source layer (cascade deletes its postal codes)
+    await db
+      .delete(areaLayers)
+      .where(and(eq(areaLayers.id, sourceLayerId), eq(areaLayers.areaId, areaId)));
+
+    await recordChangeAction(areaId, {
+      changeType: "merge_layers",
+      entityType: "layer",
+      entityId: targetLayerId,
+      changeData: {
+        sourceLayerId,
+        sourceLayerName: source.name,
+        targetLayerId,
+        targetLayerName: target.name,
+        mergedCodes: codesToAdd,
+      },
+      previousData: {
+        sourceLayer: source,
+        targetLayer: target,
+      },
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}`);
+    updateTag(`area-${areaId}-undo-redo`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error merging layers:", error);
+    return { success: false, error: "Failed to merge layers" };
+  }
+}

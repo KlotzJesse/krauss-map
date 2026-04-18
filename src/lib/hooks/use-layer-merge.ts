@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 
-import { updateLayerAction } from "@/app/actions/area-actions";
+import { deleteLayerAction, updateLayerAction } from "@/app/actions/area-actions";
 
 import type { Layer } from "../types/area-types";
 
@@ -69,6 +69,11 @@ export function useLayerMerge({
         await updateLayerAction(areaId, targetLayerId, {
           postalCodes: mergedPostalCodes,
         });
+
+        // Delete source layers after successful merge
+        await Promise.all(
+          sourceLayerIds.map((id) => deleteLayerAction(areaId, id))
+        );
 
         toast.success(
           `${sourceLayers.length} Layer in "${targetLayer.name}" zusammengeführt`

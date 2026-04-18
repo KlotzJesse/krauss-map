@@ -55,7 +55,7 @@ import {
   exportAreaDataAction,
   importAreaFromDataAction,
 } from "@/app/actions/area-actions";
-import { batchUpdateVisibilityAction } from "@/app/actions/layer-actions";
+import { batchUpdateVisibilityAction, mergeLayersAction } from "@/app/actions/layer-actions";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
 import { LayerListItem } from "@/components/shared/layer-list-item";
