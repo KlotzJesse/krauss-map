@@ -504,6 +504,18 @@ export function useDeckLayers({
   );
 
   // Handle hover from deck.gl picking — cursor set via direct DOM mutation (no React re-render)
+  const [hoverTooltip, setHoverTooltip] = useState<{
+    x: number;
+    y: number;
+    code: string;
+    layers: Array<{ name: string; color: string }>;
+  } | null>(null);
+
+  const layersRef = useRef(layers);
+  layersRef.current = layers;
+  const countryRef = useRef(country);
+  countryRef.current = country;
+
   const onHover = useCallback(
     (info: PickingInfo) => {
       if (!isCursorMode) {
@@ -514,16 +526,31 @@ export function useDeckLayers({
       if (info.object) {
         const feature = info.object as Feature<Polygon | MultiPolygon>;
         const code = getFeatureCode(feature);
-        if (code && hoveredCodeRef.current !== code) {
-          hoveredCodeRef.current = code;
-          setHoveredFeature(feature);
-          if (canvas) {
-            canvas.style.cursor = "pointer";
+        if (code) {
+          if (hoveredCodeRef.current !== code) {
+            hoveredCodeRef.current = code;
+            setHoveredFeature(feature);
+            if (canvas) {
+              canvas.style.cursor = "pointer";
+            }
           }
+          // Resolve which layers contain this code
+          const rawCode = code.includes(":") ? code.split(":")[1] : code;
+          const matchingLayers = (layersRef.current ?? [])
+            .filter((l) => l.postalCodes?.some((pc) => pc.postalCode === rawCode))
+            .map((l) => ({ name: l.name, color: l.color }));
+          // Always update tooltip position
+          setHoverTooltip({
+            x: info.x ?? 0,
+            y: info.y ?? 0,
+            code: rawCode ?? code,
+            layers: matchingLayers,
+          });
         }
       } else if (hoveredCodeRef.current !== null) {
         hoveredCodeRef.current = null;
         setHoveredFeature(null);
+        setHoverTooltip(null);
         if (canvas) {
           canvas.style.cursor = "grab";
         }
@@ -537,6 +564,7 @@ export function useDeckLayers({
     if (!isCursorMode) {
       hoveredCodeRef.current = null;
       setHoveredFeature(null);
+      setHoverTooltip(null);
       const canvas = mapCanvasRef.current;
       if (canvas) {
         canvas.style.cursor = "grab";
@@ -860,5 +888,6 @@ export function useDeckLayers({
   return {
     deckLayers,
     onHover,
+    hoverTooltip,
   } as const;
 }

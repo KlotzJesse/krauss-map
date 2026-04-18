@@ -248,7 +248,7 @@ const MapInner = memo(function MapInner({
       : undefined;
 
   // deck.gl layers (polygons, fills, hover, preview) — cursor managed via direct DOM ref
-  const { deckLayers, onHover } = useDeckLayers({
+  const { deckLayers, onHover, hoverTooltip } = useDeckLayers({
     data,
     statesData,
     countryShapesData,
@@ -411,6 +411,31 @@ const MapInner = memo(function MapInner({
           />
         </div>
       </Activity>
+
+      {/* Hover tooltip */}
+      {hoverTooltip && (
+        <div
+          className="absolute z-20 pointer-events-none"
+          style={{ left: hoverTooltip.x + 12, top: hoverTooltip.y - 10 }}
+        >
+          <div className="bg-popover/95 border border-border rounded shadow-md px-2 py-1.5 text-xs min-w-[80px]">
+            <div className="font-mono font-semibold text-foreground">{hoverTooltip.code}</div>
+            {hoverTooltip.layers.length > 0 && (
+              <div className="mt-1 space-y-0.5">
+                {hoverTooltip.layers.map((l) => (
+                  <div key={l.name} className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: l.color }}
+                    />
+                    <span className="text-muted-foreground truncate max-w-[140px]">{l.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 });
