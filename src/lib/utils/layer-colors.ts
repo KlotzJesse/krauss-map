@@ -99,14 +99,14 @@ export function generateNextColor(existingColors: string[]): string {
   let bestColor = "#3b82f6";
   let bestMinDist = -1;
 
-  // Try multiple saturation/lightness combos — rich cartographic tones: clear contrast, not pastel
+  // Try multiple saturation/lightness combos — balanced cartographic tones: distinct but not overwhelming
   const slCombos: [number, number][] = [
-    [62, 62], // Rich mid-tone
-    [60, 60], // Slightly deeper
-    [58, 64], // Balanced vivid
-    [64, 61], // Saturated
-    [56, 63], // Medium
-    [66, 63], // Vivid
+    [52, 66], // Balanced mid-tone
+    [54, 64], // Slightly richer
+    [50, 68], // Softer
+    [56, 65], // Slightly more vivid
+    [48, 70], // Lighter
+    [55, 63], // Deep balanced
   ];
 
   for (const [s, l] of slCombos) {
@@ -141,9 +141,9 @@ export function generatePalette(count: number): string[] {
 
   for (let i = 0; i < count; i++) {
     const hue = (i * GOLDEN_ANGLE) % 360;
-    // Rich cartographic tones: S=58-66%, L=59-63% — clear without being overwhelming
-    const saturation = 58 + (i % 4) * 2; // 58, 60, 62, 64
-    const lightness = 59 + (i % 3) * 2; // 59, 61, 63
+    // Balanced cartographic tones: S=50-56%, L=64-68% — distinct without being overwhelming
+    const saturation = 50 + (i % 4) * 2; // 50, 52, 54, 56
+    const lightness = 64 + (i % 3) * 2; // 64, 66, 68
     colors.push(hslToHex(hue, saturation, lightness));
   }
 
@@ -229,7 +229,7 @@ function generateThemePalette(theme: string, count: number): string[] {
     string,
     { s: number; l: number; hueOffset: number }
   > = {
-    jewel: { s: 62, l: 62, hueOffset: 0 },
+    jewel: { s: 52, l: 66, hueOffset: 0 },
     pastel: { s: 45, l: 78, hueOffset: 20 },
     vivid: { s: 80, l: 50, hueOffset: 0 },
     earthy: { s: 25, l: 54, hueOffset: 30 },
