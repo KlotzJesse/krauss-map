@@ -1,5 +1,6 @@
 import {
   IconActivity,
+  IconAlertTriangle,
   IconArchive,
   IconFolder,
   IconFolders,
@@ -95,6 +96,16 @@ export async function PostalCodesOverview() {
 
   // Recent (sorted by updatedAt desc)
   const recent = activeAreas.slice(0, 5);
+
+  // Conflict areas (sorted by conflict ratio)
+  const conflictAreas = activeAreas
+    .filter((a) => (a.conflictCount ?? 0) > 0 && (a.postalCodeCount ?? 0) > 0)
+    .map((a) => ({
+      ...a,
+      conflictRatio: (a.conflictCount ?? 0) / (a.postalCodeCount ?? 1),
+    }))
+    .sort((a, b) => b.conflictRatio - a.conflictRatio)
+    .slice(0, 5);
 
   return (
     <div className="h-full overflow-auto p-6 pt-8">
@@ -343,6 +354,38 @@ export async function PostalCodesOverview() {
                         {stats.count} Geb.
                       </span>
                     </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {conflictAreas.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <IconAlertTriangle className="h-4 w-4 text-orange-500" />
+                    PLZ-Konflikte
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Gebiete mit überlappenden PLZ
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2">
+                  {conflictAreas.map((area) => (
+                    <Link
+                      key={area.id}
+                      href={`/postal-codes/${area.id}` as Route}
+                      className="flex items-center gap-2 hover:bg-muted/40 rounded-md px-1.5 py-1 -mx-1.5 transition-colors group"
+                    >
+                      <IconFolder className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 text-xs font-medium truncate">
+                        {area.name}
+                      </span>
+                      <span className="shrink-0 text-[9px] font-medium text-orange-600 bg-orange-100 dark:bg-orange-950 dark:text-orange-400 rounded px-1.5 py-0.5 leading-none">
+                        {area.conflictCount} /{" "}
+                        {Math.round(area.conflictRatio * 100)}%
+                      </span>
+                    </Link>
                   ))}
                 </CardContent>
               </Card>
