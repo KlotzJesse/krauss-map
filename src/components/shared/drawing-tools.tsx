@@ -861,6 +861,42 @@ function useDrawingToolsActions({
     toast.success("JSON exportiert");
   };
 
+  const handleExportZip = useCallback(async () => {
+    if (!optimisticLayers.length) {
+      toast.warning("Keine Ebenen zum Exportieren vorhanden");
+      return;
+    }
+    const layersWithCodes = optimisticLayers.filter(
+      (l) => l.postalCodes && l.postalCodes.length > 0
+    );
+    if (!layersWithCodes.length) {
+      toast.warning("Keine Ebenen mit Postleitzahlen");
+      return;
+    }
+    const { zipSync, strToU8 } = await import("fflate");
+    const files: Record<string, Uint8Array> = {};
+    for (const layer of layersWithCodes) {
+      const safeName = (layer.name ?? `layer-${layer.id}`)
+        .replace(/[^\w\-. ]/g, "_")
+        .trim();
+      const csvContent = layer
+        .postalCodes!.map((pc) => pc.postalCode)
+        .join("\n");
+      files[`${safeName}.csv`] = strToU8(csvContent);
+    }
+    const zipped = zipSync(files);
+    const blob = new Blob([zipped.buffer as ArrayBuffer], {
+      type: "application/zip",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${areaName ?? `gebiet-${areaId}`}-ebenen.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${layersWithCodes.length} Ebenen als ZIP exportiert`);
+  }, [optimisticLayers, areaName, areaId]);
+
   const handleCreateLayer = async () => {
     if (!form.newLayerName.trim()) {
       return;
@@ -1354,6 +1390,7 @@ function useDrawingToolsActions({
     handleClearLayerPLZ,
     handleExportGeoJSON,
     handleExportData,
+    handleExportZip,
     handleBulkDelete,
     handleBulkVisibility,
     handleBulkMovePlz,
@@ -3333,6 +3370,7 @@ function DrawingToolsImpl({
     handleClearLayerPLZ,
     handleExportGeoJSON,
     handleExportData,
+    handleExportZip,
     handleBulkDelete,
     handleBulkVisibility,
     handleBulkMovePlz,
@@ -4036,6 +4074,7 @@ function DrawingToolsImpl({
           onExportPDF={handleExportPDF}
           onExportGeoJSON={handleExportGeoJSON}
           onExportData={handleExportData}
+          onExportZip={handleExportZip}
         />
 
         {/* Import JSON — creates a new area from JSON backup */}

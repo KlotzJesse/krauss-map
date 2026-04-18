@@ -2,6 +2,7 @@
 
 import {
   Diamond,
+  FileArchive,
   FileJson,
   FileSpreadsheet,
   Loader2Icon,
@@ -39,6 +40,7 @@ interface DrawingActionsSectionProps {
   onExportPDF: () => void;
   onExportGeoJSON: () => void;
   onExportData: () => void;
+  onExportZip: () => void;
 }
 
 export function DrawingActionsSection({
@@ -53,6 +55,7 @@ export function DrawingActionsSection({
   onExportPDF,
   onExportGeoJSON,
   onExportData,
+  onExportZip,
 }: DrawingActionsSectionProps) {
   const isDrawingMode =
     currentMode !== null &&
@@ -166,6 +169,24 @@ export function DrawingActionsSection({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Gebiet als JSON sichern (für Import/Restore)</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onExportZip}
+                      className="flex-1 h-7 text-xs"
+                    />
+                  }
+                >
+                  <FileArchive className="h-3 w-3 mr-1" />
+                  ZIP
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Alle Ebenen als CSV-Dateien im ZIP exportieren</p>
                 </TooltipContent>
               </Tooltip>
             </div>
