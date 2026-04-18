@@ -1,6 +1,7 @@
 "use no memo";
 import { Camera, Home, Layers, LocateFixed, Maximize2, Printer, PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
+import { cn } from "@/lib/utils";
 import {
   Component,
   memo,
@@ -149,6 +150,47 @@ class MapRecoveryBoundary extends Component<
     }
     return this.props.children;
   }
+}
+
+function MapLegend({ layers, activeLayerId }: { layers: BaseMapProps["layers"]; activeLayerId?: number | null }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const visibleLayers = layers.filter((l) => l.isVisible !== "false" && (l.postalCodes?.length ?? 0) > 0);
+  if (visibleLayers.length === 0) return null;
+
+  return (
+    <div className="absolute bottom-4 right-4 z-10 print:hidden">
+      <div className="bg-white/95 border border-border rounded-lg shadow-md overflow-hidden max-w-[200px]">
+        <button
+          type="button"
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted/50 transition-colors"
+        >
+          <span>Legende</span>
+          <span className="text-muted-foreground">{collapsed ? "▲" : "▼"}</span>
+        </button>
+        {!collapsed && (
+          <div className="px-2.5 pb-2 space-y-1 max-h-48 overflow-y-auto">
+            {visibleLayers.map((l) => (
+              <div
+                key={l.id}
+                className={cn(
+                  "flex items-center gap-1.5",
+                  activeLayerId === l.id && "font-semibold"
+                )}
+              >
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-sm shrink-0 border border-black/10"
+                  style={{ backgroundColor: l.color }}
+                />
+                <span className="text-[10px] text-foreground truncate leading-tight">{l.name}</span>
+                <span className="text-[9px] text-muted-foreground shrink-0 ml-auto">{l.postalCodes?.length ?? 0}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -540,6 +582,11 @@ const MapInner = memo(function MapInner({
           />
         </div>
       </Activity>
+
+      {/* Map layer legend — bottom right */}
+      {layers && layers.some((l) => (l.postalCodes?.length ?? 0) > 0) && (
+        <MapLegend layers={layers} activeLayerId={activeLayerId} />
+      )}
 
       {/* Hover tooltip */}
       {hoverTooltip && (
