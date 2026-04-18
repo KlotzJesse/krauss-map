@@ -1476,22 +1476,30 @@ function LayerManagementSection({
               <ChevronDown className="h-3 w-3" />
             )}
           </CollapsibleTrigger>
-          {hasHiddenLayers && (
+          {optimisticLayers.length >= 2 && (
             <Tooltip>
               <TooltipTrigger
                 render={
                   <Button
-                    onClick={handleShowAllLayers}
+                    onClick={() =>
+                      hasHiddenLayers
+                        ? handleShowAllLayers()
+                        : handleBulkVisibility(optimisticLayers.map((l) => l.id), false)
+                    }
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 shrink-0"
                   />
                 }
               >
-                <Eye className="h-3 w-3" />
+                {hasHiddenLayers ? (
+                  <Eye className="h-3 w-3" />
+                ) : (
+                  <EyeOff className="h-3 w-3" />
+                )}
               </TooltipTrigger>
               <TooltipContent>
-                <p>Alle Gebiete einblenden</p>
+                <p>{hasHiddenLayers ? "Alle einblenden" : "Alle ausblenden"}</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -2129,6 +2137,7 @@ const LayerDialogs = memo(function LayerDialogs({
               { keys: ["Alt", "↑ / ↓"], desc: "Gebiet wechseln" },
               { keys: ["Ctrl", "V"], desc: "PLZ aus Zwischenablage einfügen" },
               { keys: ["/"], desc: "PLZ-Suche fokussieren" },
+              { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
               { keys: ["Esc"], desc: "Zeichenmodus beenden" },
               { keys: ["Enter"], desc: "Polygon abschließen" },
               { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
@@ -2324,6 +2333,8 @@ function DrawingToolsImpl({
   guardedAddRef.current = guardedAddPostalCodesToLayer;
   const dispatchUIRef = useRef(dispatchUI);
   dispatchUIRef.current = dispatchUI;
+  const onZoomToLayerRef = useRef(onZoomToLayer);
+  onZoomToLayerRef.current = onZoomToLayer;
   const plzFindInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleOpenKeyboardHelp = useCallback(
@@ -2345,6 +2356,13 @@ function DrawingToolsImpl({
           plzFindInputRef.current?.focus();
           plzFindInputRef.current?.select();
         }, 50);
+        return;
+      }
+
+      // F key: zoom to active layer
+      if (e.key === "f" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const id = activeLayerIdRef.current;
+        if (id) onZoomToLayerRef.current?.(id);
         return;
       }
 

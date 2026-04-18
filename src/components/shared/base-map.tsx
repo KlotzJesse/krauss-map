@@ -1,5 +1,5 @@
 "use no memo";
-import { Camera, Maximize2, Printer, PlusIcon } from "lucide-react";
+import { Camera, LocateFixed, Maximize2, Printer, PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   Component,
@@ -182,6 +182,22 @@ const MapInner = memo(function MapInner({
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const setMapCenterZoom = useSetMapCenterZoom();
+  const [isGeolocating, setIsGeolocating] = useState(false);
+
+  const handleGeolocate = useCallback(() => {
+    if (!navigator.geolocation) return;
+    setIsGeolocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setMapCenterZoom([pos.coords.longitude, pos.coords.latitude], 13);
+        setIsGeolocating(false);
+      },
+      () => {
+        setIsGeolocating(false);
+      },
+      { timeout: 8000 }
+    );
+  }, [setMapCenterZoom]);
 
   // Conflict resolution panel state (lifted from DrawingTools)
   const [showConflicts, setShowConflicts] = useState(false);
@@ -470,6 +486,16 @@ const MapInner = memo(function MapInner({
             <Maximize2 className="h-4 w-4" />
           </button>
         )}
+        <button
+          type="button"
+          onClick={handleGeolocate}
+          title="Meinen Standort anzeigen"
+          aria-label="Zum aktuellen Standort navigieren"
+          disabled={isGeolocating}
+          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-wait"
+        >
+          <LocateFixed className={`h-4 w-4 ${isGeolocating ? "animate-pulse" : ""}`} />
+        </button>
       </div>
 
       {/* Conflict resolution panel — right side, next to the map */}
