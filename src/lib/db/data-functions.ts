@@ -471,3 +471,82 @@ export async function getAreaTags(
     return [];
   }
 }
+
+export interface GlobalChangelogItem {
+  areaId: number;
+  areaName: string;
+  changeType: string;
+  entityType: string;
+  layerName: string | null;
+  previousLayerName: string | null;
+  postalCodeCount: number;
+  isUndone: string;
+  createdBy: string | null;
+  createdAt: string;
+  sequenceNumber: number;
+  versionNumber: number | null;
+}
+
+export async function getGlobalChangelog(options?: {
+  limit?: number;
+  offset?: number;
+  areaId?: number;
+  changeType?: string;
+  includeUndone?: boolean;
+}): Promise<{ items: GlobalChangelogItem[]; total: number }> {
+  "use cache";
+  cacheLife("seconds");
+  cacheTag("recent-activity");
+
+  const limit = options?.limit ?? 50;
+  const offset = options?.offset ?? 0;
+
+  try {
+    const whereClause = sql`
+      ${options?.includeUndone ? sql`` : sql`ac.is_undone = 'false'`}
+      ${options?.areaId ? sql`AND ac.area_id = ${options.areaId}` : sql``}
+      ${options?.changeType ? sql`AND ac.change_type = ${options.changeType}` : sql``}
+    `;
+
+    const [itemsResult, countResult] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          ac.area_id          AS "areaId",
+          a.name              AS "areaName",
+          ac.change_type      AS "changeType",
+          ac.entity_type      AS "entityType",
+          ac.change_data->'layer'->>'name'       AS "layerName",
+          ac.previous_data->'layer'->>'name'     AS "previousLayerName",
+          COALESCE(jsonb_array_length(ac.change_data->'postalCodes'), 0) AS "postalCodeCount",
+          ac.is_undone        AS "isUndone",
+          ac.created_by       AS "createdBy",
+          ac.created_at       AS "createdAt",
+          ac.sequence_number  AS "sequenceNumber",
+          ac.version_number   AS "versionNumber"
+        FROM area_changes ac
+        INNER JOIN areas a ON a.id = ac.area_id
+        WHERE ${options?.includeUndone ? sql`TRUE` : sql`ac.is_undone = 'false'`}
+          ${options?.areaId ? sql`AND ac.area_id = ${options.areaId}` : sql``}
+          ${options?.changeType ? sql`AND ac.change_type = ${options.changeType}` : sql``}
+        ORDER BY ac.created_at DESC, ac.sequence_number DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `),
+      db.execute(sql`
+        SELECT COUNT(*)::int AS total
+        FROM area_changes ac
+        WHERE ${options?.includeUndone ? sql`TRUE` : sql`ac.is_undone = 'false'`}
+          ${options?.areaId ? sql`AND ac.area_id = ${options.areaId}` : sql``}
+          ${options?.changeType ? sql`AND ac.change_type = ${options.changeType}` : sql``}
+      `),
+    ]);
+
+    const total = (countResult.rows[0] as { total: number })?.total ?? 0;
+    return {
+      items: itemsResult.rows as unknown as GlobalChangelogItem[],
+      total,
+    };
+  } catch (error) {
+    console.error("Error fetching global changelog:", error);
+    return { items: [], total: 0 };
+  }
+}

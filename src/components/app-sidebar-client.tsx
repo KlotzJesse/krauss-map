@@ -1,6 +1,6 @@
 "use client";
 
-import { IconDashboard, IconMapPin2 } from "@tabler/icons-react";
+import { IconDashboard, IconHistory, IconMapPin2 } from "@tabler/icons-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -27,6 +27,11 @@ const data = {
       title: "Übersicht",
       url: "/",
       icon: IconDashboard,
+    },
+    {
+      title: "Änderungsprotokoll",
+      url: "/changelog",
+      icon: IconHistory,
     },
   ],
 };
