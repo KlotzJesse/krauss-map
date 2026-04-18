@@ -29,7 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { CheckSquare, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Palette, Search, Square, Trash2, Upload, X } from "lucide-react";
+import { CheckSquare, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, HelpCircle, Palette, Search, Square, Trash2, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
@@ -72,6 +72,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Card,
   CardAction,
@@ -272,6 +279,7 @@ interface DrawingToolsUIState {
   showVersionHistory: boolean;
   showCreateVersion: boolean;
   showLayerMerge: boolean;
+  showKeyboardHelp: boolean;
   isFilling: boolean;
 }
 
@@ -284,6 +292,8 @@ type DrawingToolsUIAction =
   | { type: "CLOSE_VERSION" }
   | { type: "OPEN_MERGE" }
   | { type: "CLOSE_MERGE" }
+  | { type: "OPEN_KEYBOARD_HELP" }
+  | { type: "CLOSE_KEYBOARD_HELP" }
   | { type: "SET_FILLING"; value: boolean }
   | { type: "AUTO_OPEN_REGIONS" };
 
@@ -318,6 +328,12 @@ function drawingToolsUIReducer(
     }
     case "CLOSE_MERGE": {
       return { ...state, showLayerMerge: false };
+    }
+    case "OPEN_KEYBOARD_HELP": {
+      return { ...state, showKeyboardHelp: true };
+    }
+    case "CLOSE_KEYBOARD_HELP": {
+      return { ...state, showKeyboardHelp: false };
     }
     case "SET_FILLING": {
       return { ...state, isFilling: action.value };
@@ -481,6 +497,7 @@ function useDrawingToolsActions({
     showVersionHistory: false,
     showCreateVersion: false,
     showLayerMerge: false,
+    showKeyboardHelp: false,
     isFilling: false,
   });
 
@@ -1830,6 +1847,11 @@ const LayerDialogs = memo(function LayerDialogs({
       dispatchUI(open ? { type: "OPEN_MERGE" } : { type: "CLOSE_MERGE" }),
     [dispatchUI]
   );
+  const handleKeyboardHelpOpenChange = useCallback(
+    (open: boolean) =>
+      dispatchUI(open ? { type: "OPEN_KEYBOARD_HELP" } : { type: "CLOSE_KEYBOARD_HELP" }),
+    [dispatchUI]
+  );
   const handleDeleteOpenChange = useCallback(
     (open: boolean) => {
       if (!open) {
@@ -1873,6 +1895,45 @@ const LayerDialogs = memo(function LayerDialogs({
         layers={layers}
         onMergeComplete={handleMergeComplete}
       />
+
+      {/* Keyboard shortcuts help dialog */}
+      <Dialog
+        open={ui.showKeyboardHelp}
+        onOpenChange={handleKeyboardHelpOpenChange}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Tastaturkürzel</DialogTitle>
+            <DialogDescription>Alle verfügbaren Shortcuts in der Kartenansicht</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            {[
+              { keys: ["Alt", "↑ / ↓"], desc: "Gebiet wechseln" },
+              { keys: ["Esc"], desc: "Zeichenmodus beenden" },
+              { keys: ["Enter"], desc: "Polygon abschließen" },
+              { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
+              { keys: ["Z"], desc: "Cursor-Modus" },
+              { keys: ["L"], desc: "Lasso-Modus" },
+              { keys: ["C"], desc: "Kursor-Modus (Kreis)" },
+              { keys: ["R"], desc: "Rechteck zeichnen" },
+            ].map(({ keys, desc }) => (
+              <div key={desc} className="flex items-center justify-between">
+                <span className="text-muted-foreground">{desc}</span>
+                <span className="flex gap-1">
+                  {keys.map((k) => (
+                    <kbd
+                      key={k}
+                      className="px-1.5 py-0.5 text-[10px] font-mono bg-muted border rounded"
+                    >
+                      {k}
+                    </kbd>
+                  ))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
       <AlertDialog
         open={form.showDeleteDialog}
         onOpenChange={handleDeleteOpenChange}
@@ -2003,6 +2064,11 @@ function DrawingToolsImpl({
   const onLayerSelectRef = useRef(onLayerSelect);
   onLayerSelectRef.current = onLayerSelect;
 
+  const handleOpenKeyboardHelp = useCallback(
+    () => dispatchUI({ type: "OPEN_KEYBOARD_HELP" }),
+    [dispatchUI]
+  );
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
@@ -2064,6 +2130,15 @@ function DrawingToolsImpl({
           </div>
         )}
         <CardAction>
+          <button
+            type="button"
+            onClick={handleOpenKeyboardHelp}
+            title="Tastaturkürzel anzeigen"
+            aria-label="Tastaturkürzel anzeigen"
+            className="p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary text-muted-foreground"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
           <button
             type="button"
             onClick={onToggleVisibility}
