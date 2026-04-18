@@ -1,5 +1,5 @@
 "use no memo";
-import { Camera, LocateFixed, Maximize2, Printer, PlusIcon } from "lucide-react";
+import { Camera, Home, LocateFixed, Maximize2, Printer, PlusIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   Component,
@@ -183,6 +183,13 @@ const MapInner = memo(function MapInner({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const setMapCenterZoom = useSetMapCenterZoom();
   const [isGeolocating, setIsGeolocating] = useState(false);
+
+  const handleRecenter = useCallback(() => {
+    const config = country ? COUNTRY_CONFIGS[country] : undefined;
+    const center = config?.center ?? [10.4515, 51.1657] as [number, number];
+    const zoom = config?.zoom ?? 5;
+    setMapCenterZoom(center, zoom);
+  }, [country, setMapCenterZoom]);
 
   const handleGeolocate = useCallback(() => {
     if (!navigator.geolocation) return;
@@ -486,6 +493,15 @@ const MapInner = memo(function MapInner({
             <Maximize2 className="h-4 w-4" />
           </button>
         )}
+        <button
+          type="button"
+          onClick={handleRecenter}
+          title="Zur Länderübersicht"
+          aria-label="Zur Länderübersicht zoomen"
+          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <Home className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={handleGeolocate}
