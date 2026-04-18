@@ -1277,6 +1277,11 @@ export const LayerListItem = memo(function LayerListItem({
             )}
           </div>
         </div>
+        {layer.notes && (
+          <p className="text-[10px] text-muted-foreground/70 italic truncate leading-tight mt-0.5 pl-[18px] pr-1 pb-0.5">
+            {layer.notes.split("\n")[0].trim()}
+          </p>
+        )}
       </div>
 
       {/* Expandable postal codes section */}

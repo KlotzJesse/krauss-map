@@ -131,6 +131,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -1786,6 +1791,15 @@ function LayerManagementSection({
   const handleBulkHideSelected = useCallback(() => {
     handleBulkVisibility([...selectedIds], false);
   }, [selectedIds, handleBulkVisibility]);
+  const handleBulkAssignGroup = useCallback(
+    (groupName: string | null) => {
+      for (const id of selectedIds) {
+        handleSetLayerGroup?.(id, groupName);
+      }
+    },
+    [selectedIds, handleSetLayerGroup]
+  );
+  const [bulkGroupPopoverOpen, setBulkGroupPopoverOpen] = useState(false);
 
   // CSV import dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -2354,6 +2368,60 @@ function LayerManagementSection({
                       <p>{selectedIds.size} Gebiete löschen</p>
                     </TooltipContent>
                   </Tooltip>
+                  <span className="text-border mx-1">|</span>
+                  <Popover
+                    open={bulkGroupPopoverOpen}
+                    onOpenChange={setBulkGroupPopoverOpen}
+                  >
+                    <Tooltip>
+                      <PopoverTrigger
+                        render={
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                className="p-0.5 rounded hover:bg-muted text-muted-foreground"
+                              />
+                            }
+                          >
+                            <Folder className="h-3 w-3" />
+                          </TooltipTrigger>
+                        }
+                      />
+                      <TooltipContent>
+                        <p>Gruppe zuweisen</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <PopoverContent className="w-44 p-1.5" align="start">
+                      <p className="text-[10px] font-medium text-muted-foreground mb-1 px-1">
+                        Gruppe zuweisen
+                      </p>
+                      {existingGroups.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          className="w-full text-left px-2 py-1 rounded text-xs hover:bg-accent transition-colors flex items-center gap-1.5"
+                          onClick={() => {
+                            handleBulkAssignGroup(g);
+                            setBulkGroupPopoverOpen(false);
+                          }}
+                        >
+                          <Folder className="h-3 w-3 text-muted-foreground shrink-0" />
+                          {g}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="w-full text-left px-2 py-1 rounded text-xs text-muted-foreground hover:bg-accent transition-colors mt-0.5 border-t pt-1.5"
+                        onClick={() => {
+                          handleBulkAssignGroup(null);
+                          setBulkGroupPopoverOpen(false);
+                        }}
+                      >
+                        Gruppe entfernen
+                      </button>
+                    </PopoverContent>
+                  </Popover>
                 </>
               )}
             </div>
