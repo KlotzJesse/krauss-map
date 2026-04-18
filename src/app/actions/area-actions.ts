@@ -554,7 +554,19 @@ export async function duplicateAreaAction(sourceAreaId: number) {
         }
       }
 
-      // 5. Create initial version
+      // 5. Copy tag assignments
+      const sourceTags = await tx
+        .select({ tagId: areaTagAssignments.tagId })
+        .from(areaTagAssignments)
+        .where(eq(areaTagAssignments.areaId, sourceAreaId));
+
+      if (sourceTags.length > 0) {
+        await tx.insert(areaTagAssignments).values(
+          sourceTags.map((t) => ({ areaId: newArea.id, tagId: t.tagId }))
+        );
+      }
+
+      // 6. Create initial version
       const { createVersionAction } = await import("./version-actions");
       await createVersionAction(newArea.id, {
         name: "Erstversion",
