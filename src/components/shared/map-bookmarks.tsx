@@ -62,6 +62,19 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
     }
   }, [open, getCurrentView]);
 
+  // Keyboard shortcut: Ctrl+B / Cmd+B toggles bookmarks panel
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "b") {
+        e.preventDefault();
+        setOpen((prev) => !prev);
+      }
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   // Close on outside click
   useEffect(() => {
     if (!open) return;
@@ -129,7 +142,7 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="Kartenlesezeichen"
+        title="Kartenlesezeichen (Ctrl+B)"
         aria-label="Kartenlesezeichen öffnen"
         className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
       >
