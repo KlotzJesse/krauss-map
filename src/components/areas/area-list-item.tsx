@@ -90,7 +90,10 @@ export const AreaListItem = memo(
 
     useEffect(() => {
       if (isCurrentRoute && itemRef.current) {
-        itemRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        itemRef.current.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth",
+        });
       }
     }, [isCurrentRoute]);
 

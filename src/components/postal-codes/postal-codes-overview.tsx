@@ -105,8 +105,7 @@ export async function PostalCodesOverview() {
       coveragePct: Math.min(
         100,
         Math.round(
-          ((a.uniquePostalCodeCount ?? 0) / (a.totalPostalCodeCount ?? 1)) *
-            100
+          ((a.uniquePostalCodeCount ?? 0) / (a.totalPostalCodeCount ?? 1)) * 100
         )
       ),
     }))
@@ -233,7 +232,10 @@ export async function PostalCodesOverview() {
                       const assigned = area.uniquePostalCodeCount ?? 0;
                       const coveragePct =
                         totalPc > 0
-                          ? Math.min(100, Math.round((assigned / totalPc) * 100))
+                          ? Math.min(
+                              100,
+                              Math.round((assigned / totalPc) * 100)
+                            )
                           : null;
                       return (
                         <li key={area.id}>

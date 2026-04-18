@@ -202,26 +202,38 @@ function MapLegend({
         </button>
         {!collapsed && (
           <div className="px-2.5 pb-2 space-y-1 max-h-48 overflow-y-auto">
-            {visibleLayers.map((l) => (
-              <div
-                key={l.id}
-                className={cn(
-                  "flex items-center gap-1.5",
-                  activeLayerId === l.id && "font-semibold"
-                )}
-              >
-                <span
-                  className="inline-block w-2.5 h-2.5 rounded-sm shrink-0 border border-black/10"
-                  style={{ backgroundColor: l.color }}
-                />
-                <span className="text-[10px] text-foreground truncate leading-tight">
-                  {l.name}
-                </span>
-                <span className="text-[9px] text-muted-foreground shrink-0 ml-auto">
-                  {l.postalCodes?.length ?? 0}
-                </span>
-              </div>
-            ))}
+            {visibleLayers.map((l) => {
+              const count = l.postalCodes?.length ?? 0;
+              const total = visibleLayers.reduce(
+                (s, x) => s + (x.postalCodes?.length ?? 0),
+                0
+              );
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              return (
+                <div
+                  key={l.id}
+                  className={cn(
+                    "flex items-center gap-1.5",
+                    activeLayerId === l.id &&
+                      "font-semibold bg-muted/60 rounded px-1 -mx-1"
+                  )}
+                >
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-sm shrink-0 border border-black/10"
+                    style={{ backgroundColor: l.color }}
+                  />
+                  <span className="text-[10px] text-foreground truncate leading-tight flex-1">
+                    {l.name}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground shrink-0 tabular-nums">
+                    {count}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground/60 shrink-0 tabular-nums w-7 text-right">
+                    {pct}%
+                  </span>
+                </div>
+              );
+            })}
             {showUnassignedEntry && (
               <div className="flex items-center gap-1.5 border-t border-border/50 pt-1 mt-1">
                 <span

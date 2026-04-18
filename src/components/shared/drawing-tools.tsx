@@ -225,7 +225,11 @@ interface StatsSectionProps {
   onLayerSelect?: (layerId: number) => void;
 }
 
-function StatsSection({ layers, postalCodesData, onLayerSelect }: StatsSectionProps) {
+function StatsSection({
+  layers,
+  postalCodesData,
+  onLayerSelect,
+}: StatsSectionProps) {
   const totalFeatures = postalCodesData?.features.length ?? 0;
   const assignedSet = new Set(
     layers.flatMap((l) => l.postalCodes?.map((pc) => pc.postalCode) ?? [])
@@ -332,8 +336,36 @@ function StatsSection({ layers, postalCodesData, onLayerSelect }: StatsSectionPr
         </div>
         {layerSizes.length > 0 && (
           <div className="space-y-1 pt-0.5">
-            <div className="text-[10px] font-semibold text-muted-foreground">
-              Layer-Verteilung
+            <div className="flex items-center justify-between">
+              <div className="text-[10px] font-semibold text-muted-foreground">
+                Layer-Verteilung
+              </div>
+              <button
+                type="button"
+                className="text-[9px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
+                title="Statistik als CSV exportieren"
+                onClick={() => {
+                  const total = layerSizes.reduce((s, l) => s + l.count, 0);
+                  const header = "Layer;PLZ;Anteil %";
+                  const rows = layerSizes.map(
+                    (l) =>
+                      `${l.name};${l.count};${total > 0 ? ((l.count / total) * 100).toFixed(1) : "0.0"}`
+                  );
+                  const csv = [header, ...rows].join("\n");
+                  const blob = new Blob([csv], {
+                    type: "text/csv;charset=utf-8;",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "statistik.csv";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                <Download className="h-2.5 w-2.5" />
+                CSV
+              </button>
             </div>
             {layerSizes.map((layer) => (
               <div key={layer.name} className="flex items-center gap-1.5">
@@ -3267,7 +3299,9 @@ function LayerManagementSection({
                           >
                             {code}
                           </button>
-                          <span className="text-muted-foreground shrink-0">→</span>
+                          <span className="text-muted-foreground shrink-0">
+                            →
+                          </span>
                           <span className="flex gap-0.5 flex-wrap flex-1">
                             {layerIds.map((id: number) => {
                               const l = optimisticLayers.find(
@@ -3299,7 +3333,9 @@ function LayerManagementSection({
                                     {l.name}
                                   </TooltipTrigger>
                                   <TooltipContent side="top">
-                                    <p className="text-[10px]">Nur in „{l.name}" behalten</p>
+                                    <p className="text-[10px]">
+                                      Nur in „{l.name}" behalten
+                                    </p>
                                   </TooltipContent>
                                 </Tooltip>
                               ) : null;
