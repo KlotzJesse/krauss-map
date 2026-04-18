@@ -2167,6 +2167,7 @@ const LayerDialogs = memo(function LayerDialogs({
               { keys: ["F"], desc: "Karte auf aktive Ebene zentrieren" },
               { keys: ["N"], desc: "Neues Gebiet anlegen" },
               { keys: ["D"], desc: "Aktive Ebene duplizieren" },
+              { keys: ["F2"], desc: "Aktive Ebene umbenennen" },
               { keys: ["Esc"], desc: "Zeichenmodus beenden" },
               { keys: ["Enter"], desc: "Polygon abschließen" },
               { keys: ["Backspace"], desc: "Letzten Punkt löschen" },
@@ -2377,6 +2378,8 @@ function DrawingToolsImpl({
   handleDuplicateLayerRef.current = handleDuplicateLayer;
   const countryRef = useRef(country);
   countryRef.current = country;
+  const dispatchFormRef = useRef(dispatchForm);
+  dispatchFormRef.current = dispatchForm;
 
   const handleOpenKeyboardHelp = useCallback(
     () => dispatchUI({ type: "OPEN_KEYBOARD_HELP" }),
@@ -2422,6 +2425,17 @@ function DrawingToolsImpl({
       if (e.key === "d" && !isInInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const id = activeLayerIdRef.current;
         if (id) handleDuplicateLayerRef.current(id);
+        return;
+      }
+
+      // F2: rename active layer
+      if (e.key === "F2" && !isInInput) {
+        const id = activeLayerIdRef.current;
+        const activeLayer = layersRef.current.find((l) => l.id === id);
+        if (activeLayer) {
+          e.preventDefault();
+          dispatchFormRef.current({ type: "START_EDIT", layerId: activeLayer.id, name: activeLayer.name });
+        }
         return;
       }
 
