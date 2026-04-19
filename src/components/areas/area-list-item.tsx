@@ -222,6 +222,7 @@ export const AreaListItem = memo(
               )}
               {isSelectable ? (
                 <span
+                  title={area.name}
                   className={`flex-1 text-sm font-medium min-w-0 truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}
                 >
                   {area.name}
@@ -236,6 +237,7 @@ export const AreaListItem = memo(
                   className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
                 >
                   <span
+                    title={area.name}
                     className={`truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}
                   >
                     {area.name}

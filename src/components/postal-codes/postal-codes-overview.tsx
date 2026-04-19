@@ -14,6 +14,8 @@ import {
 import type { Route } from "next";
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
+
 import {
   Card,
   CardContent,
@@ -71,10 +73,27 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 export async function PostalCodesOverview() {
-  const [areas, recentActivity] = await Promise.all([
+  const [areas, rawActivity] = await Promise.all([
     getAreas(),
-    getRecentActivity(8),
+    getRecentActivity(40),
   ]);
+
+  // Group by area+changeType+day to avoid spammy repetition
+  const activityGroupMap = new Map<
+    string,
+    (typeof rawActivity)[0] & { count: number }
+  >();
+  for (const item of rawActivity) {
+    const day = item.createdAt.slice(0, 10);
+    const key = `${item.areaId}:${item.changeType}:${day}`;
+    const existing = activityGroupMap.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      activityGroupMap.set(key, { ...item, count: 1 });
+    }
+  }
+  const recentActivity = [...activityGroupMap.values()].slice(0, 8);
 
   const activeAreas = areas.filter((a) => a.isArchived !== "true");
   const archivedAreas = areas.filter((a) => a.isArchived === "true");
@@ -261,9 +280,19 @@ export async function PostalCodesOverview() {
                                 <span className="text-xs font-medium text-foreground truncate">
                                   {item.areaName}
                                 </span>
-                                <span className="text-[10px] text-muted-foreground shrink-0">
-                                  {formatRelativeTime(item.createdAt)}
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {item.count > 1 && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-[9px] px-1 py-0 h-4 leading-none"
+                                    >
+                                      ×{item.count}
+                                    </Badge>
+                                  )}
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {formatRelativeTime(item.createdAt)}
+                                  </span>
+                                </div>
                               </div>
                               <div className="text-[11px] text-muted-foreground">
                                 {label}
