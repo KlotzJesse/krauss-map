@@ -402,7 +402,10 @@ function StatsSection({
                 </div>
                 {layerSizes.map((layer) => (
                   <div key={layer.id} className="flex items-center gap-1.5">
-                    <div className="w-16 shrink-0 truncate text-[10px] text-muted-foreground">
+                    <div
+                      className="w-24 shrink-0 truncate text-[10px] text-muted-foreground"
+                      title={layer.name}
+                    >
                       {layer.name}
                     </div>
                     <div className="relative flex-1 h-3 rounded-sm bg-muted overflow-hidden">

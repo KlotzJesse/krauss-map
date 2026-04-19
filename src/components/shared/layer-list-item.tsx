@@ -705,6 +705,7 @@ export const LayerListItem = memo(function LayerListItem({
                   <IconPalette className="h-3.5 w-3.5" />
                   Farbe ändern
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {onDuplicateLayer && (
                   <DropdownMenuItem onClick={() => onDuplicateLayer(layer.id)}>
                     <CopyPlus className="h-3.5 w-3.5" />
@@ -719,6 +720,10 @@ export const LayerListItem = memo(function LayerListItem({
                     In anderes Gebiet kopieren
                   </DropdownMenuItem>
                 )}
+                {(onMergeLayer && otherLayers.length > 0) ||
+                (onSplitLayer && postalCodes.length >= 4) ? (
+                  <DropdownMenuSeparator />
+                ) : null}
                 {onMergeLayer && otherLayers.length > 0 && (
                   <DropdownMenuItem
                     onClick={() => onMergeLayer(layer.id, layer.name)}

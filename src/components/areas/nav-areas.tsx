@@ -182,6 +182,15 @@ function navAreasReducer(
   }
 }
 
+type SortMode = "default" | "name" | "plz" | "modified";
+const SORT_MODES: SortMode[] = ["default", "name", "plz", "modified"];
+const SORT_LABELS: Record<SortMode, string> = {
+  default: "Standard",
+  name: "Name (A–Z)",
+  plz: "PLZ-Anzahl",
+  modified: "Zuletzt geändert",
+};
+
 interface NavAreasProps {
   areas: AreaSummary[];
   isLoading?: boolean;
@@ -260,21 +269,16 @@ export function NavAreas({
     new Set()
   );
   type SortMode = "default" | "name" | "plz" | "modified";
-  const sortModes: SortMode[] = ["default", "name", "plz", "modified"];
-  const sortLabels: Record<SortMode, string> = {
-    default: "Standard",
-    name: "Name (A–Z)",
-    plz: "PLZ-Anzahl",
-    modified: "Zuletzt geändert",
-  };
+  const sortModes: SortMode[] = SORT_MODES;
+  const sortLabels: Record<SortMode, string> = SORT_LABELS;
   const [sortBy, setSortBy] = useState<SortMode>("default");
 
   const cycleSortMode = useCallback(() => {
     setSortBy((prev) => {
-      const idx = sortModes.indexOf(prev);
-      return sortModes[(idx + 1) % sortModes.length];
+      const idx = SORT_MODES.indexOf(prev);
+      return SORT_MODES[(idx + 1) % SORT_MODES.length];
     });
-  }, [sortModes]);
+  }, []);
   const [notesArea, setNotesArea] = useState<AreaSummary | null>(null);
   const [notesText, setNotesText] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
