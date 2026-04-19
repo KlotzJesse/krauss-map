@@ -866,12 +866,10 @@ const MapInner = memo(function MapInner({
         </div>
       </Activity>
 
-      {/* Screenshot + Print buttons - top left when panel open, bottom left otherwise */}
+      {/* Map toolbar — always top, shifts right when Kartentools panel is open */}
       <div
-        className={`absolute z-10 flex flex-col gap-1 print:hidden transition-all duration-200 ${
-          interactions.isDrawingToolsVisible
-            ? "top-4 left-[472px]"
-            : "bottom-4 left-4"
+        className={`absolute z-10 flex flex-col gap-1 print:hidden transition-all duration-200 top-4 ${
+          interactions.isDrawingToolsVisible ? "left-[472px]" : "left-14"
         }`}
       >
         <button

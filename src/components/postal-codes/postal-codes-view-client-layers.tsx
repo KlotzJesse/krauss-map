@@ -428,7 +428,7 @@ export function PostalCodesViewClientWithLayers({
     [setMapCenterZoom]
   );
 
-  const handleBadgePreviewPostalCode = useCallback(
+  const handleBadgePreviewPostalCode = useStableCallback(
     (postalCode: string | null) => {
       setPreviewPostalCode(postalCode);
       if (postalCode && data) {
@@ -442,8 +442,7 @@ export function PostalCodesViewClientWithLayers({
           setMapCenterZoom([lng, lat], 11);
         }
       }
-    },
-    [data, setMapCenterZoom]
+    }
   );
 
   const handleZoomToLayer = useCallback(
