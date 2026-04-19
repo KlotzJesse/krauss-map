@@ -2800,6 +2800,19 @@ const LayerManagementSection = memo(function LayerManagementSection({
                   <IconLayoutColumns className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-sm">Ebenen-Vorlagen</span>
                 </DropdownMenuItem>
+                {optimisticLayers.filter((l) => (l.postalCodes?.length ?? 0) > 0).length > 1 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleBalanceLayers}
+                      disabled={isBalancing}
+                      className="gap-2 cursor-pointer"
+                    >
+                      <Scale className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">{isBalancing ? "Wird ausgeglichen…" : "Ebenen ausgleichen"}</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -3518,131 +3531,59 @@ const LayerManagementSection = memo(function LayerManagementSection({
                     </span>
                   </div>
                 )}
-              {/* Per-layer mini bar chart */}
-              {optimisticLayers.length > 1 && (
-                <div className="space-y-0.5">
-                  {optimisticLayers
-                    .filter((l) => (l.postalCodes?.length ?? 0) > 0)
-                    .sort(
-                      (a, b) =>
-                        (b.postalCodes?.length ?? 0) -
-                        (a.postalCodes?.length ?? 0)
-                    )
-                    .map((layer) => {
-                      const count = layer.postalCodes?.length ?? 0;
-                      const pct =
-                        layerStats.totalCodes > 0
-                          ? (count / layerStats.totalCodes) * 100
-                          : 0;
-                      const codes =
-                        layer.postalCodes?.map((pc) => pc.postalCode).sort() ??
-                        [];
-                      const minPlz = codes[0] ?? "";
-                      const maxPlz = codes.at(-1) ?? "";
-                      const range =
-                        minPlz && maxPlz && minPlz !== maxPlz
-                          ? `${minPlz}–${maxPlz}`
-                          : minPlz;
-                      return (
-                        <button
-                          type="button"
-                          key={layer.id}
-                          className="flex items-center gap-1.5 text-[10px] w-full text-left hover:bg-muted/50 rounded px-0.5 transition-colors cursor-pointer"
-                          title={`${layer.name ?? `Layer ${layer.id}`} – ${count} PLZ (${pct.toFixed(0)}%)${range ? ` | ${range}` : ""} — klicken zum Aktivieren`}
-                          onClick={() => onLayerSelect?.(layer.id)}
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: layer.color }}
-                          />
-                          <span className="truncate text-muted-foreground max-w-[70px]">
-                            {layer.name ?? `Layer ${layer.id}`}
-                          </span>
-                          <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${pct}%`,
-                                backgroundColor: layer.color,
-                              }}
-                            />
-                          </div>
-                          <span className="text-muted-foreground w-8 text-right tabular-nums">
-                            {count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                </div>
-              )}
-              {/* Balance PLZ button — shown when 2+ layers have codes */}
-              {optimisticLayers.filter((l) => (l.postalCodes?.length ?? 0) > 0)
-                .length > 1 && (
-                <button
-                  type="button"
-                  disabled={isBalancing}
-                  onClick={handleBalanceLayers}
-                  className="w-full flex items-center justify-center gap-1.5 text-[10px] px-2 py-1 rounded border border-dashed border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="PLZ gleichmäßig auf alle Ebenen verteilen"
-                >
-                  <Scale className="h-3 w-3" />
-                  {isBalancing ? "Wird ausgeglichen…" : "Ebenen ausgleichen"}
-                </button>
-              )}
-              {/* PLZ prefix distribution (2-digit) — compact sparkline */}
+              {/* PLZ prefix distribution (2-digit) — collapsible sparkline */}
               {layerStats.prefixDistribution.length > 1 && (
-                <div className="space-y-0.5">
-                  <div className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">
+                <Collapsible defaultOpen={false}>
+                  <CollapsibleTrigger className="flex items-center gap-1 text-[9px] text-muted-foreground font-medium uppercase tracking-wide w-full hover:text-foreground transition-colors py-0.5 [&>svg]:transition-transform [&[data-panel-open]>svg]:rotate-0 [&>svg]:-rotate-90">
+                    <ChevronDown className="h-2.5 w-2.5" />
                     PLZ-Verteilung nach Vorwahl
-                  </div>
-                  <div className="flex items-end gap-px h-8 overflow-x-auto">
-                    {(() => {
-                      const max = Math.max(
-                        ...layerStats.prefixDistribution.map((p) => p.count)
-                      );
-                      return layerStats.prefixDistribution.map(
-                        ({ prefix, count }) => (
-                          <div
-                            key={prefix}
-                            className="flex flex-col items-center gap-px flex-1 min-w-[8px] group"
-                            title={`${prefix}xxx: ${count} PLZ`}
-                          >
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-0.5">
+                    <div className="flex items-end gap-px h-8 overflow-x-auto">
+                      {(() => {
+                        const max = Math.max(
+                          ...layerStats.prefixDistribution.map((p) => p.count)
+                        );
+                        return layerStats.prefixDistribution.map(
+                          ({ prefix, count }) => (
                             <div
-                              className="w-full rounded-sm bg-primary/60 group-hover:bg-primary transition-colors"
-                              style={{
-                                height: `${Math.max(2, (count / max) * 24)}px`,
-                              }}
-                            />
-                          </div>
-                        )
-                      );
-                    })()}
-                  </div>
-                  <div className="flex justify-between text-[8px] text-muted-foreground/60">
-                    <span>{layerStats.prefixDistribution[0]?.prefix}xx</span>
-                    <span>
-                      {
-                        layerStats.prefixDistribution[
-                          Math.floor(layerStats.prefixDistribution.length / 2)
-                        ]?.prefix
-                      }
-                      xx
-                    </span>
-                    <span>
-                      {
-                        layerStats.prefixDistribution[
-                          layerStats.prefixDistribution.length - 1
-                        ]?.prefix
-                      }
-                      xx
-                    </span>
-                  </div>
-                </div>
+                              key={prefix}
+                              className="flex flex-col items-center gap-px flex-1 min-w-[8px] group"
+                              title={`${prefix}xxx: ${count} PLZ`}
+                            >
+                              <div
+                                className="w-full rounded-sm bg-primary/60 group-hover:bg-primary transition-colors"
+                                style={{
+                                  height: `${Math.max(2, (count / max) * 24)}px`,
+                                }}
+                              />
+                            </div>
+                          )
+                        );
+                      })()}
+                    </div>
+                    <div className="flex justify-between text-[8px] text-muted-foreground/60">
+                      <span>{layerStats.prefixDistribution[0]?.prefix}xx</span>
+                      <span>
+                        {
+                          layerStats.prefixDistribution[
+                            Math.floor(layerStats.prefixDistribution.length / 2)
+                          ]?.prefix
+                        }
+                        xx
+                      </span>
+                      <span>
+                        {
+                          layerStats.prefixDistribution[
+                            layerStats.prefixDistribution.length - 1
+                          ]?.prefix
+                        }
+                        xx
+                      </span>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
-              {/* Keyboard hint */}
-              <div className="text-[9px] text-muted-foreground/60 text-right">
-                Alt+↑↓ Gebiet wechseln · Ctrl+V PLZ einfügen · / PLZ suchen
-              </div>
             </div>
           )}
 
