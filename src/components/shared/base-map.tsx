@@ -971,7 +971,7 @@ const MapInner = memo(function MapInner({
           }
           aria-label="Nicht zugeordnete PLZ anzeigen/ausblenden"
           className={cn(
-            "flex items-center gap-1.5 px-2 h-8 rounded-md border shadow-sm transition-colors text-xs font-medium",
+            "relative flex items-center justify-center w-8 h-8 rounded-md border shadow-sm transition-colors",
             showUnassigned
               ? "bg-red-100 border-red-300 text-red-600 hover:bg-red-50"
               : unassignedCount > 0
@@ -985,7 +985,11 @@ const MapInner = memo(function MapInner({
             <Eye className="h-4 w-4" />
           )}
           {unassignedCount > 0 && (
-            <span>{unassignedCount.toLocaleString("de-DE")}</span>
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full bg-orange-500 text-white text-[9px] font-bold leading-4 text-center tabular-nums">
+              {unassignedCount > 9999
+                ? `${Math.round(unassignedCount / 1000)}k`
+                : unassignedCount.toLocaleString("de-DE")}
+            </span>
           )}
         </button>
         <MapBookmarks

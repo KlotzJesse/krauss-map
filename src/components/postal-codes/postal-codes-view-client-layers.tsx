@@ -605,8 +605,8 @@ export function PostalCodesViewClientWithLayers({
                 <Button
                   variant="outline"
                   onClick={openImportDialog}
-                  size="default"
-                  className="shadow-sm bg-background"
+                  size="icon"
+                  className="shadow-sm bg-background h-8 w-8"
                   title="PLZ importieren"
                   disabled={isGeodataLoading}
                 />

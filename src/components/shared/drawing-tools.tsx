@@ -2620,6 +2620,98 @@ const LayerManagementSection = memo(function LayerManagementSection({
               </TooltipContent>
             </Tooltip>
           )}
+          {crossAreaDuplicatesByArea.size > 0 && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={handleOpenConflicts}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                  />
+                }
+              >
+                <IconAlertTriangle className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  {crossAreaDuplicates.length.toLocaleString("de-DE")} PLZ in{" "}
+                  {crossAreaDuplicatesByArea.size}{" "}
+                  {crossAreaDuplicatesByArea.size === 1
+                    ? "anderem Gebiet"
+                    : "anderen Gebieten"}{" "}
+                  — Konflikte lösen
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 shrink-0"
+                  title="Weitere Aktionen"
+                />
+              }
+            >
+              <IconDots className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel className="text-xs">
+                Weitere Aktionen
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleOpenHistory}
+                className="gap-2 cursor-pointer"
+              >
+                <IconClock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm">Versionsverlauf</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleOpenVersion}
+                className="gap-2 cursor-pointer"
+              >
+                <IconDeviceFloppy className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm">Version erstellen</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleOpenMerge}
+                className="gap-2 cursor-pointer"
+              >
+                <IconGitMerge className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm">Gebiete zusammenführen</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setTemplatesDialogOpen(true)}
+                className="gap-2 cursor-pointer"
+              >
+                <IconLayoutColumns className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm">Ebenen-Vorlagen</span>
+              </DropdownMenuItem>
+              {optimisticLayers.filter((l) => (l.postalCodes?.length ?? 0) > 0)
+                .length > 1 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleBalanceLayers}
+                    disabled={isBalancing}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <Scale className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm">
+                      {isBalancing
+                        ? "Wird ausgeglichen…"
+                        : "Ebenen ausgleichen"}
+                    </span>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <CollapsibleContent className="space-y-2 pt-2">
           {/* Bulk action bar */}
@@ -2772,95 +2864,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
               )}
             </div>
           )}
-          {/* Layer action buttons — Conflicts always visible; secondary actions in dropdown */}
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    onClick={handleOpenConflicts}
-                    variant="outline"
-                    size="sm"
-                    className="h-7 flex-1 gap-1.5 text-xs"
-                  />
-                }
-              >
-                <IconAlertTriangle className="h-3 w-3 shrink-0" />
-                Konflikte
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Konflikte anzeigen und lösen</p>
-              </TooltipContent>
-            </Tooltip>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0 shrink-0"
-                    title="Weitere Aktionen"
-                  />
-                }
-              >
-                <IconDots className="h-3.5 w-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="text-xs">
-                  Weitere Aktionen
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleOpenHistory}
-                  className="gap-2 cursor-pointer"
-                >
-                  <IconClock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm">Versionsverlauf</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleOpenVersion}
-                  className="gap-2 cursor-pointer"
-                >
-                  <IconDeviceFloppy className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm">Version erstellen</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleOpenMerge}
-                  className="gap-2 cursor-pointer"
-                >
-                  <IconGitMerge className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm">Gebiete zusammenführen</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setTemplatesDialogOpen(true)}
-                  className="gap-2 cursor-pointer"
-                >
-                  <IconLayoutColumns className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm">Ebenen-Vorlagen</span>
-                </DropdownMenuItem>
-                {optimisticLayers.filter(
-                  (l) => (l.postalCodes?.length ?? 0) > 0
-                ).length > 1 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handleBalanceLayers}
-                      disabled={isBalancing}
-                      className="gap-2 cursor-pointer"
-                    >
-                      <Scale className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm">
-                        {isBalancing
-                          ? "Wird ausgeglichen…"
-                          : "Ebenen ausgleichen"}
-                      </span>
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
           {/* Create new layer */}
           <div className="flex gap-1">
             <Input
