@@ -2,21 +2,28 @@
 
 import {
   Diamond,
+  Download,
   FileArchive,
   FileJson,
   FileSpreadsheet,
+  FileText,
   Loader2Icon,
+  Upload,
   X,
 } from "lucide-react";
 import { Activity } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 
 const DRAWING_MODES = [
   "freehand",
@@ -41,6 +48,7 @@ interface DrawingActionsSectionProps {
   onExportGeoJSON: () => void;
   onExportData: () => void;
   onExportZip: () => void;
+  onImportData: () => void;
 }
 
 export function DrawingActionsSection({
@@ -56,6 +64,7 @@ export function DrawingActionsSection({
   onExportGeoJSON,
   onExportData,
   onExportZip,
+  onImportData,
 }: DrawingActionsSectionProps) {
   const isDrawingMode =
     currentMode !== null &&
@@ -98,99 +107,75 @@ export function DrawingActionsSection({
       <Activity mode={!!postalCodesData ? "visible" : "hidden"}>
         <>
           <Separator />
-          <div className="space-y-1">
-            <div className="flex gap-1">
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onExportExcel}
-                      className="flex-1 h-7 text-xs"
-                    />
-                  }
+          <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-7 text-xs"
+              />
+            }
+          >
+            <Download className="h-3 w-3 mr-1.5" />
+            Export / Import
+          </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                  Exportieren
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  className="text-xs gap-2"
+                  onClick={onExportExcel}
                 >
-                  <FileSpreadsheet className="h-3 w-3 mr-1" />
-                  XLS
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Als Excel-Datei exportieren</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onExportPDF}
-                      className="flex-1 h-7 text-xs"
-                    />
-                  }
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-muted-foreground" />
+                  Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-xs gap-2"
+                  onClick={onExportPDF}
                 >
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                   PDF
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Als PDF-Datei exportieren</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onExportGeoJSON}
-                      className="flex-1 h-7 text-xs"
-                    />
-                  }
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-xs gap-2"
+                  onClick={onExportGeoJSON}
                 >
-                  <FileJson className="h-3 w-3 mr-1" />
-                  GeoJSON
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Als GeoJSON exportieren (mit Geometrien)</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onExportData}
-                      className="flex-1 h-7 text-xs"
-                    />
-                  }
+                  <FileJson className="h-3.5 w-3.5 text-muted-foreground" />
+                  GeoJSON (mit Geometrien)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-xs gap-2"
+                  onClick={onExportData}
                 >
-                  <FileJson className="h-3 w-3 mr-1" />
-                  JSON
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Gebiet als JSON sichern (für Import/Restore)</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onExportZip}
-                      className="flex-1 h-7 text-xs"
-                    />
-                  }
+                  <FileJson className="h-3.5 w-3.5 text-muted-foreground" />
+                  JSON (Backup)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-xs gap-2"
+                  onClick={onExportZip}
                 >
-                  <FileArchive className="h-3 w-3 mr-1" />
-                  ZIP
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Alle Ebenen als CSV-Dateien im ZIP exportieren</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+                  <FileArchive className="h-3.5 w-3.5 text-muted-foreground" />
+                  ZIP (alle Ebenen als CSV)
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                  Importieren
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  className="text-xs gap-2"
+                  onClick={onImportData}
+                >
+                  <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                  Gebiet aus JSON importieren
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       </Activity>
     </>

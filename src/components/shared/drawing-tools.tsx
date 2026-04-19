@@ -4837,6 +4837,9 @@ function DrawingToolsImpl({
   );
 
   const importDataFileRef = useRef<HTMLInputElement>(null);
+  const handleTriggerImportData = useCallback(() => {
+    importDataFileRef.current?.click();
+  }, []);
 
   return (
     <Card
@@ -5046,22 +5049,19 @@ function DrawingToolsImpl({
           onExportGeoJSON={handleExportGeoJSON}
           onExportData={handleExportData}
           onExportZip={handleExportZip}
+          onImportData={handleTriggerImportData}
         />
 
-        {/* Import JSON — creates a new area from JSON backup */}
-        <div className="flex justify-end">
-          <label className="inline-flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-            <Upload className="h-3 w-3" />
-            <span>Gebiet aus JSON importieren</span>
-            <input
-              ref={importDataFileRef}
-              type="file"
-              accept=".json"
-              className="sr-only"
-              onChange={handleImportDataFile}
-            />
-          </label>
-        </div>
+        {/* Hidden file input for JSON import — triggered via dropdown */}
+        <input
+          ref={importDataFileRef}
+          type="file"
+          accept=".json"
+          className="sr-only"
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={handleImportDataFile}
+        />
 
         {/* Stats Section */}
         {postalCodesData && (
