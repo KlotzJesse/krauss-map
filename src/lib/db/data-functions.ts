@@ -529,6 +529,7 @@ export interface GlobalChangelogItem {
   layerName: string | null;
   previousLayerName: string | null;
   postalCodeCount: number;
+  updateFields: string | null;
   isUndone: string;
   createdBy: string | null;
   createdAt: string;
@@ -564,9 +565,27 @@ export async function getGlobalChangelog(options?: {
           a.name              AS "areaName",
           ac.change_type      AS "changeType",
           ac.entity_type      AS "entityType",
-          ac.change_data->'layer'->>'name'       AS "layerName",
-          ac.previous_data->'layer'->>'name'     AS "previousLayerName",
+          COALESCE(
+            ac.change_data->'layer'->>'name',
+            ac.change_data->>'name',
+            ac.previous_data->>'name',
+            al.name
+          )                   AS "layerName",
+          COALESCE(
+            ac.previous_data->'layer'->>'name',
+            ac.previous_data->>'name'
+          )                   AS "previousLayerName",
           COALESCE(jsonb_array_length(ac.change_data->'postalCodes'), 0) AS "postalCodeCount",
+          CASE WHEN ac.change_type = 'update_layer' THEN
+            TRIM(',' FROM CONCAT(
+              CASE WHEN ac.change_data ? 'color'      THEN 'Farbe,'        ELSE '' END,
+              CASE WHEN ac.change_data ? 'name'       THEN 'Name,'         ELSE '' END,
+              CASE WHEN ac.change_data ? 'opacity'    THEN 'Deckkraft,'    ELSE '' END,
+              CASE WHEN ac.change_data ? 'isVisible'  THEN 'Sichtbarkeit,' ELSE '' END,
+              CASE WHEN ac.change_data ? 'orderIndex' THEN 'Reihenfolge,'  ELSE '' END,
+              CASE WHEN ac.change_data ? 'postalCodes' THEN 'PLZ,'         ELSE '' END
+            ))
+          ELSE NULL END       AS "updateFields",
           ac.is_undone        AS "isUndone",
           ac.created_by       AS "createdBy",
           ac.created_at       AS "createdAt",
@@ -574,6 +593,7 @@ export async function getGlobalChangelog(options?: {
           ac.version_number   AS "versionNumber"
         FROM area_changes ac
         INNER JOIN areas a ON a.id = ac.area_id
+        LEFT JOIN area_layers al ON al.id = ac.entity_id AND ac.entity_type = 'layer'
         WHERE ${options?.includeUndone ? sql`TRUE` : sql`ac.is_undone = 'false'`}
           ${options?.areaId ? sql`AND ac.area_id = ${options.areaId}` : sql``}
           ${options?.changeType ? sql`AND ac.change_type = ${options.changeType}` : sql``}

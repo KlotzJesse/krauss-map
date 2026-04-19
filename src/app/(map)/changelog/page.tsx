@@ -92,18 +92,21 @@ function getChangeDescription(item: {
   layerName: string | null;
   previousLayerName: string | null;
   postalCodeCount: number;
+  updateFields: string | null;
 }): string {
-  const { changeType, layerName, previousLayerName, postalCodeCount } = item;
-  if (
-    changeType === "add_postal_codes" ||
-    changeType === "remove_postal_codes"
-  ) {
+  const { changeType, layerName, previousLayerName, postalCodeCount, updateFields } = item;
+  if (changeType === "add_postal_codes" || changeType === "remove_postal_codes") {
     const name = layerName ? ` → ${layerName}` : "";
-    return postalCodeCount > 0
-      ? `${postalCodeCount} PLZ${name}`
-      : (layerName ?? "");
+    return postalCodeCount > 0 ? `${postalCodeCount} PLZ${name}` : (layerName ?? "");
   }
-  if (changeType === "update_layer" && previousLayerName && layerName) {
+  if (changeType === "update_layer") {
+    const name = layerName ?? previousLayerName ?? "";
+    const fields = updateFields?.replace(/,/g, ", ") ?? "";
+    if (name && fields) return `${name} (${fields})`;
+    if (fields) return fields;
+    return name;
+  }
+  if (changeType === "update_layer" && previousLayerName && layerName && previousLayerName !== layerName) {
     return `${previousLayerName} → ${layerName}`;
   }
   return layerName ?? previousLayerName ?? "";
@@ -274,6 +277,7 @@ export default async function ChangelogPage({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={<Link href={buildUrl({ page: page - 1 }) as Route} />}
               >
                 ← Zurück
@@ -283,6 +287,7 @@ export default async function ChangelogPage({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={<Link href={buildUrl({ page: page + 1 }) as Route} />}
               >
                 Weiter →
