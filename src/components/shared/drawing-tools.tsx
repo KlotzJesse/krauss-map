@@ -1756,6 +1756,7 @@ interface LayerManagementSectionProps {
   onZoomToLayer?: (layerId: number) => void;
   plzFindInputRef?: React.RefObject<HTMLInputElement | null>;
   newLayerInputRef?: React.RefObject<HTMLInputElement | null>;
+  showNewLayerInputRef?: React.RefObject<((show: boolean) => void) | null>;
   allCodesSet?: Set<string>;
   getAllCodesSet?: () => Set<string>;
   onLayerUpdate?: () => void;
@@ -1809,6 +1810,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
   onZoomToLayer,
   plzFindInputRef: externalPlzFindInputRef,
   newLayerInputRef: externalNewLayerInputRef,
+  showNewLayerInputRef,
   allCodesSet,
   getAllCodesSet,
   onLayerUpdate,
@@ -2007,6 +2009,12 @@ const LayerManagementSection = memo(function LayerManagementSection({
   // Bulk select state
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  // New layer input visibility — hidden by default, toggled by + button
+  const [showNewLayerInput, setShowNewLayerInput] = useState(false);
+  // Expose setter via ref so DrawingTools keyboard handler can trigger it
+  useEffect(() => {
+    if (showNewLayerInputRef) showNewLayerInputRef.current = setShowNewLayerInput;
+  }, [showNewLayerInputRef]);
   const toggleSelectMode = useCallback(() => {
     setSelectMode((v) => !v);
     setSelectedIds(new Set());
@@ -2619,6 +2627,28 @@ const LayerManagementSection = memo(function LayerManagementSection({
               </TooltipContent>
             </Tooltip>
           )}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  onClick={() => {
+                    setShowNewLayerInput((v) => !v);
+                    if (!showNewLayerInput) {
+                      setTimeout(() => newLayerInputRef.current?.focus(), 50);
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 w-7 p-0 shrink-0 ${showNewLayerInput ? "text-primary bg-primary/10" : ""}`}
+                />
+              }
+            >
+              <IconPlus className="h-3.5 w-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Neues Gebiet erstellen</p>
+            </TooltipContent>
+          </Tooltip>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -2732,7 +2762,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <CollapsibleContent className="space-y-2 pt-2">
+        <CollapsibleContent className="space-y-1 pt-1">
           {/* Bulk action bar */}
           {selectMode && (
             <div className="flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs">
@@ -2883,7 +2913,8 @@ const LayerManagementSection = memo(function LayerManagementSection({
               )}
             </div>
           )}
-          {/* Create new layer */}
+          {/* Create new layer — shown when toggled via + in header */}
+          {showNewLayerInput && (
           <div className="flex gap-1">
             <Input
               ref={newLayerInputRef}
@@ -2896,31 +2927,32 @@ const LayerManagementSection = memo(function LayerManagementSection({
                   : "Neues Gebiet..."
               }
               className="h-7 text-xs"
-              onKeyDown={handleNewLayerKeyDown}
-            />
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    onClick={handleCreateLayer}
-                    disabled={!form.newLayerName.trim() || form.isCreating}
-                    size="icon"
-                    className="h-7 w-7"
-                    title={
-                      isViewingVersion
-                        ? "Gebiet wird in neuer Version erstellt"
-                        : "Gebiet erstellen"
-                    }
-                  />
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setShowNewLayerInput(false);
+                  return;
                 }
-              >
-                <IconPlus className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Neues Gebiet erstellen</p>
-              </TooltipContent>
-            </Tooltip>
+                handleNewLayerKeyDown(e);
+              }}
+            />
+            <Button
+              onClick={async () => {
+                await handleCreateLayer();
+                setShowNewLayerInput(false);
+              }}
+              disabled={!form.newLayerName.trim() || form.isCreating}
+              size="icon"
+              className="h-7 w-7"
+              title={
+                isViewingVersion
+                  ? "Gebiet wird in neuer Version erstellt"
+                  : "Gebiet erstellen"
+              }
+            >
+              <IconPlus className="h-3 w-3" />
+            </Button>
           </div>
+          )}
 
           {/* Layer search — shown when there are enough layers to scroll */}
           {optimisticLayers.length >= 5 && (
@@ -4436,6 +4468,7 @@ function DrawingToolsImpl({
   onZoomToLayerRef.current = onZoomToLayer;
   const plzFindInputRef = useRef<HTMLInputElement | null>(null);
   const newLayerInputRef = useRef<HTMLInputElement | null>(null);
+  const showNewLayerInputRef = useRef<((show: boolean) => void) | null>(null);
   const handleDuplicateLayerRef = useRef(handleDuplicateLayer);
   handleDuplicateLayerRef.current = handleDuplicateLayer;
   const handleToggleVisibilityRef = useRef(handleToggleVisibility);
@@ -4533,6 +4566,7 @@ function DrawingToolsImpl({
       ) {
         e.preventDefault();
         dispatchUIRef.current({ type: "SET_LAYERS_OPEN", open: true });
+        showNewLayerInputRef.current?.(true);
         setTimeout(() => {
           newLayerInputRef.current?.focus();
           newLayerInputRef.current?.select();
@@ -5072,6 +5106,7 @@ function DrawingToolsImpl({
             onZoomToLayer={onZoomToLayer}
             plzFindInputRef={plzFindInputRef}
             newLayerInputRef={newLayerInputRef}
+            showNewLayerInputRef={showNewLayerInputRef}
             allCodesSet={allCodesSet}
             getAllCodesSet={getAllCodesSet}
             onLayerUpdate={onLayerUpdate}
