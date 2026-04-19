@@ -40,6 +40,10 @@ import {
   Download,
   Eye,
   EyeOff,
+  FileArchive,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
   Folder,
   GripVertical,
   HelpCircle,
@@ -128,6 +132,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -4884,6 +4889,77 @@ function DrawingToolsImpl({
           </div>
         )}
         <CardAction>
+          {postalCodesData && !isViewingVersion && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <button
+                    type="button"
+                    title="Export / Import"
+                    aria-label="Export / Import"
+                    className="p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary text-muted-foreground"
+                  />
+                }
+              >
+                <Download className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                    Exportieren
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    className="text-xs gap-2"
+                    onClick={handleExportExcel}
+                  >
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-muted-foreground" />
+                    Excel (.xlsx)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs gap-2"
+                    onClick={handleExportPDF}
+                  >
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs gap-2"
+                    onClick={handleExportGeoJSON}
+                  >
+                    <FileJson className="h-3.5 w-3.5 text-muted-foreground" />
+                    GeoJSON (mit Geometrien)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs gap-2"
+                    onClick={handleExportData}
+                  >
+                    <FileJson className="h-3.5 w-3.5 text-muted-foreground" />
+                    JSON (Backup)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs gap-2"
+                    onClick={handleExportZip}
+                  >
+                    <FileArchive className="h-3.5 w-3.5 text-muted-foreground" />
+                    ZIP (alle Ebenen als CSV)
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                    Importieren
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    className="text-xs gap-2"
+                    onClick={handleTriggerImportData}
+                  >
+                    <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                    Gebiet aus JSON importieren
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <button
             type="button"
             onClick={handleOpenKeyboardHelp}
@@ -4971,18 +5047,20 @@ function DrawingToolsImpl({
           />
         )}
 
-        {/* Regions Section */}
-        <PendingRegionsSection
-          pendingPostalCodes={pendingPostalCodes}
-          regionsOpen={ui.regionsOpen}
-          onOpenChange={handleSetRegionsOpen}
-          canAdd={!!(areaId && activeLayerId && addPostalCodesToLayer)}
-          canRemove={!!(areaId && activeLayerId && removePostalCodesFromLayer)}
-          onAddPending={handleAddPendingToLayer}
-          onRemovePending={handleRemovePendingFromLayer}
-        />
+        {/* Regions Section — only shown when there are pending codes */}
+        {pendingPostalCodes.length > 0 && (
+          <PendingRegionsSection
+            pendingPostalCodes={pendingPostalCodes}
+            regionsOpen={ui.regionsOpen}
+            onOpenChange={handleSetRegionsOpen}
+            canAdd={!!(areaId && activeLayerId && addPostalCodesToLayer)}
+            canRemove={!!(areaId && activeLayerId && removePostalCodesFromLayer)}
+            onAddPending={handleAddPendingToLayer}
+            onRemovePending={handleRemovePendingFromLayer}
+          />
+        )}
 
-        {/* Actions + Export Section */}
+        {/* Actions Section — drawing-mode-only actions (clear/fill) */}
         <DrawingActionsSection
           currentMode={currentMode}
           postalCodesData={postalCodesData}
@@ -4991,12 +5069,6 @@ function DrawingToolsImpl({
           isFilling={ui.isFilling}
           onFillHoles={handleFillHoles}
           onClearAll={handleClearAllWithToast}
-          onExportExcel={handleExportExcel}
-          onExportPDF={handleExportPDF}
-          onExportGeoJSON={handleExportGeoJSON}
-          onExportData={handleExportData}
-          onExportZip={handleExportZip}
-          onImportData={handleTriggerImportData}
         />
 
         {/* Hidden file input for JSON import — triggered via dropdown */}
