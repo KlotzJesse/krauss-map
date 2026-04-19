@@ -1256,8 +1256,10 @@ const BaseMapComponent = ({
   const lastDebouncePositionRef = useRef<[number, number, number] | null>(null);
   const hasMountedRef = useRef(false);
 
-  // Handle map movement — only debounced URL sync, no React state update
-  // (map is uncontrolled: it manages its own viewport state internally)
+  // Handle map movement — bypass nuqs entirely to avoid React re-renders.
+  // nuqs uses startTransition internally which cascades through the layout tree
+  // (Router → NuqsAdapter → SidebarProvider → NavAreas → 31×AreaListItem → Tooltip/MenuRoot).
+  // Raw history.replaceState writes the URL correctly for page reload/share without any re-renders.
   const handleMove = useCallback(
     (evt: {
       viewState: { longitude: number; latitude: number; zoom: number };
@@ -1268,10 +1270,15 @@ const BaseMapComponent = ({
       }
       moveDebounceRef.current = setTimeout(() => {
         lastDebouncePositionRef.current = [longitude, latitude, zoom];
-        setMapCenterZoom([longitude, latitude], zoom);
+        const url = new URL(window.location.href);
+        url.searchParams.set(
+          "mapView",
+          JSON.stringify({ center: [longitude, latitude], zoom })
+        );
+        window.history.replaceState(null, "", url.toString());
       }, 750);
     },
-    [setMapCenterZoom]
+    []
   );
 
   // Sync from external URL changes (back/forward, zoom-to-layer, etc.)

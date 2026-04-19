@@ -216,7 +216,7 @@ export function NavAreas({
     areaToDuplicate,
     duplicateName,
   } = state;
-  const { isPinned, togglePin } = useAreaPins();
+  const { pinnedIds, isPinned, togglePin } = useAreaPins();
   const editInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (editingAreaId !== null) {
@@ -324,7 +324,7 @@ export function NavAreas({
       return 0; // default: server order
     });
     return sorted;
-  }, [baseVisibleAreas, areaSearch, activeTagId, isPinned, sortBy]);
+  }, [baseVisibleAreas, areaSearch, activeTagId, pinnedIds, sortBy]);
 
   const archivedCount = optimisticAreas.filter(
     (a) => a.isArchived === "true"

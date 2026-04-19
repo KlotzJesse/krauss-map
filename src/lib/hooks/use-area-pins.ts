@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 
 const STORAGE_KEY = "pinned-area-ids";
 
@@ -25,13 +26,21 @@ function writePins(pins: Set<number>): void {
 
 export function useAreaPins() {
   const [pinnedIds, setPinnedIds] = useState<Set<number>>(new Set());
+  // pinnedRef always reflects the latest Set so stable isPinned reads current state
+  const pinnedRef = useRef<Set<number>>(new Set());
 
-  // Load from localStorage only after hydration to avoid SSR mismatch
+  // Load from localStorage after hydration to avoid SSR mismatch
   useEffect(() => {
-    setPinnedIds(readPins());
+    const pins = readPins();
+    pinnedRef.current = pins;
+    // Only trigger a re-render if there are actually pinned items to show
+    if (pins.size > 0) {
+      setPinnedIds(pins);
+    }
   }, []);
 
-  const isPinned = useCallback((id: number) => pinnedIds.has(id), [pinnedIds]);
+  // Stable reference — reads from ref, never changes identity between renders
+  const isPinned = useStableCallback((id: number) => pinnedRef.current.has(id));
 
   const togglePin = useCallback((id: number) => {
     setPinnedIds((prev) => {
@@ -41,6 +50,7 @@ export function useAreaPins() {
       } else {
         next.add(id);
       }
+      pinnedRef.current = next;
       writePins(next);
       return next;
     });

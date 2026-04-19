@@ -1851,25 +1851,23 @@ const LayerManagementSection = memo(function LayerManagementSection({
   );
 
   // Lock-guarded wrappers — no-op when the target layer is locked
-  const guardedRemovePostalCode = useCallback(
+  const guardedRemovePostalCode = useStableCallback(
     (layerId: number, postalCode: string) => {
       if (isLocked(layerId)) {
         toast.warning("Ebene ist gesperrt — PLZ entfernen nicht möglich");
         return;
       }
       handleRemovePostalCodeFromLayer?.(layerId, postalCode);
-    },
-    [isLocked, handleRemovePostalCodeFromLayer]
+    }
   );
-  const guardedImportCSV = useCallback(
+  const guardedImportCSV = useStableCallback(
     (layerId: number) => {
       if (isLocked(layerId)) {
         toast.warning("Ebene ist gesperrt — Import nicht möglich");
         return;
       }
       openImportDialog(layerId);
-    },
-    [isLocked]
+    }
   );
   const handleNewLayerNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) =>

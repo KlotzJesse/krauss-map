@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { useStableCallback } from "./use-stable-callback";
 
 const STORAGE_KEY_PREFIX = "lockedLayers:";
 
@@ -32,9 +34,18 @@ export function useLockedLayers(areaId: number | string) {
   const [lockedLayerIds, setLockedLayerIds] = useState<Set<number>>(() =>
     readFromStorage(areaId)
   );
+  // Ref for stable isLocked reads without recreating the callback
+  const lockedRef = useRef(lockedLayerIds);
+  lockedRef.current = lockedLayerIds;
 
-  // Sync from storage when areaId changes
+  // Sync from storage when areaId changes, skip the initial mount
+  // (the useState initializer already read from storage on mount)
+  const isFirstMount = useRef(true);
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     setLockedLayerIds(readFromStorage(areaId));
   }, [areaId]);
 
@@ -54,9 +65,9 @@ export function useLockedLayers(areaId: number | string) {
     [areaId]
   );
 
-  const isLocked = useCallback(
-    (layerId: number) => lockedLayerIds.has(layerId),
-    [lockedLayerIds]
+  // Stable reference — always reads from the latest lockedLayerIds via ref
+  const isLocked = useStableCallback((layerId: number) =>
+    lockedRef.current.has(layerId)
   );
 
   return { lockedLayerIds, toggleLock, isLocked };
