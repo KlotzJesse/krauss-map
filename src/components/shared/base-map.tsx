@@ -804,7 +804,6 @@ const MapInner = memo(function MapInner({
         currentMode={interactions.currentDrawingMode}
         onModeChange={interactions.handleDrawingModeChange}
         areaId={areaId}
-        initialUndoRedoStatus={initialUndoRedoStatus}
         isPanelOpen={interactions.isDrawingToolsVisible}
       />
       {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
@@ -886,6 +885,13 @@ const MapInner = memo(function MapInner({
           interactions.isDrawingToolsVisible ? "left-[472px]" : "left-14"
         }`}
       >
+        {areaId && (
+          <UndoRedoToolbar
+            areaId={areaId}
+            variant="icon"
+            initialStatus={initialUndoRedoStatus}
+          />
+        )}
         <button
           type="button"
           onClick={handleScreenshot}
@@ -1013,13 +1019,6 @@ const MapInner = memo(function MapInner({
           }}
           onJumpTo={handleBookmarkJump}
         />
-        {areaId && (
-          <UndoRedoToolbar
-            areaId={areaId}
-            variant="icon"
-            initialStatus={initialUndoRedoStatus}
-          />
-        )}
       </div>
 
       {/* PLZ search overlay — top right */}

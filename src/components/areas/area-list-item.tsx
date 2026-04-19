@@ -172,7 +172,7 @@ export const AreaListItem = memo(
         >
           <div className="group/item relative flex flex-col w-full">
             <div
-              className={`flex items-center gap-2 w-full h-8 px-2 rounded-md transition-colors ${
+              className={`relative flex items-center gap-2 w-full h-7 px-2 rounded-md transition-colors ${
                 isSelectable && isSelected
                   ? "bg-primary/10 text-primary"
                   : isCurrentRoute && !isSelectable
@@ -303,7 +303,7 @@ export const AreaListItem = memo(
               )}
             </div>
             {area.tags && area.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 px-2 pb-1">
+              <div className="flex flex-wrap gap-1 px-2 pb-0.5">
                 {area.tags.map((tag) => (
                   <TagBadge
                     key={tag.id}
@@ -317,7 +317,7 @@ export const AreaListItem = memo(
             {!isSelectable &&
               !isArchived &&
               (area.totalPostalCodeCount ?? 0) > 0 && (
-                <div className="px-2 pb-1">
+                <div className="absolute bottom-0 left-2 right-2 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150">
                   {(() => {
                     const pct = Math.min(
                       100,

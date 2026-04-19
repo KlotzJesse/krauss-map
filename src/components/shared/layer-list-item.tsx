@@ -457,7 +457,7 @@ export const LayerListItem = memo(function LayerListItem({
       <div
         role="button"
         tabIndex={0}
-        className="px-2 py-1 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-md"
+        className="px-2 py-0.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-md"
         onClick={() => {
           if (!isOptimistic) {
             onSelect(layer.id);

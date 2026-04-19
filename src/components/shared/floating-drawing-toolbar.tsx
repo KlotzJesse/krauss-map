@@ -9,7 +9,6 @@ import {
   Triangle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import dynamic from "next/dynamic";
 import { memo, useCallback } from "react";
 import { toast } from "sonner";
 
@@ -22,27 +21,10 @@ import {
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 
-// Floating undo/redo toolbar
-const UndoRedoToolbar = dynamic(
-  () =>
-    import("@/components/areas/undo-redo-toolbar").then(
-      (m) => m.UndoRedoToolbar
-    ),
-  {
-    ssr: false,
-  }
-);
-
 interface FloatingDrawingToolbarProps {
   currentMode: TerraDrawMode | null;
   areaId: number | null | undefined;
   onModeChange: (mode: TerraDrawMode | null) => void;
-  initialUndoRedoStatus: {
-    canUndo: boolean;
-    canRedo: boolean;
-    undoCount: number;
-    redoCount: number;
-  };
   isPanelOpen?: boolean;
 }
 
@@ -130,7 +112,6 @@ export function FloatingDrawingToolbar({
   currentMode,
   areaId,
   onModeChange,
-  initialUndoRedoStatus,
   isPanelOpen = false,
 }: FloatingDrawingToolbarProps) {
   const handleModeClick = useStableCallback((modeId: string) => {
