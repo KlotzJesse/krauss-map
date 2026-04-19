@@ -2386,6 +2386,45 @@ const LayerManagementSection = memo(function LayerManagementSection({
     return m;
   }, [optimisticLayers]);
 
+  // Stable callbacks for LayerListItem to prevent memo() being defeated by inline functions
+  const handleLayerStartEdit = useCallback(
+    (id: number, name: string) =>
+      dispatchForm({ type: "START_EDIT", layerId: id, name }),
+    [dispatchForm]
+  );
+  const handleLayerCancelEdit = useCallback(
+    () => dispatchForm({ type: "CANCEL_EDIT" }),
+    [dispatchForm]
+  );
+  const handleLayerEditNameChange = useCallback(
+    (name: string) => dispatchForm({ type: "SET_EDIT_NAME", name }),
+    [dispatchForm]
+  );
+  const handleLayerSelect = useCallback(
+    (id: number) => {
+      if (!selectMode) onLayerSelect?.(id);
+    },
+    // biome-ignore lint/correctness/useExhaustiveDependencies: selectMode is a local state
+    [selectMode, onLayerSelect]
+  );
+  // Stable template currentLayers shape for LayerTemplatesDialog
+  const templateCurrentLayers = useMemo(
+    () =>
+      optimisticLayers.map((l) => ({
+        name: l.name,
+        color: l.color,
+        opacity:
+          typeof l.opacity === "number" ? l.opacity : Number(l.opacity ?? 70),
+        orderIndex: l.orderIndex,
+        notes: l.notes ?? null,
+      })),
+    [optimisticLayers]
+  );
+  const handleTemplateApplied = useCallback(
+    () => onLayerUpdate?.(),
+    [onLayerUpdate]
+  );
+
   // Per-layer duplicate postal code counts + overall stats
   const { duplicateCountByLayer, duplicateCodeMap, layerStats } =
     useMemo(() => {
@@ -2800,7 +2839,9 @@ const LayerManagementSection = memo(function LayerManagementSection({
                   <IconLayoutColumns className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-sm">Ebenen-Vorlagen</span>
                 </DropdownMenuItem>
-                {optimisticLayers.filter((l) => (l.postalCodes?.length ?? 0) > 0).length > 1 && (
+                {optimisticLayers.filter(
+                  (l) => (l.postalCodes?.length ?? 0) > 0
+                ).length > 1 && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -2809,7 +2850,11 @@ const LayerManagementSection = memo(function LayerManagementSection({
                       className="gap-2 cursor-pointer"
                     >
                       <Scale className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm">{isBalancing ? "Wird ausgeglichen…" : "Ebenen ausgleichen"}</span>
+                      <span className="text-sm">
+                        {isBalancing
+                          ? "Wird ausgeglichen…"
+                          : "Ebenen ausgleichen"}
+                      </span>
                     </DropdownMenuItem>
                   </>
                 )}
@@ -3078,31 +3123,18 @@ const LayerManagementSection = memo(function LayerManagementSection({
                         editingLayerId={form.editingLayerId}
                         editingLayerName={form.editingLayerName}
                         editLayerInputRef={editLayerInputRef}
-                        onSelect={(id) => {
-                          if (!selectMode) onLayerSelect?.(id);
-                        }}
-                        onStartEdit={(id, name) =>
-                          dispatchForm({
-                            type: "START_EDIT",
-                            layerId: id,
-                            name,
-                          })
-                        }
+                        onSelect={handleLayerSelect}
+                        onStartEdit={handleLayerStartEdit}
                         onConfirmEdit={handleRenameLayer}
-                        onCancelEdit={() =>
-                          dispatchForm({ type: "CANCEL_EDIT" })
-                        }
-                        onEditNameChange={(name) =>
-                          dispatchForm({ type: "SET_EDIT_NAME", name })
-                        }
+                        onCancelEdit={handleLayerCancelEdit}
+                        onEditNameChange={handleLayerEditNameChange}
                         onColorChange={handleColorChange}
                         onOpacityChange={handleOpacityChange}
                         onDelete={handleDeleteLayer}
                         onDuplicateLayer={handleDuplicateLayer}
                         onCopyToArea={handleOpenCopyToArea}
                         onMergeLayer={
-                          optimisticLayers.filter((l) => l.id !== layer.id)
-                            .length > 0
+                          (otherLayersMap.get(layer.id)?.length ?? 0) > 0
                             ? handleOpenMergeLayers
                             : undefined
                         }
@@ -3114,13 +3146,9 @@ const LayerManagementSection = memo(function LayerManagementSection({
                         }
                         onNotesChange={handleNotesChange}
                         onMovePlz={handleMovePlz}
-                        otherLayers={optimisticLayers
-                          .filter((l) => l.id !== layer.id)
-                          .map((l) => ({
-                            id: l.id,
-                            name: l.name,
-                            color: l.color,
-                          }))}
+                        otherLayers={
+                          otherLayersMap.get(layer.id) ?? EMPTY_ARRAY
+                        }
                         isSelected={
                           selectMode ? selectedIds.has(layer.id) : undefined
                         }
@@ -3130,12 +3158,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                         onPreviewPostalCode={onPreviewPostalCode}
                         onZoomToLayer={onZoomToLayer}
                         onClearPLZ={handleClearLayerPLZ}
-                        onAddPlzRange={
-                          addPostalCodesToLayer
-                            ? (layerId, codes) =>
-                                addPostalCodesToLayer(layerId, codes)
-                            : undefined
-                        }
+                        onAddPlzRange={addPostalCodesToLayer ?? undefined}
                         allCodesSet={allCodesSet}
                         onBulkMovePlz={handleBulkMovePlz}
                         onBulkRemovePlz={handleBulkRemovePlz}
@@ -3741,15 +3764,8 @@ const LayerManagementSection = memo(function LayerManagementSection({
         open={templatesDialogOpen}
         onOpenChange={setTemplatesDialogOpen}
         areaId={areaId}
-        currentLayers={optimisticLayers.map((l) => ({
-          name: l.name,
-          color: l.color,
-          opacity:
-            typeof l.opacity === "number" ? l.opacity : Number(l.opacity ?? 70),
-          orderIndex: l.orderIndex,
-          notes: l.notes ?? null,
-        }))}
-        onApplied={() => onLayerUpdate?.()}
+        currentLayers={templateCurrentLayers}
+        onApplied={handleTemplateApplied}
       />
 
       {/* Layer Diff Dialog */}
@@ -4421,6 +4437,29 @@ function DrawingToolsImpl({
     [dispatchUI]
   );
 
+  const handleMergeSuccess = useCallback(
+    () => onLayerUpdate?.(),
+    [onLayerUpdate]
+  );
+
+  const mergeDialogOtherLayers = useMemo(
+    () =>
+      (layers ?? [])
+        .filter((l) => l.id !== mergeLayersDialog.layerId)
+        .map((l) => ({ id: l.id, name: l.name })),
+    [layers, mergeLayersDialog.layerId]
+  );
+
+  const handleCopyDialogOpenChange = useCallback(
+    (open: boolean) => setCopyLayerDialog((prev) => ({ ...prev, open })),
+    []
+  );
+
+  const handleMergeDialogOpenChange = useCallback(
+    (open: boolean) => setMergeLayersDialog((prev) => ({ ...prev, open })),
+    []
+  );
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -4883,7 +4922,9 @@ function DrawingToolsImpl({
         {granularity && onGranularityChange && (
           <>
             <div className="pb-2">
-              <div className="text-[10px] font-medium text-muted-foreground mb-1">PLZ-Granularität</div>
+              <div className="text-[10px] font-medium text-muted-foreground mb-1">
+                PLZ-Granularität
+              </div>
               <GranularitySelector
                 currentGranularity={granularity}
                 onGranularityChange={onGranularityChange}
@@ -5015,9 +5056,7 @@ function DrawingToolsImpl({
         {/* Copy Layer to Area Dialog */}
         <CopyLayerToAreaDialog
           open={copyLayerDialog.open}
-          onOpenChange={(open) =>
-            setCopyLayerDialog((prev) => ({ ...prev, open }))
-          }
+          onOpenChange={handleCopyDialogOpenChange}
           sourceLayerName={copyLayerDialog.layerName ?? ""}
           currentAreaId={areaId ?? 0}
           onConfirm={handleConfirmCopyToArea}
@@ -5027,16 +5066,12 @@ function DrawingToolsImpl({
         {/* Merge Layers Dialog */}
         <MergeLayersDialog
           open={mergeLayersDialog.open}
-          onOpenChange={(open) =>
-            setMergeLayersDialog((prev) => ({ ...prev, open }))
-          }
+          onOpenChange={handleMergeDialogOpenChange}
           areaId={areaId ?? 0}
           sourceLayerId={mergeLayersDialog.layerId ?? 0}
           sourceLayerName={mergeLayersDialog.layerName ?? ""}
-          otherLayers={(layers ?? [])
-            .filter((l) => l.id !== mergeLayersDialog.layerId)
-            .map((l) => ({ id: l.id, name: l.name }))}
-          onSuccess={() => onLayerUpdate?.()}
+          otherLayers={mergeDialogOtherLayers}
+          onSuccess={handleMergeSuccess}
         />
       </CardContent>
     </Card>

@@ -686,7 +686,8 @@ export const LayerListItem = memo(function LayerListItem({
                     />
                   </div>
                   <span className="text-[9px] text-muted-foreground tabular-nums">
-                    {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}%
+                    {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}
+                    %
                   </span>
                 </>
               )}

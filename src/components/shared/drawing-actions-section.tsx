@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Activity } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const DRAWING_MODES = [
   "freehand",
@@ -109,13 +110,10 @@ export function DrawingActionsSection({
           <Separator />
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-7 text-xs"
-                />
-              }
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "w-full h-7 text-xs"
+              )}
             >
               <Download className="h-3 w-3 mr-1.5" />
               Export / Import
