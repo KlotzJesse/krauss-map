@@ -49,11 +49,13 @@ import {
   HelpCircle,
   MapPin,
   Palette,
+  Redo2,
   Scale,
   Search,
   Square,
   TriangleAlert,
   Trash2,
+  Undo2,
   Upload,
   X,
 } from "lucide-react";
@@ -89,6 +91,10 @@ import {
   addPostalCodesByPrefixAction,
   splitLayerAction,
 } from "@/app/actions/area-actions";
+import {
+  redoChangeAction,
+  undoChangeAction,
+} from "@/app/actions/change-tracking-actions";
 import {
   batchUpdateVisibilityAction,
   mergeLayersAction,
@@ -3417,11 +3423,20 @@ const LayerManagementSection = memo(function LayerManagementSection({
             <div className="border-t pt-1.5 mt-0.5 space-y-1.5">
               {/* Summary row */}
               <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>
-                  <span className="font-medium text-foreground">
-                    {layerStats.uniqueCodes}
-                  </span>{" "}
-                  eindeutige PLZ
+                <span className="flex flex-col gap-0.5">
+                  <span>
+                    <span className="font-medium text-foreground">
+                      {layerStats.uniqueCodes}
+                    </span>{" "}
+                    eindeutige PLZ
+                  </span>
+                  {layerStats.minCode &&
+                    layerStats.maxCode &&
+                    layerStats.minCode !== layerStats.maxCode && (
+                      <span className="font-mono text-[9px] text-muted-foreground/70">
+                        {layerStats.minCode}–{layerStats.maxCode}
+                      </span>
+                    )}
                 </span>
                 {layerStats.duplicateCodes > 0 && (
                   <button
@@ -3594,21 +3609,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
                   </div>
                 </div>
               )}
-              {/* PLZ range */}
-              {layerStats.minCode &&
-                layerStats.maxCode &&
-                layerStats.minCode !== layerStats.maxCode && (
-                  <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <span>Bereich:</span>
-                    <span className="font-mono font-medium text-foreground">
-                      {layerStats.minCode}
-                    </span>
-                    <span>–</span>
-                    <span className="font-mono font-medium text-foreground">
-                      {layerStats.maxCode}
-                    </span>
-                  </div>
-                )}
               {/* PLZ prefix distribution (2-digit) — collapsible sparkline */}
               {layerStats.prefixDistribution.length > 1 && (
                 <Collapsible defaultOpen={false}>
@@ -3665,105 +3665,112 @@ const LayerManagementSection = memo(function LayerManagementSection({
             </div>
           )}
 
-          {/* PLZ quick-find */}
-          <div className="border-t pt-1.5 mt-0.5">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-              <Input
-                ref={plzFindInputRef}
-                value={plzFindQuery}
-                onChange={(e) => setPlzFindQuery(e.target.value)}
-                placeholder="PLZ suchen…"
-                className="h-6 text-[10px] pl-6 pr-2"
-                maxLength={5}
-              />
-            </div>
-            {plzFindResults !== null && (
-              <div className="mt-1 space-y-0.5">
-                {plzFindResults.length === 0 ? (
-                  <p className="text-[10px] text-muted-foreground py-0.5">
-                    Keine Treffer
-                  </p>
-                ) : (
-                  plzFindResults.map((r) => (
-                    <div
-                      key={r.id}
-                      className="flex items-start gap-1.5 text-[10px]"
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0 mt-0.5"
-                        style={{ backgroundColor: r.color }}
-                      />
-                      <span className="font-medium truncate max-w-[80px]">
-                        {r.name}
-                      </span>
-                      <span className="text-muted-foreground ml-auto font-mono flex gap-0.5 flex-wrap justify-end">
-                        {r.matchingCodes.map((code) => (
-                          <button
-                            key={code}
-                            type="button"
-                            title={`Zur PLZ ${code} springen`}
-                            className="hover:text-foreground hover:underline transition-colors cursor-pointer"
-                            onClick={() => {
-                              onPreviewPostalCode?.(code);
-                              setTimeout(
-                                () => onPreviewPostalCode?.(null),
-                                2000
-                              );
-                            }}
-                          >
-                            {code}
-                          </button>
-                        ))}
-                        {r.matchingCodes.length === 5 ? "…" : ""}
-                      </span>
-                    </div>
-                  ))
-                )}
+          {/* PLZ quick-find + prefix bulk-add — collapsed by default */}
+          <Collapsible>
+            <CollapsibleTrigger className="flex w-full items-center gap-1 border-t pt-1.5 mt-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors group">
+              <Search className="h-2.5 w-2.5 shrink-0" />
+              <span className="font-medium">PLZ suchen / hinzufügen</span>
+              <IconChevronDown className="h-2.5 w-2.5 ml-auto transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1.5 pt-1.5">
+              {/* PLZ quick-find */}
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                <Input
+                  ref={plzFindInputRef}
+                  value={plzFindQuery}
+                  onChange={(e) => setPlzFindQuery(e.target.value)}
+                  placeholder="PLZ suchen…"
+                  className="h-6 text-[10px] pl-6 pr-2"
+                  maxLength={5}
+                />
               </div>
-            )}
-          </div>
-
-          {/* PLZ prefix / range bulk-add */}
-          {allCodesSet &&
-            allCodesSet.size > 0 &&
-            activeLayerId &&
-            addPostalCodesToLayer && (
-              <div className="border-t pt-1.5 mt-0.5">
-                <div className="flex gap-1">
-                  <div className="relative flex-1">
-                    <Input
-                      value={prefixInput}
-                      onChange={(e) => setPrefixInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && prefixMatches?.length)
-                          handleAddByPrefix();
-                      }}
-                      placeholder="Präfix (80) oder Bereich (80-89)"
-                      className="h-6 text-[10px] pr-2"
-                      maxLength={9}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddByPrefix}
-                    disabled={!prefixMatches?.length}
-                    className="h-6 px-2 text-[10px] rounded border border-input bg-background hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed shrink-0 font-medium"
-                  >
-                    {prefixMatches !== null
-                      ? `+${prefixMatches.length}`
-                      : "Hinzufügen"}
-                  </button>
-                </div>
-                {prefixInput.trim() &&
-                  prefixMatches !== null &&
-                  prefixMatches.length === 0 && (
-                    <p className="text-[9px] text-muted-foreground mt-0.5">
-                      Keine PLZ gefunden
+              {plzFindResults !== null && (
+                <div className="space-y-0.5">
+                  {plzFindResults.length === 0 ? (
+                    <p className="text-[10px] text-muted-foreground py-0.5">
+                      Keine Treffer
                     </p>
+                  ) : (
+                    plzFindResults.map((r) => (
+                      <div
+                        key={r.id}
+                        className="flex items-start gap-1.5 text-[10px]"
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0 mt-0.5"
+                          style={{ backgroundColor: r.color }}
+                        />
+                        <span className="font-medium truncate max-w-[80px]">
+                          {r.name}
+                        </span>
+                        <span className="text-muted-foreground ml-auto font-mono flex gap-0.5 flex-wrap justify-end">
+                          {r.matchingCodes.map((code) => (
+                            <button
+                              key={code}
+                              type="button"
+                              title={`Zur PLZ ${code} springen`}
+                              className="hover:text-foreground hover:underline transition-colors cursor-pointer"
+                              onClick={() => {
+                                onPreviewPostalCode?.(code);
+                                setTimeout(
+                                  () => onPreviewPostalCode?.(null),
+                                  2000
+                                );
+                              }}
+                            >
+                              {code}
+                            </button>
+                          ))}
+                          {r.matchingCodes.length === 5 ? "…" : ""}
+                        </span>
+                      </div>
+                    ))
                   )}
-              </div>
-            )}
+                </div>
+              )}
+              {/* PLZ prefix / range bulk-add */}
+              {allCodesSet &&
+                allCodesSet.size > 0 &&
+                activeLayerId &&
+                addPostalCodesToLayer && (
+                  <div className="space-y-0.5">
+                    <div className="flex gap-1">
+                      <div className="relative flex-1">
+                        <Input
+                          value={prefixInput}
+                          onChange={(e) => setPrefixInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && prefixMatches?.length)
+                              handleAddByPrefix();
+                          }}
+                          placeholder="Präfix (80) oder Bereich (80-89)"
+                          className="h-6 text-[10px] pr-2"
+                          maxLength={9}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddByPrefix}
+                        disabled={!prefixMatches?.length}
+                        className="h-6 px-2 text-[10px] rounded border border-input bg-background hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed shrink-0 font-medium"
+                      >
+                        {prefixMatches !== null
+                          ? `+${prefixMatches.length}`
+                          : "Hinzufügen"}
+                      </button>
+                    </div>
+                    {prefixInput.trim() &&
+                      prefixMatches !== null &&
+                      prefixMatches.length === 0 && (
+                        <p className="text-[9px] text-muted-foreground">
+                          Keine PLZ gefunden
+                        </p>
+                      )}
+                  </div>
+                )}
+            </CollapsibleContent>
+          </Collapsible>
         </CollapsibleContent>
       </Collapsible>
 
@@ -4404,6 +4411,21 @@ function DrawingToolsImpl({
   );
 
   const [isCopyingLayer, startCopyLayerTransition] = useTransition();
+  const [isUndoRedoPending, startUndoRedoTransition] = useTransition();
+
+  const handleUndo = useCallback(() => {
+    if (!areaId || !undoRedoStatus?.canUndo || isUndoRedoPending) return;
+    startUndoRedoTransition(async () => {
+      await undoChangeAction(areaId);
+    });
+  }, [areaId, undoRedoStatus?.canUndo, isUndoRedoPending]);
+
+  const handleRedo = useCallback(() => {
+    if (!areaId || !undoRedoStatus?.canRedo || isUndoRedoPending) return;
+    startUndoRedoTransition(async () => {
+      await redoChangeAction(areaId);
+    });
+  }, [areaId, undoRedoStatus?.canRedo, isUndoRedoPending]);
 
   const handleOpenCopyToArea = useCallback(
     (layerId: number, layerName: string) => {
@@ -4955,6 +4977,46 @@ function DrawingToolsImpl({
           </div>
         )}
         <CardAction>
+          {!isViewingVersion && areaId && undoRedoStatus && (
+            <>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      onClick={handleUndo}
+                      disabled={!undoRedoStatus.canUndo || isUndoRedoPending}
+                      aria-label="Rückgängig"
+                      className="p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                    />
+                  }
+                >
+                  <Undo2 className="h-4 w-4" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Rückgängig (Strg+Z)</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      onClick={handleRedo}
+                      disabled={!undoRedoStatus.canRedo || isUndoRedoPending}
+                      aria-label="Wiederholen"
+                      className="p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                    />
+                  }
+                >
+                  <Redo2 className="h-4 w-4" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Wiederholen (Strg+Umschalt+Z)</p>
+                </TooltipContent>
+              </Tooltip>
+            </>
+          )}
           {postalCodesData && !isViewingVersion && (
             <DropdownMenu>
               <DropdownMenuTrigger

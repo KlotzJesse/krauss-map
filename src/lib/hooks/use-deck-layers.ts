@@ -1,6 +1,7 @@
 import type { PickingInfo } from "@deck.gl/core";
 import { FillStyleExtension } from "@deck.gl/extensions";
 import { GeoJsonLayer } from "@deck.gl/layers";
+import type { MapboxOverlay } from "@deck.gl/mapbox";
 import type { InferSelectModel } from "drizzle-orm";
 import type {
   Feature,
@@ -8,8 +9,8 @@ import type {
   MultiPolygon,
   Polygon,
 } from "geojson";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import type { MutableRefObject, RefObject } from "react";
 
 import type { areaLayers } from "@/lib/schema/schema";
 import {
@@ -379,6 +380,12 @@ interface UseDeckLayersProps {
   showUnassigned?: boolean;
   /** Ref to the tooltip DOM element — updated directly to avoid React re-renders on hover. */
   hoverTooltipRef?: RefObject<HTMLDivElement | null>;
+  /**
+   * Ref to the MapboxOverlay instance (from DeckGLOverlay).
+   * Hover outline is applied via overlay.setProps() directly — no React state change,
+   * so MapInner does not re-render on every hover boundary crossing.
+   */
+  overlayRef?: MutableRefObject<MapboxOverlay | null>;
 }
 
 /**
@@ -400,12 +407,13 @@ export function useDeckLayers({
   highlightedCodes,
   showUnassigned = false,
   hoverTooltipRef,
+  overlayRef,
 }: UseDeckLayersProps) {
-  // Hover state: store the currently hovered feature for the outline layer
-  const [hoveredFeature, setHoveredFeature] = useState<Feature<
-    Polygon | MultiPolygon
-  > | null>(null);
+  // Hover tracking — ref only, no state. Hover updates go directly to overlay.setProps().
   const hoveredCodeRef = useRef<string | null>(null);
+  // Always-current deckLayers reference for direct overlay updates in onHover.
+  // Initialized empty; updated each render after deckLayers useMemo runs.
+  const deckLayersRef = useRef<GeoJsonLayer[]>([]);
 
   // Stripe pattern texture atlas — created once per browser session (client-only)
   const stripeAtlas = useMemo(() => createStripePatternAtlas(), []);
@@ -525,20 +533,6 @@ export function useDeckLayers({
     };
   }, [previewPostalCode, featureIndex, country]);
 
-  // Hover outline data — single-feature FeatureCollection
-  const hoverData = useMemo(
-    () =>
-      hoveredFeature
-        ? ({
-            type: "FeatureCollection",
-            features: [hoveredFeature],
-          } as FeatureCollection<Polygon | MultiPolygon>)
-        : (EMPTY_FEATURE_COLLECTION as FeatureCollection<
-            Polygon | MultiPolygon
-          >),
-    [hoveredFeature]
-  );
-
   // Handle hover from deck.gl picking — cursor set via direct DOM mutation (no React re-render)
   // hoverTooltip is managed via DOM ref to avoid MapInner re-renders on every mouse move
   const hoverTooltipRefInternal = useRef<HTMLDivElement | null>(null);
@@ -610,7 +604,33 @@ export function useDeckLayers({
         if (code) {
           if (hoveredCodeRef.current !== code) {
             hoveredCodeRef.current = code;
-            setHoveredFeature(feature);
+            // Push hover outline directly to overlay — no React state change,
+            // so MapInner does not re-render on hover.
+            if (overlayRef?.current) {
+              const hoverLayer = new GeoJsonLayer({
+                id: "hover-outline",
+                data: {
+                  type: "FeatureCollection" as const,
+                  features: [feature],
+                },
+                beforeId,
+                filled: false,
+                stroked: true,
+                getLineColor: [255, 255, 255, 230] as [
+                  number,
+                  number,
+                  number,
+                  number,
+                ],
+                getLineWidth: 2,
+                lineWidthUnits: "pixels" as const,
+                lineWidthMinPixels: 2,
+                pickable: false,
+              });
+              overlayRef.current.setProps({
+                layers: [...deckLayersRef.current, hoverLayer],
+              });
+            }
             if (canvas) {
               canvas.style.cursor = "pointer";
             }
@@ -632,28 +652,33 @@ export function useDeckLayers({
         }
       } else if (hoveredCodeRef.current !== null) {
         hoveredCodeRef.current = null;
-        setHoveredFeature(null);
+        // Remove hover outline directly
+        if (overlayRef?.current) {
+          overlayRef.current.setProps({ layers: deckLayersRef.current });
+        }
         hideTooltip();
         if (canvas) {
           canvas.style.cursor = "grab";
         }
       }
     },
-    [isCursorMode, mapCanvasRef, showTooltip, hideTooltip]
+    [isCursorMode, mapCanvasRef, showTooltip, hideTooltip, overlayRef, beforeId]
   );
 
   // Clear hover state when leaving cursor mode (e.g., switching to drawing)
   useEffect(() => {
     if (!isCursorMode) {
       hoveredCodeRef.current = null;
-      setHoveredFeature(null);
+      if (overlayRef?.current) {
+        overlayRef.current.setProps({ layers: deckLayersRef.current });
+      }
       hideTooltip();
       const canvas = mapCanvasRef.current;
       if (canvas) {
         canvas.style.cursor = "grab";
       }
     }
-  }, [isCursorMode, mapCanvasRef, hideTooltip]);
+  }, [isCursorMode, mapCanvasRef, hideTooltip, overlayRef]);
 
   // State boundaries layer — isolated since statesData never changes after load
   const stateBoundariesLayer = useMemo(
@@ -935,21 +960,6 @@ export function useDeckLayers({
       })
     );
 
-    // Hover outline layer — always present to avoid MapLibre add/remove churn
-    result.push(
-      new GeoJsonLayer({
-        id: "hover-outline",
-        data: hoverData,
-        beforeId,
-        filled: false,
-        stroked: true,
-        getLineColor: [37, 99, 235, 255],
-        getLineWidth: 3,
-        lineWidthUnits: "pixels" as const,
-        pickable: false,
-      })
-    );
-
     // Conflict-highlight outline layer
     if (highlightData.features.length > 0) {
       result.push(
@@ -980,7 +990,6 @@ export function useDeckLayers({
     sameColorCodes,
     stripeAtlas,
     previewData,
-    hoverData,
     highlightData,
     isCursorMode,
     beforeId,
@@ -997,6 +1006,9 @@ export function useDeckLayers({
     }
     return count;
   }, [data, allAssignedCodeSet]);
+
+  // Keep deckLayersRef current after every render so onHover always reads the latest layers.
+  deckLayersRef.current = deckLayers;
 
   return {
     deckLayers,

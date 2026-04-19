@@ -253,14 +253,7 @@ export const AreaListItem = memo(
                   {area.postalCodeCount}
                 </span>
               )}
-              {!isSelectable && !!area.layerCount && (
-                <span
-                  className="shrink-0 text-[9px] font-medium text-muted-foreground/60 bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity"
-                  title={`${area.layerCount} Gebiete`}
-                >
-                  {area.layerCount}L
-                </span>
-              )}
+
               {!isSelectable && !!area.conflictCount && (
                 <span
                   className="shrink-0 text-[9px] font-medium text-orange-600 bg-orange-100 dark:bg-orange-950 dark:text-orange-400 rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity"

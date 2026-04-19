@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/error-boundaries";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+import { MapboxOverlay } from "@deck.gl/mapbox";
 import { DrawingToolsSkeleton } from "@/components/ui/loading-skeletons";
 import { useSidebar } from "@/components/ui/sidebar";
 import {
@@ -590,8 +591,9 @@ const MapInner = memo(function MapInner({
       ? getFirstSymbolLayerId(rawMapRef.current)
       : undefined;
 
-  // deck.gl layers (polygons, fills, hover, preview) — cursor managed via direct DOM ref
+  // deck.gl layers (polygons, fills, preview) — hover pushed directly to overlay, no React re-render
   const hoverTooltipRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<MapboxOverlay | null>(null);
   const { deckLayers, onHover, unassignedCount } = useDeckLayers({
     data,
     statesData,
@@ -607,6 +609,7 @@ const MapInner = memo(function MapInner({
     highlightedCodes: highlightedConflictCodes,
     showUnassigned,
     hoverTooltipRef,
+    overlayRef,
   });
 
   // MapLibre native labels (hybrid escape hatch)
@@ -791,6 +794,7 @@ const MapInner = memo(function MapInner({
         layers={deckLayers}
         onHover={onHover}
         onClick={interactions.handleDeckClick}
+        overlayRef={overlayRef}
       />
 
       {/* Floating Drawing Toolbar - Center bottom */}
