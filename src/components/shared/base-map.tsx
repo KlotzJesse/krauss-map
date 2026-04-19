@@ -1,6 +1,7 @@
 "use no memo";
 import {
   Camera,
+  Ellipsis,
   Home,
   Layers,
   LocateFixed,
@@ -73,6 +74,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { DeckGLOverlay } from "./deck-gl-overlay";
@@ -892,24 +894,39 @@ const MapInner = memo(function MapInner({
             initialStatus={initialUndoRedoStatus}
           />
         )}
-        <button
-          type="button"
-          onClick={handleScreenshot}
-          title="Karte als PNG speichern"
-          aria-label="Screenshot der Karte erstellen"
-          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
-        >
-          <Camera className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handlePrint}
-          title="Karte drucken"
-          aria-label="Karte drucken"
-          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
-        >
-          <Printer className="h-4 w-4" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <button
+                type="button"
+                title="Weitere Kartenaktionen"
+                aria-label="Weitere Kartenaktionen"
+                className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+              />
+            }
+          >
+            <Ellipsis className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="right" className="min-w-44">
+            <DropdownMenuItem onClick={handleScreenshot} className="text-xs gap-2">
+              <Camera className="h-3.5 w-3.5" />
+              Karte als PNG speichern
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handlePrint} className="text-xs gap-2">
+              <Printer className="h-3.5 w-3.5" />
+              Karte drucken
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleGeolocate}
+              disabled={isGeolocating}
+              className="text-xs gap-2"
+            >
+              <LocateFixed className={`h-3.5 w-3.5 ${isGeolocating ? "animate-pulse" : ""}`} />
+              Meinen Standort anzeigen
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {layers?.some((l) => (l.postalCodes?.length ?? 0) > 0) && (
           <button
             type="button"
@@ -929,18 +946,6 @@ const MapInner = memo(function MapInner({
           className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
         >
           <Home className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handleGeolocate}
-          title="Meinen Standort anzeigen"
-          aria-label="Zum aktuellen Standort navigieren"
-          disabled={isGeolocating}
-          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-wait"
-        >
-          <LocateFixed
-            className={`h-4 w-4 ${isGeolocating ? "animate-pulse" : ""}`}
-          />
         </button>
         {onCycleMapStyle && (
           <DropdownMenu>
