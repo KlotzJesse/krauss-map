@@ -624,6 +624,107 @@ export const LayerListItem = memo(function LayerListItem({
             )}
           </div>
 
+          {/* Inline stats: PLZ count + % bar + duplicate badge */}
+          {postalCodes.length > 0 ? (
+            <div className="flex items-center gap-1 shrink-0">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] px-1 py-0 h-4 cursor-default tabular-nums shrink-0"
+                    />
+                  }
+                >
+                  {postalCodes.length}
+                </TooltipTrigger>
+                <TooltipContent className="min-w-[140px]">
+                  <p className="font-medium mb-1">
+                    {postalCodes.length} PLZ
+                    {allCodesSet && allCodesSet.size > 0
+                      ? ` · ${((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}% des Gebiets`
+                      : ""}
+                  </p>
+                  {prefixDistribution.length > 0 && (
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wide mb-1">
+                        Top Regionen
+                      </p>
+                      {prefixDistribution.slice(0, 5).map(([prefix, count]) => (
+                        <div key={prefix} className="flex items-center gap-1.5">
+                          <span className="font-mono text-[10px] w-6">
+                            {prefix}
+                          </span>
+                          <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                backgroundColor: layer.color,
+                                width: `${Math.round((count / postalCodes.length) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground tabular-nums w-6 text-right">
+                            {count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+              {allCodesSet && allCodesSet.size > 0 && (
+                <>
+                  <div className="w-8 h-1.5 rounded-full overflow-hidden bg-muted shrink-0">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.round((postalCodes.length / allCodesSet.size) * 100)}%`,
+                        backgroundColor: layer.color,
+                        opacity: 0.85,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-muted-foreground tabular-nums">
+                    {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}%
+                  </span>
+                </>
+              )}
+              {duplicateCount > 0 && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 border-0 gap-0.5 cursor-default shrink-0" />
+                    }
+                  >
+                    <TriangleAlert className="h-2.5 w-2.5" />
+                    {duplicateCount}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{duplicateCount} PLZ in mehreren Gebieten</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30 gap-0.5 cursor-default shrink-0" />
+                }
+              >
+                <TriangleAlert className="h-2.5 w-2.5" />
+                Leer
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-medium">Kein PLZ zugewiesen</p>
+                <p className="text-muted-foreground text-[11px] mt-0.5">
+                  Klicke auf PLZ auf der Karte oder nutze Präfix-Hinzufügen.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {/* Hover actions: Solo + List-toggle + ⋮ dropdown */}
           {hoverActionsReady && (
             <div
@@ -877,109 +978,6 @@ export const LayerListItem = memo(function LayerListItem({
             </div>
           )}
         </div>
-
-        {/* ── Row 2: PLZ stats (only when codes exist) ── */}
-        {postalCodes.length > 0 ? (
-          <div className="flex items-center gap-1.5 mt-0.5 pl-[1.875rem]">
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Badge
-                    variant="secondary"
-                    className="text-[10px] px-1 py-0 h-4 cursor-default tabular-nums shrink-0"
-                  />
-                }
-              >
-                {postalCodes.length}
-              </TooltipTrigger>
-              <TooltipContent className="min-w-[140px]">
-                <p className="font-medium mb-1">
-                  {postalCodes.length} PLZ
-                  {allCodesSet && allCodesSet.size > 0
-                    ? ` · ${((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}% des Gebiets`
-                    : ""}
-                </p>
-                {prefixDistribution.length > 0 && (
-                  <div className="space-y-0.5">
-                    <p className="text-muted-foreground text-[10px] uppercase tracking-wide mb-1">
-                      Top Regionen
-                    </p>
-                    {prefixDistribution.slice(0, 5).map(([prefix, count]) => (
-                      <div key={prefix} className="flex items-center gap-1.5">
-                        <span className="font-mono text-[10px] w-6">
-                          {prefix}
-                        </span>
-                        <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              backgroundColor: layer.color,
-                              width: `${Math.round((count / postalCodes.length) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground tabular-nums w-6 text-right">
-                          {count}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TooltipContent>
-            </Tooltip>
-            {allCodesSet && allCodesSet.size > 0 && (
-              <div className="flex items-center gap-0.5 flex-1 min-w-0">
-                <div className="w-10 h-1.5 rounded-full overflow-hidden bg-muted shrink-0">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${Math.round((postalCodes.length / allCodesSet.size) * 100)}%`,
-                      backgroundColor: layer.color,
-                      opacity: 0.85,
-                    }}
-                  />
-                </div>
-                <span className="text-[9px] text-muted-foreground tabular-nums">
-                  {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}%
-                </span>
-              </div>
-            )}
-            {duplicateCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 border-0 gap-0.5 cursor-default shrink-0" />
-                  }
-                >
-                  <TriangleAlert className="h-2.5 w-2.5" />
-                  {duplicateCount}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{duplicateCount} PLZ in mehreren Gebieten</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-1 mt-0.5 pl-[1.875rem]">
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30 gap-0.5 cursor-default shrink-0" />
-                }
-              >
-                <TriangleAlert className="h-2.5 w-2.5" />
-                Leer
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="font-medium">Kein PLZ zugewiesen</p>
-                <p className="text-muted-foreground text-[11px] mt-0.5">
-                  Klicke auf PLZ auf der Karte oder nutze Präfix-Hinzufügen.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
 
         {/* History Dialog */}
         {hoverActionsReady && (

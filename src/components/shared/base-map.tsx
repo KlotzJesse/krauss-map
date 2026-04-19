@@ -114,6 +114,14 @@ const FloatingDrawingEditBar = dynamic(
   }
 );
 
+const UndoRedoToolbar = dynamic(
+  () =>
+    import("@/components/areas/undo-redo-toolbar").then(
+      (m) => m.UndoRedoToolbar
+    ),
+  { ssr: false }
+);
+
 // Static style objects — hoisted to avoid allocating new objects on every render
 const MAP_CONTAINER_STYLE = { minHeight: "400px" } as const;
 const MAP_STYLE = { width: "100%", height: "100%" } as const;
@@ -353,7 +361,7 @@ function PlzSearch({
   );
 
   return (
-    <div className="absolute top-4 right-4 z-10 print:hidden">
+    <div className="absolute top-4 right-4 z-40 print:hidden">
       {!open ? (
         <button
           type="button"
@@ -996,6 +1004,13 @@ const MapInner = memo(function MapInner({
           }}
           onJumpTo={handleBookmarkJump}
         />
+        {areaId && (
+          <UndoRedoToolbar
+            areaId={areaId}
+            variant="icon"
+            initialStatus={initialUndoRedoStatus}
+          />
+        )}
       </div>
 
       {/* PLZ search overlay — top right */}

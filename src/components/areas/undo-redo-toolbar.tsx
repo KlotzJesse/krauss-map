@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 interface UndoRedoToolbarProps {
   areaId: number | null;
   className?: string;
-  variant?: "default" | "floating";
+  variant?: "default" | "floating" | "icon";
   initialStatus?: {
     canUndo: boolean;
     canRedo: boolean;
@@ -105,6 +105,72 @@ export function UndoRedoToolbar({
   }
 
   const isFloating = variant === "floating";
+  const isIcon = variant === "icon";
+
+  if (isIcon) {
+    return (
+      <TooltipProvider>
+        <>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={undo}
+                  disabled={!optimisticStatus.canUndo || isLoading}
+                  aria-label="Rückgängig (Strg+Z)"
+                  className={cn(
+                    "flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed",
+                    className
+                  )}
+                />
+              }
+            >
+              <IconArrowBackUp className="h-4 w-4" />
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>
+                Rückgängig (Strg+Z)
+                {optimisticStatus.undoCount > 0 && (
+                  <span className="ml-1 text-muted-foreground">
+                    ({optimisticStatus.undoCount})
+                  </span>
+                )}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={redo}
+                  disabled={!optimisticStatus.canRedo || isLoading}
+                  aria-label="Wiederholen (Strg+Umschalt+Z)"
+                  className={cn(
+                    "flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed",
+                    className
+                  )}
+                />
+              }
+            >
+              <IconArrowForwardUp className="h-4 w-4" />
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>
+                Wiederholen (Strg+Umschalt+Z)
+                {optimisticStatus.redoCount > 0 && (
+                  <span className="ml-1 text-muted-foreground">
+                    ({optimisticStatus.redoCount})
+                  </span>
+                )}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </>
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>

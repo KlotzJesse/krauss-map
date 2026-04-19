@@ -4916,15 +4916,6 @@ function DrawingToolsImpl({
             </span>
           </div>
         )}
-        {!isViewingVersion && areaId && undoRedoStatus && (
-          <UndoRedoToolbar
-            areaId={areaId}
-            initialStatus={undoRedoStatus}
-            onStatusUpdate={onLayerUpdate}
-            className="mt-0.5"
-            variant="default"
-          />
-        )}
         <CardAction>
           <button
             type="button"

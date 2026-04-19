@@ -314,11 +314,6 @@ export const AreaListItem = memo(
                 ))}
               </div>
             )}
-            {area.description && !isSelectable && (
-              <p className="text-[10px] text-muted-foreground/60 truncate px-2 pb-1 leading-tight">
-                {area.description}
-              </p>
-            )}
             {!isSelectable &&
               !isArchived &&
               (area.totalPostalCodeCount ?? 0) > 0 && (

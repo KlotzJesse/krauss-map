@@ -547,7 +547,7 @@ export function PostalCodesViewClientWithLayers({
   return (
     <div className="h-full relative">
       {/* Address and Postal Code Tools - horizontal, top right */}
-      <div className="absolute top-4 right-4 z-30 flex flex-row items-center gap-2 w-auto">
+      <div className="absolute top-4 right-16 z-30 flex flex-row items-center gap-2 w-auto">
         <div className="w-80">
           <AddressAutocompleteErrorBoundary>
             <AddressAutocompleteEnhanced
