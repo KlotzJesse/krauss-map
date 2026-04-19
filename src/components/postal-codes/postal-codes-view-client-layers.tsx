@@ -31,6 +31,7 @@ import {
   use,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import { toast } from "sonner";
 
@@ -85,6 +86,8 @@ const PostalCodeImportDialog = dynamic(
     import("./postal-code-import-dialog").then((m) => m.PostalCodeImportDialog),
   { ssr: false }
 );
+
+const EMPTY_TAGS: { id: number; name: string; color: string }[] = [];
 
 interface PostalCodesViewClientWithLayersProps {
   defaultGranularity: string;
@@ -168,6 +171,13 @@ function usePostalCodesLayerActions({
       canRedo: false,
     })
   );
+
+  // Stable refs so callbacks that only read (not depend on) these values
+  // don't recreate on every render and break React.memo on children.
+  const optimisticLayersRef = useRef(optimisticLayers);
+  optimisticLayersRef.current = optimisticLayers;
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   const { findPostalCodeByCoords } = usePostalCodeLookup({ data });
 
@@ -348,6 +358,7 @@ function usePostalCodesLayerActions({
 
   return {
     optimisticLayers,
+    optimisticLayersRef,
     optimisticUndoRedo,
     addPostalCodesToLayer,
     removePostalCodesFromLayer,
@@ -381,7 +392,7 @@ export function PostalCodesViewClientWithLayers({
   const areaDescription = areaDescriptionPromise
     ? use(areaDescriptionPromise)
     : null;
-  const areaTags = areaTagsPromise ? use(areaTagsPromise) : [];
+  const areaTags = areaTagsPromise ? use(areaTagsPromise) : EMPTY_TAGS;
 
   // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)
   // "native" = all DACH countries at their full resolution
@@ -400,6 +411,7 @@ export function PostalCodesViewClientWithLayers({
 
   const {
     optimisticLayers,
+    optimisticLayersRef,
     optimisticUndoRedo,
     addPostalCodesToLayer,
     removePostalCodesFromLayer,
@@ -414,6 +426,10 @@ export function PostalCodesViewClientWithLayers({
     initialLayers,
     initialUndoRedoStatus,
   });
+
+  // Stable ref for geodata so handleZoomToLayer doesn't recreate on every data change
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   const handlePreviewSelect = useCallback(
     (coords: [number, number] | null, _label: string, postalCode?: string) => {
@@ -447,8 +463,9 @@ export function PostalCodesViewClientWithLayers({
 
   const handleZoomToLayer = useCallback(
     (layerId: number) => {
+      const data = dataRef.current;
       if (!data) return;
-      const layer = optimisticLayers.find((l) => l.id === layerId);
+      const layer = optimisticLayersRef.current.find((l) => l.id === layerId);
       if (!layer?.postalCodes?.length) return;
 
       const codeSet = new Set(layer.postalCodes.map((pc) => pc.postalCode));
@@ -493,7 +510,7 @@ export function PostalCodesViewClientWithLayers({
 
       setMapCenterZoom([centerLng, centerLat], zoom);
     },
-    [data, optimisticLayers, setMapCenterZoom]
+    [setMapCenterZoom]
   );
 
   const handleGranularityChange = useCallback(

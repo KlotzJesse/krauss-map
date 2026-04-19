@@ -280,100 +280,111 @@ export function GranularitySelector({
 
   return (
     <TooltipProvider>
-      <div className="space-y-2">
-        {/* Granularity Selector */}
-        <Select
-          value={optimisticGranularity}
-          onValueChange={(val) => val && handleGranularitySelect(val)}
-          disabled={isPending}
-          items={Object.fromEntries(
-            ALL_GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
-          )}
-        >
-          <SelectTrigger className="w-full h-8 text-xs">
-            <SelectValue placeholder="Granularität wählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {ALL_GRANULARITY_OPTIONS.map((option) => {
-              const status = getSelectItemStatus(
-                option.value,
-                currentGranularity,
-                hasPostalCodes,
-                totalPostalCodes
-              );
-              const tooltip = getSelectItemTooltip(
-                option.value,
-                currentGranularity,
-                totalPostalCodes
-              );
+      <div>
+        {/* Compact single-row: label + select + region status */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-muted-foreground shrink-0 whitespace-nowrap">
+            PLZ-Granularität
+          </span>
+          <Select
+            value={optimisticGranularity}
+            onValueChange={(val) => val && handleGranularitySelect(val)}
+            disabled={isPending}
+            items={Object.fromEntries(
+              ALL_GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
+            )}
+          >
+            <SelectTrigger className="h-6 text-xs flex-1 min-w-0">
+              <SelectValue placeholder="Granularität wählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {ALL_GRANULARITY_OPTIONS.map((option) => {
+                const status = getSelectItemStatus(
+                  option.value,
+                  currentGranularity,
+                  hasPostalCodes,
+                  totalPostalCodes
+                );
+                const tooltip = getSelectItemTooltip(
+                  option.value,
+                  currentGranularity,
+                  totalPostalCodes
+                );
 
-              return (
-                <Tooltip key={option.value}>
-                  <TooltipTrigger
-                    render={
-                      <SelectItem
-                        value={option.value}
-                        className={`
-                        ${status === "current" ? "bg-accent" : ""}
-                        ${status === "destructive" ? "text-destructive" : ""}
-                        ${status === "compatible" ? "text-green-600" : ""}
-                      `}
-                      />
-                    }
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>{option.label}</span>
-                      <div className="flex items-center gap-1 ml-2">
-                        <Activity
-                          mode={status === "current" ? "visible" : "hidden"}
-                        >
-                          <Badge variant="secondary" className="text-xs px-1">
-                            Aktiv
-                          </Badge>
-                        </Activity>
-                        <Activity
-                          mode={status === "destructive" ? "visible" : "hidden"}
-                        >
-                          <AlertTriangle className="h-3 w-3 text-destructive" />
-                        </Activity>
-                        <Activity
-                          mode={status === "compatible" ? "visible" : "hidden"}
-                        >
-                          <Info className="h-3 w-3 text-green-600" />
-                        </Activity>
+                return (
+                  <Tooltip key={option.value}>
+                    <TooltipTrigger
+                      render={
+                        <SelectItem
+                          value={option.value}
+                          className={`
+                          ${status === "current" ? "bg-accent" : ""}
+                          ${status === "destructive" ? "text-destructive" : ""}
+                          ${status === "compatible" ? "text-green-600" : ""}
+                        `}
+                        />
+                      }
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span>{option.label}</span>
+                        <div className="flex items-center gap-1 ml-2">
+                          <Activity
+                            mode={status === "current" ? "visible" : "hidden"}
+                          >
+                            <Badge variant="secondary" className="text-xs px-1">
+                              Aktiv
+                            </Badge>
+                          </Activity>
+                          <Activity
+                            mode={
+                              status === "destructive" ? "visible" : "hidden"
+                            }
+                          >
+                            <AlertTriangle className="h-3 w-3 text-destructive" />
+                          </Activity>
+                          <Activity
+                            mode={
+                              status === "compatible" ? "visible" : "hidden"
+                            }
+                          >
+                            <Info className="h-3 w-3 text-green-600" />
+                          </Activity>
+                        </div>
                       </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p className="text-xs">{tooltip}</p>
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-          </SelectContent>
-        </Select>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p className="text-xs">{tooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </SelectContent>
+          </Select>
 
-        {/* Status Information — compact inline hint */}
-        <Activity mode={hasPostalCodes ? "visible" : "hidden"}>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Lock className="h-3 w-3 shrink-0" />
-            <span>{totalPostalCodes.toLocaleString("de-DE")} Regionen</span>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Info className="h-3 w-3 shrink-0 cursor-help text-muted-foreground/70 hover:text-muted-foreground" />
-                }
-              />
-              <TooltipContent side="bottom" className="max-w-[220px]">
-                <p className="text-xs">
-                  Höhere Granularität (→) ist kompatibel — bestehende Regionen
-                  bleiben erhalten. Niedrigere Granularität (←) löscht alle
-                  Regionen unwiderruflich.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </Activity>
+          {/* Inline region count */}
+          {hasPostalCodes && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+              <Lock className="h-2.5 w-2.5 shrink-0" />
+              <span className="whitespace-nowrap">
+                {totalPostalCodes.toLocaleString("de-DE")}
+              </span>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Info className="h-2.5 w-2.5 shrink-0 cursor-help text-muted-foreground/70 hover:text-muted-foreground" />
+                  }
+                />
+                <TooltipContent side="bottom" className="max-w-[220px]">
+                  <p className="text-xs">
+                    Höhere Granularität (→) ist kompatibel — bestehende Regionen
+                    bleiben erhalten. Niedrigere Granularität (←) löscht alle
+                    Regionen unwiderruflich.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+        </div>
 
         {/* Confirmation Dialog */}
         <AlertDialog

@@ -219,7 +219,6 @@ const MergeLayersDialog = dynamic(
   { ssr: false }
 );
 
-
 interface StatsSectionProps {
   layers: Layer[];
   postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
@@ -1298,7 +1297,9 @@ function useDrawingToolsActions({
   );
 
   const handleFillHoles = () => {
-    const activeLayer = optimisticLayersRef.current.find((l) => l.id === activeLayerId);
+    const activeLayer = optimisticLayersRef.current.find(
+      (l) => l.id === activeLayerId
+    );
     if (postalCodesData && activeLayer) {
       fillRegions(
         "holes",
@@ -1335,7 +1336,11 @@ function useDrawingToolsActions({
   const handleReorderLayers = useCallback(
     (oldIndex: number, newIndex: number) => {
       startTransition(async () => {
-        const reordered = arrayMove(optimisticLayersRef.current, oldIndex, newIndex);
+        const reordered = arrayMove(
+          optimisticLayersRef.current,
+          oldIndex,
+          newIndex
+        );
         const withNewIndices = reordered.map((l, i) => ({
           ...l,
           orderIndex: i,
@@ -2065,7 +2070,9 @@ const LayerManagementSection = memo(function LayerManagementSection({
     if (!addPostalCodesToLayer || !activeLayerId || !prefixMatches?.length)
       return;
     // Filter out already-assigned codes from active layer
-    const activeLayer = optimisticLayersRef.current.find((l) => l.id === activeLayerId);
+    const activeLayer = optimisticLayersRef.current.find(
+      (l) => l.id === activeLayerId
+    );
     const existing = new Set(
       activeLayer?.postalCodes?.map((pc) => pc.postalCode) ?? []
     );
@@ -2119,7 +2126,9 @@ const LayerManagementSection = memo(function LayerManagementSection({
     (oldName: string, newName: string) => {
       const trimmed = newName.trim();
       if (!trimmed || trimmed === oldName || !handleSetLayerGroup) return;
-      const toUpdate = optimisticLayersRef.current.filter((l) => l.groupName === oldName);
+      const toUpdate = optimisticLayersRef.current.filter(
+        (l) => l.groupName === oldName
+      );
       for (const layer of toUpdate) {
         handleSetLayerGroup(layer.id, trimmed);
       }
@@ -4911,10 +4920,7 @@ function DrawingToolsImpl({
         {/* Granularity Management Section */}
         {granularity && onGranularityChange && (
           <>
-            <div className="pb-2">
-              <div className="text-[10px] font-medium text-muted-foreground mb-1">
-                PLZ-Granularität
-              </div>
+            <div className="py-0.5">
               <GranularitySelector
                 currentGranularity={granularity}
                 onGranularityChange={onGranularityChange}
