@@ -116,14 +116,6 @@ const FloatingDrawingEditBar = dynamic(
   }
 );
 
-const UndoRedoToolbar = dynamic(
-  () =>
-    import("@/components/areas/undo-redo-toolbar").then(
-      (m) => m.UndoRedoToolbar
-    ),
-  { ssr: false }
-);
-
 // Static style objects — hoisted to avoid allocating new objects on every render
 const MAP_CONTAINER_STYLE = { minHeight: "400px" } as const;
 const MAP_STYLE = { width: "100%", height: "100%" } as const;
@@ -807,6 +799,7 @@ const MapInner = memo(function MapInner({
         onModeChange={interactions.handleDrawingModeChange}
         areaId={areaId}
         isPanelOpen={interactions.isDrawingToolsVisible}
+        undoRedoStatus={initialUndoRedoStatus}
       />
       {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
       {interactions.editingFeatureId && (
@@ -887,13 +880,6 @@ const MapInner = memo(function MapInner({
           interactions.isDrawingToolsVisible ? "left-[472px]" : "left-14"
         }`}
       >
-        {areaId && (
-          <UndoRedoToolbar
-            areaId={areaId}
-            variant="icon"
-            initialStatus={initialUndoRedoStatus}
-          />
-        )}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
