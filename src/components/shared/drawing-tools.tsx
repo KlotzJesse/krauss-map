@@ -218,13 +218,7 @@ const MergeLayersDialog = dynamic(
     ),
   { ssr: false }
 );
-const UndoRedoToolbar = dynamic(
-  () =>
-    import("@/components/areas/undo-redo-toolbar").then(
-      (m) => m.UndoRedoToolbar
-    ),
-  { ssr: false }
-);
+
 
 interface StatsSectionProps {
   layers: Layer[];
@@ -799,6 +793,12 @@ function useDrawingToolsActions({
     }
   );
 
+  // Stable ref so callbacks that iterate all layers don't include optimisticLayers
+  // in their dep array (which would recreate them on every layer change,
+  // defeating memo() on LayerListItem and LayerManagementSection).
+  const optimisticLayersRef = useRef(optimisticLayers);
+  optimisticLayersRef.current = optimisticLayers;
+
   const [_isPending, startTransition] = useTransition();
 
   const [ui, dispatchUI] = useReducer(drawingToolsUIReducer, undefined, () => {
@@ -966,11 +966,12 @@ function useDrawingToolsActions({
   };
 
   const handleExportExcel = async () => {
-    if (!optimisticLayers.length) {
+    const layers = optimisticLayersRef.current;
+    if (!layers.length) {
       toast.warning("Keine Ebenen zum Exportieren vorhanden");
       return;
     }
-    const layersWithCodes = optimisticLayers
+    const layersWithCodes = layers
       .filter((layer) => layer.postalCodes && layer.postalCodes.length > 0)
       .map((layer) => ({
         layerName: layer.name,
@@ -1007,7 +1008,7 @@ function useDrawingToolsActions({
       toast.warning("Kein Gebiet ausgewählt");
       return;
     }
-    if (!optimisticLayers.length) {
+    if (!optimisticLayersRef.current.length) {
       toast.warning("Keine Ebenen zum Exportieren vorhanden");
       return;
     }
@@ -1047,11 +1048,12 @@ function useDrawingToolsActions({
   };
 
   const handleExportZip = useCallback(async () => {
-    if (!optimisticLayers.length) {
+    const layers = optimisticLayersRef.current;
+    if (!layers.length) {
       toast.warning("Keine Ebenen zum Exportieren vorhanden");
       return;
     }
-    const layersWithCodes = optimisticLayers.filter(
+    const layersWithCodes = layers.filter(
       (l) => l.postalCodes && l.postalCodes.length > 0
     );
     if (!layersWithCodes.length) {
@@ -1080,7 +1082,7 @@ function useDrawingToolsActions({
     a.click();
     URL.revokeObjectURL(url);
     toast.success(`${layersWithCodes.length} Ebenen als ZIP exportiert`);
-  }, [optimisticLayers, areaName, areaId]);
+  }, [areaName, areaId]);
 
   const handleCreateLayer = useCallback(async () => {
     if (!form.newLayerName.trim()) {
@@ -1088,7 +1090,7 @@ function useDrawingToolsActions({
     }
     dispatchForm({ type: "START_CREATING" });
     startTransition(async () => {
-      const existingColors = optimisticLayers.map((l) => l.color);
+      const existingColors = optimisticLayersRef.current.map((l) => l.color);
       const nextColor = generateNextColor(existingColors);
       const createdLayerName = form.newLayerName;
       updateOptimisticLayers({
@@ -1098,7 +1100,7 @@ function useDrawingToolsActions({
           color: nextColor,
           opacity: 70,
           isVisible: "true",
-          orderIndex: optimisticLayers.length,
+          orderIndex: optimisticLayersRef.current.length,
           areaId: areaId!,
           postalCodes: [],
         },
@@ -1108,7 +1110,7 @@ function useDrawingToolsActions({
         createLayer({
           name: createdLayerName,
           color: nextColor,
-          orderIndex: optimisticLayers.length,
+          orderIndex: optimisticLayersRef.current.length,
         }),
         {
           loading: `Erstelle Gebiet "${createdLayerName}"...`,
@@ -1124,7 +1126,6 @@ function useDrawingToolsActions({
     });
   }, [
     form.newLayerName,
-    optimisticLayers,
     areaId,
     dispatchForm,
     startTransition,
@@ -1192,8 +1193,9 @@ function useDrawingToolsActions({
   const handleSoloLayer = useCallback(
     (soloId: number) => {
       startTransition(async () => {
+        const layers = optimisticLayersRef.current;
         const updates: { layerId: number; isVisible: boolean }[] = [];
-        for (const layer of optimisticLayers) {
+        for (const layer of layers) {
           const shouldBeVisible = layer.id === soloId;
           const currentlyVisible = layer.isVisible !== "false";
           if (currentlyVisible !== shouldBeVisible) {
@@ -1211,19 +1213,14 @@ function useDrawingToolsActions({
         }
       });
     },
-    [
-      startTransition,
-      updateOptimisticLayers,
-      optimisticLayers,
-      areaId,
-      onLayerUpdate,
-    ]
+    [startTransition, updateOptimisticLayers, areaId, onLayerUpdate]
   );
 
   const handleShowAllLayers = useCallback(() => {
     startTransition(async () => {
+      const layers = optimisticLayersRef.current;
       const updates: { layerId: number; isVisible: boolean }[] = [];
-      for (const layer of optimisticLayers) {
+      for (const layer of layers) {
         if (layer.isVisible === "false") {
           updates.push({ layerId: layer.id, isVisible: true });
           updateOptimisticLayers({
@@ -1238,13 +1235,7 @@ function useDrawingToolsActions({
         if (result.success) onLayerUpdate?.();
       }
     });
-  }, [
-    startTransition,
-    updateOptimisticLayers,
-    optimisticLayers,
-    areaId,
-    onLayerUpdate,
-  ]);
+  }, [startTransition, updateOptimisticLayers, areaId, onLayerUpdate]);
 
   const handleDeleteLayer = useCallback(
     (layerId: number) => {
@@ -1307,7 +1298,7 @@ function useDrawingToolsActions({
   );
 
   const handleFillHoles = () => {
-    const activeLayer = optimisticLayers.find((l) => l.id === activeLayerId);
+    const activeLayer = optimisticLayersRef.current.find((l) => l.id === activeLayerId);
     if (postalCodesData && activeLayer) {
       fillRegions(
         "holes",
@@ -1323,7 +1314,7 @@ function useDrawingToolsActions({
   const handleReassignColors = useCallback(
     (theme?: string) => {
       startTransition(async () => {
-        const colorMap = reassignAllColors(optimisticLayers, theme);
+        const colorMap = reassignAllColors(optimisticLayersRef.current, theme);
         for (const [id, color] of colorMap) {
           updateOptimisticLayers({ type: "update", id, layer: { color } });
         }
@@ -1338,20 +1329,20 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers, optimisticLayers, onLayerUpdate]
+    [startTransition, updateOptimisticLayers, onLayerUpdate]
   );
 
   const handleReorderLayers = useCallback(
     (oldIndex: number, newIndex: number) => {
       startTransition(async () => {
-        const reordered = arrayMove(optimisticLayers, oldIndex, newIndex);
+        const reordered = arrayMove(optimisticLayersRef.current, oldIndex, newIndex);
         const withNewIndices = reordered.map((l, i) => ({
           ...l,
           orderIndex: i,
         }));
         updateOptimisticLayers({ type: "reorder", layers: withNewIndices });
         const changedLayers = withNewIndices.filter(
-          (l, i) => optimisticLayers[i]?.id !== l.id
+          (l, i) => optimisticLayersRef.current[i]?.id !== l.id
         );
         try {
           await Promise.all(
@@ -1365,12 +1356,12 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers, optimisticLayers, onLayerUpdate]
+    [startTransition, updateOptimisticLayers, onLayerUpdate]
   );
 
   const handleSortByCount = useCallback(() => {
     startTransition(async () => {
-      const sorted = [...optimisticLayers].sort(
+      const sorted = [...optimisticLayersRef.current].sort(
         (a, b) => (b.postalCodes?.length ?? 0) - (a.postalCodes?.length ?? 0)
       );
       const withNewIndices = sorted.map((l, i) => ({ ...l, orderIndex: i }));
@@ -1387,12 +1378,7 @@ function useDrawingToolsActions({
         toast.error("Fehler beim Sortieren");
       }
     });
-  }, [
-    startTransition,
-    updateOptimisticLayers,
-    optimisticLayers,
-    onLayerUpdate,
-  ]);
+  }, [startTransition, updateOptimisticLayers, onLayerUpdate]);
 
   const handleRemovePostalCodeFromLayer = useStableCallback(
     (layerId: number, postalCode: string) => {
@@ -1887,12 +1873,15 @@ const LayerManagementSection = memo(function LayerManagementSection({
     "default" | "name" | "count-desc" | "count-asc"
   >("default");
 
+  const optimisticLayersRef = useRef(optimisticLayers);
+  optimisticLayersRef.current = optimisticLayers;
+
   const [isBalancing, setIsBalancing] = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [, startBalanceTransition] = useTransition();
   const handleBalanceLayers = useCallback(() => {
-    if (!areaId || optimisticLayers.length < 2) return;
-    const layerIdsWithCodes = optimisticLayers
+    if (!areaId || optimisticLayersRef.current.length < 2) return;
+    const layerIdsWithCodes = optimisticLayersRef.current
       .filter((l) => (l.postalCodes?.length ?? 0) > 0)
       .map((l) => l.id);
     if (layerIdsWithCodes.length < 2) {
@@ -1923,7 +1912,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
         setIsBalancing(false);
       }
     });
-  }, [areaId, optimisticLayers, onLayerUpdate, startBalanceTransition]);
+  }, [areaId, onLayerUpdate, startBalanceTransition]);
   const filteredLayers = useMemo(() => {
     const q = layerSearch.trim().toLowerCase();
     let result = q
@@ -2076,7 +2065,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
     if (!addPostalCodesToLayer || !activeLayerId || !prefixMatches?.length)
       return;
     // Filter out already-assigned codes from active layer
-    const activeLayer = optimisticLayers.find((l) => l.id === activeLayerId);
+    const activeLayer = optimisticLayersRef.current.find((l) => l.id === activeLayerId);
     const existing = new Set(
       activeLayer?.postalCodes?.map((pc) => pc.postalCode) ?? []
     );
@@ -2088,7 +2077,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
     await addPostalCodesToLayer(activeLayerId, toAdd);
     toast.success(`${toAdd.length} PLZ hinzugefügt`);
     setPrefixInput("");
-  }, [addPostalCodesToLayer, activeLayerId, optimisticLayers, prefixMatches]);
+  }, [addPostalCodesToLayer, activeLayerId, prefixMatches]);
 
   // Sync prefix matches to map highlight
   useEffect(() => {
@@ -2130,17 +2119,17 @@ const LayerManagementSection = memo(function LayerManagementSection({
     (oldName: string, newName: string) => {
       const trimmed = newName.trim();
       if (!trimmed || trimmed === oldName || !handleSetLayerGroup) return;
-      const toUpdate = optimisticLayers.filter((l) => l.groupName === oldName);
+      const toUpdate = optimisticLayersRef.current.filter((l) => l.groupName === oldName);
       for (const layer of toUpdate) {
         handleSetLayerGroup(layer.id, trimmed);
       }
     },
-    [optimisticLayers, handleSetLayerGroup]
+    [handleSetLayerGroup]
   );
 
   const handleToggleGroupVisibility = useCallback(
     (groupName: string) => {
-      const groupLayers = optimisticLayers.filter(
+      const groupLayers = optimisticLayersRef.current.filter(
         (l) => l.groupName === groupName
       );
       const allVisible = groupLayers.every((l) => l.isVisible !== "false");
@@ -2148,7 +2137,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
         handleToggleVisibility(layer.id, !allVisible);
       }
     },
-    [optimisticLayers, handleToggleVisibility]
+    [handleToggleVisibility]
   );
 
   // Group layers by groupName; null/empty = ungrouped (shown last)
@@ -2339,13 +2328,14 @@ const LayerManagementSection = memo(function LayerManagementSection({
     (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const oldIndex = optimisticLayers.findIndex((l) => l.id === active.id);
-      const newIndex = optimisticLayers.findIndex((l) => l.id === over.id);
+      const layers = optimisticLayersRef.current;
+      const oldIndex = layers.findIndex((l) => l.id === active.id);
+      const newIndex = layers.findIndex((l) => l.id === over.id);
       if (oldIndex !== -1 && newIndex !== -1) {
         handleReorderLayers(oldIndex, newIndex);
       }
     },
-    [optimisticLayers, handleReorderLayers]
+    [handleReorderLayers]
   );
 
   // Stable layer item callbacks — extracted from the map loop to prevent per-render identity changes
