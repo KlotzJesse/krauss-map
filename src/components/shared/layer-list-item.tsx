@@ -138,7 +138,8 @@ interface LayerListItemProps {
   onZoomToLayer?: (layerId: number) => void;
   onClearPLZ?: (layerId: number) => void;
   onAddPlzRange?: (layerId: number, codes: string[]) => void;
-  allCodesSet?: Set<string>;
+  allCodesSetSize?: number;
+  getAllCodesSet?: () => Set<string>;
   onBulkMovePlz?: (
     fromLayerId: number,
     toLayerId: number,
@@ -313,7 +314,8 @@ export const LayerListItem = memo(function LayerListItem({
   onZoomToLayer,
   onClearPLZ,
   onAddPlzRange,
-  allCodesSet,
+  allCodesSetSize,
+  getAllCodesSet,
   onBulkMovePlz,
   onBulkRemovePlz,
   onExportCSV,
@@ -391,9 +393,11 @@ export const LayerListItem = memo(function LayerListItem({
   );
 
   const handleAddRange = () => {
-    if (!onAddPlzRange || !allCodesSet) return;
+    if (!onAddPlzRange) return;
     const raw = rangeInput.trim();
     if (!raw) return;
+    const currentCodesSet = getAllCodesSet?.();
+    if (!currentCodesSet || currentCodesSet.size === 0) return;
 
     const newCodes: string[] = [];
 
@@ -407,19 +411,19 @@ export const LayerListItem = memo(function LayerListItem({
         const to = Number.parseInt(dashMatch[2], 10);
         for (let n = from; n <= to; n++) {
           const code = n.toString().padStart(dashMatch[1].length, "0");
-          if (allCodesSet.has(code) && !existingCodesSet.has(code)) {
+          if (currentCodesSet.has(code) && !existingCodesSet.has(code)) {
             newCodes.push(code);
           }
         }
       } else if (/^\d{2,4}$/.test(segment)) {
         // prefix match
-        for (const code of allCodesSet) {
+        for (const code of currentCodesSet) {
           if (code.startsWith(segment) && !existingCodesSet.has(code)) {
             newCodes.push(code);
           }
         }
       } else if (/^\d{5}$/.test(segment)) {
-        if (allCodesSet.has(segment) && !existingCodesSet.has(segment)) {
+        if (currentCodesSet.has(segment) && !existingCodesSet.has(segment)) {
           newCodes.push(segment);
         }
       }
@@ -650,8 +654,8 @@ export const LayerListItem = memo(function LayerListItem({
                 <TooltipContent className="min-w-[140px]">
                   <p className="font-medium mb-1">
                     {postalCodes.length} PLZ
-                    {allCodesSet && allCodesSet.size > 0
-                      ? ` · ${((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}% des Gebiets`
+                    {(allCodesSetSize ?? 0) > 0
+                      ? ` · ${((postalCodes.length / (allCodesSetSize ?? 1)) * 100).toFixed(1)}% des Gebiets`
                       : ""}
                   </p>
                   {prefixDistribution.length > 0 && (
@@ -682,20 +686,20 @@ export const LayerListItem = memo(function LayerListItem({
                   )}
                 </TooltipContent>
               </Tooltip>
-              {allCodesSet && allCodesSet.size > 0 && (
+              {(allCodesSetSize ?? 0) > 0 && (
                 <>
                   <div className="w-8 h-1.5 rounded-full overflow-hidden bg-muted shrink-0">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${Math.round((postalCodes.length / allCodesSet.size) * 100)}%`,
+                        width: `${Math.round((postalCodes.length / (allCodesSetSize ?? 1)) * 100)}%`,
                         backgroundColor: layer.color,
                         opacity: 0.85,
                       }}
                     />
                   </div>
                   <span className="text-[9px] text-muted-foreground tabular-nums">
-                    {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}
+                    {((postalCodes.length / (allCodesSetSize ?? 1)) * 100).toFixed(1)}
                     %
                   </span>
                 </>
@@ -1400,7 +1404,7 @@ export const LayerListItem = memo(function LayerListItem({
             )}
           </div>
           {/* PLZ range input */}
-          {onAddPlzRange && allCodesSet && (
+          {onAddPlzRange && getAllCodesSet && (
             <div className="mt-1.5">
               {rangeInputVisible ? (
                 <div className="flex items-center gap-1">

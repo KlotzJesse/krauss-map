@@ -1757,6 +1757,7 @@ interface LayerManagementSectionProps {
   plzFindInputRef?: React.RefObject<HTMLInputElement | null>;
   newLayerInputRef?: React.RefObject<HTMLInputElement | null>;
   allCodesSet?: Set<string>;
+  getAllCodesSet?: () => Set<string>;
   onLayerUpdate?: () => void;
   onHighlightCodes?: (codes: Set<string> | null) => void;
   handleExportLayerCSV?: (
@@ -1809,6 +1810,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
   plzFindInputRef: externalPlzFindInputRef,
   newLayerInputRef: externalNewLayerInputRef,
   allCodesSet,
+  getAllCodesSet,
   onLayerUpdate,
   onHighlightCodes,
   handleExportLayerCSV,
@@ -3178,7 +3180,8 @@ const LayerManagementSection = memo(function LayerManagementSection({
                         onZoomToLayer={onZoomToLayer}
                         onClearPLZ={handleClearLayerPLZ}
                         onAddPlzRange={addPostalCodesToLayer ?? undefined}
-                        allCodesSet={allCodesSet}
+                        allCodesSetSize={allCodesSet?.size ?? 0}
+                        getAllCodesSet={getAllCodesSet}
                         onBulkMovePlz={handleBulkMovePlz}
                         onBulkRemovePlz={handleBulkRemovePlz}
                         onExportCSV={handleExportLayerCSV}
@@ -3357,7 +3360,8 @@ const LayerManagementSection = memo(function LayerManagementSection({
                             onZoomToLayer={onZoomToLayer}
                             onClearPLZ={handleClearLayerPLZ}
                             onAddPlzRange={addPostalCodesToLayer ?? undefined}
-                            allCodesSet={allCodesSet}
+                            allCodesSetSize={allCodesSet?.size ?? 0}
+                            getAllCodesSet={getAllCodesSet}
                             onBulkMovePlz={handleBulkMovePlz}
                             onBulkRemovePlz={handleBulkRemovePlz}
                             onExportCSV={handleExportLayerCSV}
@@ -4448,6 +4452,7 @@ function DrawingToolsImpl({
   areaIdRef.current = areaId;
   const allCodesSetRef = useRef(allCodesSet);
   allCodesSetRef.current = allCodesSet;
+  const getAllCodesSet = useCallback(() => allCodesSetRef.current, []);
   const dispatchFormRef = useRef(dispatchForm);
   dispatchFormRef.current = dispatchForm;
 
@@ -5068,8 +5073,8 @@ function DrawingToolsImpl({
             plzFindInputRef={plzFindInputRef}
             newLayerInputRef={newLayerInputRef}
             allCodesSet={allCodesSet}
+            getAllCodesSet={getAllCodesSet}
             onLayerUpdate={onLayerUpdate}
-            onHighlightCodes={onHighlightCodes}
             handleExportLayerCSV={handleExportLayerCSV}
           />
         )}
