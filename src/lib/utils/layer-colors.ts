@@ -1,6 +1,8 @@
 /**
- * Generates maximally-contrasting colors for map layers using
+ * Generates high-contrast pastel colors for map layers using
  * evenly-spaced hues in HSL space with perceptual adjustments.
+ * Palette is "soft vivid" — pastel lightness with enough saturation
+ * to stay clearly visible against the OpenStreetMap basemap.
  */
 
 /** Returns true if the hex color is "light" (needs dark text for contrast). */
@@ -99,14 +101,15 @@ export function generateNextColor(existingColors: string[]): string {
   let bestColor = "#3b82f6";
   let bestMinDist = -1;
 
-  // Try multiple saturation/lightness combos — vivid-but-pleasant cartographic tones
+  // Try multiple saturation/lightness combos — high-contrast pastel cartographic tones
+  // Soft enough to look pastel, vivid enough to distinguish on map backgrounds
   const slCombos: [number, number][] = [
-    [65, 57], // Primary sweet-spot: punchy but not electric
-    [68, 55], // Slightly more vivid
-    [62, 60], // Softer punch
-    [70, 53], // Deep vivid
-    [60, 62], // Balanced mid
-    [67, 58], // Rich mid-tone
+    [60, 68], // Primary sweet-spot: soft vivid pastel
+    [57, 71], // Classic pastel
+    [63, 66], // Slightly punchier pastel
+    [55, 73], // Lighter pastel
+    [65, 64], // Rich pastel
+    [52, 75], // Delicate pastel
   ];
 
   for (const [s, l] of slCombos) {
@@ -141,9 +144,9 @@ export function generatePalette(count: number): string[] {
 
   for (let i = 0; i < count; i++) {
     const hue = (i * GOLDEN_ANGLE) % 360;
-    // Vivid-but-pleasant cartographic tones: punchy without being electric
-    const saturation = 63 + (i % 3) * 4; // 63, 67, 71
-    const lightness = 55 + (i % 2) * 5; // 55, 60
+    // High-contrast pastel: soft lightness, moderate saturation — visible but not harsh
+    const saturation = 57 + (i % 3) * 4; // 57, 61, 65
+    const lightness = 68 + (i % 2) * 5; // 68, 73
     colors.push(hslToHex(hue, saturation, lightness));
   }
 
@@ -229,8 +232,8 @@ function generateThemePalette(theme: string, count: number): string[] {
     string,
     { s: number; l: number; hueOffset: number }
   > = {
-    jewel: { s: 65, l: 57, hueOffset: 0 },
-    pastel: { s: 45, l: 78, hueOffset: 20 },
+    jewel: { s: 60, l: 68, hueOffset: 0 },
+    pastel: { s: 48, l: 78, hueOffset: 20 },
     vivid: { s: 80, l: 50, hueOffset: 0 },
     earthy: { s: 25, l: 54, hueOffset: 30 },
     ocean: { s: 72, l: 50, hueOffset: 190 },
