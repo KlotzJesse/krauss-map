@@ -804,7 +804,7 @@ function useDrawingToolsActions({
   const [ui, dispatchUI] = useReducer(drawingToolsUIReducer, undefined, () => {
     let layersOpen = !!areaId;
     let regionsOpen = false;
-    let statsOpen = true;
+    let statsOpen = false;
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("drawing-tools-ui");
       if (saved) {
@@ -816,7 +816,7 @@ function useDrawingToolsActions({
           };
           layersOpen = parsed.layersOpen ?? layersOpen;
           regionsOpen = parsed.regionsOpen ?? false;
-          statsOpen = parsed.statsOpen ?? true;
+          statsOpen = parsed.statsOpen ?? false;
         } catch {
           /* ignore */
         }
@@ -1860,15 +1860,13 @@ const LayerManagementSection = memo(function LayerManagementSection({
       handleRemovePostalCodeFromLayer?.(layerId, postalCode);
     }
   );
-  const guardedImportCSV = useStableCallback(
-    (layerId: number) => {
-      if (isLocked(layerId)) {
-        toast.warning("Ebene ist gesperrt — Import nicht möglich");
-        return;
-      }
-      openImportDialog(layerId);
+  const guardedImportCSV = useStableCallback((layerId: number) => {
+    if (isLocked(layerId)) {
+      toast.warning("Ebene ist gesperrt — Import nicht möglich");
+      return;
     }
-  );
+    openImportDialog(layerId);
+  });
   const handleNewLayerNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) =>
       dispatchForm({ type: "SET_NEW_NAME", name: e.target.value }),

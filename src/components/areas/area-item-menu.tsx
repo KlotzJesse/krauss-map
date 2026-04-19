@@ -9,7 +9,7 @@ import {
   IconFileText,
   IconTrash,
 } from "@tabler/icons-react";
-import { memo } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 
 import {
   ContextMenu,
@@ -98,9 +98,26 @@ export const AreaItemMenu = memo(function AreaItemMenu({
   children,
   disabled = false,
 }: AreaItemMenuProps) {
+  const [mounted, setMounted] = useState(false);
+  const mountRef = useRef(mounted);
+  mountRef.current = mounted;
+
+  const handlePointerEnter = useCallback(() => {
+    if (!mountRef.current) setMounted(true);
+  }, []);
+
   if (disabled) {
     return <>{children}</>;
   }
+
+  if (!mounted) {
+    return (
+      <div className="w-full" onPointerEnter={handlePointerEnter}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <ContextMenu>
       <ContextMenuTrigger className="w-full">{children}</ContextMenuTrigger>
