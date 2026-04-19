@@ -176,7 +176,7 @@ export const AreaListItem = memo(
                 isSelectable && isSelected
                   ? "bg-primary/10 text-primary"
                   : isCurrentRoute && !isSelectable
-                    ? "bg-primary/10 text-sidebar-foreground font-semibold border-l-2 border-primary !pl-[6px]"
+                    ? "bg-primary/15 text-sidebar-foreground font-semibold border-l-[3px] border-primary !pl-[5px]"
                     : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
               } ${isArchived ? "opacity-50" : ""} ${isSelectable ? "cursor-pointer select-none" : ""}`}
               onClick={
@@ -212,7 +212,7 @@ export const AreaListItem = memo(
                 />
               ) : (
                 <IconFolder
-                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  className={`h-4 w-4 shrink-0 ${isCurrentRoute ? "text-primary" : "text-muted-foreground"}`}
                   title={
                     area.updatedAt
                       ? `Geändert: ${relativeTime(area.updatedAt)}`

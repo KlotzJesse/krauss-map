@@ -171,6 +171,10 @@ import {
 
 const EMPTY_ARRAY: never[] = [];
 
+// Stable DnD config — defined outside components to avoid re-renders on each render cycle
+const DND_MODIFIERS = [restrictToVerticalAxis, restrictToParentElement];
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 5 } };
+
 // Lazy-load dialog components — only fetched when users open them
 const CreateVersionDialog = dynamic(
   () =>
@@ -1387,7 +1391,7 @@ function useDrawingToolsActions({
     onLayerUpdate,
   ]);
 
-  const handleRemovePostalCodeFromLayer = useCallback(
+  const handleRemovePostalCodeFromLayer = useStableCallback(
     (layerId: number, postalCode: string) => {
       if (!removePostalCodesFromLayer) return;
       startTransition(async () => {
@@ -1407,39 +1411,29 @@ function useDrawingToolsActions({
           toast.error("Fehler beim Entfernen der PLZ");
         }
       });
-    },
-    [
-      startTransition,
-      updateOptimisticLayers,
-      optimisticLayers,
-      removePostalCodesFromLayer,
-      onLayerUpdate,
-    ]
+    }
   );
 
-  const handleClearLayerPLZ = useCallback(
-    (layerId: number) => {
-      if (!removePostalCodesFromLayer) return;
-      const layer = optimisticLayers.find((l) => l.id === layerId);
-      const codes = layer?.postalCodes?.map((pc) => pc.postalCode) ?? [];
-      if (codes.length === 0) return;
-      startTransition(async () => {
-        updateOptimisticLayers({
-          type: "update",
-          id: layerId,
-          layer: { postalCodes: [] },
-        });
-        try {
-          await removePostalCodesFromLayer(layerId, codes);
-          onLayerUpdate?.();
-          toast.success(`${codes.length} PLZ entfernt`);
-        } catch {
-          toast.error("Fehler beim Leeren des Layers");
-        }
+  const handleClearLayerPLZ = useStableCallback((layerId: number) => {
+    if (!removePostalCodesFromLayer) return;
+    const layer = optimisticLayers.find((l) => l.id === layerId);
+    const codes = layer?.postalCodes?.map((pc) => pc.postalCode) ?? [];
+    if (codes.length === 0) return;
+    startTransition(async () => {
+      updateOptimisticLayers({
+        type: "update",
+        id: layerId,
+        layer: { postalCodes: [] },
       });
-    },
-    [optimisticLayers, removePostalCodesFromLayer, onLayerUpdate]
-  );
+      try {
+        await removePostalCodesFromLayer(layerId, codes);
+        onLayerUpdate?.();
+        toast.success(`${codes.length} PLZ entfernt`);
+      } catch {
+        toast.error("Fehler beim Leeren des Layers");
+      }
+    });
+  });
 
   const handleMovePlz = useStableCallback(
     (fromLayerId: number, toLayerId: number, postalCode: string) => {
@@ -1563,7 +1557,7 @@ function useDrawingToolsActions({
     }
   );
 
-  const handleBulkRemovePlz = useCallback(
+  const handleBulkRemovePlz = useStableCallback(
     (layerId: number, codes: string[]) => {
       if (!removePostalCodesFromLayer || codes.length === 0) return;
       startTransition(async () => {
@@ -1587,14 +1581,7 @@ function useDrawingToolsActions({
           toast.error("Fehler beim Entfernen der PLZ");
         }
       });
-    },
-    [
-      startTransition,
-      updateOptimisticLayers,
-      optimisticLayers,
-      removePostalCodesFromLayer,
-      onLayerUpdate,
-    ]
+    }
   );
 
   const handleBulkDelete = useCallback(
@@ -1680,7 +1667,7 @@ function useDrawingToolsActions({
 
 type SortableLayerListItemProps = React.ComponentProps<typeof LayerListItem>;
 
-function SortableLayerListItem({
+const SortableLayerListItem = memo(function SortableLayerListItem({
   layer,
   ...props
 }: SortableLayerListItemProps) {
@@ -1712,7 +1699,7 @@ function SortableLayerListItem({
       />
     </div>
   );
-}
+});
 
 interface LayerManagementSectionProps {
   areaId: number;
@@ -2343,7 +2330,12 @@ const LayerManagementSection = memo(function LayerManagementSection({
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS)
+  );
+
+  const layerIds = useMemo(
+    () => optimisticLayers.map((l) => l.id),
+    [optimisticLayers]
   );
 
   const handleDragEnd = useCallback(
@@ -2358,6 +2350,40 @@ const LayerManagementSection = memo(function LayerManagementSection({
     },
     [optimisticLayers, handleReorderLayers]
   );
+
+  // Stable layer item callbacks — extracted from the map loop to prevent per-render identity changes
+  const handleItemSelect = useCallback(
+    (id: number) => {
+      if (!selectMode) onLayerSelect?.(id);
+    },
+    [selectMode, onLayerSelect]
+  );
+  const handleItemStartEdit = useCallback(
+    (id: number, name: string) =>
+      dispatchForm({ type: "START_EDIT", layerId: id, name }),
+    [dispatchForm]
+  );
+  const handleItemCancelEdit = useCallback(
+    () => dispatchForm({ type: "CANCEL_EDIT" }),
+    [dispatchForm]
+  );
+  const handleItemEditNameChange = useCallback(
+    (name: string) => dispatchForm({ type: "SET_EDIT_NAME", name }),
+    [dispatchForm]
+  );
+  // Memoize otherLayers map to avoid new array per item per render
+  const otherLayersMap = useMemo(() => {
+    const m = new Map<number, { id: number; name: string; color: string }[]>();
+    for (const l of optimisticLayers) {
+      m.set(
+        l.id,
+        optimisticLayers
+          .filter((other) => other.id !== l.id)
+          .map((other) => ({ id: other.id, name: other.name, color: other.color }))
+      );
+    }
+    return m;
+  }, [optimisticLayers]);
 
   // Per-layer duplicate postal code counts + overall stats
   const { duplicateCountByLayer, duplicateCodeMap, layerStats } =
@@ -3115,10 +3141,10 @@ const LayerManagementSection = memo(function LayerManagementSection({
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
-                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                modifiers={DND_MODIFIERS}
               >
                 <SortableContext
-                  items={optimisticLayers.map((l) => l.id)}
+                  items={layerIds}
                   strategy={verticalListSortingStrategy}
                 >
                   {groupedLayers.flatMap(({ name: gName, layers: gLayers }) => [
@@ -3235,31 +3261,18 @@ const LayerManagementSection = memo(function LayerManagementSection({
                             editingLayerId={form.editingLayerId}
                             editingLayerName={form.editingLayerName}
                             editLayerInputRef={editLayerInputRef}
-                            onSelect={(id) => {
-                              if (!selectMode) onLayerSelect?.(id);
-                            }}
-                            onStartEdit={(id, name) =>
-                              dispatchForm({
-                                type: "START_EDIT",
-                                layerId: id,
-                                name,
-                              })
-                            }
+                            onSelect={handleItemSelect}
+                            onStartEdit={handleItemStartEdit}
                             onConfirmEdit={handleRenameLayer}
-                            onCancelEdit={() =>
-                              dispatchForm({ type: "CANCEL_EDIT" })
-                            }
-                            onEditNameChange={(name) =>
-                              dispatchForm({ type: "SET_EDIT_NAME", name })
-                            }
+                            onCancelEdit={handleItemCancelEdit}
+                            onEditNameChange={handleItemEditNameChange}
                             onColorChange={handleColorChange}
                             onOpacityChange={handleOpacityChange}
                             onDelete={handleDeleteLayer}
                             onDuplicateLayer={handleDuplicateLayer}
                             onCopyToArea={handleOpenCopyToArea}
                             onMergeLayer={
-                              optimisticLayers.filter((l) => l.id !== layer.id)
-                                .length > 0
+                              (otherLayersMap.get(layer.id)?.length ?? 0) > 0
                                 ? handleOpenMergeLayers
                                 : undefined
                             }
@@ -3273,13 +3286,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                             }
                             onNotesChange={handleNotesChange}
                             onMovePlz={handleMovePlz}
-                            otherLayers={optimisticLayers
-                              .filter((l) => l.id !== layer.id)
-                              .map((l) => ({
-                                id: l.id,
-                                name: l.name,
-                                color: l.color,
-                              }))}
+                            otherLayers={otherLayersMap.get(layer.id) ?? EMPTY_ARRAY}
                             isSelected={
                               selectMode ? selectedIds.has(layer.id) : undefined
                             }
@@ -3291,12 +3298,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                             onPreviewPostalCode={onPreviewPostalCode}
                             onZoomToLayer={onZoomToLayer}
                             onClearPLZ={handleClearLayerPLZ}
-                            onAddPlzRange={
-                              addPostalCodesToLayer
-                                ? (layerId, codes) =>
-                                    addPostalCodesToLayer(layerId, codes)
-                                : undefined
-                            }
+                            onAddPlzRange={addPostalCodesToLayer ?? undefined}
                             allCodesSet={allCodesSet}
                             onBulkMovePlz={handleBulkMovePlz}
                             onBulkRemovePlz={handleBulkRemovePlz}
