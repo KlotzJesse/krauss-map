@@ -15,7 +15,6 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-
 import {
   Card,
   CardContent,

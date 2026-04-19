@@ -13,6 +13,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getAreas, getGlobalChangelog } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
+
 import { AreaSelect } from "./area-select";
 
 const PAGE_SIZE = 50;
@@ -94,10 +95,21 @@ function getChangeDescription(item: {
   postalCodeCount: number;
   updateFields: string | null;
 }): string {
-  const { changeType, layerName, previousLayerName, postalCodeCount, updateFields } = item;
-  if (changeType === "add_postal_codes" || changeType === "remove_postal_codes") {
+  const {
+    changeType,
+    layerName,
+    previousLayerName,
+    postalCodeCount,
+    updateFields,
+  } = item;
+  if (
+    changeType === "add_postal_codes" ||
+    changeType === "remove_postal_codes"
+  ) {
     const name = layerName ? ` → ${layerName}` : "";
-    return postalCodeCount > 0 ? `${postalCodeCount} PLZ${name}` : (layerName ?? "");
+    return postalCodeCount > 0
+      ? `${postalCodeCount} PLZ${name}`
+      : (layerName ?? "");
   }
   if (changeType === "update_layer") {
     const name = layerName ?? previousLayerName ?? "";
@@ -106,7 +118,12 @@ function getChangeDescription(item: {
     if (fields) return fields;
     return name;
   }
-  if (changeType === "update_layer" && previousLayerName && layerName && previousLayerName !== layerName) {
+  if (
+    changeType === "update_layer" &&
+    previousLayerName &&
+    layerName &&
+    previousLayerName !== layerName
+  ) {
     return `${previousLayerName} → ${layerName}`;
   }
   return layerName ?? previousLayerName ?? "";

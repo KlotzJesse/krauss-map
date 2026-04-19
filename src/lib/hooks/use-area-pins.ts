@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 
 const STORAGE_KEY = "pinned-area-ids";

@@ -108,18 +108,18 @@ export function DrawingActionsSection({
         <>
           <Separator />
           <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-7 text-xs"
-              />
-            }
-          >
-            <Download className="h-3 w-3 mr-1.5" />
-            Export / Import
-          </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-7 text-xs"
+                />
+              }
+            >
+              <Download className="h-3 w-3 mr-1.5" />
+              Export / Import
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">

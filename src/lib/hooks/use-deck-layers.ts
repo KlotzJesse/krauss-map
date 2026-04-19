@@ -550,14 +550,23 @@ export function useDeckLayers({
   countryRef.current = country;
 
   const showTooltip = useCallback(
-    (x: number, y: number, code: string, matchingLayers: Array<{ name: string; color: string }>) => {
+    (
+      x: number,
+      y: number,
+      code: string,
+      matchingLayers: Array<{ name: string; color: string }>
+    ) => {
       const tooltipEl = effectiveTooltipRef.current;
       if (!tooltipEl) return;
       tooltipEl.style.left = `${x + 12}px`;
       tooltipEl.style.top = `${y - 10}px`;
       tooltipEl.style.display = "block";
-      const codeEl = tooltipEl.querySelector<HTMLElement>("[data-tooltip-code]");
-      const layersEl = tooltipEl.querySelector<HTMLElement>("[data-tooltip-layers]");
+      const codeEl = tooltipEl.querySelector<HTMLElement>(
+        "[data-tooltip-code]"
+      );
+      const layersEl = tooltipEl.querySelector<HTMLElement>(
+        "[data-tooltip-layers]"
+      );
       if (codeEl) codeEl.textContent = code;
       if (layersEl) {
         layersEl.innerHTML = "";
@@ -614,7 +623,12 @@ export function useDeckLayers({
             )
             .map((l) => ({ name: l.name, color: l.color }));
           // Update tooltip via direct DOM — no React re-render
-          showTooltip(info.x ?? 0, info.y ?? 0, rawCode ?? code, matchingLayers);
+          showTooltip(
+            info.x ?? 0,
+            info.y ?? 0,
+            rawCode ?? code,
+            matchingLayers
+          );
         }
       } else if (hoveredCodeRef.current !== null) {
         hoveredCodeRef.current = null;

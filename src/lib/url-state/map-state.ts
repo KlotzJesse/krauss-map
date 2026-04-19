@@ -10,7 +10,8 @@ const DEFAULT_ZOOM = DACH_ZOOM;
 function parseMapViewFromSearch(search: string) {
   const params = new URLSearchParams(search);
   const raw = params.get("mapView");
-  if (!raw) return { center: DEFAULT_CENTER as [number, number], zoom: DEFAULT_ZOOM };
+  if (!raw)
+    return { center: DEFAULT_CENTER as [number, number], zoom: DEFAULT_ZOOM };
   try {
     return JSON.parse(raw) as { center: [number, number]; zoom: number };
   } catch {

@@ -33,7 +33,7 @@ import {
   X,
 } from "lucide-react";
 import type { RefObject } from "react";
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 import { getLayerHistoryAction } from "@/app/actions/area-actions";
@@ -346,6 +346,8 @@ export const LayerListItem = memo(function LayerListItem({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<HistoryRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [hoverActionsReady, setHoverActionsReady] = useState(false);
+  const hoverReadyRef = useRef(false);
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -442,6 +444,10 @@ export const LayerListItem = memo(function LayerListItem({
           "border-amber-300/40 bg-amber-50/30 dark:bg-amber-950/10"
       )}
       onMouseEnter={() => {
+        if (!hoverReadyRef.current) {
+          hoverReadyRef.current = true;
+          setHoverActionsReady(true);
+        }
         if (onHighlightCodes && postalCodes.length > 0) {
           onHighlightCodes(new Set(postalCodes.map((pc) => pc.postalCode)));
         }
@@ -619,248 +625,257 @@ export const LayerListItem = memo(function LayerListItem({
           </div>
 
           {/* Hover actions: Solo + List-toggle + ⋮ dropdown */}
-          <div
-            className={cn(
-              "flex items-center gap-0.5 transition-opacity shrink-0",
-              "opacity-0 group-hover:opacity-100"
-            )}
-          >
-            {onSoloLayer && (
-              <Tooltip>
-                <TooltipTrigger
+          {hoverActionsReady && (
+            <div
+              className={cn(
+                "flex items-center gap-0.5 transition-opacity shrink-0",
+                "opacity-0 group-hover:opacity-100"
+              )}
+            >
+              {onSoloLayer && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSoloLayer(layer.id);
+                        }}
+                      />
+                    }
+                  >
+                    <Focus className="h-3 w-3" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Nur dieses Gebiet anzeigen</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {postalCodes.length > 0 && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        className={cn(
+                          "shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground",
+                          codesExpanded && "bg-muted text-foreground"
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCodesExpanded((v) => !v);
+                          if (codesExpanded) setCodeSearch("");
+                        }}
+                      />
+                    }
+                  >
+                    <List className="h-3 w-3" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {codesExpanded
+                        ? "PLZ-Liste schließen"
+                        : "PLZ-Liste anzeigen"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* ⋮ More actions */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
                   render={
                     <button
                       type="button"
                       className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSoloLayer(layer.id);
-                      }}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   }
                 >
-                  <Focus className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Nur dieses Gebiet anzeigen</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {postalCodes.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <button
-                      type="button"
-                      className={cn(
-                        "shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground",
-                        codesExpanded && "bg-muted text-foreground"
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCodesExpanded((v) => !v);
-                        if (codesExpanded) setCodeSearch("");
-                      }}
-                    />
-                  }
+                  <MoreHorizontal className="h-3 w-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="bottom"
+                  align="end"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <List className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {codesExpanded
-                      ? "PLZ-Liste schließen"
-                      : "PLZ-Liste anzeigen"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* ⋮ More actions */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <button
-                    type="button"
-                    className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                }
-              >
-                <MoreHorizontal className="h-3 w-3" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="bottom"
-                align="end"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <DropdownMenuItem
-                  onClick={() => onStartEdit(layer.id, layer.name)}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Umbenennen
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setColorPickerOpen(true)}>
-                  <IconPalette className="h-3.5 w-3.5" />
-                  Farbe ändern
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {onDuplicateLayer && (
-                  <DropdownMenuItem onClick={() => onDuplicateLayer(layer.id)}>
-                    <CopyPlus className="h-3.5 w-3.5" />
-                    Duplizieren
-                  </DropdownMenuItem>
-                )}
-                {onCopyToArea && (
                   <DropdownMenuItem
-                    onClick={() => onCopyToArea(layer.id, layer.name)}
+                    onClick={() => onStartEdit(layer.id, layer.name)}
                   >
-                    <ArrowRightLeft className="h-3.5 w-3.5" />
-                    In anderes Gebiet kopieren
+                    <Pencil className="h-3.5 w-3.5" />
+                    Umbenennen
                   </DropdownMenuItem>
-                )}
-                {(onMergeLayer && otherLayers.length > 0) ||
-                (onSplitLayer && postalCodes.length >= 4) ? (
+                  <DropdownMenuItem onClick={() => setColorPickerOpen(true)}>
+                    <IconPalette className="h-3.5 w-3.5" />
+                    Farbe ändern
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                ) : null}
-                {onMergeLayer && otherLayers.length > 0 && (
-                  <DropdownMenuItem
-                    onClick={() => onMergeLayer(layer.id, layer.name)}
-                  >
-                    <GitMerge className="h-3.5 w-3.5" />
-                    Zusammenführen
-                  </DropdownMenuItem>
-                )}
-                {onSplitLayer && postalCodes.length >= 4 && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <Scissors className="h-3.5 w-3.5" />
-                      Aufteilen
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      {[2, 3, 4, 5].map((n) => (
-                        <DropdownMenuItem
-                          key={n}
-                          disabled={postalCodes.length < n}
-                          onClick={() => onSplitLayer(layer.id, n)}
-                        >
-                          {n}× (~{Math.ceil(postalCodes.length / n)} PLZ)
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                )}
-                {onCompareLayer && postalCodes.length > 0 && (
-                  <DropdownMenuItem onClick={() => onCompareLayer(layer.id)}>
-                    <GitCompareArrows className="h-3.5 w-3.5" />
-                    Vergleichen
-                  </DropdownMenuItem>
-                )}
-                {onSetGroup && (
-                  <DropdownMenuItem onClick={() => setGroupPopoverOpen(true)}>
-                    {layer.groupName ? (
-                      <FolderOpen className="h-3.5 w-3.5" />
-                    ) : (
-                      <Folder className="h-3.5 w-3.5" />
-                    )}
-                    {layer.groupName
-                      ? `Gruppe: ${layer.groupName}`
-                      : "Gruppe zuweisen"}
-                  </DropdownMenuItem>
-                )}
-                {onZoomToLayer && (layer.postalCodes?.length ?? 0) > 0 && (
-                  <DropdownMenuItem onClick={() => onZoomToLayer(layer.id)}>
-                    <Focus className="h-3.5 w-3.5" />
-                    Karte zentrieren
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                {postalCodes.length > 0 && (
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      const codes =
-                        layer.postalCodes?.map((pc) => `D-${pc.postalCode}`) ??
-                        [];
-                      if (codes.length > 0) {
-                        await copyPostalCodesCSV(codes);
-                      } else {
-                        toast.info("Keine Postleitzahlen zum Kopieren");
+                  {onDuplicateLayer && (
+                    <DropdownMenuItem
+                      onClick={() => onDuplicateLayer(layer.id)}
+                    >
+                      <CopyPlus className="h-3.5 w-3.5" />
+                      Duplizieren
+                    </DropdownMenuItem>
+                  )}
+                  {onCopyToArea && (
+                    <DropdownMenuItem
+                      onClick={() => onCopyToArea(layer.id, layer.name)}
+                    >
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                      In anderes Gebiet kopieren
+                    </DropdownMenuItem>
+                  )}
+                  {(onMergeLayer && otherLayers.length > 0) ||
+                  (onSplitLayer && postalCodes.length >= 4) ? (
+                    <DropdownMenuSeparator />
+                  ) : null}
+                  {onMergeLayer && otherLayers.length > 0 && (
+                    <DropdownMenuItem
+                      onClick={() => onMergeLayer(layer.id, layer.name)}
+                    >
+                      <GitMerge className="h-3.5 w-3.5" />
+                      Zusammenführen
+                    </DropdownMenuItem>
+                  )}
+                  {onSplitLayer && postalCodes.length >= 4 && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <Scissors className="h-3.5 w-3.5" />
+                        Aufteilen
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {[2, 3, 4, 5].map((n) => (
+                          <DropdownMenuItem
+                            key={n}
+                            disabled={postalCodes.length < n}
+                            onClick={() => onSplitLayer(layer.id, n)}
+                          >
+                            {n}× (~{Math.ceil(postalCodes.length / n)} PLZ)
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                  {onCompareLayer && postalCodes.length > 0 && (
+                    <DropdownMenuItem onClick={() => onCompareLayer(layer.id)}>
+                      <GitCompareArrows className="h-3.5 w-3.5" />
+                      Vergleichen
+                    </DropdownMenuItem>
+                  )}
+                  {onSetGroup && (
+                    <DropdownMenuItem onClick={() => setGroupPopoverOpen(true)}>
+                      {layer.groupName ? (
+                        <FolderOpen className="h-3.5 w-3.5" />
+                      ) : (
+                        <Folder className="h-3.5 w-3.5" />
+                      )}
+                      {layer.groupName
+                        ? `Gruppe: ${layer.groupName}`
+                        : "Gruppe zuweisen"}
+                    </DropdownMenuItem>
+                  )}
+                  {onZoomToLayer && (layer.postalCodes?.length ?? 0) > 0 && (
+                    <DropdownMenuItem onClick={() => onZoomToLayer(layer.id)}>
+                      <Focus className="h-3.5 w-3.5" />
+                      Karte zentrieren
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  {postalCodes.length > 0 && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        const codes =
+                          layer.postalCodes?.map(
+                            (pc) => `D-${pc.postalCode}`
+                          ) ?? [];
+                        if (codes.length > 0) {
+                          await copyPostalCodesCSV(codes);
+                        } else {
+                          toast.info("Keine Postleitzahlen zum Kopieren");
+                        }
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      PLZ kopieren
+                    </DropdownMenuItem>
+                  )}
+                  {onImportCSV && (
+                    <DropdownMenuItem onClick={() => onImportCSV(layer.id)}>
+                      <Upload className="h-3.5 w-3.5" />
+                      CSV importieren
+                    </DropdownMenuItem>
+                  )}
+                  {onExportCSV && postalCodes.length > 0 && (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        onExportCSV(
+                          layer.id,
+                          layer.name,
+                          postalCodes.map((pc) => pc.postalCode)
+                        )
                       }
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      CSV exportieren
+                    </DropdownMenuItem>
+                  )}
+                  {onNotesChange && (
+                    <DropdownMenuItem
+                      onClick={() => setNotesExpanded((v) => !v)}
+                    >
+                      <StickyNote className="h-3.5 w-3.5" />
+                      {notesExpanded
+                        ? "Notizen schließen"
+                        : "Notizen bearbeiten"}
+                      {layer.notes && !notesExpanded && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                      )}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={() => {
+                      loadHistory();
+                      setHistoryOpen(true);
                     }}
                   >
-                    <Copy className="h-3.5 w-3.5" />
-                    PLZ kopieren
+                    <History className="h-3.5 w-3.5" />
+                    Verlauf anzeigen
                   </DropdownMenuItem>
-                )}
-                {onImportCSV && (
-                  <DropdownMenuItem onClick={() => onImportCSV(layer.id)}>
-                    <Upload className="h-3.5 w-3.5" />
-                    CSV importieren
-                  </DropdownMenuItem>
-                )}
-                {onExportCSV && postalCodes.length > 0 && (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      onExportCSV(
-                        layer.id,
-                        layer.name,
-                        postalCodes.map((pc) => pc.postalCode)
-                      )
-                    }
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    CSV exportieren
-                  </DropdownMenuItem>
-                )}
-                {onNotesChange && (
-                  <DropdownMenuItem onClick={() => setNotesExpanded((v) => !v)}>
-                    <StickyNote className="h-3.5 w-3.5" />
-                    {notesExpanded ? "Notizen schließen" : "Notizen bearbeiten"}
-                    {layer.notes && !notesExpanded && (
-                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                    )}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={() => {
-                    loadHistory();
-                    setHistoryOpen(true);
-                  }}
-                >
-                  <History className="h-3.5 w-3.5" />
-                  Verlauf anzeigen
-                </DropdownMenuItem>
-                {onToggleLock && (
-                  <DropdownMenuItem onClick={() => onToggleLock(layer.id)}>
-                    {isLocked ? (
-                      <LockOpen className="h-3.5 w-3.5" />
-                    ) : (
-                      <Lock className="h-3.5 w-3.5" />
-                    )}
-                    {isLocked ? "Entsperren" : "Sperren"}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                {onClearPLZ && postalCodes.length > 0 && (
+                  {onToggleLock && (
+                    <DropdownMenuItem onClick={() => onToggleLock(layer.id)}>
+                      {isLocked ? (
+                        <LockOpen className="h-3.5 w-3.5" />
+                      ) : (
+                        <Lock className="h-3.5 w-3.5" />
+                      )}
+                      {isLocked ? "Entsperren" : "Sperren"}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  {onClearPLZ && postalCodes.length > 0 && (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => onClearPLZ(layer.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Alle PLZ löschen
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     variant="destructive"
-                    onClick={() => onClearPLZ(layer.id)}
+                    onClick={() => onDelete(layer.id)}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Alle PLZ löschen
+                    <X className="h-3.5 w-3.5" />
+                    Layer löschen
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => onDelete(layer.id)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Layer löschen
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
 
         {/* ── Row 2: PLZ stats (only when codes exist) ── */}
@@ -967,81 +982,83 @@ export const LayerListItem = memo(function LayerListItem({
         )}
 
         {/* History Dialog */}
-        <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-          <DialogContent
-            className="max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DialogHeader>
-              <DialogTitle className="text-sm flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                Änderungshistorie — {layer.name}
-              </DialogTitle>
-            </DialogHeader>
-            {historyLoading && (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {!historyLoading && historyItems.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Keine Änderungen aufgezeichnet
-              </p>
-            )}
-            {!historyLoading && historyItems.length > 0 && (
-              <div className="space-y-1 max-h-72 overflow-y-auto">
-                {historyItems.map((item, i) => {
-                  const isAdd = item.changeType === "add_postal_codes";
-                  const codes = Array.isArray(item.sampleCodes)
-                    ? (item.sampleCodes as string[])
-                    : [];
-                  const preview =
-                    codes.slice(0, 3).join(", ") +
-                    (codes.length > 3 ? ` +${codes.length - 3}` : "");
-                  const date = item.createdAt
-                    ? new Date(item.createdAt).toLocaleDateString("de-DE", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "";
-                  return (
-                    <div
-                      key={i}
-                      className="flex items-start gap-1.5 text-xs py-1.5 border-b last:border-0"
-                    >
-                      <span
-                        className={cn(
-                          "shrink-0 mt-0.5 font-bold",
-                          isAdd ? "text-green-600" : "text-red-500"
-                        )}
+        {hoverActionsReady && (
+          <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+            <DialogContent
+              className="max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DialogHeader>
+                <DialogTitle className="text-sm flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  Änderungshistorie — {layer.name}
+                </DialogTitle>
+              </DialogHeader>
+              {historyLoading && (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!historyLoading && historyItems.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Keine Änderungen aufgezeichnet
+                </p>
+              )}
+              {!historyLoading && historyItems.length > 0 && (
+                <div className="space-y-1 max-h-72 overflow-y-auto">
+                  {historyItems.map((item, i) => {
+                    const isAdd = item.changeType === "add_postal_codes";
+                    const codes = Array.isArray(item.sampleCodes)
+                      ? (item.sampleCodes as string[])
+                      : [];
+                    const preview =
+                      codes.slice(0, 3).join(", ") +
+                      (codes.length > 3 ? ` +${codes.length - 3}` : "");
+                    const date = item.createdAt
+                      ? new Date(item.createdAt).toLocaleDateString("de-DE", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "";
+                    return (
+                      <div
+                        key={i}
+                        className="flex items-start gap-1.5 text-xs py-1.5 border-b last:border-0"
                       >
-                        {isAdd ? "+" : "−"}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="font-medium">
-                          {item.postalCodeCount} PLZ
+                        <span
+                          className={cn(
+                            "shrink-0 mt-0.5 font-bold",
+                            isAdd ? "text-green-600" : "text-red-500"
+                          )}
+                        >
+                          {isAdd ? "+" : "−"}
                         </span>
-                        {preview && (
-                          <span className="text-muted-foreground ml-1 truncate block">
-                            {preview}
+                        <span className="flex-1 min-w-0">
+                          <span className="font-medium">
+                            {item.postalCodeCount} PLZ
                           </span>
-                        )}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground shrink-0 tabular-nums">
-                        {date}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+                          {preview && (
+                            <span className="text-muted-foreground ml-1 truncate block">
+                              {preview}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground shrink-0 tabular-nums">
+                          {date}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Group Dialog */}
-        {onSetGroup && (
+        {hoverActionsReady && onSetGroup && (
           <Dialog open={groupPopoverOpen} onOpenChange={setGroupPopoverOpen}>
             <DialogContent
               className="max-w-xs"
