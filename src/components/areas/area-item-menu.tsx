@@ -25,6 +25,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 interface AreaItemMenuProps {
@@ -148,13 +153,20 @@ export const AreaItemDropdown = memo(
   }: Omit<AreaItemMenuProps, "children">) {
     return (
       <DropdownMenu>
-        <DropdownMenuTrigger
-          className="h-6 w-6 p-0 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus:outline-none"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <IconDotsVertical className="h-4 w-4" />
-          <span className="sr-only">Menü</span>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <DropdownMenuTrigger
+                className="h-6 w-6 p-0 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus:outline-none"
+                onClick={(e) => e.stopPropagation()}
+              />
+            }
+          >
+            <IconDotsVertical className="h-4 w-4" />
+            <span className="sr-only">Menü</span>
+          </TooltipTrigger>
+          <TooltipContent>Optionen</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="end" className="w-44">
           <MenuItems
             area={area}

@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  memo,
   useOptimistic,
   useReducer,
   useRef,
@@ -198,7 +199,7 @@ interface NavAreasProps {
   onAreaSelect?: (areaId: number) => void;
 }
 
-export function NavAreas({
+export const NavAreas = memo(function NavAreas({
   areas,
   isLoading = false,
   currentAreaId: _currentAreaId,
@@ -1094,4 +1095,4 @@ export function NavAreas({
       </Dialog>
     </>
   );
-}
+});

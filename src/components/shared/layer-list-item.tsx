@@ -54,6 +54,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -430,6 +437,8 @@ export const LayerListItem = memo(function LayerListItem({
   };
 
   return (
+    <ContextMenu>
+      <ContextMenuTrigger render={<div className="contents" />}>
     <div
       className={cn(
         "group relative rounded-md border transition-all",
@@ -1460,5 +1469,72 @@ export const LayerListItem = memo(function LayerListItem({
         </div>
       )}
     </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={() => onStartEdit(layer.id, layer.name)}>
+          <Pencil className="h-3.5 w-3.5" />
+          Umbenennen
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => setColorPickerOpen(true)}>
+          <IconPalette className="h-3.5 w-3.5" />
+          Farbe ändern
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        {onToggleVisibility && (
+          <ContextMenuItem
+            onClick={() => onToggleVisibility(layer.id, !isVisible)}
+          >
+            {isVisible ? (
+              <EyeOff className="h-3.5 w-3.5" />
+            ) : (
+              <Eye className="h-3.5 w-3.5" />
+            )}
+            {isVisible ? "Ausblenden" : "Einblenden"}
+          </ContextMenuItem>
+        )}
+        {onZoomToLayer && (layer.postalCodes?.length ?? 0) > 0 && (
+          <ContextMenuItem onClick={() => onZoomToLayer(layer.id)}>
+            <Focus className="h-3.5 w-3.5" />
+            Karte zentrieren
+          </ContextMenuItem>
+        )}
+        {postalCodes.length > 0 && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={async () => {
+                const codes =
+                  layer.postalCodes?.map((pc) => `D-${pc.postalCode}`) ?? [];
+                if (codes.length > 0) {
+                  await copyPostalCodesCSV(codes);
+                } else {
+                  toast.info("Keine Postleitzahlen zum Kopieren");
+                }
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              PLZ kopieren
+            </ContextMenuItem>
+          </>
+        )}
+        {onDuplicateLayer && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => onDuplicateLayer(layer.id)}>
+              <CopyPlus className="h-3.5 w-3.5" />
+              Duplizieren
+            </ContextMenuItem>
+          </>
+        )}
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => onDelete(layer.id)}
+        >
+          <X className="h-3.5 w-3.5" />
+          Layer löschen
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 });
