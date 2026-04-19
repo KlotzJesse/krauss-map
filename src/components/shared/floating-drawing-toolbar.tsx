@@ -175,15 +175,6 @@ export function FloatingDrawingToolbar({
             })}
           </div>
         </div>
-        {!isPanelOpen && (
-          <div className="pointer-events-auto">
-            <UndoRedoToolbar
-              areaId={areaId!}
-              variant="floating"
-              initialStatus={initialUndoRedoStatus}
-            />
-          </div>
-        )}
       </div>
     </div>
   );

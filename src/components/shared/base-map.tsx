@@ -938,12 +938,11 @@ const MapInner = memo(function MapInner({
                   type="button"
                   title={`Kartenstil: ${mapStyleLabel ?? ""}`}
                   aria-label="Kartenstil wählen"
-                  className="flex items-center gap-1.5 px-2 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground text-xs font-medium"
+                  className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
                 />
               }
             >
-              <Layers className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{mapStyleLabel}</span>
+              <Layers className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-32">
               {(mapStyles ?? []).map((s) => (
