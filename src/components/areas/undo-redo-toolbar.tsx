@@ -128,7 +128,7 @@ export function UndoRedoToolbar({
             >
               <IconArrowBackUp className="h-4 w-4" />
             </TooltipTrigger>
-            <TooltipContent side="right">
+            <TooltipContent side="right" className="whitespace-nowrap">
               <p>
                 Rückgängig (Strg+Z)
                 {optimisticStatus.undoCount > 0 && (
@@ -156,7 +156,7 @@ export function UndoRedoToolbar({
             >
               <IconArrowForwardUp className="h-4 w-4" />
             </TooltipTrigger>
-            <TooltipContent side="right">
+            <TooltipContent side="right" className="whitespace-nowrap">
               <p>
                 Wiederholen (Strg+Umschalt+Z)
                 {optimisticStatus.redoCount > 0 && (
