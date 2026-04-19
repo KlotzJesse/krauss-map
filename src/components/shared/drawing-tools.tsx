@@ -4883,15 +4883,7 @@ function DrawingToolsImpl({
         {granularity && onGranularityChange && (
           <>
             <div className="pb-2">
-              <div className="text-xs font-semibold mb-2 flex items-center justify-between">
-                <span>PLZ-Granularität</span>
-                <Badge variant="outline" className="text-xs">
-                  {granularity === "1digit" && "1-stellig"}
-                  {granularity === "2digit" && "2-stellig"}
-                  {granularity === "3digit" && "3-stellig"}
-                  {granularity === "5digit" && "5-stellig"}
-                </Badge>
-              </div>
+              <div className="text-[10px] font-medium text-muted-foreground mb-1">PLZ-Granularität</div>
               <GranularitySelector
                 currentGranularity={granularity}
                 onGranularityChange={onGranularityChange}
