@@ -131,6 +131,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -2532,71 +2535,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
               </TooltipContent>
             </Tooltip>
           )}
-          {optimisticLayers.length >= 2 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    title="Farbpalette wählen"
-                    className="h-7 w-7 p-0 shrink-0"
-                  />
-                }
-              >
-                <Palette className="h-3 w-3" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel>Farbpalette</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {COLOR_THEMES.map((theme) => (
-                  <DropdownMenuItem
-                    key={theme.id}
-                    onClick={() => handleReassignColors(theme.id)}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <span className="flex gap-0.5 shrink-0">
-                      {theme.sample.slice(0, 5).map((color, i) => (
-                        <span
-                          key={i}
-                          className="inline-block w-3 h-3 rounded-sm"
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </span>
-                    <span className="text-sm">{theme.label}</span>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => handleReassignColors()}
-                  className="cursor-pointer"
-                >
-                  <Palette className="h-3.5 w-3.5 mr-2" />
-                  <span className="text-sm">Optimaler Kontrast</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {optimisticLayers.length >= 2 && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    onClick={handleSortByCount}
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 shrink-0"
-                  />
-                }
-              >
-                <ArrowDownUp className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Nach PLZ-Anzahl sortieren</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
+
           {optimisticLayers.length >= 2 && (
             <Tooltip>
               <TooltipTrigger
@@ -2664,6 +2603,52 @@ const LayerManagementSection = memo(function LayerManagementSection({
                 Weitere Aktionen
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {optimisticLayers.length >= 2 && (
+                <>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                      <Palette className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">Farbpalette wählen</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-52">
+                      {COLOR_THEMES.map((theme) => (
+                        <DropdownMenuItem
+                          key={theme.id}
+                          onClick={() => handleReassignColors(theme.id)}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <span className="flex gap-0.5 shrink-0">
+                            {theme.sample.slice(0, 5).map((color, i) => (
+                              <span
+                                key={i}
+                                className="inline-block w-3 h-3 rounded-sm"
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                          </span>
+                          <span className="text-sm">{theme.label}</span>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleReassignColors()}
+                        className="cursor-pointer gap-2"
+                      >
+                        <Palette className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm">Optimaler Kontrast</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuItem
+                    onClick={handleSortByCount}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm">Nach PLZ-Anzahl sortieren</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem
                 onClick={handleOpenHistory}
                 className="gap-2 cursor-pointer"
