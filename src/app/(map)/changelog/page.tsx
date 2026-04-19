@@ -13,6 +13,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getAreas, getGlobalChangelog } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
+import { AreaSelect } from "./area-select";
 
 const PAGE_SIZE = 50;
 
@@ -165,22 +166,11 @@ export default async function ChangelogPage({
             <IconFilter className="h-4 w-4 text-muted-foreground shrink-0" />
 
             {/* Area filter */}
-            <form method="GET" action="/changelog">
-              <input type="hidden" name="type" value={changeType ?? ""} />
-              <select
-                name="area"
-                className="h-8 text-xs rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
-                defaultValue={params.area ?? ""}
-                onChange={(e) => (e.target.form as HTMLFormElement)?.submit()}
-              >
-                <option value="">Alle Gebiete</option>
-                {areas.map((a) => (
-                  <option key={a.id} value={String(a.id)}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-            </form>
+            <AreaSelect
+              areas={areas}
+              currentArea={params.area}
+              currentType={changeType}
+            />
 
             {/* Type filter as links */}
             <div className="flex gap-1 flex-wrap">
