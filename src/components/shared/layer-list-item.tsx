@@ -21,6 +21,8 @@ import {
   Loader2,
   Lock,
   LockOpen,
+  MoreHorizontal,
+  Pencil,
   Plus,
   Scissors,
   Square,
@@ -45,6 +47,22 @@ import {
 } from "@/components/kibo-ui/color-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -453,9 +471,10 @@ export const LayerListItem = memo(function LayerListItem({
           }
         }}
       >
-        <div className="flex items-center justify-between gap-1.5">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            {/* Select checkbox — shown in select mode */}
+        {/* ── Row 1: controls + name + hover actions ── */}
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            {/* Select checkbox */}
             {onToggleSelect !== undefined && (
               <button
                 type="button"
@@ -473,7 +492,7 @@ export const LayerListItem = memo(function LayerListItem({
                 )}
               </button>
             )}
-            {/* Drag handle — shown when draggable */}
+            {/* Drag handle */}
             {dragHandleProps && (
               <button
                 type="button"
@@ -485,7 +504,7 @@ export const LayerListItem = memo(function LayerListItem({
                 <GripVertical className="h-3 w-3" />
               </button>
             )}
-            {/* Visibility toggle — always visible */}
+            {/* Visibility toggle */}
             {onToggleVisibility && (
               <button
                 type="button"
@@ -506,16 +525,40 @@ export const LayerListItem = memo(function LayerListItem({
                 )}
               </button>
             )}
-            <button
-              type="button"
-              className="w-2.5 h-2.5 rounded-sm shrink-0 border border-border hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
-              style={{ backgroundColor: layer.color }}
-              title="Farbe ändern"
-              onClick={(e) => {
-                e.stopPropagation();
-                setColorPickerOpen(true);
-              }}
-            />
+            {/* Color dot — opens color picker */}
+            <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+              <PopoverTrigger
+                render={
+                  <button
+                    type="button"
+                    className="w-3 h-3 rounded-sm shrink-0 border border-border hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
+                    style={{ backgroundColor: layer.color }}
+                    title="Farbe ändern"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                }
+              />
+              <PopoverContent
+                className="w-auto p-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <LayerColorPickerContent
+                  currentColor={layer.color}
+                  currentOpacity={currentOpacity}
+                  usedColors={otherLayers.map((l) => l.color)}
+                  onConfirm={(hex) => {
+                    onColorChange(layer.id, hex);
+                    setColorPickerOpen(false);
+                  }}
+                  onOpacityChange={
+                    onOpacityChange
+                      ? (opacity) => onOpacityChange(layer.id, opacity)
+                      : undefined
+                  }
+                />
+              </PopoverContent>
+            </Popover>
+            {/* Name or rename input */}
             {editingLayerId === layer.id ? (
               <Input
                 ref={editLayerInputRef}
@@ -542,12 +585,12 @@ export const LayerListItem = memo(function LayerListItem({
               />
             ) : (
               <span
-                className="text-xs font-medium truncate"
+                className="text-xs font-medium truncate flex-1 min-w-0"
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   onStartEdit(layer.id, layer.name);
                 }}
-                title="Doppelklick zum Umbenennen"
+                title={`${layer.name} — Doppelklick zum Umbenennen`}
               >
                 {layerIndex !== undefined && layerIndex < 9 && (
                   <span className="inline-block mr-1 text-[9px] font-mono text-muted-foreground/60 select-none">
@@ -557,115 +600,7 @@ export const LayerListItem = memo(function LayerListItem({
                 {layer.name}
               </span>
             )}
-            {postalCodes.length === 0 ? (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30 gap-0.5 cursor-default" />
-                  }
-                >
-                  <TriangleAlert className="h-2.5 w-2.5" />
-                  Leer
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="font-medium">Kein PLZ zugewiesen</p>
-                  <p className="text-muted-foreground text-[11px] mt-0.5">
-                    Klicke auf PLZ auf der Karte oder nutze Präfix-Hinzufügen.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] px-1 py-0 h-4 cursor-default tabular-nums"
-                    />
-                  }
-                >
-                  {postalCodes.length}
-                </TooltipTrigger>
-                <TooltipContent className="min-w-[140px]">
-                  <p className="font-medium mb-1">
-                    {postalCodes.length} PLZ
-                    {allCodesSet && allCodesSet.size > 0
-                      ? ` · ${((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}% des Gebiets`
-                      : ""}
-                  </p>
-                  {prefixDistribution.length > 0 && (
-                    <div className="space-y-0.5">
-                      <p className="text-muted-foreground text-[10px] uppercase tracking-wide mb-1">
-                        Top Regionen
-                      </p>
-                      {prefixDistribution.slice(0, 5).map(([prefix, count]) => (
-                        <div key={prefix} className="flex items-center gap-1.5">
-                          <span className="font-mono text-[10px] w-6">
-                            {prefix}
-                          </span>
-                          <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                backgroundColor: layer.color,
-                                width: `${Math.round((count / postalCodes.length) * 100)}%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-muted-foreground tabular-nums w-6 text-right">
-                            {count}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {allCodesSet && allCodesSet.size > 0 && postalCodes.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span className="flex items-center gap-0.5 cursor-default" />
-                  }
-                >
-                  <span
-                    className="inline-block h-1.5 rounded-full bg-current opacity-40"
-                    style={{
-                      backgroundColor: layer.color,
-                      opacity: 0.7,
-                      width: `${Math.max(8, Math.round((postalCodes.length / allCodesSet.size) * 48))}px`,
-                    }}
-                  />
-                  <span className="text-[9px] text-muted-foreground tabular-nums">
-                    {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}
-                    %
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {postalCodes.length} von {allCodesSet.size} PLZ (
-                    {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}
-                    %)
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {duplicateCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 border-0 gap-0.5" />
-                  }
-                >
-                  <TriangleAlert className="h-2.5 w-2.5" />
-                  {duplicateCount}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{duplicateCount} PLZ in mehreren Gebieten</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+            {/* Status indicators (always visible) */}
             {isLayerSwitchPending && activeLayerId === layer.id && (
               <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
             )}
@@ -675,15 +610,21 @@ export const LayerListItem = memo(function LayerListItem({
                 aria-label="Ebene gesperrt"
               />
             )}
+            {layer.notes && !notesExpanded && (
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"
+                title="Hat Notiz"
+              />
+            )}
           </div>
 
+          {/* Hover actions: Solo + List-toggle + ⋮ dropdown */}
           <div
             className={cn(
-              "flex items-center gap-0.5 transition-opacity",
-              isLocked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              "flex items-center gap-0.5 transition-opacity shrink-0",
+              "opacity-0 group-hover:opacity-100"
             )}
           >
-            {/* Solo — show only this layer */}
             {onSoloLayer && (
               <Tooltip>
                 <TooltipTrigger
@@ -706,383 +647,16 @@ export const LayerListItem = memo(function LayerListItem({
               </Tooltip>
             )}
 
-            <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <PopoverTrigger
-                      render={
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      }
-                    />
-                  }
-                >
-                  <IconPalette className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Farbe ändern</p>
-                </TooltipContent>
-              </Tooltip>
-              <PopoverContent
-                className="w-auto p-3"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <LayerColorPickerContent
-                  currentColor={layer.color}
-                  currentOpacity={currentOpacity}
-                  usedColors={otherLayers.map((l) => l.color)}
-                  onConfirm={(hex) => {
-                    onColorChange(layer.id, hex);
-                    setColorPickerOpen(false);
-                  }}
-                  onOpacityChange={
-                    onOpacityChange
-                      ? (opacity) => onOpacityChange(layer.id, opacity)
-                      : undefined
-                  }
-                />
-              </PopoverContent>
-            </Popover>
-
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-5 w-5"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      const codes =
-                        layer.postalCodes?.map((pc) => `D-${pc.postalCode}`) ??
-                        [];
-                      if (codes.length > 0) {
-                        await copyPostalCodesCSV(codes);
-                      } else {
-                        toast.info("Keine Postleitzahlen zum Kopieren");
-                      }
-                    }}
-                  />
-                }
-              >
-                <Copy className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>PLZ als CSV kopieren</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {onDuplicateLayer && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDuplicateLayer(layer.id);
-                      }}
-                    />
-                  }
-                >
-                  <CopyPlus className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Layer duplizieren</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {onCopyToArea && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCopyToArea(layer.id, layer.name);
-                      }}
-                    />
-                  }
-                >
-                  <ArrowRightLeft className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>In anderes Gebiet kopieren</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {onMergeLayer && otherLayers.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMergeLayer(layer.id, layer.name);
-                      }}
-                    />
-                  }
-                >
-                  <GitMerge className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mit anderem Layer zusammenführen</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {onSplitLayer && postalCodes.length >= 4 && (
-              <Popover
-                open={splitPopoverOpen}
-                onOpenChange={setSplitPopoverOpen}
-              >
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <PopoverTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-5 w-5"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        }
-                      />
-                    }
-                  >
-                    <Scissors className="h-3 w-3" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Layer aufteilen</p>
-                  </TooltipContent>
-                </Tooltip>
-                <PopoverContent
-                  className="w-52 p-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <p className="text-xs font-medium mb-2 text-muted-foreground">
-                    In wie viele Teile aufteilen?
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {[2, 3, 4, 5].map((n) => (
-                      <Button
-                        key={n}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 flex-1 text-xs"
-                        disabled={postalCodes.length < n}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSplitPopoverOpen(false);
-                          onSplitLayer(layer.id, n);
-                        }}
-                      >
-                        {n}× (~{Math.ceil(postalCodes.length / n)} PLZ)
-                      </Button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
-
-            {onCompareLayer && postalCodes.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCompareLayer(layer.id);
-                      }}
-                    />
-                  }
-                >
-                  <GitCompareArrows className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mit anderem Layer vergleichen</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {onSetGroup && (
-              <Popover
-                open={groupPopoverOpen}
-                onOpenChange={setGroupPopoverOpen}
-              >
-                <Tooltip>
-                  <PopoverTrigger
-                    render={
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant={layer.groupName ? "secondary" : "outline"}
-                            size="icon"
-                            className="h-5 w-5"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        }
-                      >
-                        {layer.groupName ? (
-                          <FolderOpen className="h-3 w-3" />
-                        ) : (
-                          <Folder className="h-3 w-3" />
-                        )}
-                      </TooltipTrigger>
-                    }
-                  />
-                  <TooltipContent>
-                    <p>
-                      {layer.groupName
-                        ? `Gruppe: ${layer.groupName}`
-                        : "Gruppe zuweisen"}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-                <PopoverContent className="w-52 p-2 space-y-1.5" side="top">
-                  <p className="text-xs font-medium text-muted-foreground px-1">
-                    Gruppe zuweisen
-                  </p>
-                  {existingGroups.length > 0 && (
-                    <div className="space-y-0.5">
-                      {existingGroups.map((g) => (
-                        <button
-                          key={g}
-                          type="button"
-                          className={`w-full text-left px-2 py-1 rounded text-xs hover:bg-accent transition-colors flex items-center gap-1.5 ${layer.groupName === g ? "bg-accent font-medium" : ""}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSetGroup(layer.id, g);
-                            setGroupPopoverOpen(false);
-                          }}
-                        >
-                          <Folder className="h-3 w-3 shrink-0 text-muted-foreground" />
-                          {g}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-1 pt-0.5">
-                    <input
-                      className="flex-1 text-xs border rounded px-2 py-1 bg-background min-w-0"
-                      placeholder="Neue Gruppe…"
-                      value={newGroupInput}
-                      onChange={(e) => setNewGroupInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === "Enter" && newGroupInput.trim()) {
-                          onSetGroup(layer.id, newGroupInput.trim());
-                          setNewGroupInput("");
-                          setGroupPopoverOpen(false);
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-6 w-6 shrink-0"
-                      disabled={!newGroupInput.trim()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!newGroupInput.trim()) return;
-                        onSetGroup(layer.id, newGroupInput.trim());
-                        setNewGroupInput("");
-                        setGroupPopoverOpen(false);
-                      }}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  {layer.groupName && (
-                    <button
-                      type="button"
-                      className="w-full text-left px-2 py-1 rounded text-xs text-destructive hover:bg-destructive/10 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSetGroup(layer.id, null);
-                        setGroupPopoverOpen(false);
-                      }}
-                    >
-                      Aus Gruppe entfernen
-                    </button>
-                  )}
-                </PopoverContent>
-              </Popover>
-            )}
-
-            {onClearPLZ && postalCodes.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClearPLZ(layer.id);
-                      }}
-                    />
-                  }
-                >
-                  <Trash2 className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Alle PLZ löschen</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(layer.id);
-                    }}
-                  />
-                }
-              >
-                <X className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Layer löschen</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Toggle codes list */}
             {postalCodes.length > 0 && (
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <Button
-                      variant={codesExpanded ? "secondary" : "outline"}
-                      size="icon"
-                      className="h-5 w-5"
+                    <button
+                      type="button"
+                      className={cn(
+                        "shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground",
+                        codesExpanded && "bg-muted text-foreground"
+                      )}
                       onClick={(e) => {
                         e.stopPropagation();
                         setCodesExpanded((v) => !v);
@@ -1103,251 +677,439 @@ export const LayerListItem = memo(function LayerListItem({
               </Tooltip>
             )}
 
-            {/* Import CSV */}
-            {onImportCSV && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onImportCSV(layer.id);
-                      }}
-                    />
-                  }
-                >
-                  <Upload className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>PLZ aus CSV/Text importieren</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* Export CSV */}
-            {onExportCSV && postalCodes.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onExportCSV(
-                          layer.id,
-                          layer.name,
-                          postalCodes.map((pc) => pc.postalCode)
-                        );
-                      }}
-                    />
-                  }
-                >
-                  <Download className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Als CSV herunterladen</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* Notes toggle */}
-            {onNotesChange && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant={notesExpanded ? "secondary" : "outline"}
-                      size="icon"
-                      className={cn(
-                        "h-5 w-5 relative",
-                        layer.notes && "text-amber-600"
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setNotesExpanded((v) => !v);
-                      }}
-                    />
-                  }
-                >
-                  <StickyNote className="h-3 w-3" />
-                  {layer.notes && !notesExpanded && (
-                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>
-                  {layer.notes && !notesExpanded ? (
-                    <div className="max-w-[220px]">
-                      <p className="font-medium text-xs mb-1">Notiz:</p>
-                      <p className="text-xs text-muted-foreground line-clamp-4 whitespace-pre-wrap">
-                        {layer.notes}
-                      </p>
-                    </div>
-                  ) : (
-                    <p>
-                      {notesExpanded
-                        ? "Notizen schließen"
-                        : "Notizen bearbeiten"}
-                    </p>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* Layer activity history */}
-            <Popover
-              open={historyOpen}
-              onOpenChange={(open) => {
-                setHistoryOpen(open);
-                if (open) loadHistory();
-              }}
-            >
-              <PopoverTrigger
+            {/* ⋮ More actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 render={
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-5 w-5"
+                  <button
+                    type="button"
+                    className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                     onClick={(e) => e.stopPropagation()}
-                    title="Verlauf dieser Ebene"
                   />
                 }
               >
-                <History className="h-3 w-3" />
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-72 p-2"
+                <MoreHorizontal className="h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="bottom"
                 align="end"
                 onClick={(e) => e.stopPropagation()}
               >
-                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-                  <Clock className="h-3 w-3 text-muted-foreground" />
-                  Änderungshistorie
-                </p>
-                {historyLoading && (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
+                <DropdownMenuItem
+                  onClick={() => onStartEdit(layer.id, layer.name)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Umbenennen
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setColorPickerOpen(true)}>
+                  <IconPalette className="h-3.5 w-3.5" />
+                  Farbe ändern
+                </DropdownMenuItem>
+                {onDuplicateLayer && (
+                  <DropdownMenuItem onClick={() => onDuplicateLayer(layer.id)}>
+                    <CopyPlus className="h-3.5 w-3.5" />
+                    Duplizieren
+                  </DropdownMenuItem>
                 )}
-                {!historyLoading && historyItems.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-3">
-                    Keine Änderungen aufgezeichnet
-                  </p>
+                {onCopyToArea && (
+                  <DropdownMenuItem
+                    onClick={() => onCopyToArea(layer.id, layer.name)}
+                  >
+                    <ArrowRightLeft className="h-3.5 w-3.5" />
+                    In anderes Gebiet kopieren
+                  </DropdownMenuItem>
                 )}
-                {!historyLoading && historyItems.length > 0 && (
-                  <div className="space-y-1 max-h-52 overflow-y-auto">
-                    {historyItems.map((item, i) => {
-                      const isAdd = item.changeType === "add_postal_codes";
-                      const codes = Array.isArray(item.sampleCodes)
-                        ? (item.sampleCodes as string[])
-                        : [];
-                      const preview =
-                        codes.slice(0, 3).join(", ") +
-                        (codes.length > 3 ? ` +${codes.length - 3}` : "");
-                      const date = item.createdAt
-                        ? new Date(item.createdAt).toLocaleDateString("de-DE", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "";
-                      return (
-                        <div
-                          key={i}
-                          className="flex items-start gap-1.5 text-xs py-1 border-b last:border-0"
+                {onMergeLayer && otherLayers.length > 0 && (
+                  <DropdownMenuItem
+                    onClick={() => onMergeLayer(layer.id, layer.name)}
+                  >
+                    <GitMerge className="h-3.5 w-3.5" />
+                    Zusammenführen
+                  </DropdownMenuItem>
+                )}
+                {onSplitLayer && postalCodes.length >= 4 && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Scissors className="h-3.5 w-3.5" />
+                      Aufteilen
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {[2, 3, 4, 5].map((n) => (
+                        <DropdownMenuItem
+                          key={n}
+                          disabled={postalCodes.length < n}
+                          onClick={() => onSplitLayer(layer.id, n)}
                         >
-                          <span
-                            className={cn(
-                              "shrink-0 mt-0.5 font-bold",
-                              isAdd ? "text-green-600" : "text-red-500"
-                            )}
-                          >
-                            {isAdd ? "+" : "−"}
-                          </span>
-                          <span className="flex-1 min-w-0">
-                            <span className="font-medium">
-                              {item.postalCodeCount} PLZ
-                            </span>
-                            {preview && (
-                              <span className="text-muted-foreground ml-1 truncate block">
-                                {preview}
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-[9px] text-muted-foreground shrink-0 tabular-nums">
-                            {date}
-                          </span>
+                          {n}× (~{Math.ceil(postalCodes.length / n)} PLZ)
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
+                {onCompareLayer && postalCodes.length > 0 && (
+                  <DropdownMenuItem onClick={() => onCompareLayer(layer.id)}>
+                    <GitCompareArrows className="h-3.5 w-3.5" />
+                    Vergleichen
+                  </DropdownMenuItem>
+                )}
+                {onSetGroup && (
+                  <DropdownMenuItem onClick={() => setGroupPopoverOpen(true)}>
+                    {layer.groupName ? (
+                      <FolderOpen className="h-3.5 w-3.5" />
+                    ) : (
+                      <Folder className="h-3.5 w-3.5" />
+                    )}
+                    {layer.groupName
+                      ? `Gruppe: ${layer.groupName}`
+                      : "Gruppe zuweisen"}
+                  </DropdownMenuItem>
+                )}
+                {onZoomToLayer && (layer.postalCodes?.length ?? 0) > 0 && (
+                  <DropdownMenuItem onClick={() => onZoomToLayer(layer.id)}>
+                    <Focus className="h-3.5 w-3.5" />
+                    Karte zentrieren
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                {postalCodes.length > 0 && (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      const codes =
+                        layer.postalCodes?.map((pc) => `D-${pc.postalCode}`) ??
+                        [];
+                      if (codes.length > 0) {
+                        await copyPostalCodesCSV(codes);
+                      } else {
+                        toast.info("Keine Postleitzahlen zum Kopieren");
+                      }
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    PLZ kopieren
+                  </DropdownMenuItem>
+                )}
+                {onImportCSV && (
+                  <DropdownMenuItem onClick={() => onImportCSV(layer.id)}>
+                    <Upload className="h-3.5 w-3.5" />
+                    CSV importieren
+                  </DropdownMenuItem>
+                )}
+                {onExportCSV && postalCodes.length > 0 && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      onExportCSV(
+                        layer.id,
+                        layer.name,
+                        postalCodes.map((pc) => pc.postalCode)
+                      )
+                    }
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    CSV exportieren
+                  </DropdownMenuItem>
+                )}
+                {onNotesChange && (
+                  <DropdownMenuItem onClick={() => setNotesExpanded((v) => !v)}>
+                    <StickyNote className="h-3.5 w-3.5" />
+                    {notesExpanded ? "Notizen schließen" : "Notizen bearbeiten"}
+                    {layer.notes && !notesExpanded && (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                    )}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={() => {
+                    loadHistory();
+                    setHistoryOpen(true);
+                  }}
+                >
+                  <History className="h-3.5 w-3.5" />
+                  Verlauf anzeigen
+                </DropdownMenuItem>
+                {onToggleLock && (
+                  <DropdownMenuItem onClick={() => onToggleLock(layer.id)}>
+                    {isLocked ? (
+                      <LockOpen className="h-3.5 w-3.5" />
+                    ) : (
+                      <Lock className="h-3.5 w-3.5" />
+                    )}
+                    {isLocked ? "Entsperren" : "Sperren"}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                {onClearPLZ && postalCodes.length > 0 && (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => onClearPLZ(layer.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Alle PLZ löschen
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onDelete(layer.id)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Layer löschen
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* ── Row 2: PLZ stats (only when codes exist) ── */}
+        {postalCodes.length > 0 ? (
+          <div className="flex items-center gap-1.5 mt-0.5 pl-[1.875rem]">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] px-1 py-0 h-4 cursor-default tabular-nums shrink-0"
+                  />
+                }
+              >
+                {postalCodes.length}
+              </TooltipTrigger>
+              <TooltipContent className="min-w-[140px]">
+                <p className="font-medium mb-1">
+                  {postalCodes.length} PLZ
+                  {allCodesSet && allCodesSet.size > 0
+                    ? ` · ${((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}% des Gebiets`
+                    : ""}
+                </p>
+                {prefixDistribution.length > 0 && (
+                  <div className="space-y-0.5">
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wide mb-1">
+                      Top Regionen
+                    </p>
+                    {prefixDistribution.slice(0, 5).map(([prefix, count]) => (
+                      <div key={prefix} className="flex items-center gap-1.5">
+                        <span className="font-mono text-[10px] w-6">
+                          {prefix}
+                        </span>
+                        <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              backgroundColor: layer.color,
+                              width: `${Math.round((count / postalCodes.length) * 100)}%`,
+                            }}
+                          />
                         </div>
-                      );
-                    })}
+                        <span className="text-[10px] text-muted-foreground tabular-nums w-6 text-right">
+                          {count}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
-              </PopoverContent>
-            </Popover>
-
-            {/* Layer lock */}
-            {onToggleLock && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant={isLocked ? "secondary" : "outline"}
-                      size="icon"
-                      className={cn(
-                        "h-5 w-5",
-                        isLocked && "text-amber-600 border-amber-400"
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleLock(layer.id);
-                      }}
-                    />
-                  }
-                >
-                  {isLocked ? (
-                    <Lock className="h-3 w-3" />
-                  ) : (
-                    <LockOpen className="h-3 w-3" />
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {isLocked
-                      ? "Ebene gesperrt – entsperren?"
-                      : "Ebene sperren"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
+              </TooltipContent>
+            </Tooltip>
+            {allCodesSet && allCodesSet.size > 0 && (
+              <div className="flex items-center gap-0.5 flex-1 min-w-0">
+                <div className="w-10 h-1.5 rounded-full overflow-hidden bg-muted shrink-0">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.round((postalCodes.length / allCodesSet.size) * 100)}%`,
+                      backgroundColor: layer.color,
+                      opacity: 0.85,
+                    }}
+                  />
+                </div>
+                <span className="text-[9px] text-muted-foreground tabular-nums">
+                  {((postalCodes.length / allCodesSet.size) * 100).toFixed(1)}%
+                </span>
+              </div>
             )}
-            {onZoomToLayer && (layer.postalCodes?.length ?? 0) > 0 && (
+            {duplicateCount > 0 && (
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onZoomToLayer(layer.id);
-                      }}
-                    />
+                    <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 border-0 gap-0.5 cursor-default shrink-0" />
                   }
                 >
-                  <Focus className="h-3 w-3" />
+                  <TriangleAlert className="h-2.5 w-2.5" />
+                  {duplicateCount}
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Karte auf Ebene fokussieren</p>
+                  <p>{duplicateCount} PLZ in mehreren Gebieten</p>
                 </TooltipContent>
               </Tooltip>
             )}
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-1 mt-0.5 pl-[1.875rem]">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30 gap-0.5 cursor-default shrink-0" />
+                }
+              >
+                <TriangleAlert className="h-2.5 w-2.5" />
+                Leer
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-medium">Kein PLZ zugewiesen</p>
+                <p className="text-muted-foreground text-[11px] mt-0.5">
+                  Klicke auf PLZ auf der Karte oder nutze Präfix-Hinzufügen.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
+        {/* History Dialog */}
+        <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+          <DialogContent
+            className="max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-sm flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                Änderungshistorie — {layer.name}
+              </DialogTitle>
+            </DialogHeader>
+            {historyLoading && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!historyLoading && historyItems.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Keine Änderungen aufgezeichnet
+              </p>
+            )}
+            {!historyLoading && historyItems.length > 0 && (
+              <div className="space-y-1 max-h-72 overflow-y-auto">
+                {historyItems.map((item, i) => {
+                  const isAdd = item.changeType === "add_postal_codes";
+                  const codes = Array.isArray(item.sampleCodes)
+                    ? (item.sampleCodes as string[])
+                    : [];
+                  const preview =
+                    codes.slice(0, 3).join(", ") +
+                    (codes.length > 3 ? ` +${codes.length - 3}` : "");
+                  const date = item.createdAt
+                    ? new Date(item.createdAt).toLocaleDateString("de-DE", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "";
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-start gap-1.5 text-xs py-1.5 border-b last:border-0"
+                    >
+                      <span
+                        className={cn(
+                          "shrink-0 mt-0.5 font-bold",
+                          isAdd ? "text-green-600" : "text-red-500"
+                        )}
+                      >
+                        {isAdd ? "+" : "−"}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="font-medium">
+                          {item.postalCodeCount} PLZ
+                        </span>
+                        {preview && (
+                          <span className="text-muted-foreground ml-1 truncate block">
+                            {preview}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground shrink-0 tabular-nums">
+                        {date}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Group Dialog */}
+        {onSetGroup && (
+          <Dialog open={groupPopoverOpen} onOpenChange={setGroupPopoverOpen}>
+            <DialogContent
+              className="max-w-xs"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DialogHeader>
+                <DialogTitle className="text-sm">Gruppe zuweisen</DialogTitle>
+              </DialogHeader>
+              {existingGroups.length > 0 && (
+                <div className="space-y-0.5">
+                  {existingGroups.map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      className={cn(
+                        "w-full text-left px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors flex items-center gap-2",
+                        layer.groupName === g && "bg-accent font-medium"
+                      )}
+                      onClick={() => {
+                        onSetGroup(layer.id, g);
+                        setGroupPopoverOpen(false);
+                      }}
+                    >
+                      <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 text-sm border rounded-md px-3 py-1.5 bg-background min-w-0 focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="Neue Gruppe…"
+                  value={newGroupInput}
+                  onChange={(e) => setNewGroupInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === "Enter" && newGroupInput.trim()) {
+                      onSetGroup(layer.id, newGroupInput.trim());
+                      setNewGroupInput("");
+                      setGroupPopoverOpen(false);
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <Button
+                  size="icon"
+                  disabled={!newGroupInput.trim()}
+                  onClick={() => {
+                    if (!newGroupInput.trim()) return;
+                    onSetGroup(layer.id, newGroupInput.trim());
+                    setNewGroupInput("");
+                    setGroupPopoverOpen(false);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {layer.groupName && (
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 rounded-md text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                  onClick={() => {
+                    onSetGroup(layer.id, null);
+                    setGroupPopoverOpen(false);
+                  }}
+                >
+                  Aus Gruppe entfernen
+                </button>
+              )}
+            </DialogContent>
+          </Dialog>
+        )}
         {layer.notes && (
           <Tooltip>
             <TooltipTrigger

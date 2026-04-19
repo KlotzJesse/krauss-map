@@ -2329,9 +2329,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
     []
   );
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS)
-  );
+  const sensors = useSensors(useSensor(PointerSensor, POINTER_SENSOR_OPTIONS));
 
   const layerIds = useMemo(
     () => optimisticLayers.map((l) => l.id),
@@ -2379,7 +2377,11 @@ const LayerManagementSection = memo(function LayerManagementSection({
         l.id,
         optimisticLayers
           .filter((other) => other.id !== l.id)
-          .map((other) => ({ id: other.id, name: other.name, color: other.color }))
+          .map((other) => ({
+            id: other.id,
+            name: other.name,
+            color: other.color,
+          }))
       );
     }
     return m;
@@ -3286,7 +3288,9 @@ const LayerManagementSection = memo(function LayerManagementSection({
                             }
                             onNotesChange={handleNotesChange}
                             onMovePlz={handleMovePlz}
-                            otherLayers={otherLayersMap.get(layer.id) ?? EMPTY_ARRAY}
+                            otherLayers={
+                              otherLayersMap.get(layer.id) ?? EMPTY_ARRAY
+                            }
                             isSelected={
                               selectMode ? selectedIds.has(layer.id) : undefined
                             }
