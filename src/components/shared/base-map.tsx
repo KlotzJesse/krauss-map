@@ -58,6 +58,7 @@ import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useStatesData } from "@/lib/hooks/use-states-data";
 import {
   useActiveLayerState,
+  useMapView,
   useSetMapCenterZoom,
 } from "@/lib/url-state/map-state";
 import { cn } from "@/lib/utils";
@@ -116,6 +117,21 @@ const FloatingDrawingEditBar = dynamic(
 // Static style objects — hoisted to avoid allocating new objects on every render
 const MAP_CONTAINER_STYLE = { minHeight: "400px" } as const;
 const MAP_STYLE = { width: "100%", height: "100%" } as const;
+
+const MAP_STYLES = [
+  { id: "colorful", label: "Bunt", url: "/versatilescolorful.json" },
+  {
+    id: "light",
+    label: "Hell",
+    url: "https://tiles.versatiles.org/styles/colorful/style.json",
+  },
+  {
+    id: "neutrino",
+    label: "Minimal",
+    url: "https://demotiles.maplibre.org/style.json",
+  },
+] as const;
+type MapStyleId = (typeof MAP_STYLES)[number]["id"];
 
 // Memoized error message component to prevent re-renders
 const MapErrorMessage = memo(({ message }: MapErrorMessageProps) => (
@@ -567,7 +583,8 @@ const MapInner = memo(function MapInner({
       : undefined;
 
   // deck.gl layers (polygons, fills, hover, preview) — cursor managed via direct DOM ref
-  const { deckLayers, onHover, hoverTooltip, unassignedCount } = useDeckLayers({
+  const hoverTooltipRef = useRef<HTMLDivElement | null>(null);
+  const { deckLayers, onHover, unassignedCount } = useDeckLayers({
     data,
     statesData,
     countryShapesData,
@@ -581,6 +598,7 @@ const MapInner = memo(function MapInner({
     beforeId: firstSymbolLayerId,
     highlightedCodes: highlightedConflictCodes,
     showUnassigned,
+    hoverTooltipRef,
   });
 
   // MapLibre native labels (hybrid escape hatch)
@@ -1013,34 +1031,20 @@ const MapInner = memo(function MapInner({
         />
       )}
 
-      {/* Hover tooltip */}
-      {hoverTooltip && (
-        <div
-          className="absolute z-20 pointer-events-none"
-          style={{ left: hoverTooltip.x + 12, top: hoverTooltip.y - 10 }}
-        >
-          <div className="bg-popover/95 border border-border rounded shadow-md px-2 py-1.5 text-xs min-w-[80px]">
-            <div className="font-mono font-semibold text-foreground">
-              {hoverTooltip.code}
-            </div>
-            {hoverTooltip.layers.length > 0 && (
-              <div className="mt-1 space-y-0.5">
-                {hoverTooltip.layers.map((l) => (
-                  <div key={l.name} className="flex items-center gap-1.5">
-                    <span
-                      className="inline-block w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: l.color }}
-                    />
-                    <span className="text-muted-foreground truncate max-w-[140px]">
-                      {l.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Hover tooltip — always rendered, shown/hidden via direct DOM (no React re-render on hover) */}
+      <div
+        ref={hoverTooltipRef}
+        className="absolute z-20 pointer-events-none"
+        style={{ display: "none", left: 0, top: 0 }}
+      >
+        <div className="bg-popover/95 border border-border rounded shadow-md px-2 py-1.5 text-xs min-w-[80px]">
+          <div
+            data-tooltip-code
+            className="font-mono font-semibold text-foreground"
+          />
+          <div data-tooltip-layers className="mt-1 space-y-0.5" />
         </div>
-      )}
+      </div>
 
       {/* PLZ Reassign popup — click a PLZ that belongs to a different layer */}
       {reassignPopup && (
@@ -1211,26 +1215,13 @@ const BaseMapComponent = ({
   onSnapshotReady,
 }: BaseMapProps) => {
   const countryConfig = country ? COUNTRY_CONFIGS[country] : undefined;
-  const effectiveCenter = center ?? countryConfig?.center ?? DACH_CENTER;
-  const effectiveZoom = zoom ?? countryConfig?.zoom ?? DACH_ZOOM;
-  // Controlled view state for URL sync (narrow: only setter, no view subscription)
-  const setMapCenterZoom = useSetMapCenterZoom();
+  // Read map view from URL for back/forward navigation sync — only inside BaseMapComponent
+  // so outer components (PostalCodesMap, etc.) don't subscribe to URL changes
+  const [{ center: urlCenter, zoom: urlZoom }] = useMapView();
+  const effectiveCenter =
+    center ?? urlCenter ?? countryConfig?.center ?? DACH_CENTER;
+  const effectiveZoom = zoom ?? urlZoom ?? countryConfig?.zoom ?? DACH_ZOOM;
   const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const MAP_STYLES = [
-    { id: "colorful", label: "Bunt", url: "/versatilescolorful.json" },
-    {
-      id: "light",
-      label: "Hell",
-      url: "https://tiles.versatiles.org/styles/colorful/style.json",
-    },
-    {
-      id: "neutrino",
-      label: "Minimal",
-      url: "https://demotiles.maplibre.org/style.json",
-    },
-  ] as const;
-  type MapStyleId = (typeof MAP_STYLES)[number]["id"];
 
   const [mapStyleId, setMapStyleId] = useState<MapStyleId>(() => {
     if (typeof window !== "undefined") {
@@ -1250,6 +1241,11 @@ const BaseMapComponent = ({
     setMapStyleId(next.id);
     localStorage.setItem("map-style-id", next.id);
   }, [mapStyleId]);
+
+  const handleSetMapStyle = useCallback((id: string) => {
+    setMapStyleId(id as MapStyleId);
+    localStorage.setItem("map-style-id", id);
+  }, []);
 
   const mapExternalRef = useRef<MapRef>(null);
   // Track URL positions we wrote ourselves so the sync effect can ignore them
@@ -1275,7 +1271,8 @@ const BaseMapComponent = ({
           "mapView",
           JSON.stringify({ center: [longitude, latitude], zoom })
         );
-        window.history.replaceState(null, "", url.toString());
+        // Pass existing state (has __NA: true) so Next.js skips ACTION_RESTORE dispatch
+        window.history.replaceState(window.history.state, "", url.toString());
       }, 750);
     },
     []
@@ -1361,10 +1358,7 @@ const BaseMapComponent = ({
               onCycleMapStyle={handleCycleMapStyle}
               mapStyleLabel={MAP_STYLES.find((s) => s.id === mapStyleId)?.label}
               mapStyles={MAP_STYLES}
-              onSetMapStyle={(id) => {
-                setMapStyleId(id as MapStyleId);
-                localStorage.setItem("map-style-id", id);
-              }}
+              onSetMapStyle={handleSetMapStyle}
               onSnapshotReady={onSnapshotReady}
             />
           </Map>

@@ -1,5 +1,5 @@
 import { useQueryState } from "nuqs";
-import { useMemo, useRef, useTransition } from "react";
+import { useEffect, useMemo, useReducer, useRef, useTransition } from "react";
 
 import { DACH_CENTER, DACH_ZOOM } from "../config/countries";
 import { useStableCallback } from "../hooks/use-stable-callback";
@@ -7,20 +7,35 @@ import { useStableCallback } from "../hooks/use-stable-callback";
 const DEFAULT_CENTER = DACH_CENTER;
 const DEFAULT_ZOOM = DACH_ZOOM;
 
-// Helper for atomic map view state
+function parseMapViewFromSearch(search: string) {
+  const params = new URLSearchParams(search);
+  const raw = params.get("mapView");
+  if (!raw) return { center: DEFAULT_CENTER as [number, number], zoom: DEFAULT_ZOOM };
+  try {
+    return JSON.parse(raw) as { center: [number, number]; zoom: number };
+  } catch {
+    return { center: DEFAULT_CENTER as [number, number], zoom: DEFAULT_ZOOM };
+  }
+}
+
+// Reads mapView directly from window.location — bypasses nuqs to prevent
+// the full Router cascade that fires on every replaceState during map pan.
+// Only subscribes to popstate (back/forward navigation), not pan/zoom writes.
 export function useMapView() {
-  const [mapView, setMapViewRaw] = useQueryState("mapView");
-  const defaultView = {
-    center: DEFAULT_CENTER as [number, number],
-    zoom: DEFAULT_ZOOM,
-  };
-  const parsed = mapView ? JSON.parse(mapView) : defaultView;
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
-  // Extract primitive values for stable dependency tracking
-  const parsedLng = parsed.center[0] as number;
-  const parsedLat = parsed.center[1] as number;
+  useEffect(() => {
+    window.addEventListener("popstate", forceUpdate);
+    return () => window.removeEventListener("popstate", forceUpdate);
+  }, []);
 
-  // Memoize center array to avoid new reference on every render
+  const parsed = parseMapViewFromSearch(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
+
+  const parsedLng = parsed.center[0];
+  const parsedLat = parsed.center[1];
+
   const prevCenterRef = useRef<[number, number]>([parsedLng, parsedLat]);
   const stableCenter = useMemo(() => {
     const [prevLng, prevLat] = prevCenterRef.current;
@@ -32,12 +47,15 @@ export function useMapView() {
     return next;
   }, [parsedLng, parsedLat]);
 
-  const setMapView = (view: { center: [number, number]; zoom: number }) =>
-    setMapViewRaw(JSON.stringify(view));
-  return [
-    { center: stableCenter, zoom: parsed.zoom as number },
-    setMapView,
-  ] as const;
+  const setMapView = useStableCallback(
+    (view: { center: [number, number]; zoom: number }) => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("mapView", JSON.stringify(view));
+      window.history.replaceState(window.history.state, "", url.toString());
+    }
+  );
+
+  return [{ center: stableCenter, zoom: parsed.zoom }, setMapView] as const;
 }
 
 // Narrow hook: only active layer ID and setter (triggers server re-render)
@@ -60,14 +78,12 @@ export function useActiveLayerState() {
   return { activeLayerId: parsedActiveLayerId, isLayerPending, setActiveLayer };
 }
 
-// Narrow hook: only map center/zoom setter — bypasses useMapView subscription
-// to avoid re-renders when the URL updates during continuous zoom/pan
+// Writes mapView directly to URL — bypasses nuqs to prevent any re-render
+// cascade during continuous pan/zoom. No nuqs subscription created.
 export function useSetMapCenterZoom() {
-  const [, setMapViewRaw] = useQueryState("mapView", {
-    shallow: true,
-    history: "replace",
-  });
   return useStableCallback((center: [number, number], zoom: number) => {
-    setMapViewRaw(JSON.stringify({ center, zoom }));
+    const url = new URL(window.location.href);
+    url.searchParams.set("mapView", JSON.stringify({ center, zoom }));
+    window.history.replaceState(window.history.state, "", url.toString());
   });
 }

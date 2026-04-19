@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 
@@ -73,15 +73,17 @@ export function ResizableSidebarLayout({
     }
   }, [width]);
 
+  const sidebarStyle = useMemo(
+    () =>
+      ({
+        "--sidebar-width": `${width}px`,
+        "--header-height": headerHeight,
+      }) as React.CSSProperties,
+    [width, headerHeight]
+  );
+
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": `${width}px`,
-          "--header-height": headerHeight,
-        } as React.CSSProperties
-      }
-    >
+    <SidebarProvider style={sidebarStyle}>
       {children}
       {/* Drag handle overlaid on the sidebar edge */}
       <div

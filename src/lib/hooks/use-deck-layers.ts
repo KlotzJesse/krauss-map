@@ -377,6 +377,8 @@ interface UseDeckLayersProps {
   highlightedCodes?: Set<string> | null;
   /** When true, renders a highlight overlay for postal codes not assigned to any layer. */
   showUnassigned?: boolean;
+  /** Ref to the tooltip DOM element — updated directly to avoid React re-renders on hover. */
+  hoverTooltipRef?: RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -397,6 +399,7 @@ export function useDeckLayers({
   beforeId,
   highlightedCodes,
   showUnassigned = false,
+  hoverTooltipRef,
 }: UseDeckLayersProps) {
   // Hover state: store the currently hovered feature for the outline layer
   const [hoveredFeature, setHoveredFeature] = useState<Feature<
@@ -537,17 +540,53 @@ export function useDeckLayers({
   );
 
   // Handle hover from deck.gl picking — cursor set via direct DOM mutation (no React re-render)
-  const [hoverTooltip, setHoverTooltip] = useState<{
-    x: number;
-    y: number;
-    code: string;
-    layers: Array<{ name: string; color: string }>;
-  } | null>(null);
+  // hoverTooltip is managed via DOM ref to avoid MapInner re-renders on every mouse move
+  const hoverTooltipRefInternal = useRef<HTMLDivElement | null>(null);
+  const effectiveTooltipRef = hoverTooltipRef ?? hoverTooltipRefInternal;
 
   const layersRef = useRef(layers);
   layersRef.current = layers;
   const countryRef = useRef(country);
   countryRef.current = country;
+
+  const showTooltip = useCallback(
+    (x: number, y: number, code: string, matchingLayers: Array<{ name: string; color: string }>) => {
+      const tooltipEl = effectiveTooltipRef.current;
+      if (!tooltipEl) return;
+      tooltipEl.style.left = `${x + 12}px`;
+      tooltipEl.style.top = `${y - 10}px`;
+      tooltipEl.style.display = "block";
+      const codeEl = tooltipEl.querySelector<HTMLElement>("[data-tooltip-code]");
+      const layersEl = tooltipEl.querySelector<HTMLElement>("[data-tooltip-layers]");
+      if (codeEl) codeEl.textContent = code;
+      if (layersEl) {
+        layersEl.innerHTML = "";
+        for (const l of matchingLayers) {
+          const row = document.createElement("div");
+          row.className = "flex items-center gap-1.5";
+          const dot = document.createElement("span");
+          dot.className = "inline-block w-2 h-2 rounded-full shrink-0";
+          dot.style.backgroundColor = l.color;
+          const name = document.createElement("span");
+          name.className = "text-muted-foreground truncate max-w-[140px]";
+          name.textContent = l.name;
+          row.appendChild(dot);
+          row.appendChild(name);
+          layersEl.appendChild(row);
+        }
+      }
+    },
+    // effectiveTooltipRef is a stable ref object — intentionally excluded from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const hideTooltip = useCallback(() => {
+    const tooltipEl = effectiveTooltipRef.current;
+    if (tooltipEl) tooltipEl.style.display = "none";
+    // effectiveTooltipRef is a stable ref object — intentionally excluded from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onHover = useCallback(
     (info: PickingInfo) => {
@@ -574,24 +613,19 @@ export function useDeckLayers({
               l.postalCodes?.some((pc) => pc.postalCode === rawCode)
             )
             .map((l) => ({ name: l.name, color: l.color }));
-          // Always update tooltip position
-          setHoverTooltip({
-            x: info.x ?? 0,
-            y: info.y ?? 0,
-            code: rawCode ?? code,
-            layers: matchingLayers,
-          });
+          // Update tooltip via direct DOM — no React re-render
+          showTooltip(info.x ?? 0, info.y ?? 0, rawCode ?? code, matchingLayers);
         }
       } else if (hoveredCodeRef.current !== null) {
         hoveredCodeRef.current = null;
         setHoveredFeature(null);
-        setHoverTooltip(null);
+        hideTooltip();
         if (canvas) {
           canvas.style.cursor = "grab";
         }
       }
     },
-    [isCursorMode, mapCanvasRef]
+    [isCursorMode, mapCanvasRef, showTooltip, hideTooltip]
   );
 
   // Clear hover state when leaving cursor mode (e.g., switching to drawing)
@@ -599,13 +633,13 @@ export function useDeckLayers({
     if (!isCursorMode) {
       hoveredCodeRef.current = null;
       setHoveredFeature(null);
-      setHoverTooltip(null);
+      hideTooltip();
       const canvas = mapCanvasRef.current;
       if (canvas) {
         canvas.style.cursor = "grab";
       }
     }
-  }, [isCursorMode, mapCanvasRef]);
+  }, [isCursorMode, mapCanvasRef, hideTooltip]);
 
   // State boundaries layer — isolated since statesData never changes after load
   const stateBoundariesLayer = useMemo(
@@ -953,7 +987,6 @@ export function useDeckLayers({
   return {
     deckLayers,
     onHover,
-    hoverTooltip,
     unassignedCount,
   } as const;
 }
