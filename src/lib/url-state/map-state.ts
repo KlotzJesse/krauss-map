@@ -52,7 +52,9 @@ export function useMapView() {
     (view: { center: [number, number]; zoom: number }) => {
       const url = new URL(window.location.href);
       url.searchParams.set("mapView", JSON.stringify(view));
-      window.history.replaceState(window.history.state, "", url.toString());
+      // "__nuqs__" marker tells nuqs's history patch to skip sync — prevents
+      // all nuqs consumers from re-rendering on every map pan/zoom write.
+      window.history.replaceState(window.history.state, "__nuqs__", url.toString());
     }
   );
 
@@ -85,6 +87,7 @@ export function useSetMapCenterZoom() {
   return useStableCallback((center: [number, number], zoom: number) => {
     const url = new URL(window.location.href);
     url.searchParams.set("mapView", JSON.stringify({ center, zoom }));
-    window.history.replaceState(window.history.state, "", url.toString());
+    // "__nuqs__" marker bypasses nuqs history patch — no nuqs consumer re-renders.
+    window.history.replaceState(window.history.state, "__nuqs__", url.toString());
   });
 }

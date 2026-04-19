@@ -1293,8 +1293,9 @@ const BaseMapComponent = ({
           "mapView",
           JSON.stringify({ center: [longitude, latitude], zoom })
         );
-        // Pass existing state (has __NA: true) so Next.js skips ACTION_RESTORE dispatch
-        window.history.replaceState(window.history.state, "", url.toString());
+        // "__nuqs__" marker bypasses nuqs history patch — prevents all nuqs hooks from
+        // re-rendering on every debounced pan write. Next.js also skips ACTION_RESTORE.
+        window.history.replaceState(window.history.state, "__nuqs__", url.toString());
       }, 750);
     },
     []
