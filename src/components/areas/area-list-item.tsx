@@ -317,7 +317,7 @@ export const AreaListItem = memo(
             {!isSelectable &&
               !isArchived &&
               (area.totalPostalCodeCount ?? 0) > 0 && (
-                <div className="px-2 pb-1.5">
+                <div className="px-2 pb-1">
                   {(() => {
                     const pct = Math.min(
                       100,

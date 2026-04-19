@@ -2923,7 +2923,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
           )}
 
           {/* Layer list */}
-          <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+          <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
             {plzSearchResults !== null && (
               <div className="mx-1 mb-1 rounded-md border bg-muted/30 px-2 py-1.5 text-xs">
                 <div className="flex items-center gap-1 mb-1 text-muted-foreground font-medium">
