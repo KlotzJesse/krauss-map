@@ -6,7 +6,7 @@ import {
   LocateFixed,
   Maximize2,
   Printer,
-  PlusIcon,
+  PanelLeftOpen,
   Eye,
   EyeOff,
   Search,
@@ -152,9 +152,15 @@ MapErrorMessage.displayName = "MapErrorMessage";
 // Memoized toggle button component to prevent re-renders
 const ToggleButton = memo(
   ({ onClick, title, ariaLabel, children }: ToggleButtonProps) => (
-    <Button onClick={onClick} title={title} aria-label={ariaLabel}>
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+    >
       {children}
-    </Button>
+    </button>
   )
 );
 ToggleButton.displayName = "ToggleButton";
@@ -869,7 +875,7 @@ const MapInner = memo(function MapInner({
             title="Kartentools anzeigen"
             ariaLabel="Kartentools-Panel anzeigen"
           >
-            <PlusIcon width={24} height={24} />
+            <PanelLeftOpen className="h-4 w-4" />
           </ToggleButton>
         </div>
       </Activity>
