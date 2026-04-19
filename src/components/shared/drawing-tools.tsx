@@ -2336,10 +2336,22 @@ const LayerManagementSection = memo(function LayerManagementSection({
 
   const sensors = useSensors(useSensor(PointerSensor, POINTER_SENSOR_OPTIONS));
 
-  const layerIds = useMemo(
-    () => optimisticLayers.map((l) => l.id),
-    [optimisticLayers]
-  );
+  // Stable layerIds: only returns a new array when IDs or order actually changes.
+  // Prevents SortableContext from broadcasting updates on visibility/color changes,
+  // which would cascade re-renders to all 17 useSortable subscribers.
+  const layerIdsPrevRef = useRef<number[]>([]);
+  const layerIds = useMemo(() => {
+    const next = optimisticLayers.map((l) => l.id);
+    const prev = layerIdsPrevRef.current;
+    if (
+      next.length === prev.length &&
+      next.every((id, i) => id === prev[i])
+    ) {
+      return prev;
+    }
+    layerIdsPrevRef.current = next;
+    return next;
+  }, [optimisticLayers]);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -2375,21 +2387,36 @@ const LayerManagementSection = memo(function LayerManagementSection({
     (name: string) => dispatchForm({ type: "SET_EDIT_NAME", name }),
     [dispatchForm]
   );
-  // Memoize otherLayers map to avoid new array per item per render
+  // Stable otherLayersMap: reuses array references when id/name/color haven't changed.
+  // Without this, every optimisticLayers update (e.g. visibility toggle) creates new
+  // arrays that defeat memo() on SortableLayerListItem for unchanged layers.
+  const otherLayersMapPrevRef = useRef<
+    Map<number, { id: number; name: string; color: string }[]>
+  >(new Map());
   const otherLayersMap = useMemo(() => {
     const m = new Map<number, { id: number; name: string; color: string }[]>();
+    const prev = otherLayersMapPrevRef.current;
     for (const l of optimisticLayers) {
-      m.set(
-        l.id,
-        optimisticLayers
-          .filter((other) => other.id !== l.id)
-          .map((other) => ({
-            id: other.id,
-            name: other.name,
-            color: other.color,
-          }))
-      );
+      const newArr = optimisticLayers
+        .filter((other) => other.id !== l.id)
+        .map((other) => ({ id: other.id, name: other.name, color: other.color }));
+      const prevArr = prev.get(l.id);
+      if (
+        prevArr &&
+        prevArr.length === newArr.length &&
+        prevArr.every(
+          (p, i) =>
+            p.id === newArr[i].id &&
+            p.name === newArr[i].name &&
+            p.color === newArr[i].color
+        )
+      ) {
+        m.set(l.id, prevArr);
+      } else {
+        m.set(l.id, newArr);
+      }
     }
+    otherLayersMapPrevRef.current = m;
     return m;
   }, [optimisticLayers]);
 
