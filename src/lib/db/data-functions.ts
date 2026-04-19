@@ -19,60 +19,105 @@ export async function getAreas() {
   cacheLife("minutes");
   cacheTag("areas");
   try {
-    const result = await db
-      .select({
-        id: areas.id,
-        name: areas.name,
-        granularity: areas.granularity,
-        isArchived: areas.isArchived,
-        updatedAt: areas.updatedAt,
-        country: areas.country,
-        description: areas.description,
-        postalCodeCount: sql<number>`(
-          SELECT COUNT(*)::int
+    // CTE-based query: all aggregates computed in one pass instead of N correlated
+    // subqueries per row, which caused timeouts on large datasets.
+    const result = await db.execute<{
+      id: number;
+      name: string;
+      granularity: string;
+      is_archived: string;
+      updated_at: Date;
+      country: string;
+      description: string | null;
+      postalCodeCount: number;
+      uniquePostalCodeCount: number;
+      layerCount: number;
+      tags: { id: number; name: string; color: string }[];
+      conflictCount: number;
+      totalPostalCodeCount: number;
+    }>(sql`
+      WITH
+        plz_counts AS (
+          SELECT al.area_id,
+                 COUNT(*)::int                       AS total_count,
+                 COUNT(DISTINCT alpc.postal_code)::int AS unique_count
           FROM area_layer_postal_codes alpc
           INNER JOIN area_layers al ON al.id = alpc.layer_id
-          WHERE al.area_id = "areas"."id"
-        )`.as("postalCodeCount"),
-        uniquePostalCodeCount: sql<number>`(
-          SELECT COUNT(DISTINCT alpc.postal_code)::int
-          FROM area_layer_postal_codes alpc
-          INNER JOIN area_layers al ON al.id = alpc.layer_id
-          WHERE al.area_id = "areas"."id"
-        )`.as("uniquePostalCodeCount"),
-        layerCount: sql<number>`(
-          SELECT COUNT(*)::int
-          FROM area_layers al
-          WHERE al.area_id = "areas"."id"
-        )`.as("layerCount"),
-        tags: sql<{ id: number; name: string; color: string }[]>`(
-          SELECT coalesce(json_agg(json_build_object('id', at.id, 'name', at.name, 'color', at.color) ORDER BY at.name), '[]'::json)
+          GROUP BY al.area_id
+        ),
+        layer_counts AS (
+          SELECT area_id, COUNT(*)::int AS cnt
+          FROM area_layers
+          GROUP BY area_id
+        ),
+        tags_agg AS (
+          SELECT ata.area_id,
+                 COALESCE(
+                   json_agg(json_build_object('id', at.id, 'name', at.name, 'color', at.color) ORDER BY at.name),
+                   '[]'::json
+                 ) AS tags
           FROM area_tag_assignments ata
           INNER JOIN area_tags at ON at.id = ata.tag_id
-          WHERE ata.area_id = "areas"."id"
-        )`.as("tags"),
-        conflictCount: sql<number>`(
-          SELECT COUNT(DISTINCT own.postal_code)::int
-          FROM area_layer_postal_codes own
-          INNER JOIN area_layers ol ON ol.id = own.layer_id AND ol.area_id = "areas"."id"
-          WHERE EXISTS (
-            SELECT 1 FROM area_layer_postal_codes other
-            INNER JOIN area_layers tl ON tl.id = other.layer_id AND tl.area_id != "areas"."id"
-            INNER JOIN areas a2 ON a2.id = tl.area_id AND a2.is_archived = 'false'
-            WHERE other.postal_code = own.postal_code
-          )
-        )`.as("conflictCount"),
-        totalPostalCodeCount: sql<number>`(
-          SELECT COUNT(*)::int
-          FROM postal_codes pc
-          WHERE pc.granularity = "areas"."granularity"
-            AND pc.country = "areas"."country"
-            AND pc.is_active = 'true'
-        )`.as("totalPostalCodeCount"),
-      })
-      .from(areas)
-      .orderBy(desc(areas.updatedAt));
-    return result;
+          GROUP BY ata.area_id
+        ),
+        cross_codes AS (
+          SELECT DISTINCT alpc.postal_code, al.area_id
+          FROM area_layer_postal_codes alpc
+          INNER JOIN area_layers al ON al.id = alpc.layer_id
+          INNER JOIN areas a ON a.id = al.area_id AND a.is_archived = 'false'
+        ),
+        conflict_counts AS (
+          SELECT c1.area_id, COUNT(DISTINCT c1.postal_code)::int AS cnt
+          FROM cross_codes c1
+          INNER JOIN cross_codes c2
+            ON c1.postal_code = c2.postal_code AND c1.area_id != c2.area_id
+          GROUP BY c1.area_id
+        ),
+        granularity_counts AS (
+          SELECT granularity, country, COUNT(*)::int AS cnt
+          FROM postal_codes
+          WHERE is_active = 'true'
+          GROUP BY granularity, country
+        )
+      SELECT
+        a.id,
+        a.name,
+        a.granularity,
+        a.is_archived,
+        a.updated_at,
+        a.country,
+        a.description,
+        COALESCE(pc.total_count,  0) AS "postalCodeCount",
+        COALESCE(pc.unique_count, 0) AS "uniquePostalCodeCount",
+        COALESCE(lc.cnt,          0) AS "layerCount",
+        COALESCE(ta.tags, '[]'::json) AS "tags",
+        COALESCE(cc.cnt,          0) AS "conflictCount",
+        COALESCE(gc.cnt,          0) AS "totalPostalCodeCount"
+      FROM areas a
+      LEFT JOIN plz_counts       pc ON pc.area_id   = a.id
+      LEFT JOIN layer_counts     lc ON lc.area_id   = a.id
+      LEFT JOIN tags_agg         ta ON ta.area_id   = a.id
+      LEFT JOIN conflict_counts  cc ON cc.area_id   = a.id
+      LEFT JOIN granularity_counts gc
+             ON gc.granularity = a.granularity AND gc.country = a.country
+      ORDER BY a.updated_at DESC
+    `);
+
+    return result.rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      granularity: r.granularity,
+      isArchived: r.is_archived,
+      updatedAt: r.updated_at instanceof Date ? r.updated_at.toISOString() : (r.updated_at as string),
+      country: r.country,
+      description: r.description,
+      postalCodeCount: r.postalCodeCount,
+      uniquePostalCodeCount: r.uniquePostalCodeCount,
+      layerCount: r.layerCount,
+      tags: r.tags,
+      conflictCount: r.conflictCount,
+      totalPostalCodeCount: r.totalPostalCodeCount,
+    }));
   } catch (error) {
     console.error("Error fetching areas:", error);
     throw new Error("Failed to fetch areas", { cause: error });
