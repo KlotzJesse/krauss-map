@@ -49,7 +49,7 @@ export function PlzSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="PLZ suchen…"
-          className="pl-8 pr-7 h-7 text-xs"
+          className="pl-8 pr-7 h-8 text-xs"
         />
         {query && (
           <button
