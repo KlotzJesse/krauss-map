@@ -820,6 +820,7 @@ export const LayerListItem = memo(function LayerListItem({
                     side="bottom"
                     align="end"
                     onClick={(e) => e.stopPropagation()}
+                    className="min-w-56"
                   >
                     <DropdownMenuItem
                       onClick={() => onStartEdit(layer.id, layer.name)}
@@ -1494,7 +1495,7 @@ export const LayerListItem = memo(function LayerListItem({
           )}
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent>
+      <ContextMenuContent className="min-w-56">
         <ContextMenuItem onClick={() => onStartEdit(layer.id, layer.name)}>
           <Pencil className="h-3.5 w-3.5" />
           Umbenennen
