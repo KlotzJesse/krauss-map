@@ -966,12 +966,42 @@ export function useDeckLayers({
               return [0, 0, 0, 0];
             }
             const [r, g, b] = style.layerLineColors[1];
-            return [r, g, b, 140] as [number, number, number, number];
+            return [r, g, b, 110] as [number, number, number, number];
           },
           getLineWidth: 1.5,
           lineWidthUnits: "pixels" as const,
           lineCap: "round" as const,
           lineJoint: "round" as const,
+          pickable: false,
+          updateTriggers: {
+            getLineColor: [resolvedStylesVersion],
+          },
+        })
+      );
+
+      // Tertiary outline for 3+ layers: thin gray dashed line indicating multiple layer involvement
+      result.push(
+        new GeoJsonLayer({
+          id: "duplicate-outline-tertiary",
+          data: multiLayerFeaturesData,
+          beforeId,
+          filled: false,
+          stroked: true,
+          getLineColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            if (!code) return [0, 0, 0, 0];
+            const style = resolvedStyles.get(code);
+            // Only show for 3+ layer codes
+            if (!style || style.layerLineColors.length < 3) {
+              return [0, 0, 0, 0];
+            }
+            // Neutral gray to indicate "has 3+ layers"
+            return [120, 120, 120, 90] as [number, number, number, number];
+          },
+          getLineWidth: 0.8,
+          lineWidthUnits: "pixels" as const,
+          lineCap: "butt" as const,
+          lineJoint: "bevel" as const,
           pickable: false,
           updateTriggers: {
             getLineColor: [resolvedStylesVersion],
