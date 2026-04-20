@@ -172,7 +172,7 @@ export const AreaListItem = memo(
         >
           <div className="group/item relative flex flex-col w-full">
             <div
-              className={`relative flex items-center gap-2 w-full h-7 px-2 rounded-md transition-colors ${
+              className={`relative flex items-center gap-2 w-full h-6 px-2 rounded-md transition-colors ${
                 isSelectable && isSelected
                   ? "bg-primary/10 text-primary"
                   : isCurrentRoute && !isSelectable
@@ -266,7 +266,7 @@ export const AreaListItem = memo(
                 <IconPinFilled className="shrink-0 h-2.5 w-2.5 text-amber-500 group-hover/item:opacity-0 transition-opacity" />
               )}
               {!isSelectable && (
-                <div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0 flex items-center">
+                <div className="shrink-0 w-6 h-6 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0 flex items-center">
                   {onTogglePin && (
                     <button
                       type="button"

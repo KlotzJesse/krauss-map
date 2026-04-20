@@ -5108,7 +5108,7 @@ function DrawingToolsImpl({
           </button>
         </CardAction>
       </CardHeader>
-      <CardContent className="space-y-2 overflow-y-auto min-h-0 flex-1">
+      <CardContent className="space-y-1 overflow-y-auto min-h-0 flex-1">
         {/* Granularity Management Section */}
         {granularity && onGranularityChange && (
           <>
