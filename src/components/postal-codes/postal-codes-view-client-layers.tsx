@@ -584,7 +584,7 @@ export function PostalCodesViewClientWithLayers({
         {/* Active layer indicator */}
         {activeLayer && (
           <div
-            className="shrink-0 flex items-center px-2.5 py-1 rounded-md shadow-sm text-xs font-semibold select-none"
+            className="shrink-0 flex items-center px-2.5 h-8 rounded-md shadow-sm text-xs font-semibold select-none"
             style={{
               backgroundColor: activeLayer.color,
               color: isLightColor(activeLayer.color) ? "#1a1a1a" : "#fff",
