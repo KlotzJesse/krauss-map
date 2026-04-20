@@ -102,14 +102,14 @@ export function generateNextColor(existingColors: string[]): string {
   let bestMinDist = -1;
 
   // Try multiple saturation/lightness combos — high-contrast pastel cartographic tones
-  // Soft enough to look pastel, vivid enough to distinguish on map backgrounds
+  // Balanced saturation for clarity on map with lightness for pastel softness
   const slCombos: [number, number][] = [
-    [60, 68], // Primary sweet-spot: soft vivid pastel
-    [57, 71], // Classic pastel
-    [63, 66], // Slightly punchier pastel
-    [55, 73], // Lighter pastel
-    [65, 64], // Rich pastel
-    [52, 75], // Delicate pastel
+    [68, 62], // Primary sweet-spot: high-contrast pastel
+    [65, 64], // Vivid pastel
+    [70, 60], // Rich high-contrast pastel
+    [62, 65], // Balanced pastel
+    [72, 59], // Very vibrant pastel
+    [60, 67], // Softer high-contrast
   ];
 
   for (const [s, l] of slCombos) {
@@ -144,9 +144,9 @@ export function generatePalette(count: number): string[] {
 
   for (let i = 0; i < count; i++) {
     const hue = (i * GOLDEN_ANGLE) % 360;
-    // High-contrast pastel: soft lightness, moderate saturation — visible but not harsh
-    const saturation = 57 + (i % 3) * 4; // 57, 61, 65
-    const lightness = 68 + (i % 2) * 5; // 68, 73
+    // High-contrast pastel: increased saturation with balanced lightness
+    const saturation = 64 + (i % 3) * 3; // 64, 67, 70
+    const lightness = 62 + (i % 2) * 4; // 62, 66
     colors.push(hslToHex(hue, saturation, lightness));
   }
 
@@ -233,7 +233,7 @@ function generateThemePalette(theme: string, count: number): string[] {
     { s: number; l: number; hueOffset: number }
   > = {
     jewel: { s: 60, l: 68, hueOffset: 0 },
-    pastel: { s: 48, l: 78, hueOffset: 20 },
+    pastel: { s: 68, l: 62, hueOffset: 0 }, // High-contrast pastel
     vivid: { s: 80, l: 50, hueOffset: 0 },
     earthy: { s: 25, l: 54, hueOffset: 30 },
     ocean: { s: 72, l: 50, hueOffset: 190 },
