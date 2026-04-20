@@ -3051,7 +3051,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
                         onCompareLayer={openDiffDialog}
                         onSetGroup={handleSetLayerGroup}
                         existingGroups={existingGroups}
-                        layerIndex={layerIndex}
                         maxLayerPLZ={maxLayerPLZ}
                         onHighlightCodes={onHighlightCodes}
                       />
@@ -3231,7 +3230,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
                             onCompareLayer={openDiffDialog}
                             onSetGroup={handleSetLayerGroup}
                             existingGroups={existingGroups}
-                            layerIndex={layerIndex}
                             maxLayerPLZ={maxLayerPLZ}
                             onHighlightCodes={onHighlightCodes}
                           />
@@ -3921,7 +3919,6 @@ const LayerDialogs = memo(function LayerDialogs({
               {
                 group: "Ebenen",
                 items: [
-                  { keys: ["F1–F9"], desc: "Direkt zu Ebene 1–9 wechseln" },
                   { keys: ["Alt", "↑ / ↓"], desc: "Ebene wechseln" },
                   { keys: ["S"], desc: "Aktive Ebene solo / alle einblenden" },
                   { keys: ["N"], desc: "Neue Ebene anlegen" },
@@ -4522,18 +4519,6 @@ function DrawingToolsImpl({
           } else {
             handleSoloLayerRef.current(id);
           }
-        }
-        return;
-      }
-
-      // F1-F9: switch to layer 1-9 directly
-      const f1f9Match = /^F([1-9])$/.exec(e.key);
-      if (f1f9Match && !isInInput) {
-        const idx = Number(f1f9Match[1]) - 1;
-        const currentLayers = layersRef.current;
-        if (idx < currentLayers.length) {
-          e.preventDefault();
-          onLayerSelectRef.current?.(currentLayers[idx].id);
         }
         return;
       }

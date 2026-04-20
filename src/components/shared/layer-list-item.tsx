@@ -151,7 +151,6 @@ interface LayerListItemProps {
   onCompareLayer?: (layerId: number) => void;
   onSetGroup?: (layerId: number, groupName: string | null) => void;
   existingGroups?: string[];
-  layerIndex?: number; // 0-based position in layer list (for F-key shortcut badge)
   maxLayerPLZ?: number; // max PLZ count across all layers — used for relative coverage bar
   onHighlightCodes?: (codes: Set<string> | null) => void;
 }
@@ -325,7 +324,6 @@ export const LayerListItem = memo(function LayerListItem({
   existingGroups = [],
   onCopyToArea,
   onMergeLayer,
-  layerIndex,
   maxLayerPLZ,
   onHighlightCodes,
 }: LayerListItemProps) {
@@ -614,11 +612,6 @@ export const LayerListItem = memo(function LayerListItem({
                     }}
                     title={`${layer.name} — Doppelklick zum Umbenennen`}
                   >
-                    {layerIndex !== undefined && layerIndex < 9 && (
-                      <span className="inline-block mr-1 text-[9px] font-mono text-muted-foreground/60 select-none">
-                        {`F${layerIndex + 1}`}
-                      </span>
-                    )}
                     {layer.name}
                   </span>
                 )}
