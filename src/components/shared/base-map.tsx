@@ -659,7 +659,7 @@ const MapInner = memo(function MapInner({
 
     for (const feature of data.features) {
       if (!allCodes.has(feature.properties?.code)) continue;
-      if (!feature.geometry) continue;
+      if (!feature.geometry || !feature.geometry.type) continue;
       found = true;
       const geom = feature.geometry;
       const rings: number[][][] =
