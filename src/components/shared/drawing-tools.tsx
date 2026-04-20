@@ -3497,7 +3497,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
             <CollapsibleContent className="space-y-1.5 pt-1.5">
               {/* PLZ quick-find */}
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   ref={plzFindInputRef}
                   value={plzFindQuery}
