@@ -29,11 +29,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -753,198 +748,217 @@ export const AddressAutocompleteEnhanced = memo(
       searchMode,
     } = state;
 
+    const inputRef = useRef<HTMLInputElement>(null);
+
     return (
       <>
-        <Popover
-          open={open}
-          onOpenChange={(val) => dispatch({ type: "SET_OPEN", open: val })}
-        >
-          <PopoverTrigger
-            render={
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                aria-controls="address-search-listbox"
-                className={`w-full justify-between shadow-sm bg-background h-8 ${triggerClassName}`}
-              />
-            }
-          >
-            <span className="truncate block w-full text-left">
-              {query || "PLZ, Adresse, Stadt oder Region suchen... (DE/EN)"}
-            </span>
-            <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </PopoverTrigger>
-          <PopoverContent className="w-[320px] p-0">
-            <Command>
-              <CommandInput
-                placeholder="PLZ, Adresse, Stadt oder Region suchen... (München, Munich, Berlin, Bayern, etc.)"
-                value={query}
-                onValueChange={handleInputChange}
-                autoComplete="off"
-              />
-              <CommandList id="address-search-listbox">
-                {isLoading && (
-                  <div className="p-3 text-sm text-muted-foreground">
-                    Suche läuft...
-                  </div>
-                )}
-                {!isLoading && results.length === 0 && query.length >= 2 && (
-                  <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
-                )}
-                {results.map((result) => (
-                  <CommandItem
-                    key={result.id}
-                    value={result.display_name}
-                    className="p-0"
-                    onSelect={() => {
-                      // Prevent default selection behavior, we handle it with buttons
+        <div className={`relative w-full ${triggerClassName}`}>
+          {open ? (
+            <div className="absolute right-0 top-0 w-full z-50">
+              <div className="bg-background border rounded-md shadow-sm">
+                <Command>
+                  <CommandInput
+                    ref={inputRef}
+                    placeholder="PLZ, Adresse, Stadt oder Region suchen... (München, Munich, Berlin, Bayern, etc.)"
+                    value={query}
+                    onValueChange={handleInputChange}
+                    autoComplete="off"
+                    className="h-8"
+                    onBlur={(e) => {
+                      // Only close if clicked outside the command
+                      if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
+                        if (!query) {
+                          dispatch({ type: "SET_OPEN", open: false });
+                        }
+                      }
                     }}
-                  >
-                    <div className="flex items-center gap-2 p-2 w-full">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {formatDisplayName(result)}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {result.display_name}
-                        </div>
-                        {result.postal_code &&
-                          (() => {
-                            const containingLayers = getLayersForPostalCode(
-                              result.postal_code
-                            );
-                            if (containingLayers.length > 0) {
-                              return (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {containingLayers.map((layer) => (
-                                    <span
-                                      key={layer.id}
-                                      className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md border"
-                                      style={{
-                                        borderColor: layer.color,
-                                        backgroundColor: `${layer.color}15`,
-                                        color: layer.color,
-                                      }}
-                                    >
-                                      <span
-                                        className="w-2 h-2 rounded-full"
-                                        style={{ backgroundColor: layer.color }}
-                                      />
-                                      {layer.name}
-                                    </span>
-                                  ))}
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        dispatch({ type: "SET_OPEN", open: false });
+                      }
+                    }}
+                  />
+                  <CommandList id="address-search-listbox" className="max-h-64 overflow-auto">
+                    {isLoading && (
+                      <div className="p-3 text-sm text-muted-foreground">
+                        Suche läuft...
                       </div>
-                      <div className="flex gap-1 shrink-0">
-                        {onPreviewSelect && result.postal_code && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger
-                                render={
-                                  <Button
-                                    size="sm"
-                                    variant={
-                                      previewPostalCode === result.postal_code
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onPreviewSelect(
-                                        result.coordinates,
-                                        formatDisplayName(result),
-                                        result.postal_code
-                                      );
-                                    }}
-                                    className="h-8 px-2"
-                                  />
+                    )}
+                    {!isLoading && results.length === 0 && query.length >= 2 && (
+                      <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
+                    )}
+                    {results.map((result) => (
+                      <CommandItem
+                        key={result.id}
+                        value={result.display_name}
+                        className="p-0"
+                        onSelect={() => {
+                          // Prevent default selection behavior, we handle it with buttons
+                        }}
+                      >
+                        <div className="flex items-center gap-2 p-2 w-full">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">
+                              {formatDisplayName(result)}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {result.display_name}
+                            </div>
+                            {result.postal_code &&
+                              (() => {
+                                const containingLayers = getLayersForPostalCode(
+                                  result.postal_code
+                                );
+                                if (containingLayers.length > 0) {
+                                  return (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {containingLayers.map((layer) => (
+                                        <span
+                                          key={layer.id}
+                                          className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md border"
+                                          style={{
+                                            borderColor: layer.color,
+                                            backgroundColor: `${layer.color}15`,
+                                            color: layer.color,
+                                          }}
+                                        >
+                                          <span
+                                            className="w-2 h-2 rounded-full"
+                                            style={{ backgroundColor: layer.color }}
+                                          />
+                                          {layer.name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  );
                                 }
-                              >
-                                {previewPostalCode === result.postal_code ? (
-                                  <EyeOffIcon className="h-3 w-3" />
-                                ) : (
-                                  <EyeIcon className="h-3 w-3" />
-                                )}
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>
-                                  {previewPostalCode === result.postal_code
-                                    ? "Vorschau beenden"
-                                    : "Vorschau & Zoom zur PLZ"}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                                return null;
+                              })()}
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            {onPreviewSelect && result.postal_code && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    render={
+                                      <Button
+                                        size="sm"
+                                        variant={
+                                          previewPostalCode === result.postal_code
+                                            ? "default"
+                                            : "outline"
+                                        }
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onPreviewSelect(
+                                            result.coordinates,
+                                            formatDisplayName(result),
+                                            result.postal_code
+                                          );
+                                        }}
+                                        className="h-8 px-2"
+                                      />
+                                    }
+                                  >
+                                    {previewPostalCode === result.postal_code ? (
+                                      <EyeOffIcon className="h-3 w-3" />
+                                    ) : (
+                                      <EyeIcon className="h-3 w-3" />
+                                    )}
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      {previewPostalCode === result.postal_code
+                                        ? "Vorschau beenden"
+                                        : "Vorschau & Zoom zur PLZ"}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
 
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDirectSelect(result);
-                                  }}
-                                  className="h-8 px-2"
-                                />
-                              }
-                            >
-                              <MapPinIcon className="h-3 w-3" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                {!result.postal_code &&
-                                (result.city ||
-                                  result.state ||
-                                  result.display_name.includes(
-                                    ", Deutschland"
-                                  )) &&
-                                onBoundarySelect
-                                  ? "Alle PLZ-Regionen in diesem Gebiet auswählen"
-                                  : "Exakte Position auswählen"}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDirectSelect(result);
+                                      }}
+                                      className="h-8 px-2"
+                                    />
+                                  }
+                                >
+                                  <MapPinIcon className="h-3 w-3" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    {!result.postal_code &&
+                                    (result.city ||
+                                      result.state ||
+                                      result.display_name.includes(
+                                        ", Deutschland"
+                                      )) &&
+                                    onBoundarySelect
+                                      ? "Alle PLZ-Regionen in diesem Gebiet auswählen"
+                                      : "Exakte Position auswählen"}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
 
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRadiusSelect(result);
-                                  }}
-                                  className="h-8 px-2"
-                                />
-                              }
-                            >
-                              <RadiusIcon className="h-3 w-3" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Umkreis um Position auswählen</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRadiusSelect(result);
+                                      }}
+                                      className="h-8 px-2"
+                                    />
+                                  }
+                                >
+                                  <RadiusIcon className="h-3 w-3" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Umkreis um Position auswählen</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandList>
+                </Command>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={false}
+              aria-controls="address-search-listbox"
+              className="w-full justify-start shadow-sm bg-background h-8"
+              onClick={() => {
+                dispatch({ type: "SET_OPEN", open: true });
+                setTimeout(() => inputRef.current?.focus(), 0);
+              }}
+            >
+              <ChevronsUpDownIcon className="h-4 w-4 shrink-0 opacity-50" />
+              <span className="truncate ml-2 text-muted-foreground">
+                PLZ, Adresse, Stadt oder Region suchen...
+              </span>
+            </Button>
+          )}
+        </div>
 
         <RadiusSearchDialog
           open={radiusDialogOpen}
