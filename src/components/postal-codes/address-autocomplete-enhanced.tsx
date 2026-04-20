@@ -766,7 +766,7 @@ export const AddressAutocompleteEnhanced = memo(
                 role="combobox"
                 aria-expanded={open}
                 aria-controls="address-search-listbox"
-                className={`w-full justify-between shadow-sm bg-background ${triggerClassName}`}
+                className={`w-full justify-between shadow-sm bg-background h-8 ${triggerClassName}`}
               />
             }
           >
