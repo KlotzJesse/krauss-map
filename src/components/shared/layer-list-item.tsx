@@ -1504,16 +1504,58 @@ export const LayerListItem = memo(function LayerListItem({
           Farbe ändern
         </ContextMenuItem>
         <ContextMenuSeparator />
-        {onToggleVisibility && (
+        {onDuplicateLayer && (
+          <ContextMenuItem onClick={() => onDuplicateLayer(layer.id)}>
+            <CopyPlus className="h-3.5 w-3.5" />
+            Duplizieren
+          </ContextMenuItem>
+        )}
+        {onCopyToArea && (
+          <ContextMenuItem onClick={() => onCopyToArea(layer.id, layer.name)}>
+            <ArrowRightLeft className="h-3.5 w-3.5" />
+            In anderes Gebiet kopieren
+          </ContextMenuItem>
+        )}
+        {(onMergeLayer && otherLayers.length > 0) ||
+        (onSplitLayer && postalCodes.length >= 4) ? (
+          <ContextMenuSeparator />
+        ) : null}
+        {onMergeLayer && otherLayers.length > 0 && (
+          <ContextMenuItem onClick={() => onMergeLayer(layer.id, layer.name)}>
+            <GitMerge className="h-3.5 w-3.5" />
+            Zusammenführen
+          </ContextMenuItem>
+        )}
+        {onSplitLayer && postalCodes.length >= 4 && (
           <ContextMenuItem
-            onClick={() => onToggleVisibility(layer.id, !isVisible)}
+            onClick={() => {
+              const splitOptions = [2, 3, 4, 5];
+              const idx = splitOptions.findIndex(
+                (n) => postalCodes.length >= n
+              );
+              if (idx >= 0) {
+                onSplitLayer(layer.id, splitOptions[idx]);
+              }
+            }}
           >
-            {isVisible ? (
-              <EyeOff className="h-3.5 w-3.5" />
+            <Scissors className="h-3.5 w-3.5" />
+            Aufteilen (Standard)
+          </ContextMenuItem>
+        )}
+        {onCompareLayer && postalCodes.length > 0 && (
+          <ContextMenuItem onClick={() => onCompareLayer(layer.id)}>
+            <GitCompareArrows className="h-3.5 w-3.5" />
+            Vergleichen
+          </ContextMenuItem>
+        )}
+        {onSetGroup && (
+          <ContextMenuItem onClick={() => setGroupPopoverOpen(true)}>
+            {layer.groupName ? (
+              <FolderOpen className="h-3.5 w-3.5" />
             ) : (
-              <Eye className="h-3.5 w-3.5" />
+              <Folder className="h-3.5 w-3.5" />
             )}
-            {isVisible ? "Ausblenden" : "Einblenden"}
+            {layer.groupName ? `Gruppe: ${layer.groupName}` : "Gruppe zuweisen"}
           </ContextMenuItem>
         )}
         {onZoomToLayer && (layer.postalCodes?.length ?? 0) > 0 && (
@@ -1522,35 +1564,81 @@ export const LayerListItem = memo(function LayerListItem({
             Karte zentrieren
           </ContextMenuItem>
         )}
+        <ContextMenuSeparator />
         {postalCodes.length > 0 && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem
-              onClick={async () => {
-                const codes =
-                  layer.postalCodes?.map((pc) => `D-${pc.postalCode}`) ?? [];
-                if (codes.length > 0) {
-                  await copyPostalCodesCSV(codes);
-                } else {
-                  toast.info("Keine Postleitzahlen zum Kopieren");
-                }
-              }}
-            >
-              <Copy className="h-3.5 w-3.5" />
-              PLZ kopieren
-            </ContextMenuItem>
-          </>
+          <ContextMenuItem
+            onClick={async () => {
+              const codes =
+                layer.postalCodes?.map((pc) => `D-${pc.postalCode}`) ?? [];
+              if (codes.length > 0) {
+                await copyPostalCodesCSV(codes);
+              } else {
+                toast.info("Keine Postleitzahlen zum Kopieren");
+              }
+            }}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            PLZ kopieren
+          </ContextMenuItem>
         )}
-        {onDuplicateLayer && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => onDuplicateLayer(layer.id)}>
-              <CopyPlus className="h-3.5 w-3.5" />
-              Duplizieren
-            </ContextMenuItem>
-          </>
+        {onImportCSV && (
+          <ContextMenuItem onClick={() => onImportCSV(layer.id)}>
+            <Upload className="h-3.5 w-3.5" />
+            CSV importieren
+          </ContextMenuItem>
+        )}
+        {onExportCSV && postalCodes.length > 0 && (
+          <ContextMenuItem
+            onClick={() =>
+              onExportCSV(
+                layer.id,
+                layer.name,
+                postalCodes.map((pc) => pc.postalCode)
+              )
+            }
+          >
+            <Download className="h-3.5 w-3.5" />
+            CSV exportieren
+          </ContextMenuItem>
+        )}
+        {onNotesChange && (
+          <ContextMenuItem onClick={() => setNotesExpanded((v) => !v)}>
+            <StickyNote className="h-3.5 w-3.5" />
+            {notesExpanded ? "Notizen schließen" : "Notizen bearbeiten"}
+            {layer.notes && !notesExpanded && (
+              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+            )}
+          </ContextMenuItem>
+        )}
+        <ContextMenuItem
+          onClick={() => {
+            loadHistory();
+            setHistoryOpen(true);
+          }}
+        >
+          <History className="h-3.5 w-3.5" />
+          Verlauf anzeigen
+        </ContextMenuItem>
+        {onToggleLock && (
+          <ContextMenuItem onClick={() => onToggleLock(layer.id)}>
+            {isLocked ? (
+              <LockOpen className="h-3.5 w-3.5" />
+            ) : (
+              <Lock className="h-3.5 w-3.5" />
+            )}
+            {isLocked ? "Entsperren" : "Sperren"}
+          </ContextMenuItem>
         )}
         <ContextMenuSeparator />
+        {onClearPLZ && postalCodes.length > 0 && (
+          <ContextMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => onClearPLZ(layer.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Alle PLZ löschen
+          </ContextMenuItem>
+        )}
         <ContextMenuItem
           className="text-destructive focus:text-destructive"
           onClick={() => onDelete(layer.id)}
