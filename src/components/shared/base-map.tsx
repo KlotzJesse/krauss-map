@@ -881,7 +881,7 @@ const MapInner = memo(function MapInner({
       {/* Map toolbar — always top, shifts right when Kartentools panel is open */}
       <div
         className={`absolute z-10 flex flex-col gap-1 print:hidden transition-all duration-200 top-4 ${
-          interactions.isDrawingToolsVisible ? "left-[488px]" : "left-14"
+          interactions.isDrawingToolsVisible ? "left-[464px]" : "left-14"
         }`}
       >
         <DropdownMenu>
