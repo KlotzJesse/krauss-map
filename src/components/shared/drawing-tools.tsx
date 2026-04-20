@@ -3503,7 +3503,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                   value={plzFindQuery}
                   onChange={(e) => setPlzFindQuery(e.target.value)}
                   placeholder="PLZ suchen…"
-                  className="h-6 text-[10px] pl-6 pr-2"
+                  className="h-8 text-[10px] pl-6 pr-2"
                   maxLength={5}
                 />
               </div>
