@@ -2019,7 +2019,8 @@ const LayerManagementSection = memo(function LayerManagementSection({
   const [showNewLayerInput, setShowNewLayerInput] = useState(false);
   // Expose setter via ref so DrawingTools keyboard handler can trigger it
   useEffect(() => {
-    if (showNewLayerInputRef) showNewLayerInputRef.current = setShowNewLayerInput;
+    if (showNewLayerInputRef)
+      showNewLayerInputRef.current = setShowNewLayerInput;
   }, [showNewLayerInputRef]);
   const toggleSelectMode = useCallback(() => {
     setSelectMode((v) => !v);
@@ -2359,10 +2360,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
   const layerIds = useMemo(() => {
     const next = optimisticLayers.map((l) => l.id);
     const prev = layerIdsPrevRef.current;
-    if (
-      next.length === prev.length &&
-      next.every((id, i) => id === prev[i])
-    ) {
+    if (next.length === prev.length && next.every((id, i) => id === prev[i])) {
       return prev;
     }
     layerIdsPrevRef.current = next;
@@ -2415,7 +2413,11 @@ const LayerManagementSection = memo(function LayerManagementSection({
     for (const l of optimisticLayers) {
       const newArr = optimisticLayers
         .filter((other) => other.id !== l.id)
-        .map((other) => ({ id: other.id, name: other.name, color: other.color }));
+        .map((other) => ({
+          id: other.id,
+          name: other.name,
+          color: other.color,
+        }));
       const prevArr = prev.get(l.id);
       if (
         prevArr &&
@@ -2921,43 +2923,43 @@ const LayerManagementSection = memo(function LayerManagementSection({
           )}
           {/* Create new layer — shown when toggled via + in header */}
           {showNewLayerInput && (
-          <div className="flex gap-1">
-            <Input
-              ref={newLayerInputRef}
-              value={form.newLayerName}
-              onChange={handleNewLayerNameChange}
-              maxLength={31}
-              placeholder={
-                isViewingVersion
-                  ? "Neues Gebiet (neue Version)..."
-                  : "Neues Gebiet..."
-              }
-              className="h-7 text-xs"
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setShowNewLayerInput(false);
-                  return;
+            <div className="flex gap-1">
+              <Input
+                ref={newLayerInputRef}
+                value={form.newLayerName}
+                onChange={handleNewLayerNameChange}
+                maxLength={31}
+                placeholder={
+                  isViewingVersion
+                    ? "Neues Gebiet (neue Version)..."
+                    : "Neues Gebiet..."
                 }
-                handleNewLayerKeyDown(e);
-              }}
-            />
-            <Button
-              onClick={async () => {
-                await handleCreateLayer();
-                setShowNewLayerInput(false);
-              }}
-              disabled={!form.newLayerName.trim() || form.isCreating}
-              size="icon"
-              className="h-7 w-7"
-              title={
-                isViewingVersion
-                  ? "Gebiet wird in neuer Version erstellt"
-                  : "Gebiet erstellen"
-              }
-            >
-              <IconPlus className="h-3 w-3" />
-            </Button>
-          </div>
+                className="h-7 text-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setShowNewLayerInput(false);
+                    return;
+                  }
+                  handleNewLayerKeyDown(e);
+                }}
+              />
+              <Button
+                onClick={async () => {
+                  await handleCreateLayer();
+                  setShowNewLayerInput(false);
+                }}
+                disabled={!form.newLayerName.trim() || form.isCreating}
+                size="icon"
+                className="h-7 w-7"
+                title={
+                  isViewingVersion
+                    ? "Gebiet wird in neuer Version erstellt"
+                    : "Gebiet erstellen"
+                }
+              >
+                <IconPlus className="h-3 w-3" />
+              </Button>
+            </div>
           )}
 
           {/* Layer search — shown when there are enough layers to scroll */}
@@ -4903,7 +4905,7 @@ function DrawingToolsImpl({
     <Card
       role="region"
       aria-label="Kartentools-Panel"
-      className="gap-2 max-w-md flex flex-col max-h-full min-h-0"
+      className="gap-2 max-w-md min-w-80 flex flex-col max-h-full min-h-0"
     >
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Kartentools</CardTitle>
@@ -5183,7 +5185,9 @@ function DrawingToolsImpl({
             regionsOpen={ui.regionsOpen}
             onOpenChange={handleSetRegionsOpen}
             canAdd={!!(areaId && activeLayerId && addPostalCodesToLayer)}
-            canRemove={!!(areaId && activeLayerId && removePostalCodesFromLayer)}
+            canRemove={
+              !!(areaId && activeLayerId && removePostalCodesFromLayer)
+            }
             onAddPending={handleAddPendingToLayer}
             onRemovePending={handleRemovePendingFromLayer}
           />

@@ -1,4 +1,5 @@
 "use no memo";
+import { MapboxOverlay } from "@deck.gl/mapbox";
 import {
   Camera,
   Ellipsis,
@@ -31,13 +32,11 @@ import {
 import type { ErrorInfo, ReactNode } from "react";
 import { Map, useMap, type MapRef } from "react-map-gl/maplibre";
 
+import "maplibre-gl/dist/maplibre-gl.css";
 import {
   DrawingToolsErrorBoundary,
   MapErrorBoundary,
 } from "@/components/ui/error-boundaries";
-
-import "maplibre-gl/dist/maplibre-gl.css";
-import { MapboxOverlay } from "@deck.gl/mapbox";
 import { DrawingToolsSkeleton } from "@/components/ui/loading-skeletons";
 import { useSidebar } from "@/components/ui/sidebar";
 import {
@@ -379,7 +378,7 @@ function PlzSearch({
       ) : (
         <form
           onSubmit={handleSearch}
-          className="flex items-center gap-1 bg-white/95 border border-border rounded-lg shadow-md px-2 py-1"
+          className="flex items-center gap-1 bg-white/95 border border-border rounded-lg shadow-md px-2 h-6"
         >
           <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <input
@@ -898,7 +897,10 @@ const MapInner = memo(function MapInner({
             <Ellipsis className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="right" className="min-w-44">
-            <DropdownMenuItem onClick={handleScreenshot} className="text-xs gap-2">
+            <DropdownMenuItem
+              onClick={handleScreenshot}
+              className="text-xs gap-2"
+            >
               <Camera className="h-3.5 w-3.5" />
               Karte als PNG speichern
             </DropdownMenuItem>
@@ -912,7 +914,9 @@ const MapInner = memo(function MapInner({
               disabled={isGeolocating}
               className="text-xs gap-2"
             >
-              <LocateFixed className={`h-3.5 w-3.5 ${isGeolocating ? "animate-pulse" : ""}`} />
+              <LocateFixed
+                className={`h-3.5 w-3.5 ${isGeolocating ? "animate-pulse" : ""}`}
+              />
               Meinen Standort anzeigen
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -1289,7 +1293,11 @@ const BaseMapComponent = ({
         );
         // "__nuqs__" marker bypasses nuqs history patch — prevents all nuqs hooks from
         // re-rendering on every debounced pan write. Next.js also skips ACTION_RESTORE.
-        window.history.replaceState(window.history.state, "__nuqs__", url.toString());
+        window.history.replaceState(
+          window.history.state,
+          "__nuqs__",
+          url.toString()
+        );
       }, 750);
     },
     []

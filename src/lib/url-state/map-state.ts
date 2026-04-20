@@ -54,7 +54,11 @@ export function useMapView() {
       url.searchParams.set("mapView", JSON.stringify(view));
       // "__nuqs__" marker tells nuqs's history patch to skip sync — prevents
       // all nuqs consumers from re-rendering on every map pan/zoom write.
-      window.history.replaceState(window.history.state, "__nuqs__", url.toString());
+      window.history.replaceState(
+        window.history.state,
+        "__nuqs__",
+        url.toString()
+      );
     }
   );
 
@@ -88,6 +92,10 @@ export function useSetMapCenterZoom() {
     const url = new URL(window.location.href);
     url.searchParams.set("mapView", JSON.stringify({ center, zoom }));
     // "__nuqs__" marker bypasses nuqs history patch — no nuqs consumer re-renders.
-    window.history.replaceState(window.history.state, "__nuqs__", url.toString());
+    window.history.replaceState(
+      window.history.state,
+      "__nuqs__",
+      url.toString()
+    );
   });
 }

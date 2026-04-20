@@ -19,9 +19,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useUndoRedo } from "@/lib/hooks/use-undo-redo";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
+import { useUndoRedo } from "@/lib/hooks/use-undo-redo";
 
 interface FloatingDrawingToolbarProps {
   currentMode: TerraDrawMode | null;
@@ -123,7 +123,12 @@ const UndoRedoButtons = memo(function UndoRedoButtons({
   areaId: number;
   initialStatus?: FloatingDrawingToolbarProps["undoRedoStatus"];
 }) {
-  const defaultStatus = { canUndo: false, canRedo: false, undoCount: 0, redoCount: 0 };
+  const defaultStatus = {
+    canUndo: false,
+    canRedo: false,
+    undoCount: 0,
+    redoCount: 0,
+  };
   const [optimisticStatus, updateOptimisticStatus] = useOptimistic(
     initialStatus ?? defaultStatus,
     (current, action: "undo" | "redo") => {
@@ -172,7 +177,13 @@ const UndoRedoButtons = memo(function UndoRedoButtons({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo, optimisticStatus.canUndo, optimisticStatus.canRedo, isLoading]);
+  }, [
+    undo,
+    redo,
+    optimisticStatus.canUndo,
+    optimisticStatus.canRedo,
+    isLoading,
+  ]);
 
   return (
     <>

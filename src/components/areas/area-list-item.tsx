@@ -254,14 +254,6 @@ export const AreaListItem = memo(
                 </span>
               )}
 
-              {!isSelectable && !!area.conflictCount && (
-                <span
-                  className="shrink-0 text-[9px] font-medium text-orange-600 bg-orange-100 dark:bg-orange-950 dark:text-orange-400 rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity"
-                  title={`${area.conflictCount} PLZ auch in anderen Gebieten`}
-                >
-                  ⚠ {area.conflictCount}
-                </span>
-              )}
               {!isSelectable && isPinned && (
                 <IconPinFilled className="shrink-0 h-2.5 w-2.5 text-amber-500 group-hover/item:opacity-0 transition-opacity" />
               )}

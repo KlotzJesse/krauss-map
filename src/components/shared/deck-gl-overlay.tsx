@@ -2,8 +2,8 @@
 
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { MapboxOverlayProps } from "@deck.gl/mapbox";
-import { useControl } from "react-map-gl/maplibre";
 import type { MutableRefObject } from "react";
+import { useControl } from "react-map-gl/maplibre";
 
 /**
  * DeckGL overlay component that integrates deck.gl layers into a react-map-gl Map
@@ -42,4 +42,3 @@ export function DeckGLOverlay(
   }
   return null;
 }
-

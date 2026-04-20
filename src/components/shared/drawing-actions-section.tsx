@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Diamond,
-  Loader2Icon,
-  X,
-} from "lucide-react";
+import { Diamond, Loader2Icon, X } from "lucide-react";
 import { Activity } from "react";
 
 import { Button } from "@/components/ui/button";

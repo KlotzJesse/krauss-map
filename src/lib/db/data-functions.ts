@@ -108,7 +108,10 @@ export async function getAreas() {
       name: r.name,
       granularity: r.granularity,
       isArchived: r.is_archived,
-      updatedAt: r.updated_at instanceof Date ? r.updated_at.toISOString() : (r.updated_at as string),
+      updatedAt:
+        r.updated_at instanceof Date
+          ? r.updated_at.toISOString()
+          : (r.updated_at as string),
       country: r.country,
       description: r.description,
       postalCodeCount: r.postalCodeCount,
