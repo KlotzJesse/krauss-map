@@ -918,6 +918,66 @@ export function useDeckLayers({
           },
         })
       );
+
+      // Duplicate outline — multi-color outline for postal codes in 2+ layers
+      // Creates alternating color dashes by rendering multiple thin strokes with offset opacity
+      // First color with full opacity
+      result.push(
+        new GeoJsonLayer({
+          id: "duplicate-outline-primary",
+          data: multiLayerFeaturesData,
+          beforeId,
+          filled: false,
+          stroked: true,
+          getLineColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            if (!code) return [0, 0, 0, 0];
+            const style = resolvedStyles.get(code);
+            if (!style || style.layerLineColors.length === 0) {
+              return [0, 0, 0, 0];
+            }
+            const [r, g, b] = style.layerLineColors[0];
+            return [r, g, b, 200] as [number, number, number, number];
+          },
+          getLineWidth: 2.5,
+          lineWidthUnits: "pixels" as const,
+          lineCap: "round" as const,
+          lineJoint: "round" as const,
+          pickable: false,
+          updateTriggers: {
+            getLineColor: [resolvedStylesVersion],
+          },
+        })
+      );
+
+      // Secondary color with semi-transparency for dashed effect
+      result.push(
+        new GeoJsonLayer({
+          id: "duplicate-outline-secondary",
+          data: multiLayerFeaturesData,
+          beforeId,
+          filled: false,
+          stroked: true,
+          getLineColor: (f) => {
+            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+            if (!code) return [0, 0, 0, 0];
+            const style = resolvedStyles.get(code);
+            if (!style || style.layerLineColors.length < 2) {
+              return [0, 0, 0, 0];
+            }
+            const [r, g, b] = style.layerLineColors[1];
+            return [r, g, b, 140] as [number, number, number, number];
+          },
+          getLineWidth: 1.5,
+          lineWidthUnits: "pixels" as const,
+          lineCap: "round" as const,
+          lineJoint: "round" as const,
+          pickable: false,
+          updateTriggers: {
+            getLineColor: [resolvedStylesVersion],
+          },
+        })
+      );
     } else {
       // Fallback when canvas is unavailable (SSR): solid blended fill with stroke
       result.push(
@@ -952,56 +1012,6 @@ export function useDeckLayers({
           },
         })
       );
-    }
-
-    // Duplicate postal code dashed outline layer
-    // Renders multi-color outlines for postal codes in 2+ layers
-    // Each color in layerLineColors gets its own offset outline
-    if (multiLayerFeaturesData.features.length > 0) {
-      // Find max number of colors across all multi-layer codes
-      const maxColorsPerCode = Math.max(
-        ...Array.from(resolvedStyles.values()).map(
-          (s) => s.layerLineColors.length
-        ),
-        1
-      );
-
-      for (let colorIndex = 0; colorIndex < maxColorsPerCode; colorIndex++) {
-        result.push(
-          new GeoJsonLayer({
-            id: `duplicate-outline-${colorIndex}`,
-            data: multiLayerFeaturesData,
-            beforeId,
-            filled: false,
-            stroked: true,
-            getLineColor: (f) => {
-              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-              if (!code) return [0, 0, 0, 0];
-              const style = resolvedStyles.get(code);
-              if (
-                !style ||
-                style.layerLineColors.length === 0 ||
-                colorIndex >= style.layerLineColors.length
-              ) {
-                return [0, 0, 0, 0];
-              }
-              const [r, g, b] = style.layerLineColors[colorIndex];
-              // Reduce opacity slightly for outer layers to create dashed effect
-              const opacity =
-                colorIndex === 0 ? 220 : Math.max(100, 220 - colorIndex * 40);
-              return [r, g, b, opacity] as [number, number, number, number];
-            },
-            getLineWidth: 3 + colorIndex * 0.5,
-            lineWidthUnits: "pixels" as const,
-            lineCap: "round" as const,
-            lineJoint: "round" as const,
-            pickable: false,
-            updateTriggers: {
-              getLineColor: [resolvedStylesVersion],
-            },
-          })
-        );
-      }
     }
 
     // Preview layer — always present to avoid MapLibre add/remove churn
