@@ -20,9 +20,9 @@ export interface StripePatternAtlas {
 }
 
 /** Size of each individual pattern tile in the atlas (pixels). */
-const TILE = 64;
+const TILE = 128;
 /** Width of each stripe in pixels. */
-const STRIPE_WIDTH = 8;
+const STRIPE_WIDTH = 16;
 /** Full period (stripe + gap) in pixels. */
 const PERIOD = STRIPE_WIDTH * 2;
 
