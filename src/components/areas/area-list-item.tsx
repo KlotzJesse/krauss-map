@@ -296,7 +296,7 @@ export const AreaListItem = memo(
               )}
             </div>
             {area.tags && area.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 px-2 pb-0.5">
+              <div className="flex flex-wrap gap-1 px-2 pb-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150">
                 {area.tags.map((tag) => (
                   <TagBadge
                     key={tag.id}
