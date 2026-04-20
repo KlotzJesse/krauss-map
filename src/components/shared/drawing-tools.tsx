@@ -50,7 +50,6 @@ import {
   MapPin,
   Palette,
   Redo2,
-  Scale,
   Search,
   Square,
   TriangleAlert,
@@ -85,7 +84,6 @@ import {
   exportAreaGeoJSONAction,
   exportAreaDataAction,
   importAreaFromDataAction,
-  balanceLayersAction,
   fixDuplicateCodeAction,
   fixDuplicateWithLayerAction,
   addPostalCodesByPrefixAction,
@@ -1899,43 +1897,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
   const optimisticLayersRef = useRef(optimisticLayers);
   optimisticLayersRef.current = optimisticLayers;
 
-  const [isBalancing, setIsBalancing] = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
-  const [, startBalanceTransition] = useTransition();
-  const handleBalanceLayers = useCallback(() => {
-    if (!areaId || optimisticLayersRef.current.length < 2) return;
-    const layerIdsWithCodes = optimisticLayersRef.current
-      .filter((l) => (l.postalCodes?.length ?? 0) > 0)
-      .map((l) => l.id);
-    if (layerIdsWithCodes.length < 2) {
-      toast.error("Mindestens 2 Ebenen mit PLZ benötigt");
-      return;
-    }
-    startBalanceTransition(async () => {
-      setIsBalancing(true);
-      try {
-        const res = await balanceLayersAction(areaId, layerIdsWithCodes);
-        if (!res.success) {
-          toast.error(res.error ?? "Fehler beim Ausgleichen");
-          return;
-        }
-        const totalMoved = (res.data ?? []).reduce(
-          (s, m) => s + m.codes.length,
-          0
-        );
-        if (totalMoved === 0) {
-          toast.success("Ebenen sind bereits ausgeglichen");
-        } else {
-          toast.success(`${totalMoved} PLZ verschoben — Ebenen ausgeglichen`);
-          onLayerUpdate?.();
-        }
-      } catch {
-        toast.error("Fehler beim Ausgleichen");
-      } finally {
-        setIsBalancing(false);
-      }
-    });
-  }, [areaId, onLayerUpdate, startBalanceTransition]);
   const filteredLayers = useMemo(() => {
     const q = layerSearch.trim().toLowerCase();
     let result = q
@@ -2749,24 +2711,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
                 <IconLayoutColumns className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-sm">Ebenen-Vorlagen</span>
               </DropdownMenuItem>
-              {optimisticLayers.filter((l) => (l.postalCodes?.length ?? 0) > 0)
-                .length > 1 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleBalanceLayers}
-                    disabled={isBalancing}
-                    className="gap-2 cursor-pointer"
-                  >
-                    <Scale className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm">
-                      {isBalancing
-                        ? "Wird ausgeglichen…"
-                        : "Ebenen ausgleichen"}
-                    </span>
-                  </DropdownMenuItem>
-                </>
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
