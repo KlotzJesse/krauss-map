@@ -441,61 +441,6 @@ type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
 
-function ConflictBanner({
-  crossAreaDuplicates,
-  crossAreaDuplicatesByArea,
-}: {
-  crossAreaDuplicates: {
-    postalCode: string;
-    otherAreaId: number;
-    otherAreaName: string;
-  }[];
-  crossAreaDuplicatesByArea: Map<string, { areaId: number; codes: string[] }>;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const areaCount = crossAreaDuplicatesByArea.size;
-  return (
-    <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-2.5 py-1.5 text-xs">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-1.5 font-medium text-amber-700 dark:text-amber-400"
-      >
-        <TriangleAlert className="h-3 w-3 shrink-0" />
-        <span className="flex-1 text-left">
-          {crossAreaDuplicates.length.toLocaleString("de-DE")} PLZ in{" "}
-          {areaCount} {areaCount === 1 ? "anderem Gebiet" : "anderen Gebieten"}
-        </span>
-        <ChevronDown
-          className={`h-3 w-3 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
-        />
-      </button>
-      {expanded && (
-        <ul className="mt-1 space-y-0.5 text-amber-600 dark:text-amber-500 max-h-32 overflow-y-auto">
-          {[...crossAreaDuplicatesByArea.entries()].map(
-            ([areaName, { areaId: otherAreaId, codes }]) => (
-              <li key={areaName} className="flex items-baseline gap-1 min-w-0">
-                <a
-                  href={`/postal-codes/${otherAreaId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium truncate underline-offset-2 hover:underline shrink-0 max-w-[120px]"
-                >
-                  {areaName}
-                </a>
-                <span className="text-[10px]">
-                  {codes.slice(0, 5).join(", ")}
-                  {codes.length > 5 ? ` +${codes.length - 5}` : ""}
-                </span>
-              </li>
-            )
-          )}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 export interface DrawingToolsProps {
   currentMode: TerraDrawMode | null;
 
@@ -1919,39 +1864,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
 
   const isDragDisabled = !!layerSearch.trim() || layerSortMode !== "default";
 
-  // Cross-area PLZ duplicate detection — fetched lazily when layers section is open
-  const [crossAreaDuplicates, setCrossAreaDuplicates] = useState<
-    { postalCode: string; otherAreaId: number; otherAreaName: string }[]
-  >([]);
-  const [crossAreaLoaded, setCrossAreaLoaded] = useState(false);
-  useEffect(() => {
-    if (!areaId || crossAreaLoaded) return;
-    fetch(`/api/areas/${areaId}/duplicates`)
-      .then((r) => r.json())
-      .then((data) => {
-        setCrossAreaDuplicates(Array.isArray(data) ? data : []);
-        setCrossAreaLoaded(true);
-      })
-      .catch(() => setCrossAreaLoaded(true));
-  }, [areaId, crossAreaLoaded]);
-
-  // Group cross-area duplicates by other area name for compact display
-  const crossAreaDuplicatesByArea = useMemo(() => {
-    const map = new Map<string, { areaId: number; codes: string[] }>();
-    for (const d of crossAreaDuplicates) {
-      const existing = map.get(d.otherAreaName);
-      if (existing) {
-        existing.codes.push(d.postalCode);
-      } else {
-        map.set(d.otherAreaName, {
-          areaId: d.otherAreaId,
-          codes: [d.postalCode],
-        });
-      }
-    }
-    return map;
-  }, [crossAreaDuplicates]);
-
   // PLZ quick-find: search which layer(s) contain a given code
   const [plzFindQuery, setPlzFindQuery] = useState("");
   const internalPlzFindInputRef = useRef<HTMLInputElement | null>(null);
@@ -2571,32 +2483,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
               </TooltipContent>
             </Tooltip>
           )}
-          {crossAreaDuplicatesByArea.size > 0 && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    onClick={handleOpenConflicts}
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 shrink-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                  />
-                }
-              >
-                <IconAlertTriangle className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>
-                  {crossAreaDuplicates.length.toLocaleString("de-DE")} PLZ in{" "}
-                  {crossAreaDuplicatesByArea.size}{" "}
-                  {crossAreaDuplicatesByArea.size === 1
-                    ? "anderem Gebiet"
-                    : "anderen Gebieten"}{" "}
-                  — Konflikte lösen
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          )}
           <Tooltip>
             <TooltipTrigger
               render={
@@ -2962,14 +2848,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
                 </TooltipContent>
               </Tooltip>
             </div>
-          )}
-
-          {/* Cross-area PLZ duplicate warning — collapsible */}
-          {crossAreaDuplicatesByArea.size > 0 && (
-            <ConflictBanner
-              crossAreaDuplicates={crossAreaDuplicates}
-              crossAreaDuplicatesByArea={crossAreaDuplicatesByArea}
-            />
           )}
 
           {/* Layer list */}
