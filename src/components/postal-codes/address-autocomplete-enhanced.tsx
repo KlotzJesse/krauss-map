@@ -5,7 +5,7 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from "lucide-react";
-import { useRef, useReducer, memo } from "react";
+import { useRef, useReducer, memo, useEffect } from "react";
 import { toast } from "sonner";
 
 import {
@@ -749,10 +749,29 @@ export const AddressAutocompleteEnhanced = memo(
     } = state;
 
     const inputRef = useRef<HTMLInputElement>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (!open) return;
+
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          wrapperRef.current &&
+          !wrapperRef.current.contains(event.target as Node)
+        ) {
+          dispatch({ type: "SET_OPEN", open: false });
+        }
+      };
+
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [open]);
 
     return (
       <>
-        <div className={`relative w-full ${triggerClassName}`}>
+        <div className={`relative w-full ${triggerClassName}`} ref={wrapperRef}>
           {open ? (
             <div className="absolute right-0 top-0 w-full z-50">
               <div className="bg-background border rounded-md shadow-sm">
@@ -764,12 +783,9 @@ export const AddressAutocompleteEnhanced = memo(
                     onValueChange={handleInputChange}
                     autoComplete="off"
                     className="h-8"
-                    onBlur={(e) => {
-                      // Only close if clicked outside the entire dialog wrapper
-                      const dialogWrapper = e.currentTarget.closest(".relative.w-full");
-                      if (dialogWrapper && !dialogWrapper.contains(e.relatedTarget as Node)) {
-                        dispatch({ type: "SET_OPEN", open: false });
-                      }
+                    onBlur={() => {
+                      // Don't auto-close on blur - let user close with Escape or by clicking outside
+                      // The closeWhen clicking outside will be handled by a global click listener if needed
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Escape") {
@@ -777,15 +793,20 @@ export const AddressAutocompleteEnhanced = memo(
                       }
                     }}
                   />
-                  <CommandList id="address-search-listbox" className="max-h-64 overflow-auto">
+                  <CommandList
+                    id="address-search-listbox"
+                    className="max-h-64 overflow-auto"
+                  >
                     {isLoading && (
                       <div className="p-3 text-sm text-muted-foreground">
                         Suche läuft...
                       </div>
                     )}
-                    {!isLoading && results.length === 0 && query.length >= 2 && (
-                      <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
-                    )}
+                    {!isLoading &&
+                      results.length === 0 &&
+                      query.length >= 2 && (
+                        <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
+                      )}
                     {results.map((result) => (
                       <CommandItem
                         key={result.id}
@@ -823,7 +844,9 @@ export const AddressAutocompleteEnhanced = memo(
                                         >
                                           <span
                                             className="w-2 h-2 rounded-full"
-                                            style={{ backgroundColor: layer.color }}
+                                            style={{
+                                              backgroundColor: layer.color,
+                                            }}
                                           />
                                           {layer.name}
                                         </span>
@@ -843,7 +866,8 @@ export const AddressAutocompleteEnhanced = memo(
                                       <Button
                                         size="sm"
                                         variant={
-                                          previewPostalCode === result.postal_code
+                                          previewPostalCode ===
+                                          result.postal_code
                                             ? "default"
                                             : "outline"
                                         }
@@ -859,7 +883,8 @@ export const AddressAutocompleteEnhanced = memo(
                                       />
                                     }
                                   >
-                                    {previewPostalCode === result.postal_code ? (
+                                    {previewPostalCode ===
+                                    result.postal_code ? (
                                       <EyeOffIcon className="h-3 w-3" />
                                     ) : (
                                       <EyeIcon className="h-3 w-3" />
