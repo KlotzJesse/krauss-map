@@ -765,11 +765,10 @@ export const AddressAutocompleteEnhanced = memo(
                     autoComplete="off"
                     className="h-8"
                     onBlur={(e) => {
-                      // Only close if clicked outside the command
-                      if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
-                        if (!query) {
-                          dispatch({ type: "SET_OPEN", open: false });
-                        }
+                      // Only close if clicked outside the entire dialog wrapper
+                      const dialogWrapper = e.currentTarget.closest(".relative.w-full");
+                      if (dialogWrapper && !dialogWrapper.contains(e.relatedTarget as Node)) {
+                        dispatch({ type: "SET_OPEN", open: false });
                       }
                     }}
                     onKeyDown={(e) => {
