@@ -4342,6 +4342,10 @@ function DrawingToolsImpl({
     [onLayerUpdate]
   );
 
+  const handleOpenConflicts = useCallback(() => {
+    onOpenConflicts?.();
+  }, [onOpenConflicts]);
+
   const mergeDialogOtherLayers = useMemo(
     () =>
       (layers ?? [])
@@ -4896,6 +4900,17 @@ function DrawingToolsImpl({
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
+          {onOpenConflicts && (
+            <button
+              type="button"
+              onClick={handleOpenConflicts}
+              title="Konflikte lösen"
+              aria-label="Konflikte lösen"
+              className="p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary text-muted-foreground"
+            >
+              <IconAlertTriangle className="h-4 w-4" />
+            </button>
           )}
           <button
             type="button"
