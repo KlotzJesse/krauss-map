@@ -3243,7 +3243,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
           {/* Layer stats summary — shown when there are layers with codes */}
           {layerStats.totalCodes > 0 && (
             <div className="border-t pt-1.5 mt-0.5 space-y-1.5">
-               {/* Duplicate PLZ detail panel */}
+              {/* Duplicate PLZ detail panel */}
               {showDuplicates && duplicateCodeMap.size > 0 && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
@@ -4875,4 +4875,3 @@ export const DrawingTools = memo(function DrawingTools(
     </Suspense>
   );
 });
-

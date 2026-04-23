@@ -754,26 +754,31 @@ export const AddressAutocompleteEnhanced = memo(
     useEffect(() => {
       if (!open) return;
 
-      const handleClickOutside = (event: MouseEvent) => {
-        if (
-          wrapperRef.current &&
-          !wrapperRef.current.contains(event.target as Node)
-        ) {
-          dispatch({ type: "SET_OPEN", open: false });
-        }
-      };
+      // Delay adding the listener to prevent the opening click from immediately closing
+      const timeoutId = setTimeout(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          if (
+            wrapperRef.current &&
+            !wrapperRef.current.contains(event.target as Node)
+          ) {
+            dispatch({ type: "SET_OPEN", open: false });
+          }
+        };
 
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+          document.removeEventListener("mousedown", handleClickOutside);
+        };
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     }, [open]);
 
     return (
       <>
-        <div className={`relative w-full ${triggerClassName}`} ref={wrapperRef}>
+        <div className="relative w-full" ref={wrapperRef}>
           {open ? (
-            <div className="absolute right-0 top-0 w-full z-50">
+            <div className="absolute left-0 top-full w-full z-50 mt-1">
               <div className="bg-background border rounded-md shadow-sm">
                 <Command>
                   <CommandInput
@@ -970,14 +975,15 @@ export const AddressAutocompleteEnhanced = memo(
               role="combobox"
               aria-expanded={false}
               aria-controls="address-search-listbox"
-              className="w-full justify-start shadow-sm bg-background h-8"
-              onClick={() => {
+              className={`w-full justify-start shadow-sm bg-background h-8 ${triggerClassName}`}
+              onClick={(e) => {
+                e.stopPropagation();
                 dispatch({ type: "SET_OPEN", open: true });
                 setTimeout(() => inputRef.current?.focus(), 0);
               }}
             >
               <ChevronsUpDownIcon className="h-4 w-4 shrink-0 opacity-50" />
-              <span className="truncate ml-2 text-muted-foreground">
+              <span className="ml-2 text-muted-foreground">
                 PLZ, Adresse, Stadt oder Region suchen...
               </span>
             </Button>
