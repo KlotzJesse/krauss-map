@@ -1888,6 +1888,7 @@ interface LayerManagementSectionProps {
   showNewLayerInputRef?: React.RefObject<((show: boolean) => void) | null>;
   allCodesSet?: Set<string>;
   getAllCodesSet?: () => Set<string>;
+  activeCodesTotal?: number;
   onLayerUpdate?: () => void;
   onHighlightCodes?: (codes: Set<string> | null) => void;
   handleExportLayerCSV?: (
@@ -1942,6 +1943,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
   showNewLayerInputRef,
   allCodesSet,
   getAllCodesSet,
+  activeCodesTotal,
   onLayerUpdate,
   onHighlightCodes,
   handleExportLayerCSV,
@@ -3222,7 +3224,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                         onZoomToLayer={onZoomToLayer}
                         onClearPLZ={handleClearLayerPLZ}
                         onAddPlzRange={addPostalCodesToLayer ?? undefined}
-                        allCodesSetSize={allCodesSet?.size ?? 0}
+                        allCodesSetSize={activeCodesTotal ?? allCodesSet?.size ?? 0}
                         getAllCodesSet={getAllCodesSet}
                         onBulkMovePlz={handleBulkMovePlz}
                         onBulkRemovePlz={handleBulkRemovePlz}
@@ -3401,7 +3403,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                             onZoomToLayer={onZoomToLayer}
                             onClearPLZ={handleClearLayerPLZ}
                             onAddPlzRange={addPostalCodesToLayer ?? undefined}
-                            allCodesSetSize={allCodesSet?.size ?? 0}
+                            allCodesSetSize={activeCodesTotal ?? allCodesSet?.size ?? 0}
                             getAllCodesSet={getAllCodesSet}
                             onBulkMovePlz={handleBulkMovePlz}
                             onBulkRemovePlz={handleBulkRemovePlz}
@@ -3598,7 +3600,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
         </AlertDialogContent>
       </AlertDialog>
 
-      <Separator />
       <LayerTemplatesDialog
         open={templatesDialogOpen}
         onOpenChange={setTemplatesDialogOpen}
@@ -4251,6 +4252,33 @@ function DrawingToolsImpl({
     }
     return s;
   }, [postalCodesData]);
+
+  // Active-country total: only count codes from countries that appear in at least one layer.
+  // Used for per-layer coverage percentages so a DE-only area shows % of ~8k DE codes, not ~13k DACH.
+  const activeTotalCodes = useMemo(() => {
+    if (!postalCodesData?.features || postalCodesData.features.length === 0)
+      return postalCodesData?.features.length ?? 0;
+    const countryTotals = new Map<string, number>();
+    const codeCountryMap = new Map<string, string>();
+    for (const f of postalCodesData.features) {
+      const code = f.properties?.code as string | undefined;
+      const c = f.properties?.country as string | undefined;
+      if (c) countryTotals.set(c, (countryTotals.get(c) ?? 0) + 1);
+      if (code && c && !codeCountryMap.has(code)) codeCountryMap.set(code, c);
+    }
+    const countriesInUse = new Set<string>();
+    for (const layer of optimisticLayers) {
+      for (const pc of layer.postalCodes ?? []) {
+        const c = codeCountryMap.get(pc.postalCode);
+        if (c) countriesInUse.add(c);
+      }
+    }
+    if (countriesInUse.size === 0) return postalCodesData.features.length;
+    return [...countriesInUse].reduce(
+      (sum, c) => sum + (countryTotals.get(c) ?? 0),
+      0
+    );
+  }, [postalCodesData, optimisticLayers]);
 
   const layersRef = useRef(layers);
   layersRef.current = layers;
@@ -4950,6 +4978,7 @@ function DrawingToolsImpl({
             showNewLayerInputRef={showNewLayerInputRef}
             allCodesSet={allCodesSet}
             getAllCodesSet={getAllCodesSet}
+            activeCodesTotal={activeTotalCodes}
             onLayerUpdate={onLayerUpdate}
             handleExportLayerCSV={handleExportLayerCSV}
           />
