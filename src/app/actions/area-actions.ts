@@ -2117,7 +2117,14 @@ export async function searchPostalCodesByBoundaryAction(data: {
       ],
     };
 
-    // Find postal codes within boundary
+    // Find postal codes within boundary.
+    // ST_SetSRID ensures the Nominatim GeoJSON polygon is in WGS84 (4326), matching stored geometries.
+    // Add country filter when known to avoid scanning unrelated countries' data.
+    const knownCountry = ["de", "at", "ch"].includes(
+      featureCountryCode ?? ""
+    )
+      ? featureCountryCode?.toUpperCase()
+      : undefined;
 
     const intersectingCodes = await db
 
@@ -2129,8 +2136,9 @@ export async function searchPostalCodesByBoundaryAction(data: {
 
       .where(
         sql`${postalCodes.granularity} = ${effectiveGranularity}
+          ${knownCountry ? sql`AND ${postalCodes.country} = ${knownCountry}` : sql``}
           AND ST_Contains(
-            ST_GeomFromGeoJSON(${boundaryGeometry}),
+            ST_SetSRID(ST_GeomFromGeoJSON(${boundaryGeometry}), 4326),
             ST_Centroid(${postalCodes.geometry})
           )`
       )

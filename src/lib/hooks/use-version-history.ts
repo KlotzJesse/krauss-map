@@ -60,27 +60,20 @@ export function useVersionHistory(areaId: number) {
 
   const restoreVersion = useCallback(
     (version: AreaVersion) => {
-      try {
-        executeAction(
-          (async () => {
-            const result = await restoreVersionAction(areaId, version.id);
-            if (result.success) {
-              return `Version ${version.versionNumber} wiederhergestellt`;
-            }
-            throw new Error(result.error || "Failed to restore version");
-          })(),
-          {
-            loading: "Wiederherstellen...",
-            success: (message) => message as string,
-            error: "Fehler beim Wiederherstellen",
+      executeAction(
+        (async () => {
+          const result = await restoreVersionAction(areaId, version.id);
+          if (result.success) {
+            return `Version ${version.versionNumber} wiederhergestellt`;
           }
-        );
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        toast.error(`Fehler beim Wiederherstellen: ${errorMessage}`);
-        throw error;
-      }
+          throw new Error(result.error || "Failed to restore version");
+        })(),
+        {
+          loading: "Wiederherstellen...",
+          success: (message) => message as string,
+          error: "Fehler beim Wiederherstellen",
+        }
+      ).catch(() => {});
     },
     [areaId]
   );

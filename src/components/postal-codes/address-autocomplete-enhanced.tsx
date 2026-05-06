@@ -316,7 +316,7 @@ function useAddressAutocomplete({
         success: (message) => message as string,
         error: (error) =>
           error instanceof Error ? error.message : "Adresssuche fehlgeschlagen",
-      });
+      }).catch(() => {});
     }, 300);
   });
 
@@ -351,7 +351,7 @@ function useAddressAutocomplete({
         success: (message: string) => message,
         error: (error: unknown) =>
           error instanceof Error ? error.message : "Ein Fehler ist aufgetreten",
-      });
+      }).catch(() => {});
 
       return;
     }

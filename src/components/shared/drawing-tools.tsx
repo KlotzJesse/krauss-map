@@ -868,7 +868,7 @@ async function fillRegions(
     success: (message) => message!,
 
     error: "Fehler bei der Geoverarbeitung",
-  });
+  }).catch(() => {});
 }
 
 interface UseDrawingToolsActionsProps {
@@ -4165,7 +4165,7 @@ function DrawingToolsImpl({
         loading: "Dupliziere Layer...",
         success: "Layer dupliziert",
         error: "Duplizieren fehlgeschlagen",
-      });
+      }).catch(() => {});
     },
     [areaId]
   );
