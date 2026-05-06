@@ -4,7 +4,11 @@ import { and, eq, inArray } from "drizzle-orm";
 import { updateTag } from "next/cache";
 
 import { db } from "../../lib/db";
-import { areaLayers, areaLayerPostalCodes } from "../../lib/schema/schema";
+import {
+  areaLayers,
+  areaLayerPostalCodes,
+  postalCodes,
+} from "../../lib/schema/schema";
 import { recordChangeAction } from "./change-tracking-actions";
 
 export async function createLayerAction(
@@ -469,5 +473,72 @@ export async function mergeLayersAction(
   } catch (error) {
     console.error("Error merging layers:", error);
     return { success: false, error: "Failed to merge layers" };
+  }
+}
+
+/**
+ * Remove all postal codes belonging to a specific country from one or all layers in an area.
+ * Uses the postal_codes table to identify which codes belong to the given country.
+ */
+export async function removePostalCodesByCountryAction(
+  areaId: number,
+  countryCode: string,
+  layerId?: number
+): Promise<{ success: boolean; data?: { removed: number }; error?: string }> {
+  try {
+    const layerFilter = layerId
+      ? and(eq(areaLayers.areaId, areaId), eq(areaLayers.id, layerId))
+      : eq(areaLayers.areaId, areaId);
+
+    const layerRows = await db
+      .select({ id: areaLayers.id })
+      .from(areaLayers)
+      .where(layerFilter);
+
+    const layerIds = layerRows.map((r) => r.id);
+    if (layerIds.length === 0) return { success: true, data: { removed: 0 } };
+
+    // Find codes in those layers that belong to this country via postal_codes join
+    const codesToRemove = await db
+      .selectDistinct({ postalCode: areaLayerPostalCodes.postalCode })
+      .from(areaLayerPostalCodes)
+      .innerJoin(
+        postalCodes,
+        and(
+          eq(areaLayerPostalCodes.postalCode, postalCodes.code),
+          eq(postalCodes.country, countryCode)
+        )
+      )
+      .where(inArray(areaLayerPostalCodes.layerId, layerIds));
+
+    if (codesToRemove.length === 0) {
+      return { success: true, data: { removed: 0 } };
+    }
+
+    const codeList = codesToRemove.map((r) => r.postalCode);
+
+    await db.delete(areaLayerPostalCodes).where(
+      and(
+        inArray(areaLayerPostalCodes.layerId, layerIds),
+        inArray(areaLayerPostalCodes.postalCode, codeList)
+      )
+    );
+
+    await recordChangeAction(areaId, {
+      changeType: "remove_postal_codes",
+      entityType: "postal_code",
+      entityId: areaId,
+      changeData: { postalCodes: codeList, countryCode, layerIds },
+      previousData: { postalCodes: codeList },
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}`);
+    updateTag(`area-${areaId}-undo-redo`);
+
+    return { success: true, data: { removed: codeList.length } };
+  } catch (error) {
+    console.error("removePostalCodesByCountryAction error:", error);
+    return { success: false, error: "Fehler beim Entfernen der PLZ" };
   }
 }

@@ -474,7 +474,38 @@ export function useDeckLayers({
     return codes;
   }, [layers, country, featureIndex]);
 
-  // Unassigned feature data — postal codes not in any layer.
+  // Countries that have at least one assigned code (extracted from composite "CC:code" keys).
+  const countriesInUse = useMemo(() => {
+    const used = new Set<string>();
+    for (const key of allAssignedCodeSet) {
+      const c = key.split(":")[0];
+      if (c && c.length === 2) used.add(c);
+    }
+    return used;
+  }, [allAssignedCodeSet]);
+
+  // Composite keys of features whose country is not represented in any layer.
+  const inactiveCountryCodes = useMemo(() => {
+    if (countriesInUse.size === 0) return new Set<string>();
+    const inactive = new Set<string>();
+    for (const f of data.features) {
+      const code = getFeatureCode(f);
+      if (!code) continue;
+      const c = code.split(":")[0];
+      if (c && !countriesInUse.has(c)) inactive.add(code);
+    }
+    return inactive;
+  }, [countriesInUse, data]);
+
+  const inactiveCountryFeaturesData = useMemo(
+    () =>
+      inactiveCountryCodes.size > 0
+        ? filterAreaFeatures(data, inactiveCountryCodes, featureIndex)
+        : (EMPTY_FEATURE_COLLECTION as FeatureCollection<Polygon | MultiPolygon>),
+    [inactiveCountryCodes, data, featureIndex]
+  );
+
+  // Unassigned feature data — postal codes not in any layer, excluding inactive-country codes.
   const unassignedFeaturesData = useMemo(() => {
     if (!showUnassigned)
       return EMPTY_FEATURE_COLLECTION as FeatureCollection<
@@ -487,10 +518,11 @@ export function useDeckLayers({
     }
     const unassignedCodes = new Set<string>();
     for (const code of allCodes) {
-      if (!allAssignedCodeSet.has(code)) unassignedCodes.add(code);
+      if (!allAssignedCodeSet.has(code) && !inactiveCountryCodes.has(code))
+        unassignedCodes.add(code);
     }
     return filterAreaFeatures(data, unassignedCodes, featureIndex);
-  }, [showUnassigned, data, allAssignedCodeSet, featureIndex]);
+  }, [showUnassigned, data, allAssignedCodeSet, inactiveCountryCodes, featureIndex]);
 
   // Single-layer code set (codes in exactly one visible layer)
   const singleLayerCodeSet = useMemo(() => {
@@ -798,6 +830,24 @@ export function useDeckLayers({
         highlightColor: [37, 99, 235, 50],
       })
     );
+
+    // Inactive country overlay — codes from countries not used in any layer (shown grey)
+    if (inactiveCountryCodes.size > 0) {
+      result.push(
+        new GeoJsonLayer({
+          id: "inactive-country-overlay",
+          data: inactiveCountryFeaturesData,
+          beforeId,
+          filled: true,
+          stroked: true,
+          getFillColor: [160, 160, 160, 25],
+          getLineColor: [140, 140, 140, 60],
+          getLineWidth: 0.5,
+          lineWidthUnits: "pixels" as const,
+          pickable: false,
+        })
+      );
+    }
 
     // Unassigned PLZ overlay — postal codes not assigned to any layer
     if (showUnassigned) {
