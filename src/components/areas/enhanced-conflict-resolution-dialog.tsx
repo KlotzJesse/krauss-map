@@ -153,7 +153,7 @@ export function EnhancedConflictResolutionDialog({
                               Your Changes
                             </Label>
                           </div>
-                          <div className="pl-6 p-3 bg-blue-50 dark:bg-blue-900/10 rounded border border-blue-200">
+                          <div className="pl-6 p-3 bg-blue-50 dark:bg-blue-900/10 rounded border border-blue-200 dark:border-blue-800/40">
                             <pre className="text-xs overflow-auto">
                               {formatValue(conflict.localValue)}
                             </pre>
@@ -174,7 +174,7 @@ export function EnhancedConflictResolutionDialog({
                               Their Changes
                             </Label>
                           </div>
-                          <div className="pl-6 p-3 bg-green-50 dark:bg-green-900/10 rounded border border-green-200">
+                          <div className="pl-6 p-3 bg-green-50 dark:bg-green-900/10 rounded border border-green-200 dark:border-green-800/40">
                             <pre className="text-xs overflow-auto">
                               {formatValue(conflict.remoteValue)}
                             </pre>

@@ -218,7 +218,7 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
                           <button
                             type="button"
                             onClick={handleSaveTagEdit}
-                            className="text-green-600 hover:text-green-700 transition-colors"
+                            className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 transition-colors"
                             title="Speichern"
                           >
                             <Check className="h-3 w-3" />
