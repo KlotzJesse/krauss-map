@@ -491,7 +491,7 @@ function RadiusSearchDialog({
               >
                 <div className="flex items-center gap-2 w-full">
                   <span className="text-sm font-medium">Luftlinie</span>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-auto">
+                  <span className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 px-2 py-1 rounded-full ml-auto">
                     Schnell
                   </span>
                 </div>
@@ -518,7 +518,7 @@ function RadiusSearchDialog({
               >
                 <div className="flex items-center gap-2 w-full">
                   <span className="text-sm font-medium">Fahrstrecke (km)</span>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-auto">
+                  <span className="text-xs bg-blue-500/10 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full ml-auto">
                     Präzise
                   </span>
                 </div>

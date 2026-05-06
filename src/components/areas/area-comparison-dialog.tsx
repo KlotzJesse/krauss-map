@@ -420,7 +420,7 @@ export function AreaComparisonDialog({
                         {result.overlapCodes.map((code) => (
                           <span
                             key={code}
-                            className="text-[10px] font-mono bg-orange-100 text-orange-700 rounded px-1 py-0.5 leading-none"
+                            className="text-[10px] font-mono bg-orange-500/10 text-orange-700 dark:text-orange-400 rounded px-1 py-0.5 leading-none"
                           >
                             {code}
                           </span>
@@ -440,7 +440,7 @@ export function AreaComparisonDialog({
                         {result.onlyInBCodes.map((code) => (
                           <span
                             key={code}
-                            className="text-[10px] font-mono bg-blue-100 text-blue-700 rounded px-1 py-0.5 leading-none"
+                            className="text-[10px] font-mono bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded px-1 py-0.5 leading-none"
                           >
                             {code}
                           </span>

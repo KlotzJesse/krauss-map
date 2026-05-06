@@ -199,7 +199,7 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
                         setDefaultCountry(v === "auto" ? null : (v as CountryCode))
                       }
                     >
-                      <SelectTrigger className="h-7 w-44 border-amber-300 bg-white text-xs dark:bg-transparent">
+                      <SelectTrigger className="h-7 w-44 border-amber-300 bg-background text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

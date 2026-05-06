@@ -90,7 +90,7 @@ export function EnhancedConflictResolutionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Alert className="bg-orange-50 dark:bg-orange-900/10 border-orange-200">
+        <Alert className="bg-orange-500/10 dark:bg-orange-900/10 border-orange-400/30">
           <IconAlertTriangle className="h-4 w-4 text-orange-500" />
           <AlertDescription>
             {conflicts.length} conflict{conflicts.length !== 1 ? "s" : ""}{" "}
