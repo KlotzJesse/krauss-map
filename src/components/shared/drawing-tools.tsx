@@ -382,7 +382,7 @@ function StatsSection({
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>Ohne Gebiet</span>
+                  <span>Nicht zugeordnet</span>
                   <span
                     className={`tabular-nums font-medium ${unassignedCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}
                   >
@@ -493,6 +493,7 @@ function LänderSection({
 }: LänderSectionProps) {
   const [confirmCountry, setConfirmCountry] = useState<string | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
 
   const codeCountryMap = new Map<string, string>();
   const countryTotals = new Map<string, number>();
@@ -519,6 +520,9 @@ function LänderSection({
 
   if (countryKeys.length === 0) return null;
 
+  const activeKeys = countryKeys.filter((c) => (countryAssigned.get(c) ?? 0) > 0);
+  const inactiveKeys = countryKeys.filter((c) => (countryAssigned.get(c) ?? 0) === 0);
+
   const handleRemoveCountry = async (countryCode: string) => {
     if (!areaId) return;
     setIsRemoving(true);
@@ -538,54 +542,75 @@ function LänderSection({
     }
   };
 
+  const renderCountryRow = (c: string) => {
+    const meta = COUNTRY_META[c];
+    const total = countryTotals.get(c) ?? 0;
+    const assigned = countryAssigned.get(c) ?? 0;
+    const inUse = assigned > 0;
+    const coveragePct = total > 0 ? Math.round((assigned / total) * 100) : 0;
+    return (
+      <div
+        key={c}
+        className="flex items-center gap-1.5 rounded px-1 py-0.5"
+      >
+        <span className="text-sm leading-none">{meta?.flag}</span>
+        <span className="flex-1 truncate text-[10px] text-muted-foreground">
+          {meta?.name ?? c}
+        </span>
+        {inUse ? (
+          <>
+            <span className="tabular-nums text-[10px] text-foreground">
+              {assigned.toLocaleString("de-DE")}
+              <span className="text-muted-foreground">
+                /{total.toLocaleString("de-DE")}
+              </span>
+            </span>
+            <span className="text-[9px] text-muted-foreground tabular-nums w-8 text-right shrink-0">
+              {coveragePct}%
+            </span>
+            {areaId && (
+              <button
+                type="button"
+                title={`Alle ${meta?.name ?? c}-PLZ aus allen Gebieten entfernen`}
+                className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
+                onClick={() => setConfirmCountry(c)}
+              >
+                <Trash2 className="h-2.5 w-2.5" />
+              </button>
+            )}
+          </>
+        ) : (
+          <span className="text-[9px] text-muted-foreground italic">
+            nicht verwendet
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <Separator />
       <div className="space-y-1 py-1">
         <div className="flex items-center justify-between py-0.5">
           <span className="text-xs font-semibold">Länder</span>
-        </div>
-        {countryKeys.map((c) => {
-          const meta = COUNTRY_META[c];
-          const total = countryTotals.get(c) ?? 0;
-          const assigned = countryAssigned.get(c) ?? 0;
-          const inUse = assigned > 0;
-          return (
-            <div
-              key={c}
-              className={`flex items-center gap-1.5 rounded px-1 py-0.5 ${!inUse ? "opacity-30" : ""}`}
+          {inactiveKeys.length > 0 && (
+            <button
+              type="button"
+              className="flex items-center gap-0.5 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setShowInactive((v) => !v)}
             >
-              <span className="text-sm leading-none">{meta?.flag}</span>
-              <span className="flex-1 truncate text-[10px] text-muted-foreground">
-                {meta?.name ?? c}
-              </span>
-              {inUse ? (
-                <>
-                  <span className="tabular-nums text-[10px] text-foreground">
-                    {assigned.toLocaleString("de-DE")}
-                    <span className="text-muted-foreground">
-                      /{total.toLocaleString("de-DE")}
-                    </span>
-                  </span>
-                  {areaId && (
-                    <button
-                      type="button"
-                      title={`Alle ${meta?.name ?? c}-PLZ aus allen Gebieten entfernen`}
-                      className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
-                      onClick={() => setConfirmCountry(c)}
-                    >
-                      <Trash2 className="h-2.5 w-2.5" />
-                    </button>
-                  )}
-                </>
-              ) : (
-                <span className="text-[9px] text-muted-foreground italic">
-                  nicht verwendet
-                </span>
-              )}
-            </div>
-          );
-        })}
+              {showInactive
+                ? `${inactiveKeys.length} inaktiv ausblenden`
+                : `${inactiveKeys.length} inaktiv`}
+              <IconChevronDown
+                className={`size-2.5 transition-transform ${showInactive ? "rotate-0" : "-rotate-90"}`}
+              />
+            </button>
+          )}
+        </div>
+        {activeKeys.map(renderCountryRow)}
+        {showInactive && inactiveKeys.map(renderCountryRow)}
       </div>
       <AlertDialog
         open={confirmCountry !== null}

@@ -2,6 +2,7 @@
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import {
   Camera,
+  ChevronDown,
   Ellipsis,
   Home,
   Layers,
@@ -226,14 +227,16 @@ function MapLegend({
 
   return (
     <div className="absolute bottom-20 right-4 z-10 print:hidden">
-      <div className="bg-white/95 border border-border rounded-lg shadow-md overflow-hidden max-w-[200px]">
+      <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-md overflow-hidden max-w-[200px]">
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
           className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted/50 transition-colors"
         >
           <span>Legende</span>
-          <span className="text-muted-foreground">{collapsed ? "▲" : "▼"}</span>
+          <ChevronDown
+            className={`h-3 w-3 text-muted-foreground transition-transform ${collapsed ? "rotate-180" : "rotate-0"}`}
+          />
         </button>
         {!collapsed && (
           <div className="px-2.5 pb-2 space-y-0.5 max-h-48 overflow-y-auto">
