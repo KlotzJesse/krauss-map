@@ -136,7 +136,7 @@ export function OverviewAreaList({ areas }: { areas: OverviewArea[] }) {
                     "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border transition-colors",
                     isActive
                       ? f === "conflicts"
-                        ? "bg-amber-500/15 text-amber-600 border-amber-400/30"
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30"
                         : f === "empty"
                           ? "bg-muted text-muted-foreground border-border"
                           : "bg-primary text-primary-foreground border-primary"
@@ -264,7 +264,7 @@ export function OverviewAreaList({ areas }: { areas: OverviewArea[] }) {
                       </div>
                       <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground shrink-0">
                         {hasConflicts && (
-                          <Badge className="text-[9px] px-1 py-0 h-3.5 bg-amber-500/15 text-amber-600 border-amber-400/30 gap-0.5 shrink-0">
+                          <Badge className="text-[9px] px-1 py-0 h-3.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30 gap-0.5 shrink-0">
                             <IconAlertTriangle className="h-2 w-2" />
                             {area.conflictCount}
                           </Badge>

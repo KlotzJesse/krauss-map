@@ -712,7 +712,7 @@ export const LayerListItem = memo(function LayerListItem({
                     <Tooltip>
                       <TooltipTrigger
                         render={
-                          <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 border-0 gap-0.5 cursor-default shrink-0" />
+                          <Badge className="text-[10px] px-1 py-0 h-4 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0 gap-0.5 cursor-default shrink-0" />
                         }
                       >
                         <TriangleAlert className="h-2.5 w-2.5" />

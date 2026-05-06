@@ -102,7 +102,7 @@ export function MergeLayersDialog({
           </div>
 
           {targetLayerId && (
-            <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+            <div className="rounded-md bg-amber-500/10 border border-amber-400/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
               <strong>{sourceLayerName}</strong> wird nach dem Zusammenführen
               dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht
               werden.

@@ -120,7 +120,7 @@ export function UndoRedoToolbar({
                   disabled={!optimisticStatus.canUndo || isLoading}
                   aria-label="Rückgängig (Strg+Z)"
                   className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed",
+                    "flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed",
                     className
                   )}
                 />
@@ -148,7 +148,7 @@ export function UndoRedoToolbar({
                   disabled={!optimisticStatus.canRedo || isLoading}
                   aria-label="Wiederholen (Strg+Umschalt+Z)"
                   className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed",
+                    "flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed",
                     className
                   )}
                 />
@@ -178,7 +178,7 @@ export function UndoRedoToolbar({
         className={cn(
           "flex items-center gap-1",
           isFloating &&
-            "bg-white/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 pointer-events-auto",
+            "bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 pointer-events-auto",
           className
         )}
       >
