@@ -238,15 +238,7 @@ interface StatsSectionProps {
   onLayerSelect?: (layerId: number) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  areaId?: number;
-  onLayerUpdate?: () => void;
 }
-
-const COUNTRY_META: Record<string, { flag: string; name: string }> = {
-  DE: { flag: "🇩🇪", name: "Deutschland" },
-  AT: { flag: "🇦🇹", name: "Österreich" },
-  CH: { flag: "🇨🇭", name: "Schweiz" },
-};
 
 function StatsSection({
   layers,
@@ -254,18 +246,13 @@ function StatsSection({
   onLayerSelect,
   open = true,
   onOpenChange,
-  areaId,
-  onLayerUpdate,
 }: StatsSectionProps) {
-  const [confirmCountry, setConfirmCountry] = useState<string | null>(null);
-  const [isRemoving, setIsRemoving] = useState(false);
-
   const totalFeatures = postalCodesData?.features.length ?? 0;
   const assignedSet = new Set(
     layers.flatMap((l) => l.postalCodes?.map((pc) => pc.postalCode) ?? [])
   );
 
-  // Build per-country stats from feature data
+  // Build per-country stats to compute activeTotalFeatures
   const codeCountryMap = new Map<string, string>();
   const countryTotals = new Map<string, number>();
   for (const f of postalCodesData?.features ?? []) {
@@ -298,32 +285,6 @@ function StatsSection({
   const unassignedCount = Math.max(0, activeTotalFeatures - assignedCount);
   const coverage =
     activeTotalFeatures > 0 ? (assignedCount / activeTotalFeatures) * 100 : 0;
-
-  const countryKeys = Object.keys(COUNTRY_META).filter(
-    (c) => (countryTotals.get(c) ?? 0) > 0
-  );
-
-  const handleRemoveCountry = async (countryCode: string) => {
-    if (!areaId) return;
-    setIsRemoving(true);
-    try {
-      const result = await removePostalCodesByCountryAction(
-        areaId,
-        countryCode
-      );
-      if (result.success) {
-        toast.success(
-          `${result.data?.removed ?? 0} ${COUNTRY_META[countryCode]?.name ?? countryCode}-PLZ entfernt`
-        );
-        onLayerUpdate?.();
-      } else {
-        toast.error(result.error ?? "Fehler beim Entfernen");
-      }
-    } finally {
-      setIsRemoving(false);
-      setConfirmCountry(null);
-    }
-  };
 
   // Build sorted layer sizes for bar chart (include full data for CSV)
   const layerSizes = layers
@@ -500,50 +461,128 @@ function StatsSection({
                 ))}
               </div>
             )}
-            {/* Per-country breakdown */}
-            {countryKeys.length > 0 && (
-              <div className="space-y-1 pt-0.5">
-                <div className="text-[10px] font-semibold text-muted-foreground">
-                  Länder
-                </div>
-                {countryKeys.map((c) => {
-                  const meta = COUNTRY_META[c];
-                  const total = countryTotals.get(c) ?? 0;
-                  const assigned = countryAssigned.get(c) ?? 0;
-                  const inUse = countriesInUse.has(c);
-                  return (
-                    <div
-                      key={c}
-                      className={`flex items-center gap-1.5 rounded px-1 py-0.5 ${!inUse ? "opacity-40" : ""}`}
-                    >
-                      <span className="text-xs leading-none">{meta?.flag}</span>
-                      <span className="flex-1 truncate text-[10px] text-muted-foreground">
-                        {meta?.name ?? c}
-                      </span>
-                      <span className="tabular-nums text-[10px] text-foreground">
-                        {assigned.toLocaleString("de-DE")}
-                        <span className="text-muted-foreground">
-                          /{total.toLocaleString("de-DE")}
-                        </span>
-                      </span>
-                      {areaId && assigned > 0 && (
-                        <button
-                          type="button"
-                          title={`Alle ${meta?.name ?? c}-PLZ entfernen`}
-                          className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
-                          onClick={() => setConfirmCountry(c)}
-                        >
-                          <Trash2 className="h-2.5 w-2.5" />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </CollapsibleContent>
       </Collapsible>
+    </>
+  );
+}
+
+type Layer = InferSelectModel<typeof areaLayers> & {
+  postalCodes?: { postalCode: string }[];
+};
+
+const COUNTRY_META: Record<string, { flag: string; name: string }> = {
+  DE: { flag: "🇩🇪", name: "Deutschland" },
+  AT: { flag: "🇦🇹", name: "Österreich" },
+  CH: { flag: "🇨🇭", name: "Schweiz" },
+};
+
+interface LänderSectionProps {
+  layers: Layer[];
+  postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
+  areaId?: number;
+  onLayerUpdate?: () => void;
+}
+
+function LänderSection({
+  layers,
+  postalCodesData,
+  areaId,
+  onLayerUpdate,
+}: LänderSectionProps) {
+  const [confirmCountry, setConfirmCountry] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  const codeCountryMap = new Map<string, string>();
+  const countryTotals = new Map<string, number>();
+  for (const f of postalCodesData?.features ?? []) {
+    const code = f.properties?.code as string | undefined;
+    const c = f.properties?.country as string | undefined;
+    if (c) countryTotals.set(c, (countryTotals.get(c) ?? 0) + 1);
+    if (code && c && !codeCountryMap.has(code)) codeCountryMap.set(code, c);
+  }
+
+  const assignedSet = new Set(
+    layers.flatMap((l) => l.postalCodes?.map((pc) => pc.postalCode) ?? [])
+  );
+
+  const countryAssigned = new Map<string, number>();
+  for (const code of assignedSet) {
+    const c = codeCountryMap.get(code);
+    if (c) countryAssigned.set(c, (countryAssigned.get(c) ?? 0) + 1);
+  }
+
+  const countryKeys = Object.keys(COUNTRY_META).filter(
+    (c) => (countryTotals.get(c) ?? 0) > 0
+  );
+
+  if (countryKeys.length === 0) return null;
+
+  const handleRemoveCountry = async (countryCode: string) => {
+    if (!areaId) return;
+    setIsRemoving(true);
+    try {
+      const result = await removePostalCodesByCountryAction(areaId, countryCode);
+      if (result.success) {
+        toast.success(
+          `${result.data?.removed ?? 0} ${COUNTRY_META[countryCode]?.name ?? countryCode}-PLZ entfernt`
+        );
+        onLayerUpdate?.();
+      } else {
+        toast.error(result.error ?? "Fehler beim Entfernen");
+      }
+    } finally {
+      setIsRemoving(false);
+      setConfirmCountry(null);
+    }
+  };
+
+  return (
+    <>
+      <Separator />
+      <div className="space-y-1 py-1">
+        <div className="flex items-center justify-between py-0.5">
+          <span className="text-xs font-semibold">Länder</span>
+        </div>
+        {countryKeys.map((c) => {
+          const meta = COUNTRY_META[c];
+          const total = countryTotals.get(c) ?? 0;
+          const assigned = countryAssigned.get(c) ?? 0;
+          const inUse = assigned > 0;
+          return (
+            <div
+              key={c}
+              className={`flex items-center gap-1.5 rounded px-1 py-0.5 ${!inUse ? "opacity-40" : ""}`}
+            >
+              <span className="text-sm leading-none">{meta?.flag}</span>
+              <span className="flex-1 truncate text-[10px] text-muted-foreground">
+                {meta?.name ?? c}
+              </span>
+              <span className="tabular-nums text-[10px] text-foreground">
+                {assigned.toLocaleString("de-DE")}
+                <span className="text-muted-foreground">
+                  /{total.toLocaleString("de-DE")}
+                </span>
+              </span>
+              {areaId && assigned > 0 ? (
+                <button
+                  type="button"
+                  title={`Alle ${meta?.name ?? c}-PLZ aus allen Gebieten entfernen`}
+                  className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
+                  onClick={() => setConfirmCountry(c)}
+                >
+                  <Trash2 className="h-2.5 w-2.5" />
+                </button>
+              ) : (
+                <span className="text-[9px] text-muted-foreground ml-0.5 italic">
+                  inaktiv
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
       <AlertDialog
         open={confirmCountry !== null}
         onOpenChange={(v) => !v && setConfirmCountry(null)}
@@ -556,9 +595,9 @@ function StatsSection({
             </AlertDialogTitle>
             <AlertDialogDescription>
               Alle{" "}
-              {(
-                countryAssigned.get(confirmCountry ?? "") ?? 0
-              ).toLocaleString("de-DE")}{" "}
+              {(countryAssigned.get(confirmCountry ?? "") ?? 0).toLocaleString(
+                "de-DE"
+              )}{" "}
               PLZ aus{" "}
               {COUNTRY_META[confirmCountry ?? ""]?.name ?? confirmCountry}{" "}
               werden aus allen Gebieten entfernt. Diese Aktion kann rückgängig
@@ -581,10 +620,6 @@ function StatsSection({
     </>
   );
 }
-
-type Layer = InferSelectModel<typeof areaLayers> & {
-  postalCodes?: { postalCode: string }[];
-};
 
 export interface DrawingToolsProps {
   currentMode: TerraDrawMode | null;
@@ -4965,6 +5000,14 @@ function DrawingToolsImpl({
             onLayerSelect={onLayerSelect}
             open={ui.statsOpen}
             onOpenChange={handleSetStatsOpen}
+          />
+        )}
+
+        {/* Länder Section — per-country breakdown with remove-by-country action */}
+        {postalCodesData && (
+          <LänderSection
+            layers={optimisticLayers}
+            postalCodesData={postalCodesData}
             areaId={areaId}
             onLayerUpdate={onLayerUpdate}
           />
