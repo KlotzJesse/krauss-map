@@ -17,6 +17,7 @@ import {
   EMPTY_FEATURE_COLLECTION,
   getFeatureCode,
   hexToRgba,
+  resolveFeatureKey,
 } from "@/lib/utils/deck-gl-utils";
 import {
   createStripePatternAtlas,
@@ -240,7 +241,8 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
 /**
  * Build a Map from composite key (country:code) → resolved visual style.
  * Keys match the featureIndex format from getFeatureCode().
- * `country` is used to prefix raw DB postal codes (e.g. "01067" → "DE:01067").
+ * `country` is used to prefer the area's own country when resolving codes.
+ * `featureIndex` enables cross-country resolution (e.g., AT codes in a DE area).
  *
  * Also returns `multiLayerCodes` (codes in 2+ visible layers) and
  * `sameColorCodes` (subset where all contributing layers share a similar color).
@@ -248,7 +250,8 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
 function buildResolvedStyleMap(
   layers: Layer[] | undefined,
   activeLayerId: number | null | undefined,
-  country?: string
+  country?: string,
+  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>
 ): {
   map: Map<string, ResolvedStyle>;
   version: string;
@@ -282,7 +285,7 @@ function buildResolvedStyleMap(
     versionParts.push(`${layer.id}:${layer.color}:${opacity}:${isActive}`);
 
     for (const rawCode of postalCodes) {
-      const key = country ? `${country}:${rawCode}` : rawCode;
+      const key = resolveFeatureKey(rawCode, country, featureIndex);
       const existing = byCode.get(key) ?? toAccumulator();
       const weight = isActive ? 2 : 1;
       existing.fillWeighted = [
@@ -435,8 +438,8 @@ export function useDeckLayers({
     multiLayerCodes,
     sameColorCodes,
   } = useMemo(
-    () => buildResolvedStyleMap(layers, activeLayerId, country),
-    [layers, activeLayerId, country]
+    () => buildResolvedStyleMap(layers, activeLayerId, country, featureIndex),
+    [layers, activeLayerId, country, featureIndex]
   );
 
   // Stable set of composite keys (country:code) across all visible layers.
@@ -453,11 +456,11 @@ export function useDeckLayers({
       }
       const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
       for (const rawCode of postalCodes) {
-        codes.add(country ? `${country}:${rawCode}` : rawCode);
+        codes.add(resolveFeatureKey(rawCode, country, featureIndex));
       }
     }
     return codes;
-  }, [layers, country]);
+  }, [layers, country, featureIndex]);
 
   // All assigned codes (across all layers, regardless of visibility) — used for unassigned overlay.
   const allAssignedCodeSet = useMemo(() => {
@@ -465,11 +468,11 @@ export function useDeckLayers({
     if (!layers) return codes;
     for (const layer of layers) {
       for (const pc of layer.postalCodes ?? []) {
-        codes.add(country ? `${country}:${pc.postalCode}` : pc.postalCode);
+        codes.add(resolveFeatureKey(pc.postalCode, country, featureIndex));
       }
     }
     return codes;
-  }, [layers, country]);
+  }, [layers, country, featureIndex]);
 
   // Unassigned feature data — postal codes not in any layer.
   const unassignedFeaturesData = useMemo(() => {

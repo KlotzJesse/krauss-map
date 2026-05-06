@@ -17,6 +17,7 @@ import type {
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import type { areaLayers } from "@/lib/schema/schema";
+import { resolveFeatureKey } from "@/lib/utils/deck-gl-utils";
 
 type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
@@ -410,10 +411,10 @@ export function useMapLabels({
     for (const layer of layers) {
       const rawPostalCodes =
         layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
-      // Prefix raw codes with country for composite featureIndex lookup
-      const postalCodes = country
-        ? rawPostalCodes.map((c) => `${country}:${c}`)
-        : rawPostalCodes;
+      // Resolve each raw code to its correct composite featureIndex key
+      const postalCodes = rawPostalCodes.map((c) =>
+        resolveFeatureKey(c, country, featureIndex)
+      );
       if (postalCodes.length === 0 || layer.isVisible !== "true") {
         continue;
       }

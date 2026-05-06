@@ -73,6 +73,39 @@ export function rawCodeFromComposite(compositeKey: string): string {
 }
 
 /**
+ * Resolve the composite featureIndex key ("country:code") for a raw postal code.
+ *
+ * Tries the preferred country first, then all other DACH countries, then a
+ * raw/legacy key (no country prefix). Falls back to `${preferredCountry}:${rawCode}`
+ * when no match is found in the featureIndex (code may not exist at the current
+ * granularity, or featureIndex hasn't loaded yet).
+ *
+ * This is the canonical key-resolver for all map code lookups so that a postal
+ * code stored without country (e.g., Austrian "1010" in a "DE" area) still finds
+ * its matching feature in the featureIndex.
+ */
+export function resolveFeatureKey(
+  rawCode: string,
+  preferredCountry: string | undefined,
+  featureIndex: Map<string, unknown> | undefined
+): string {
+  if (!featureIndex) {
+    return preferredCountry ? `${preferredCountry}:${rawCode}` : rawCode;
+  }
+  if (preferredCountry) {
+    const key = `${preferredCountry}:${rawCode}`;
+    if (featureIndex.has(key)) return key;
+  }
+  for (const cc of ["DE", "AT", "CH"]) {
+    if (cc === preferredCountry) continue;
+    const k = `${cc}:${rawCode}`;
+    if (featureIndex.has(k)) return k;
+  }
+  if (featureIndex.has(rawCode)) return rawCode;
+  return preferredCountry ? `${preferredCountry}:${rawCode}` : rawCode;
+}
+
+/**
  * Empty GeoJSON FeatureCollection constant. Reused across layers to avoid allocations.
  */
 export const EMPTY_FEATURE_COLLECTION = {

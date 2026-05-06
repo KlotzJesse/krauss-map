@@ -63,6 +63,7 @@ import {
   useSetMapCenterZoom,
 } from "@/lib/url-state/map-state";
 import { cn } from "@/lib/utils";
+import { resolveFeatureKey } from "@/lib/utils/deck-gl-utils";
 import type {
   BaseMapProps,
   MapErrorMessageProps,
@@ -321,7 +322,7 @@ function PlzSearch({
       e.preventDefault();
       const code = query.trim();
       if (!code || !mapRef) return;
-      const key = country ? `${country}:${code}` : code;
+      const key = resolveFeatureKey(code, country, featureIndex);
       const features = featureIndex?.get(key) ?? featureIndex?.get(code);
       if (!features || features.length === 0) return;
       // Compute bounding box of first feature
