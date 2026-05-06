@@ -279,7 +279,7 @@ function StatsSection({
           (sum, c) => sum + (countryTotals.get(c) ?? 0),
           0
         )
-      : totalFeatures;
+      : 0;
 
   const assignedCount = assignedSet.size;
   const unassignedCount = Math.max(0, activeTotalFeatures - assignedCount);
@@ -4277,7 +4277,7 @@ function DrawingToolsImpl({
         if (c) countriesInUse.add(c);
       }
     }
-    if (countriesInUse.size === 0) return postalCodesData.features.length;
+    if (countriesInUse.size === 0) return 0;
     return [...countriesInUse].reduce(
       (sum, c) => sum + (countryTotals.get(c) ?? 0),
       0
@@ -5025,8 +5025,8 @@ function DrawingToolsImpl({
           onChange={handleImportDataFile}
         />
 
-        {/* Stats Section */}
-        {postalCodesData && (
+        {/* Stats Section — hidden when no codes are assigned */}
+        {postalCodesData && activeTotalCodes > 0 && (
           <StatsSection
             layers={optimisticLayers}
             postalCodesData={postalCodesData}
@@ -5037,7 +5037,7 @@ function DrawingToolsImpl({
         )}
 
         {/* Länder Section — per-country breakdown with remove-by-country action */}
-        {postalCodesData && (
+        {postalCodesData && activeTotalCodes > 0 && (
           <LänderSection
             layers={optimisticLayers}
             postalCodesData={postalCodesData}
