@@ -305,9 +305,7 @@ function useAddressAutocomplete({
         dispatch({ type: "SET_RESULTS", results: fetchedResults });
 
         if (fetchedResults.length === 0) {
-          throw new Error(
-            `Keine Ergebnisse für "${value}" gefunden. Versuchen Sie deutsche Stadtnamen (z.B. München statt Munich) oder PLZ.`
-          );
+          return "Keine Ergebnisse gefunden";
         }
 
         return `${fetchedResults.length} Adressen gefunden`;

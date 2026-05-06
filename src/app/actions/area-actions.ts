@@ -2059,6 +2059,16 @@ export async function searchPostalCodesByBoundaryAction(data: {
 
     const feature = geoJsonData.features[0];
 
+    // Resolve granularity from the boundary's actual country, not the caller's area country
+    const featureCountryCode =
+      feature.properties?.address?.country_code?.toLowerCase();
+    const effectiveGranularity =
+      featureCountryCode === "at" || featureCountryCode === "ch"
+        ? "4digit"
+        : featureCountryCode === "de"
+          ? "5digit"
+          : granularity;
+
     if (
       !feature.geometry ||
       (feature.geometry.type !== "Polygon" &&
@@ -2118,7 +2128,7 @@ export async function searchPostalCodesByBoundaryAction(data: {
       .from(postalCodes)
 
       .where(
-        sql`${postalCodes.granularity} = ${granularity}
+        sql`${postalCodes.granularity} = ${effectiveGranularity}
           AND ST_Contains(
             ST_GeomFromGeoJSON(${boundaryGeometry}),
             ST_Centroid(${postalCodes.geometry})
@@ -2137,7 +2147,7 @@ export async function searchPostalCodesByBoundaryAction(data: {
 
         count: codes.length,
 
-        granularity,
+        granularity: effectiveGranularity,
 
         areaInfo: {
           name: areaInfo.display_name,
