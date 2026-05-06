@@ -153,7 +153,7 @@ const ToggleButton = memo(
       onClick={onClick}
       title={title}
       aria-label={ariaLabel}
-      className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+      className="flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
     >
       {children}
     </button>
@@ -375,14 +375,14 @@ function PlzSearch({
           }}
           title="PLZ suchen und anspringen"
           aria-label="PLZ suchen"
-          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+          className="flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
         >
           <Search className="h-4 w-4" />
         </button>
       ) : (
         <form
           onSubmit={handleSearch}
-          className="flex items-center gap-1 bg-white/95 border border-border rounded-lg shadow-md px-2 h-6"
+          className="flex items-center gap-1 bg-background/95 border border-border rounded-lg shadow-md px-2 h-6"
         >
           <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <input
@@ -895,7 +895,7 @@ const MapInner = memo(function MapInner({
                 type="button"
                 title="Weitere Kartenaktionen"
                 aria-label="Weitere Kartenaktionen"
-                className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+                className="flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
               />
             }
           >
@@ -932,7 +932,7 @@ const MapInner = memo(function MapInner({
             onClick={handleFitAllLayers}
             title="Alle Ebenen anzeigen (G)"
             aria-label="Karte auf alle Ebenen ausrichten (G)"
-            className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+            className="flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
           >
             <Maximize2 className="h-4 w-4" />
           </button>
@@ -942,7 +942,7 @@ const MapInner = memo(function MapInner({
           onClick={handleRecenter}
           title="Zur Länderübersicht"
           aria-label="Zur Länderübersicht zoomen"
-          className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+          className="flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
         >
           <Home className="h-4 w-4" />
         </button>
@@ -954,7 +954,7 @@ const MapInner = memo(function MapInner({
                   type="button"
                   title={`Kartenstil: ${mapStyleLabel ?? ""}`}
                   aria-label="Kartenstil wählen"
-                  className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+                  className="flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
                 />
               }
             >
@@ -988,10 +988,10 @@ const MapInner = memo(function MapInner({
           className={cn(
             "relative flex items-center justify-center w-8 h-8 rounded-md border shadow-sm transition-colors",
             showUnassigned
-              ? "bg-red-100 border-red-300 text-red-600 hover:bg-red-50"
+              ? "bg-red-500/10 border-red-400/30 text-red-600 dark:text-red-400 hover:bg-red-500/20"
               : unassignedCount > 0
-                ? "bg-orange-50 border-orange-200 text-orange-600 hover:bg-orange-100"
-                : "bg-white/90 border-border text-muted-foreground hover:bg-white hover:text-foreground"
+                ? "bg-orange-500/10 border-orange-400/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20"
+                : "bg-background/90 border-border text-muted-foreground hover:bg-background hover:text-foreground"
           )}
         >
           {showUnassigned ? (

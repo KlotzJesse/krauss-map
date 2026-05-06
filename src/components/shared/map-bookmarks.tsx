@@ -134,7 +134,7 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
         onClick={() => setOpen((v) => !v)}
         title="Kartenlesezeichen (Ctrl+B)"
         aria-label="Kartenlesezeichen öffnen"
-        className="flex items-center justify-center w-8 h-8 rounded-md bg-white/90 border border-border shadow-sm hover:bg-white transition-colors text-muted-foreground hover:text-foreground"
+        className="flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
       >
         {bookmarks.length > 0 ? (
           <IconBookmarkFilled className="h-4 w-4 text-amber-500" />
@@ -144,7 +144,7 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
       </button>
 
       {open && (
-        <div className="absolute bottom-10 left-0 z-50 w-64 bg-white border border-border rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute bottom-10 left-0 z-50 w-64 bg-background border border-border rounded-lg shadow-xl overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
             <span className="text-xs font-semibold text-foreground">
               Kartenlesezeichen

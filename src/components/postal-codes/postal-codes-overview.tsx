@@ -40,13 +40,13 @@ const CHANGE_ICONS: Record<string, React.ElementType> = {
 };
 
 const CHANGE_COLORS: Record<string, string> = {
-  add_postal_codes: "text-green-500 bg-green-50",
-  remove_postal_codes: "text-red-500 bg-red-50",
-  create_layer: "text-blue-500 bg-blue-50",
-  delete_layer: "text-red-500 bg-red-50",
-  update_layer: "text-amber-500 bg-amber-50",
-  update_area: "text-amber-500 bg-amber-50",
-  move_postal_codes: "text-purple-500 bg-purple-50",
+  add_postal_codes: "text-green-600 dark:text-green-400 bg-green-500/10",
+  remove_postal_codes: "text-red-600 dark:text-red-400 bg-red-500/10",
+  create_layer: "text-blue-600 dark:text-blue-400 bg-blue-500/10",
+  delete_layer: "text-red-600 dark:text-red-400 bg-red-500/10",
+  update_layer: "text-amber-600 dark:text-amber-400 bg-amber-500/10",
+  update_area: "text-amber-600 dark:text-amber-400 bg-amber-500/10",
+  move_postal_codes: "text-purple-600 dark:text-purple-400 bg-purple-500/10",
 };
 
 const CHANGE_LABELS: Record<string, string> = {

@@ -4,6 +4,7 @@ import { IconAlertTriangle, IconFolder } from "@tabler/icons-react";
 import {
   ArrowDownAZ,
   ChevronDown,
+  Clock,
   Filter,
   SortAsc,
   TrendingUp,
@@ -173,7 +174,7 @@ export function OverviewAreaList({ areas }: { areas: OverviewArea[] }) {
                     )}
                   >
                     {key === "modified" && (
-                      <ArrowDownAZ className="h-3 w-3 mr-1.5 text-muted-foreground" />
+                      <Clock className="h-3 w-3 mr-1.5 text-muted-foreground" />
                     )}
                     {key === "name" && (
                       <ArrowDownAZ className="h-3 w-3 mr-1.5 text-muted-foreground" />

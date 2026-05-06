@@ -257,7 +257,7 @@ export function FloatingDrawingToolbar({
   return (
     <div className="absolute bottom-6 left-0 right-0 z-10 pointer-events-none">
       <div className="flex justify-center gap-2">
-        <div className="bg-white/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 pointer-events-auto">
+        <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 pointer-events-auto">
           <div className="flex items-center gap-1">
             {drawingModes.map((mode) => {
               const isActive =
