@@ -1150,15 +1150,16 @@ export function useDeckLayers({
     unassignedFeaturesData,
   ]);
 
-  /** Count of postal codes not assigned to any layer (computed regardless of showUnassigned) */
+  /** Count of postal codes not assigned to any layer, excluding inactive-country codes */
   const unassignedCount = useMemo(() => {
     let count = 0;
     for (const f of data.features) {
       const code = getFeatureCode(f);
-      if (code && !allAssignedCodeSet.has(code)) count++;
+      if (code && !allAssignedCodeSet.has(code) && !inactiveCountryCodes.has(code))
+        count++;
     }
     return count;
-  }, [data, allAssignedCodeSet]);
+  }, [data, allAssignedCodeSet, inactiveCountryCodes]);
 
   // Keep deckLayersRef current after every render so onHover always reads the latest layers.
   deckLayersRef.current = deckLayers;

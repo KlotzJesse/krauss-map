@@ -553,30 +553,34 @@ function LänderSection({
           return (
             <div
               key={c}
-              className={`flex items-center gap-1.5 rounded px-1 py-0.5 ${!inUse ? "opacity-40" : ""}`}
+              className={`flex items-center gap-1.5 rounded px-1 py-0.5 ${!inUse ? "opacity-30" : ""}`}
             >
               <span className="text-sm leading-none">{meta?.flag}</span>
               <span className="flex-1 truncate text-[10px] text-muted-foreground">
                 {meta?.name ?? c}
               </span>
-              <span className="tabular-nums text-[10px] text-foreground">
-                {assigned.toLocaleString("de-DE")}
-                <span className="text-muted-foreground">
-                  /{total.toLocaleString("de-DE")}
-                </span>
-              </span>
-              {areaId && assigned > 0 ? (
-                <button
-                  type="button"
-                  title={`Alle ${meta?.name ?? c}-PLZ aus allen Gebieten entfernen`}
-                  className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
-                  onClick={() => setConfirmCountry(c)}
-                >
-                  <Trash2 className="h-2.5 w-2.5" />
-                </button>
+              {inUse ? (
+                <>
+                  <span className="tabular-nums text-[10px] text-foreground">
+                    {assigned.toLocaleString("de-DE")}
+                    <span className="text-muted-foreground">
+                      /{total.toLocaleString("de-DE")}
+                    </span>
+                  </span>
+                  {areaId && (
+                    <button
+                      type="button"
+                      title={`Alle ${meta?.name ?? c}-PLZ aus allen Gebieten entfernen`}
+                      className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
+                      onClick={() => setConfirmCountry(c)}
+                    >
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                </>
               ) : (
-                <span className="text-[9px] text-muted-foreground ml-0.5 italic">
-                  inaktiv
+                <span className="text-[9px] text-muted-foreground italic">
+                  nicht verwendet
                 </span>
               )}
             </div>
