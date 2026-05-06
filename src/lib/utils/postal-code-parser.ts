@@ -68,24 +68,34 @@ export function parsePostalCodeInput(input: string): ParsedPostalCode[] {
 }
 
 /**
- * Finds matching postal codes based on granularity and input patterns
+ * Finds matching postal codes based on granularity and input patterns.
+ *
+ * @param defaultCountry - Fallback country for codes without an explicit prefix.
+ *   Pass null/undefined to match across all DACH countries (old behaviour).
+ *   Must be set to prevent 4-digit AT/CH codes from prefix-matching German 5-digit codes.
  */
 export function findPostalCodeMatches(
   parsedCodes: ParsedPostalCode[],
   availableData: FeatureCollection<Polygon | MultiPolygon>,
-  targetGranularity: string
+  targetGranularity: string,
+  defaultCountry?: string | null
 ): PostalCodeMatch[] {
   const matches: PostalCodeMatch[] = [];
 
-  // Build Set for O(1) exact lookups + array for prefix scans
-  const allCodes: string[] = [];
-  const codeSet = new Set<string>();
+  // Build country-partitioned sets: Map<COUNTRY_UPPER, Set<normalizedCode>>
+  const codesByCountry = new Map<string, Set<string>>();
+  const allCodesSet = new Set<string>();
+
   for (const f of availableData.features) {
     const raw = f.properties?.code || f.properties?.PLZ || f.properties?.plz;
+    const country = (f.properties?.country as string | undefined)?.toUpperCase();
     if (raw) {
       const code = normalizePostalCode(raw);
-      allCodes.push(code);
-      codeSet.add(code);
+      allCodesSet.add(code);
+      if (country) {
+        if (!codesByCountry.has(country)) codesByCountry.set(country, new Set());
+        codesByCountry.get(country)!.add(code);
+      }
     }
   }
 
@@ -95,29 +105,38 @@ export function findPostalCodeMatches(
     }
 
     const inputCode = parsed.normalized;
+    // Explicit prefix on the input takes priority; fall back to dialog-level default
+    const effectiveCountry =
+      (parsed.countryCode ?? defaultCountry ?? null)?.toUpperCase() ?? null;
+
+    // Scope search to the resolved country, or fall back to all codes
+    const searchSet: Set<string> =
+      effectiveCountry
+        ? (codesByCountry.get(effectiveCountry) ?? new Set<string>())
+        : allCodesSet;
+
     const matchedCodes: string[] = [];
 
-    // Exact match first — O(1) via Set
-    if (codeSet.has(inputCode)) {
+    // Exact match first — O(1)
+    if (searchSet.has(inputCode)) {
       matchedCodes.push(inputCode);
-    } else {
-      // Pattern matching based on granularity and input length
-      const inputLength = inputCode.length;
-
-      if (inputLength < 5) {
-        // Partial code - find all codes that start with this pattern
-        const pattern = inputCode;
-        const prefixMatches = allCodes.filter((code) =>
-          code.startsWith(pattern)
-        );
-        matchedCodes.push(...prefixMatches);
+    } else if (inputCode.length < 5) {
+      // Prefix expansion within the same country scope only.
+      // Without a country filter, skip prefix expansion for codes ≤4 digits to
+      // avoid a 4-digit AT/CH code matching German 5-digit codes.
+      if (effectiveCountry !== null) {
+        for (const code of searchSet) {
+          if (code.startsWith(inputCode)) matchedCodes.push(code);
+        }
       }
+      // If no country is resolved and the code is short, skip prefix expansion
+      // — the caller should set defaultCountry before calling this function.
     }
 
     if (matchedCodes.length > 0) {
       matches.push({
         code: inputCode,
-        matched: [...new Set(matchedCodes)], // Remove duplicates
+        matched: [...new Set(matchedCodes)],
         granularity: targetGranularity,
       });
     }

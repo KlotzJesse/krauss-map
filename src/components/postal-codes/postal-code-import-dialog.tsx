@@ -21,8 +21,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { COUNTRY_CONFIGS, type CountryCode } from "@/lib/config/countries";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import {
   findPostalCodeMatches,
@@ -55,6 +63,8 @@ export function PostalCodeImportDialog({
   const [textInput, setTextInput] = useState("");
   const [activeTab, setActiveTab] = useState("paste");
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  // Country to use for codes that have no explicit country prefix
+  const [defaultCountry, setDefaultCountry] = useState<CountryCode | null>(null);
 
   // Parse and validate input
   const parsedCodes = useMemo(() => {
@@ -64,13 +74,19 @@ export function PostalCodeImportDialog({
     return parsePostalCodeInput(textInput);
   }, [textInput]);
 
-  // Find matches based on current granularity
+  // Whether any valid codes lack an explicit country prefix
+  const hasAmbiguousCodes = useMemo(
+    () => parsedCodes.some((p) => p.isValid && !p.countryCode),
+    [parsedCodes]
+  );
+
+  // Find matches based on current granularity and resolved country
   const matches = useMemo(() => {
     if (parsedCodes.length === 0) {
       return [];
     }
-    return findPostalCodeMatches(parsedCodes, data, granularity);
-  }, [parsedCodes, data, granularity]);
+    return findPostalCodeMatches(parsedCodes, data, granularity, defaultCountry);
+  }, [parsedCodes, data, granularity, defaultCountry]);
 
   const groupedMatches = useMemo(
     () => groupMatchesByPattern(matches),
@@ -117,6 +133,7 @@ export function PostalCodeImportDialog({
   // Clear input
   const handleClear = useStableCallback(() => {
     setTextInput("");
+    setDefaultCountry(null);
   });
 
   return (
@@ -157,11 +174,11 @@ export function PostalCodeImportDialog({
                 <Textarea
                   id="postal-input"
                   placeholder={`PLZ eingeben... Beispiele:
-86899, 86932
-D-86899, D-86932
+86899, 86932               (Deutschland)
+D-86899, D-86932           (mit Länderpräfix DE)
+A-1010, AT-1010            (Österreich)
+CH-8001                    (Schweiz)
 8, 9 (alle PLZ mit 8 oder 9 beginnend)
-86899
-86932
 
 Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
                   value={textInput}
@@ -169,6 +186,39 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
                   className="min-h-32 font-mono text-sm"
                 />
               </div>
+
+              {/* Country chooser for ambiguous codes (no country prefix) */}
+              {hasAmbiguousCodes && (
+                <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/30">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div className="flex flex-1 flex-wrap items-center gap-2 text-sm text-amber-800 dark:text-amber-300">
+                    <span>PLZ ohne Länderpräfix – welches Land?</span>
+                    <Select
+                      value={defaultCountry ?? "auto"}
+                      onValueChange={(v) =>
+                        setDefaultCountry(v === "auto" ? null : (v as CountryCode))
+                      }
+                    >
+                      <SelectTrigger className="h-7 w-44 border-amber-300 bg-white text-xs dark:bg-transparent">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">
+                          Alle DACH-Länder (unsicher)
+                        </SelectItem>
+                        {(["DE", "AT", "CH"] as CountryCode[]).map((cc) => {
+                          const cfg = COUNTRY_CONFIGS[cc];
+                          return (
+                            <SelectItem key={cc} value={cc}>
+                              {cfg.flag} {cfg.localName}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
 
               {/* Statistics */}
               {parsedCodes.length > 0 && (

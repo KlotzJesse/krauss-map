@@ -50,6 +50,30 @@ interface GeocodeResult {
   isLocationBased?: boolean; // Flag for results from location search
 }
 
+/**
+ * Returns true when a geocode result represents an administrative area
+ * (city, state, region) rather than a specific address/postal code.
+ * Covers Germany, Austria, and Switzerland.
+ */
+function isAdministrativeAreaResult(result: GeocodeResult): boolean {
+  if (result.postal_code) return false;
+  return !!(
+    result.city ||
+    result.state ||
+    result.display_name.includes(", Deutschland") ||
+    result.display_name.includes(", Österreich") ||
+    result.display_name.includes(", Austria") ||
+    result.display_name.includes(", Schweiz") ||
+    result.display_name.includes(", Switzerland") ||
+    result.display_name.includes(", Bayern") ||
+    result.display_name.includes(", Nordrhein-Westfalen") ||
+    result.display_name.includes(" Deutschland") ||
+    /\b(Stadt|Kreis|Landkreis|Region|Bundesland|Kanton|Bezirk|Gemeinde)\b/i.test(
+      result.display_name
+    )
+  );
+}
+
 interface AutocompleteState {
   open: boolean;
   query: string;
@@ -301,21 +325,10 @@ function useAddressAutocomplete({
   const handleDirectSelect = useStableCallback((result: GeocodeResult) => {
     dispatch({ type: "SET_OPEN", open: false });
 
-    const isAdministrativeArea =
-      !result.postal_code &&
-      (result.city ||
-        result.state ||
-        result.display_name.includes(", Deutschland") ||
-        result.display_name.includes(", Bayern") ||
-        result.display_name.includes(", Nordrhein-Westfalen") ||
-        result.display_name.includes(" Deutschland") ||
-        /\b(Stadt|Kreis|Landkreis|Region|Bundesland)\b/i.test(
-          result.display_name
-        ));
-
-    if (isAdministrativeArea && onBoundarySelect) {
+    if (isAdministrativeAreaResult(result) && onBoundarySelect) {
+      // Prefer the most specific name: city → state → first token of display_name
       const areaName =
-        result.city ?? result.state ?? result.display_name.split(",")[0];
+        result.city ?? result.state ?? result.display_name.split(",")[0].trim();
       const boundarySearchPromise = async () => {
         const boundaryResult = await searchPostalCodesByBoundaryAction({
           areaName,
@@ -403,21 +416,9 @@ function useAddressAutocomplete({
   });
 
   const formatDisplayName = (result: GeocodeResult): string => {
-    const isAdministrativeArea =
-      !result.postal_code &&
-      (result.city ||
-        result.state ||
-        result.display_name.includes(", Deutschland") ||
-        result.display_name.includes(", Bayern") ||
-        result.display_name.includes(", Nordrhein-Westfalen") ||
-        result.display_name.includes(" Deutschland") ||
-        /\b(Stadt|Kreis|Landkreis|Region|Bundesland)\b/i.test(
-          result.display_name
-        ));
-
-    if (isAdministrativeArea && onBoundarySelect) {
+    if (isAdministrativeAreaResult(result) && onBoundarySelect) {
       return `${
-        result.city || result.state || result.display_name.split(",")[0]
+        result.city || result.state || result.display_name.split(",")[0].trim()
       } (Gebiet)`;
     }
 
