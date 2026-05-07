@@ -322,13 +322,14 @@ export function PostalCodesViewSkeleton() {
             {/* Filter input */}
             <Skeleton className="h-7 w-full rounded-md" />
 
-            {/* Layer rows — eye toggle + color dot (rounded-sm) + name + count badge + % */}
+            {/* Layer rows — eye toggle + color dot (rounded-sm) + name + count badge + progress bar + % */}
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-1.5 px-2 py-0.5">
                 <Skeleton className="h-3.5 w-3.5 shrink-0" />
                 <Skeleton className="h-3 w-3 rounded-sm shrink-0" />
                 <Skeleton className="h-3 flex-1" />
                 <Skeleton className="h-4 w-7 rounded shrink-0" />
+                <Skeleton className="h-1.5 w-8 rounded-full shrink-0" />
                 <Skeleton className="h-3 w-8 shrink-0" />
               </div>
             ))}
@@ -357,7 +358,7 @@ export function PostalCodesViewSkeleton() {
                   <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
                   <Skeleton className="h-3 flex-1" />
                   <Skeleton className="h-3 w-16 shrink-0" />
-                  <Skeleton className="h-3 w-6 shrink-0" />
+                  <Skeleton className="h-3 w-8 shrink-0" />
                   <Skeleton className="h-2.5 w-2.5 shrink-0" />
                 </div>
               ))}
@@ -451,6 +452,7 @@ export function MapSkeleton() {
                 <Skeleton className="h-3 w-3 rounded-sm shrink-0" />
                 <Skeleton className="h-3 flex-1" />
                 <Skeleton className="h-4 w-7 rounded shrink-0" />
+                <Skeleton className="h-1.5 w-8 rounded-full shrink-0" />
                 <Skeleton className="h-3 w-8 shrink-0" />
               </div>
             ))}
@@ -477,7 +479,7 @@ export function MapSkeleton() {
                   <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
                   <Skeleton className="h-3 flex-1" />
                   <Skeleton className="h-3 w-16 shrink-0" />
-                  <Skeleton className="h-3 w-6 shrink-0" />
+                  <Skeleton className="h-3 w-8 shrink-0" />
                   <Skeleton className="h-2.5 w-2.5 shrink-0" />
                 </div>
               ))}
@@ -565,6 +567,7 @@ export function DrawingToolsSkeleton() {
             <Skeleton className="h-3 w-3 rounded-sm shrink-0" />
             <Skeleton className="h-3 flex-1" />
             <Skeleton className="h-4 w-7 rounded shrink-0" />
+            <Skeleton className="h-1.5 w-8 rounded-full shrink-0" />
             <Skeleton className="h-3 w-8 shrink-0" />
           </div>
         ))}
@@ -579,12 +582,15 @@ export function DrawingToolsSkeleton() {
           </div>
         </div>
         {/* Länder */}
-        <div className="pt-1.5 space-y-1.5">
+        <div className="pt-1.5 space-y-1">
+          <div className="flex items-center justify-between py-0.5">
+            <Skeleton className="h-3.5 w-12" />
+          </div>
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-2 py-0.5">
-              <Skeleton className="h-3.5 w-4 shrink-0" />
+            <div key={i} className="flex items-center gap-1.5 rounded px-1 py-0.5">
+              <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
               <Skeleton className="h-3 flex-1" />
-              <Skeleton className="h-3 w-12 shrink-0" />
+              <Skeleton className="h-3 w-16 shrink-0" />
               <Skeleton className="h-3 w-8 shrink-0" />
               <Skeleton className="h-2.5 w-2.5 shrink-0" />
             </div>
