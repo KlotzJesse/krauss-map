@@ -301,14 +301,13 @@ export function PostalCodesViewSkeleton() {
             {/* Granularity row */}
             <div className="flex items-center justify-between gap-2">
               <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-7 w-24 rounded-md" />
+              <Skeleton className="h-6 w-24 rounded-md" />
             </div>
 
             {/* Layers section header + action buttons */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Skeleton className="h-4 w-4 rounded" />
-                <Skeleton className="h-4 w-14" />
+                <Skeleton className="h-4 w-28" />
               </div>
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4].map((i) => (
@@ -366,7 +365,7 @@ export function PostalCodesViewSkeleton() {
 
       {/* Map toolbar — right of the left panel (matches base-map.tsx left-[413px] when panel open) */}
       <div className="absolute top-4 left-[413px] z-10 flex flex-col gap-1">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} className="h-8 w-8 rounded" />
         ))}
       </div>
@@ -427,12 +426,11 @@ export function MapSkeleton() {
             </div>
             <div className="flex items-center justify-between gap-2">
               <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-7 w-24 rounded-md" />
+              <Skeleton className="h-6 w-24 rounded-md" />
             </div>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Skeleton className="h-4 w-4 rounded" />
-                <Skeleton className="h-4 w-14" />
+                <Skeleton className="h-4 w-28" />
               </div>
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4].map((i) => (
@@ -484,7 +482,7 @@ export function MapSkeleton() {
 
       {/* Map toolbar — right of panel (left-[413px] matches base-map.tsx) */}
       <div className="absolute top-4 left-[413px] z-10 flex flex-col gap-1">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} className="h-8 w-8 rounded" />
         ))}
       </div>
