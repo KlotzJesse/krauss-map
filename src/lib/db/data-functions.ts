@@ -35,6 +35,7 @@ export async function getAreas() {
       tags: { id: number; name: string; color: string }[];
       conflictCount: number;
       totalPostalCodeCount: number;
+      countries: string[];
     }>(sql`
       WITH
         plz_counts AS (
@@ -78,6 +79,18 @@ export async function getAreas() {
           FROM postal_codes
           WHERE is_active = 'true'
           GROUP BY granularity, country
+        ),
+        area_countries AS (
+          SELECT area_id,
+                 array_agg(DISTINCT country ORDER BY country) AS countries
+          FROM (
+            SELECT DISTINCT al.area_id, pc.country
+            FROM area_layer_postal_codes alpc
+            INNER JOIN area_layers al ON al.id = alpc.layer_id
+            INNER JOIN postal_codes pc ON pc.id = alpc.postal_code_id
+            WHERE pc.is_active = 'true'
+          ) sub
+          GROUP BY area_id
         )
       SELECT
         a.id,
@@ -92,7 +105,8 @@ export async function getAreas() {
         COALESCE(lc.cnt,          0) AS "layerCount",
         COALESCE(ta.tags, '[]'::json) AS "tags",
         COALESCE(cc.cnt,          0) AS "conflictCount",
-        COALESCE(gc.cnt,          0) AS "totalPostalCodeCount"
+        COALESCE(gc.cnt,          0) AS "totalPostalCodeCount",
+        COALESCE(ac.countries, ARRAY[a.country]::text[]) AS "countries"
       FROM areas a
       LEFT JOIN plz_counts       pc ON pc.area_id   = a.id
       LEFT JOIN layer_counts     lc ON lc.area_id   = a.id
@@ -100,6 +114,7 @@ export async function getAreas() {
       LEFT JOIN conflict_counts  cc ON cc.area_id   = a.id
       LEFT JOIN granularity_counts gc
              ON gc.granularity = a.granularity AND gc.country = a.country
+      LEFT JOIN area_countries   ac ON ac.area_id   = a.id
       ORDER BY a.updated_at DESC
     `);
 
@@ -120,6 +135,7 @@ export async function getAreas() {
       tags: r.tags,
       conflictCount: r.conflictCount,
       totalPostalCodeCount: r.totalPostalCodeCount,
+      countries: (r.countries as string[]) ?? [r.country],
     }));
   } catch (error) {
     console.error("Error fetching areas:", error);
@@ -133,9 +149,7 @@ export async function getAreas() {
  * area + layers + postalCodes join just to get one scalar field.
  */
 /** Fetch area name, granularity, and country in one query — use instead of three separate calls. */
-export async function getAreaMeta(
-  id: number
-): Promise<{
+export async function getAreaMeta(id: number): Promise<{
   name: string | null;
   granularity: string | null;
   country: string | null;

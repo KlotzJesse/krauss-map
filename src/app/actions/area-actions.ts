@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { type CountryCode, formatWithPrefix } from "../../lib/config/countries";
 import { db } from "../../lib/db";
 import {
   areas,
@@ -291,7 +292,7 @@ export async function exportAreaGeoJSONAction(
         array_agg(alpc.postal_code ORDER BY alpc.postal_code) AS postal_codes
       FROM area_layers al
       LEFT JOIN area_layer_postal_codes alpc ON alpc.layer_id = al.id
-      LEFT JOIN postal_codes pc ON pc.code = alpc.postal_code AND pc.granularity = al.granularity
+      LEFT JOIN postal_codes pc ON pc.id = alpc.postal_code_id
       WHERE al.area_id = ${areaId}
       GROUP BY al.id, al.name, al.color, al.order_index
       ORDER BY al.order_index ASC
@@ -1550,7 +1551,11 @@ export async function addPostalCodesByPrefixAction(
       if (!layer) throw new Error("Layer not found");
 
       const matchingCodes = await tx
-        .select({ code: postalCodes.code })
+        .select({
+          id: postalCodes.id,
+          code: postalCodes.code,
+          country: postalCodes.country,
+        })
         .from(postalCodes)
         .where(
           and(
@@ -1564,10 +1569,14 @@ export async function addPostalCodesByPrefixAction(
         return { count: 0 };
       }
 
-      const codes = matchingCodes.map((r) => r.code);
+      const insertRows = matchingCodes.map((r) => ({
+        layerId,
+        postalCode: formatWithPrefix(r.code, r.country as CountryCode),
+        postalCodeId: r.id,
+      }));
       const insertedRows = await tx
         .insert(areaLayerPostalCodes)
-        .values(codes.map((code) => ({ layerId, postalCode: code })))
+        .values(insertRows)
         .onConflictDoNothing()
         .returning({ postalCode: areaLayerPostalCodes.postalCode });
 
@@ -2128,6 +2137,7 @@ export async function searchPostalCodesByBoundaryAction(data: {
 
       .select({
         code: postalCodes.code,
+        country: postalCodes.country,
       })
 
       .from(postalCodes)
@@ -2143,7 +2153,9 @@ export async function searchPostalCodesByBoundaryAction(data: {
 
       .limit(limit);
 
-    const codes = intersectingCodes.map((row) => row.code).sort();
+    const codes = intersectingCodes
+      .map((row) => formatWithPrefix(row.code, row.country as CountryCode))
+      .sort();
 
     return {
       success: true,

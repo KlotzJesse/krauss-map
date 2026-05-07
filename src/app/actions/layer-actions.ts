@@ -1,10 +1,16 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, like, or } from "drizzle-orm";
 import { updateTag } from "next/cache";
 
+import {
+  type CountryCode,
+  detectCountryFromCode,
+  formatWithPrefix,
+} from "../../lib/config/countries";
 import { db } from "../../lib/db";
 import {
+  areas,
   areaLayers,
   areaLayerPostalCodes,
   postalCodes,
@@ -267,15 +273,23 @@ export async function deleteLayerAction(
 export async function addPostalCodesToLayerAction(
   areaId: number,
   layerId: number,
-  postalCodes: string[],
+  inputCodes: string[],
   createdBy?: string
 ) {
   try {
-    // Get existing postal codes for this layer
+    // Load area for country/granularity context needed for normalization
+    const area = await db.query.areas.findFirst({
+      where: eq(areas.id, areaId),
+      columns: { country: true, granularity: true },
+    });
+    const areaCountry = (area?.country ?? "DE") as CountryCode;
+    const areaGranularity = area?.granularity ?? "5digit";
+
+    // Get existing postal codes for this layer (already in stored format after migration)
     const layer = await db.query.areaLayers.findFirst({
       where: eq(areaLayers.id, layerId),
       with: {
-        postalCodes: true,
+        postalCodes: { columns: { postalCode: true } },
       },
     });
 
@@ -286,27 +300,73 @@ export async function addPostalCodesToLayerAction(
     const existingCodesSet = new Set(
       layer.postalCodes?.map((pc) => pc.postalCode) ?? []
     );
-    const codesToAdd = postalCodes.filter(
-      (code) => !existingCodesSet.has(code)
+
+    // Normalize incoming codes: detect country prefix, convert to stored format
+    const normalized = inputCodes
+      .map((code) => {
+        const detected = detectCountryFromCode(code);
+        const country = (detected.country ?? areaCountry) as CountryCode;
+        const rawCode = detected.code;
+        if (!rawCode || rawCode.length < 1 || rawCode.length > 6) return null;
+        const storedCode = formatWithPrefix(rawCode, country);
+        return { rawCode, country, storedCode };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    const toAdd = normalized.filter(
+      ({ storedCode }) => !existingCodesSet.has(storedCode)
     );
 
-    if (codesToAdd.length === 0) {
-      return { success: true }; // No new codes to add
+    if (toAdd.length === 0) {
+      return { success: true };
     }
 
-    // Delta insert only new codes — uses unique constraint to skip duplicates
+    // Group by country for efficient postalCodeId look up
+    const byCountry = new Map<CountryCode, string[]>();
+    for (const { rawCode, country } of toAdd) {
+      const arr = byCountry.get(country) ?? [];
+      arr.push(rawCode);
+      byCountry.set(country, arr);
+    }
+
+    // Bulk look up postalCodeId for each (country, rawCode) pair
+    const postalCodeIdMap = new Map<string, number>(); // "country:rawCode" → id
+    for (const [country, rawCodes] of byCountry) {
+      const rows = await db
+        .select({ id: postalCodes.id, code: postalCodes.code })
+        .from(postalCodes)
+        .where(
+          and(
+            inArray(postalCodes.code, rawCodes),
+            eq(postalCodes.country, country),
+            eq(postalCodes.granularity, areaGranularity)
+          )
+        );
+      for (const row of rows) {
+        postalCodeIdMap.set(`${country}:${row.code}`, row.id);
+      }
+    }
+
+    // Build insert rows with stored-format postalCode and populated postalCodeId
+    const insertRows = toAdd.map(({ rawCode, country, storedCode }) => ({
+      layerId,
+      postalCode: storedCode,
+      postalCodeId: postalCodeIdMap.get(`${country}:${rawCode}`) ?? null,
+    }));
+
     await db
       .insert(areaLayerPostalCodes)
-      .values(codesToAdd.map((code) => ({ layerId, postalCode: code })))
+      .values(insertRows)
       .onConflictDoNothing();
 
-    // Record change
+    const codesToAddStored = insertRows.map((r) => r.postalCode);
+
     await recordChangeAction(areaId, {
       changeType: "add_postal_codes",
       entityType: "postal_code",
       entityId: layerId,
       changeData: {
-        postalCodes: codesToAdd,
+        postalCodes: codesToAddStored,
         layerId,
       },
       previousData: {
@@ -498,18 +558,21 @@ export async function removePostalCodesByCountryAction(
     const layerIds = layerRows.map((r) => r.id);
     if (layerIds.length === 0) return { success: true, data: { removed: 0 } };
 
-    // Find codes in those layers that belong to this country via postal_codes join
+    // Find codes in those layers that belong to this country via stored-format prefix.
+    // Stored format: DE→"D-xxxxx", AT→"A-xxxx", CH→"CH-xxxx"
+    const prefixMap: Record<string, string> = { DE: "D-", AT: "A-", CH: "CH-" };
+    const prefix = prefixMap[countryCode];
+    if (!prefix) return { success: false, error: "Invalid country code" };
+
     const codesToRemove = await db
       .selectDistinct({ postalCode: areaLayerPostalCodes.postalCode })
       .from(areaLayerPostalCodes)
-      .innerJoin(
-        postalCodes,
+      .where(
         and(
-          eq(areaLayerPostalCodes.postalCode, postalCodes.code),
-          eq(postalCodes.country, countryCode)
+          inArray(areaLayerPostalCodes.layerId, layerIds),
+          like(areaLayerPostalCodes.postalCode, `${prefix}%`)
         )
-      )
-      .where(inArray(areaLayerPostalCodes.layerId, layerIds));
+      );
 
     if (codesToRemove.length === 0) {
       return { success: true, data: { removed: 0 } };

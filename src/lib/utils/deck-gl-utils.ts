@@ -1,5 +1,77 @@
 import type { Feature, MultiPolygon, Polygon } from "geojson";
 
+/** Maps ISO country code → stored postal code prefix (e.g. DE → "D"). */
+const COUNTRY_TO_PREFIX: Record<string, string> = {
+  DE: "D",
+  AT: "A",
+  CH: "CH",
+};
+/** Maps stored prefix → ISO country code (e.g. "D" → "DE"). */
+const PREFIX_TO_COUNTRY: Record<string, string> = {
+  D: "DE",
+  A: "AT",
+  CH: "CH",
+};
+
+/**
+ * Convert a stored postal code ("D-12345" / "A-1010" / "CH-3800") to a
+ * featureIndex composite key ("DE:12345" / "AT:1010" / "CH:3800").
+ * Returns null if the input has no recognised prefix (raw numeric code).
+ */
+export function storedCodeToCompositeKey(stored: string): string | null {
+  const dashIdx = stored.indexOf("-");
+  if (dashIdx < 0) return null;
+  const prefix = stored.slice(0, dashIdx);
+  const rawCode = stored.slice(dashIdx + 1);
+  const country = PREFIX_TO_COUNTRY[prefix];
+  return country ? `${country}:${rawCode}` : null;
+}
+
+/**
+ * Convert a featureIndex composite key ("DE:12345") to stored format ("D-12345").
+ * Returns the input unchanged if no ":" separator is present.
+ */
+export function compositeKeyToStoredCode(compositeKey: string): string {
+  const colonIdx = compositeKey.indexOf(":");
+  if (colonIdx < 0) return compositeKey;
+  const country = compositeKey.slice(0, colonIdx);
+  const code = compositeKey.slice(colonIdx + 1);
+  const prefix = COUNTRY_TO_PREFIX[country] ?? country;
+  return `${prefix}-${code}`;
+}
+
+/**
+ * Extract the raw numeric code from any format:
+ * - stored "D-12345" → "12345"
+ * - composite "DE:12345" → "12345"
+ * - raw "12345" → "12345"
+ */
+export function extractRawCode(code: string): string {
+  const colonIdx = code.indexOf(":");
+  if (colonIdx >= 0) return code.slice(colonIdx + 1);
+  const dashIdx = code.indexOf("-");
+  if (dashIdx >= 0) return code.slice(dashIdx + 1);
+  return code;
+}
+
+/**
+ * Get the stored-format postal code from a GeoJSON feature.
+ * Returns "D-12345" / "A-1010" / "CH-3800" when country is in properties,
+ * falls back to raw code string for legacy features without country.
+ */
+export function getFeatureStoredCode(
+  feature: Feature<Polygon | MultiPolygon>
+): string | null {
+  const props = feature.properties ?? {};
+  const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
+  if (!code) return null;
+  const rawCode = String(code);
+  const country = props.country as string | undefined;
+  if (!country) return rawCode;
+  const prefix = COUNTRY_TO_PREFIX[country];
+  return prefix ? `${prefix}-${rawCode}` : rawCode;
+}
+
 /**
  * Convert a hex color string to an RGBA array for deck.gl.
  * Accepts #RGB, #RRGGBB, or #RRGGBBAA formats.
@@ -73,22 +145,28 @@ export function rawCodeFromComposite(compositeKey: string): string {
 }
 
 /**
- * Resolve the composite featureIndex key ("country:code") for a raw postal code.
+ * Resolve the composite featureIndex key ("country:code") for a stored or raw postal code.
  *
- * Tries the preferred country first, then all other DACH countries, then a
- * raw/legacy key (no country prefix). Falls back to `${preferredCountry}:${rawCode}`
- * when no match is found in the featureIndex (code may not exist at the current
- * granularity, or featureIndex hasn't loaded yet).
+ * For stored-format codes ("D-12345" / "A-1010" / "CH-3800") the country is known
+ * unambiguously — returns the composite key directly without any fallback search.
  *
- * This is the canonical key-resolver for all map code lookups so that a postal
- * code stored without country (e.g., Austrian "1010" in a "DE" area) still finds
- * its matching feature in the featureIndex.
+ * For legacy raw numeric codes, tries the preferred country first, then all other
+ * DACH countries, then a raw/legacy key. Falls back to `${preferredCountry}:${rawCode}`
+ * when no match is found in the featureIndex.
  */
 export function resolveFeatureKey(
-  rawCode: string,
+  storedOrRawCode: string,
   preferredCountry: string | undefined,
   featureIndex: Map<string, unknown> | undefined
 ): string {
+  // Fast-path: stored format encodes the country — no ambiguity, no fallback needed
+  const compositeFromStored = storedCodeToCompositeKey(storedOrRawCode);
+  if (compositeFromStored) {
+    return compositeFromStored;
+  }
+
+  // Legacy: raw numeric code — use fallback search across DACH countries
+  const rawCode = storedOrRawCode;
   if (!featureIndex) {
     return preferredCountry ? `${preferredCountry}:${rawCode}` : rawCode;
   }

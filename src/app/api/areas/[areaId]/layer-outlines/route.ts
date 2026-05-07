@@ -22,9 +22,9 @@ export async function GET(
 
   try {
     // Union all postal code geometries per visible layer using PostGIS.
-    // ST_SimplifyPreserveTopology at 0.002° (~200m) keeps the outline smooth
-    // without being too coarse. Join via area's own granularity + country so
-    // that cross-country DACH areas still resolve correctly.
+    // ST_SimplifyPreserveTopology at 0.002 (~200m) keeps the outline smooth
+    // without being too coarse. Join via postalCodeId FK for correct cross-country
+    // DACH resolution (codes are stored in "D-12345"/"A-1010"/"CH-3800" format).
     const { rows } = await db.execute(sql`
       SELECT
         l.id                                                          AS "layerId",
@@ -37,12 +37,9 @@ export async function GET(
           )
         )                                                             AS outline
       FROM area_layers       l
-      JOIN areas             a   ON a.id           = l.area_id
       JOIN area_layer_postal_codes alpc
                                  ON alpc.layer_id  = l.id
-      JOIN postal_codes      pc  ON pc.code        = alpc.postal_code
-                                AND pc.granularity = a.granularity
-                                AND pc.country     = a.country
+      JOIN postal_codes      pc  ON pc.id          = alpc.postal_code_id
       WHERE l.area_id    = ${id}
         AND l.is_visible = 'true'
       GROUP BY l.id, l.color, l.opacity

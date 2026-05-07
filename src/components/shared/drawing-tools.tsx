@@ -159,6 +159,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  type CountryCode,
+  detectCountryFromCode,
+  formatWithPrefix,
+} from "@/lib/config/countries";
 import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
@@ -2363,8 +2368,17 @@ const LayerManagementSection = memo(function LayerManagementSection({
     if (!addPostalCodesToLayer || !importTargetLayerId) return;
     const codes = importText
       .split(/[\s,;|\n\r]+/)
-      .map((s) => s.replace(/\D/g, "").trim())
-      .filter((s) => s.length >= 2 && s.length <= 5);
+      .map((s) => {
+        const trimmed = s.trim();
+        const detected = detectCountryFromCode(trimmed);
+        if (detected.country)
+          return formatWithPrefix(detected.code, detected.country);
+        // Pure numeric: keep as-is and let addPostalCodesToLayerAction resolve country
+        return detected.code.length >= 2 && detected.code.length <= 5
+          ? detected.code
+          : "";
+      })
+      .filter((s) => s.length >= 2);
     const unique = [...new Set(codes)];
     if (unique.length === 0) {
       toast.error("Keine gültigen PLZ gefunden");
@@ -2408,7 +2422,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
               const codes = features
                 .map((f) => {
                   const p = f.properties ?? {};
-                  const raw =
+                  const rawVal =
                     p.postal_code ??
                     p.postcode ??
                     p.plz ??
@@ -2416,9 +2430,15 @@ const LayerManagementSection = memo(function LayerManagementSection({
                     p.code ??
                     p.zip ??
                     "";
-                  return String(raw).replace(/\D/g, "").trim();
+                  const s = String(rawVal).trim();
+                  const detected = detectCountryFromCode(s);
+                  if (detected.country)
+                    return formatWithPrefix(detected.code, detected.country);
+                  return detected.code.length >= 2 && detected.code.length <= 5
+                    ? detected.code
+                    : "";
                 })
-                .filter((c) => c.length >= 2 && c.length <= 5);
+                .filter((c) => c.length >= 2);
               if (codes.length > 0) {
                 setImportText((prev) =>
                   prev ? `${prev}\n${codes.join("\n")}` : codes.join("\n")

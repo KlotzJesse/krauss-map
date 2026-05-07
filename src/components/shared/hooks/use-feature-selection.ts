@@ -6,6 +6,7 @@ import type {
 } from "geojson";
 
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
+import { getFeatureStoredCode } from "@/lib/utils/deck-gl-utils";
 import {
   getLargestPolygonCentroid,
   isPointInPolygon,
@@ -31,7 +32,9 @@ export function useFindFeaturesInPolygon(
       ) {
         continue;
       }
-      const featureCode = feature.properties?.code;
+      const featureCode = getFeatureStoredCode(
+        feature as Feature<Polygon | MultiPolygon>
+      );
       if (!featureCode) {
         continue;
       }
@@ -80,7 +83,9 @@ export function useFindFeaturesInCircle(
         ) {
           continue;
         }
-        const featureCode = feature.properties?.code;
+        const featureCode = getFeatureStoredCode(
+          feature as Feature<Polygon | MultiPolygon>
+        );
         if (!featureCode) {
           continue;
         }

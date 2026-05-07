@@ -10,7 +10,10 @@ import { useMapTerraDrawSelection } from "@/lib/hooks/use-map-terradraw-selectio
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useTerraDraw } from "@/lib/hooks/use-terradraw";
 import type { SelectAreaLayers } from "@/lib/schema/schema";
-import { getFeatureCode, getFeatureRawCode } from "@/lib/utils/deck-gl-utils";
+import {
+  getFeatureCode,
+  getFeatureStoredCode,
+} from "@/lib/utils/deck-gl-utils";
 
 type LayerWithPostalCodes = SelectAreaLayers & {
   postalCodes?: { postalCode: string }[];
@@ -152,15 +155,15 @@ export function useMapInteractions({
         return;
       }
 
-      // Use raw code (without country prefix) for DB operations and display
-      const rawCode = getFeatureRawCode(info.object);
-      if (!rawCode) {
+      // Get stored-format code ("D-12345" / "A-1010" / "CH-3800") for DB operations
+      const storedCode = getFeatureStoredCode(info.object);
+      if (!storedCode) {
         return;
       }
 
       if (!areaId || !activeLayerId || areaId <= 0) {
         toast.info(
-          `PLZ ${rawCode} - Bitte wählen Sie einen Bereich und aktiven Layer aus`,
+          `PLZ ${storedCode} - Bitte wählen Sie einen Bereich und aktiven Layer aus`,
           { duration: 3000 }
         );
         return;
@@ -183,20 +186,20 @@ export function useMapInteractions({
       const existingCodesSet = new Set(
         activeLayer.postalCodes?.map((pc) => pc.postalCode)
       );
-      const codeExists = existingCodesSet.has(rawCode);
+      const codeExists = existingCodesSet.has(storedCode);
 
       // Find layers (other than active) that also contain this PLZ
       const otherLayersWithCode = (layers ?? []).filter(
         (l) =>
           l.id !== activeLayerId &&
-          l.postalCodes?.some((pc) => pc.postalCode === rawCode)
+          l.postalCodes?.some((pc) => pc.postalCode === storedCode)
       );
 
       try {
         if (codeExists) {
           // PLZ is in the active layer → remove it
-          await removePostalCodesFromLayer(activeLayerId, [rawCode]);
-          toast.success(`PLZ ${rawCode} aus Gebiet entfernt`, {
+          await removePostalCodesFromLayer(activeLayerId, [storedCode]);
+          toast.success(`PLZ ${storedCode} aus Gebiet entfernt`, {
             duration: 2000,
           });
         } else if (otherLayersWithCode.length > 0 && onNeedsReassign) {
@@ -204,7 +207,7 @@ export function useMapInteractions({
           onNeedsReassign({
             x: info.x ?? 0,
             y: info.y ?? 0,
-            code: rawCode,
+            code: storedCode,
             containingLayers: otherLayersWithCode.map((l) => ({
               id: l.id,
               name: l.name,
@@ -213,13 +216,13 @@ export function useMapInteractions({
           });
         } else {
           // PLZ not in any layer → add to active layer
-          await addPostalCodesToLayer(activeLayerId, [rawCode]);
-          toast.success(`PLZ ${rawCode} zu Gebiet hinzugefügt`, {
+          await addPostalCodesToLayer(activeLayerId, [storedCode]);
+          toast.success(`PLZ ${storedCode} zu Gebiet hinzugefügt`, {
             duration: 2000,
           });
         }
       } catch {
-        toast.error(`Fehler beim Bearbeiten von PLZ ${rawCode}`, {
+        toast.error(`Fehler beim Bearbeiten von PLZ ${storedCode}`, {
           duration: 2000,
         });
       }

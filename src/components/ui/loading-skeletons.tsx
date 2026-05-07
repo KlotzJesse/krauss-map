@@ -587,7 +587,10 @@ export function DrawingToolsSkeleton() {
             <Skeleton className="h-3.5 w-12" />
           </div>
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-1.5 rounded px-1 py-0.5">
+            <div
+              key={i}
+              className="flex items-center gap-1.5 rounded px-1 py-0.5"
+            >
               <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
               <Skeleton className="h-3 flex-1" />
               <Skeleton className="h-3 w-16 shrink-0" />

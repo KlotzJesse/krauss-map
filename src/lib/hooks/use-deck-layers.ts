@@ -15,6 +15,7 @@ import type { MutableRefObject, RefObject } from "react";
 import type { areaLayers } from "@/lib/schema/schema";
 import {
   EMPTY_FEATURE_COLLECTION,
+  compositeKeyToStoredCode,
   getFeatureCode,
   hexToRgba,
   resolveFeatureKey,
@@ -689,19 +690,16 @@ export function useDeckLayers({
             }
           }
           // Resolve which layers contain this code
-          const rawCode = code.includes(":") ? code.split(":")[1] : code;
+          // code is a composite featureIndex key like "CH:3800" — convert to stored
+          // format so it matches pc.postalCode stored in the DB as "CH-3800"
+          const storedCode = compositeKeyToStoredCode(code);
           const matchingLayers = (layersRef.current ?? [])
             .filter((l) =>
-              l.postalCodes?.some((pc) => pc.postalCode === rawCode)
+              l.postalCodes?.some((pc) => pc.postalCode === storedCode)
             )
             .map((l) => ({ name: l.name, color: l.color }));
           // Update tooltip via direct DOM — no React re-render
-          showTooltip(
-            info.x ?? 0,
-            info.y ?? 0,
-            rawCode ?? code,
-            matchingLayers
-          );
+          showTooltip(info.x ?? 0, info.y ?? 0, storedCode, matchingLayers);
         }
       } else if (hoveredCodeRef.current !== null) {
         hoveredCodeRef.current = null;

@@ -27,6 +27,7 @@ type OverviewArea = {
   id: number;
   name: string;
   country: string | null;
+  countries?: string[] | null;
   postalCodeCount: number | null;
   uniquePostalCodeCount: number | null;
   totalPostalCodeCount: number | null;
@@ -269,9 +270,17 @@ export function OverviewAreaList({ areas }: { areas: OverviewArea[] }) {
                             {area.conflictCount}
                           </Badge>
                         )}
-                        {area.country && (
+                        {(area.countries && area.countries.length > 0
+                          ? area.countries
+                          : area.country
+                            ? [area.country]
+                            : []
+                        ).length > 0 && (
                           <span className="uppercase font-mono">
-                            {area.country}
+                            {(area.countries && area.countries.length > 0
+                              ? area.countries
+                              : [area.country ?? "?"]
+                            ).join("·")}
                           </span>
                         )}
                         {!!assigned && (

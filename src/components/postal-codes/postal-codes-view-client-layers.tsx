@@ -46,6 +46,7 @@ import {
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
+import { extractRawCode } from "@/lib/utils/deck-gl-utils";
 import { isLightColor } from "@/lib/utils/layer-colors";
 import { getLargestPolygonCentroid } from "@/lib/utils/map-data";
 
@@ -449,7 +450,7 @@ export function PostalCodesViewClientWithLayers({
       setPreviewPostalCode(postalCode);
       if (postalCode && data) {
         const feature = data.features.find(
-          (f) => f.properties?.code === postalCode
+          (f) => f.properties?.code === extractRawCode(postalCode)
         );
         if (feature) {
           const [lng, lat] = getLargestPolygonCentroid(

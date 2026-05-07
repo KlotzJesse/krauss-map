@@ -102,15 +102,18 @@ export async function PostalCodesOverview() {
   );
   const totalLayers = activeAreas.reduce((s, a) => s + (a.layerCount ?? 0), 0);
 
-  // Country breakdown
+  // Country breakdown — use actual countries from PLZ assignments
   const countryMap = new Map<string, { count: number; plz: number }>();
   for (const a of activeAreas) {
-    const c = a.country ?? "?";
-    const prev = countryMap.get(c) ?? { count: 0, plz: 0 };
-    countryMap.set(c, {
-      count: prev.count + 1,
-      plz: prev.plz + (a.postalCodeCount ?? 0),
-    });
+    const countries =
+      a.countries && a.countries.length > 0 ? a.countries : [a.country ?? "?"];
+    for (const c of countries) {
+      const prev = countryMap.get(c) ?? { count: 0, plz: 0 };
+      countryMap.set(c, {
+        count: prev.count + 1,
+        plz: prev.plz + (a.postalCodeCount ?? 0),
+      });
+    }
   }
 
   // Areas with coverage %

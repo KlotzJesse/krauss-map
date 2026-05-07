@@ -83,6 +83,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { extractRawCode } from "@/lib/utils/deck-gl-utils";
 import { copyPostalCodesCSV } from "@/lib/utils/export-utils";
 import { generatePalette } from "@/lib/utils/layer-colors";
 
@@ -379,7 +380,7 @@ export const LayerListItem = memo(function LayerListItem({
     if (postalCodes.length < 3) return [];
     const map = new Map<string, number>();
     for (const pc of postalCodes) {
-      const prefix = pc.postalCode.slice(0, 2);
+      const prefix = extractRawCode(pc.postalCode).slice(0, 2);
       map.set(prefix, (map.get(prefix) ?? 0) + 1);
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
