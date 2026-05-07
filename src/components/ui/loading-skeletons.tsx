@@ -284,7 +284,7 @@ export function PostalCodesViewSkeleton() {
               <Skeleton className="h-4 w-24" />
             </div>
             <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="h-7 w-7 rounded" />
               ))}
             </div>
@@ -299,9 +299,12 @@ export function PostalCodesViewSkeleton() {
             </div>
 
             {/* Granularity row */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-6 w-24 rounded-md" />
+              <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
+              <Skeleton className="h-4 w-10 rounded shrink-0" />
+              <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
             </div>
 
             {/* Layers section header + action buttons */}
@@ -412,7 +415,7 @@ export function MapSkeleton() {
               <Skeleton className="h-4 w-24" />
             </div>
             <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="h-7 w-7 rounded" />
               ))}
             </div>
@@ -424,9 +427,12 @@ export function MapSkeleton() {
               <Skeleton className="h-3 w-full" />
               <Skeleton className="h-3 w-3/4" />
             </div>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-6 w-24 rounded-md" />
+              <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
+              <Skeleton className="h-4 w-10 rounded shrink-0" />
+              <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
             </div>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
