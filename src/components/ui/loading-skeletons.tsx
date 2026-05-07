@@ -408,8 +408,8 @@ export function PostalCodesViewSkeleton() {
         </div>
       </div>
 
-      {/* Map toolbar — right of the left panel */}
-      <div className="absolute top-4 left-[356px] z-10 flex flex-col gap-1">
+      {/* Map toolbar — right of the left panel (matches base-map.tsx left-[413px] when panel open) */}
+      <div className="absolute top-4 left-[413px] z-10 flex flex-col gap-1">
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-8 w-8 rounded" />
         ))}
@@ -440,104 +440,178 @@ export function PostalCodesViewSkeleton() {
   );
 }
 
-// Loading skeleton for map component
+// Loading skeleton for map component — mirrors the floating-panel map layout
 export function MapSkeleton() {
   return (
-    <div className="w-full h-full bg-muted/30 rounded-lg flex items-center justify-center relative">
-      {/* Map loading animation */}
-      <div className="absolute inset-0 rounded-lg overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-muted/50 via-muted/30 to-muted/50 animate-pulse" />
+    <div className="w-full h-full relative overflow-hidden">
+      {/* Map background */}
+      <div className="absolute inset-0 bg-muted/20 animate-pulse" />
 
-        {/* Simulated map tiles */}
-        <div className="absolute inset-0 grid grid-cols-4 grid-rows-4 gap-1 p-4">
-          {Array.from({ length: 16 }).map((_, i) => (
-            <Skeleton
-              key={i}
-              className="w-full h-full"
-              style={{ animationDelay: `${i * 50}ms` }}
-            />
+      {/* Kartentools panel — left (matches absolute top-4 left-4 bottom-4 in base-map.tsx) */}
+      <div className="absolute top-4 left-4 bottom-4 z-10 w-80 flex flex-col">
+        <div className="bg-background rounded-lg border shadow flex flex-col h-full overflow-hidden">
+          {/* Panel header */}
+          <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b shrink-0">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-7 w-7 rounded" />
+              ))}
+            </div>
+          </div>
+          {/* Panel body */}
+          <div className="flex flex-col flex-1 overflow-hidden p-3 gap-3 min-h-0">
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-3/4" />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-7 w-24 rounded-md" />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-14" />
+              </div>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-7 w-7 rounded" />
+                ))}
+              </div>
+            </div>
+            <Skeleton className="h-7 w-full rounded-md" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-2 py-0.5">
+                <Skeleton className="h-3 w-3 rounded-full shrink-0" />
+                <Skeleton className="h-3 flex-1" />
+                <Skeleton className="h-3 w-8 shrink-0" />
+                <Skeleton className="h-3 w-10 shrink-0" />
+              </div>
+            ))}
+            <div className="pt-2 border-t space-y-1.5">
+              <Skeleton className="h-3.5 w-20" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+              ))}
+            </div>
+            <div className="pt-2 border-t space-y-1.5">
+              <Skeleton className="h-3.5 w-16" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-3 rounded-sm shrink-0" />
+                    <Skeleton className="h-3 w-6" />
+                  </div>
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Map toolbar — right of panel (left-[413px] matches base-map.tsx) */}
+      <div className="absolute top-4 left-[413px] z-10 flex flex-col gap-1">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-8 w-8 rounded" />
+        ))}
+      </div>
+
+      {/* Drawing toolbar — bottom center */}
+      <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-center pointer-events-none">
+        <div className="bg-background/95 border shadow rounded-full px-2 py-1.5 flex items-center gap-1">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <Skeleton key={i} className="h-8 w-8 rounded-full" />
           ))}
         </div>
       </div>
 
-      {/* Loading text */}
-      <div className="relative z-10 text-center space-y-2 bg-background/80 backdrop-blur-sm rounded-lg p-4">
-        <Skeleton className="h-6 w-32 mx-auto" />
-        <Skeleton className="h-4 w-48 mx-auto" />
+      {/* Legend — bottom right */}
+      <div className="absolute bottom-20 right-4 z-10">
+        <div className="bg-background rounded-lg border shadow p-2 w-[180px] space-y-1.5">
+          <Skeleton className="h-3 w-16" />
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Skeleton className="h-3 w-3 rounded-sm shrink-0" />
+              <Skeleton className="h-3 flex-1" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-// Loading skeleton for drawing tools
+// Loading skeleton for drawing tools — matches Kartentools panel content
 export function DrawingToolsSkeleton() {
   return (
-    <Card className="w-80 shadow-lg">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+    <div className="bg-background rounded-lg border shadow flex flex-col min-w-80 max-w-md overflow-hidden">
+      {/* Panel header */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b shrink-0">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-7 w-7 rounded" />
+          ))}
+        </div>
+      </div>
+      {/* Panel body */}
+      <div className="flex flex-col overflow-hidden p-3 gap-3">
+        <div className="space-y-1.5">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-3/4" />
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-7 w-24 rounded-md" />
+        </div>
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Skeleton className="w-4 h-4 rounded" />
-            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-14" />
           </div>
-          <Skeleton className="h-8 w-8 rounded" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Tool Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <Skeleton className="h-9 w-full rounded" />
-          <Skeleton className="h-9 w-full rounded" />
-          <Skeleton className="h-9 w-full rounded" />
-          <Skeleton className="h-9 w-full rounded" />
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-2 pt-2 border-t">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-9 w-full" />
-        </div>
-
-        {/* Statistics */}
-        <div className="space-y-2 pt-2 border-t">
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-5 w-12 rounded-full" />
-          </div>
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-5 w-12 rounded-full" />
-          </div>
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-5 w-16 rounded-full" />
+          <div className="flex items-center gap-1">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-7 w-7 rounded" />
+            ))}
           </div>
         </div>
-      </CardContent>
-    </Card>
+        <Skeleton className="h-7 w-full rounded-md" />
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex items-center gap-2 py-0.5">
+            <Skeleton className="h-3 w-3 rounded-full shrink-0" />
+            <Skeleton className="h-3 flex-1" />
+            <Skeleton className="h-3 w-8 shrink-0" />
+            <Skeleton className="h-3 w-10 shrink-0" />
+          </div>
+        ))}
+        <div className="pt-2 border-t space-y-1.5">
+          <Skeleton className="h-3.5 w-20" />
+          {[1, 2].map((i) => (
+            <div key={i} className="flex items-center justify-between">
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-3 w-12" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
-// Loading skeleton for address autocomplete
+// Loading skeleton for address autocomplete — matches the combobox trigger input
 export function AddressAutocompleteSkeleton() {
-  return (
-    <Card className="w-80 shadow-lg">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Skeleton className="w-4 h-4 rounded" />
-          <Skeleton className="h-5 w-32" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Skeleton className="h-10 w-full rounded-md" />
-        <div className="flex gap-2">
-          <Skeleton className="h-9 flex-1" />
-          <Skeleton className="h-9 flex-1" />
-        </div>
-        <div className="pt-2 border-t space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return <Skeleton className="h-8 w-full rounded-md" />;
 }
