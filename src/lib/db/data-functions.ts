@@ -135,7 +135,11 @@ export async function getAreas() {
 /** Fetch area name, granularity, and country in one query — use instead of three separate calls. */
 export async function getAreaMeta(
   id: number
-): Promise<{ name: string | null; granularity: string | null; country: string | null }> {
+): Promise<{
+  name: string | null;
+  granularity: string | null;
+  country: string | null;
+}> {
   "use cache";
   cacheLife("minutes");
   cacheTag("areas", `area-${id}`);

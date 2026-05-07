@@ -10,10 +10,7 @@ import { VersionIndicatorSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import type { CountryCode } from "@/lib/config/countries";
 import { DEFAULT_COUNTRY, isValidCountryCode } from "@/lib/config/countries";
-import {
-  getAreaMeta,
-  getVersion,
-} from "@/lib/db/data-functions";
+import { getAreaMeta, getVersion } from "@/lib/db/data-functions";
 
 const VersionIndicator = dynamic(() =>
   import("@/components/shared/version-indicator").then((m) => ({

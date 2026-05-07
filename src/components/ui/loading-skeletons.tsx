@@ -343,7 +343,7 @@ export function PostalCodesViewSkeleton() {
             </div>
 
             {/* Länder section — flag + country name + assigned/total + % + trash */}
-            <div className="pt-2 border-t space-y-1">
+            <div className="pt-1.5 space-y-1">
               <div className="flex items-center justify-between py-0.5">
                 <Skeleton className="h-3.5 w-12" />
               </div>
@@ -461,7 +461,7 @@ export function MapSkeleton() {
               </div>
             </div>
             {/* Länder — flag + country name + assigned/total + % + trash */}
-            <div className="pt-2 border-t space-y-1">
+            <div className="pt-1.5 space-y-1">
               <div className="flex items-center justify-between py-0.5">
                 <Skeleton className="h-3.5 w-12" />
               </div>
@@ -573,7 +573,7 @@ export function DrawingToolsSkeleton() {
           </div>
         </div>
         {/* Länder */}
-        <div className="pt-2 border-t space-y-1.5">
+        <div className="pt-1.5 space-y-1.5">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center gap-2 py-0.5">
               <Skeleton className="h-3.5 w-4 shrink-0" />

@@ -594,8 +594,7 @@ function LänderSection({
 
   return (
     <>
-      <Separator />
-      <div className="space-y-1 py-1">
+      <div className="space-y-1 pt-1.5 pb-1">
         <div className="flex items-center justify-between py-0.5">
           <span className="text-xs font-semibold">Länder</span>
           {inactiveKeys.length > 0 && (
