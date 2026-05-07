@@ -223,13 +223,13 @@ export default async function ChangelogPage({
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-auto">
         {items.length === 0 ? (
           <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
             Keine Einträge gefunden
           </div>
         ) : (
-          <table className="w-full text-xs">
+          <table className="w-full text-xs min-w-[540px]">
             <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
               <tr className="border-b">
                 <th className="text-left font-medium px-4 py-2">Zeitpunkt</th>
@@ -263,7 +263,7 @@ export default async function ChangelogPage({
                     <td className="px-4 py-2">
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium",
+                          "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap",
                           meta.color,
                           meta.bg
                         )}

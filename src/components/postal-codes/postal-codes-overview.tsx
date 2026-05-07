@@ -145,7 +145,7 @@ export async function PostalCodesOverview() {
     <div className="h-full overflow-auto p-6 pt-8">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-1">Übersicht</h1>
             <p className="text-muted-foreground text-sm">
@@ -153,7 +153,7 @@ export async function PostalCodesOverview() {
             </p>
           </div>
           {activeAreas.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <CompareAreasButton areas={areas} />
               <ExportAllAreasButton />
             </div>
