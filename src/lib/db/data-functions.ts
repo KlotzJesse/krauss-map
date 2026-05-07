@@ -132,6 +132,29 @@ export async function getAreas() {
  * Used by resolveGranularity in page.tsx to avoid loading the full
  * area + layers + postalCodes join just to get one scalar field.
  */
+/** Fetch area name, granularity, and country in one query — use instead of three separate calls. */
+export async function getAreaMeta(
+  id: number
+): Promise<{ name: string | null; granularity: string | null; country: string | null }> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("areas", `area-${id}`);
+  try {
+    const row = await db.query.areas.findFirst({
+      where: eq(areas.id, id),
+      columns: { name: true, granularity: true, country: true },
+    });
+    return {
+      name: row?.name ?? null,
+      granularity: row?.granularity ?? null,
+      country: row?.country ?? null,
+    };
+  } catch (error) {
+    console.error("Error fetching area meta:", error);
+    return { name: null, granularity: null, country: null };
+  }
+}
+
 export async function getAreaGranularity(id: number): Promise<string | null> {
   "use cache";
   cacheLife("minutes");

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { cache } from "react";
 import { Suspense } from "react";
 
 import ServerPostalCodesView from "@/components/postal-codes/server-postal-codes-view";
@@ -10,9 +11,7 @@ import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import type { CountryCode } from "@/lib/config/countries";
 import { DEFAULT_COUNTRY, isValidCountryCode } from "@/lib/config/countries";
 import {
-  getAreaGranularity,
-  getAreaCountry,
-  getAreaName,
+  getAreaMeta,
   getVersion,
 } from "@/lib/db/data-functions";
 
@@ -27,42 +26,46 @@ interface PostalCodesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/** Resolve granularity, country, and name from area or version snapshot — parallel fetch. */
-async function resolveAreaMeta(
-  areaId: number,
-  versionId: number | null
-): Promise<{
-  granularity: string;
-  country: CountryCode;
-  areaName: string | null;
-}> {
-  const isValidVersion =
-    versionId !== null && versionId !== undefined && versionId > 0;
+/** Resolve granularity, country, and name from area or version snapshot.
+ * Wrapped in React cache() to deduplicate between generateMetadata and page component
+ * within the same request. Uses a single DB query via getAreaMeta. */
+const resolveAreaMeta = cache(
+  async (
+    areaId: number,
+    versionId: number | null
+  ): Promise<{
+    granularity: string;
+    country: CountryCode;
+    areaName: string | null;
+  }> => {
+    const isValidVersion =
+      versionId !== null && versionId !== undefined && versionId > 0;
 
-  const [granularity, country, areaName, version] = await Promise.all([
-    getAreaGranularity(areaId),
-    getAreaCountry(areaId),
-    getAreaName(areaId),
-    isValidVersion ? getVersion(areaId, versionId) : Promise.resolve(null),
-  ]);
+    const [meta, version] = await Promise.all([
+      getAreaMeta(areaId),
+      isValidVersion ? getVersion(areaId, versionId) : Promise.resolve(null),
+    ]);
 
-  const resolvedCountry: CountryCode =
-    country && isValidCountryCode(country) ? country : DEFAULT_COUNTRY;
+    const resolvedCountry: CountryCode =
+      meta.country && isValidCountryCode(meta.country)
+        ? meta.country
+        : DEFAULT_COUNTRY;
 
-  if (isValidVersion && version?.snapshot) {
-    const snap = version.snapshot as { granularity?: string };
+    if (isValidVersion && version?.snapshot) {
+      const snap = version.snapshot as { granularity?: string };
+      return {
+        granularity: snap.granularity ?? "1digit",
+        country: resolvedCountry,
+        areaName: meta.name,
+      };
+    }
     return {
-      granularity: snap.granularity ?? "1digit",
+      granularity: meta.granularity ?? "1digit",
       country: resolvedCountry,
-      areaName,
+      areaName: meta.name,
     };
   }
-  return {
-    granularity: granularity ?? "1digit",
-    country: resolvedCountry,
-    areaName,
-  };
-}
+);
 
 export async function generateMetadata({
   params,
