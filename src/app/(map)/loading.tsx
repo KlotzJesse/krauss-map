@@ -1,5 +1,5 @@
-import { ChangelogPageSkeleton } from "@/components/ui/loading-skeletons";
+import { OverviewPageSkeleton } from "@/components/ui/loading-skeletons";
 
 export default function Loading() {
-  return <ChangelogPageSkeleton />;
+  return <OverviewPageSkeleton />;
 }
