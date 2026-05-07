@@ -501,7 +501,9 @@ export function useDeckLayers({
     () =>
       inactiveCountryCodes.size > 0
         ? filterAreaFeatures(data, inactiveCountryCodes, featureIndex)
-        : (EMPTY_FEATURE_COLLECTION as FeatureCollection<Polygon | MultiPolygon>),
+        : (EMPTY_FEATURE_COLLECTION as FeatureCollection<
+            Polygon | MultiPolygon
+          >),
     [inactiveCountryCodes, data, featureIndex]
   );
 
@@ -522,7 +524,13 @@ export function useDeckLayers({
         unassignedCodes.add(code);
     }
     return filterAreaFeatures(data, unassignedCodes, featureIndex);
-  }, [showUnassigned, data, allAssignedCodeSet, inactiveCountryCodes, featureIndex]);
+  }, [
+    showUnassigned,
+    data,
+    allAssignedCodeSet,
+    inactiveCountryCodes,
+    featureIndex,
+  ]);
 
   // Single-layer code set (codes in exactly one visible layer)
   const singleLayerCodeSet = useMemo(() => {
@@ -1156,7 +1164,11 @@ export function useDeckLayers({
     let count = 0;
     for (const f of data.features) {
       const code = getFeatureCode(f);
-      if (code && !allAssignedCodeSet.has(code) && !inactiveCountryCodes.has(code))
+      if (
+        code &&
+        !allAssignedCodeSet.has(code) &&
+        !inactiveCountryCodes.has(code)
+      )
         count++;
     }
     return count;

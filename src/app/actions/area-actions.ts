@@ -2120,9 +2120,7 @@ export async function searchPostalCodesByBoundaryAction(data: {
     // Find postal codes within boundary.
     // ST_SetSRID ensures the Nominatim GeoJSON polygon is in WGS84 (4326), matching stored geometries.
     // Add country filter when known to avoid scanning unrelated countries' data.
-    const knownCountry = ["de", "at", "ch"].includes(
-      featureCountryCode ?? ""
-    )
+    const knownCountry = ["de", "at", "ch"].includes(featureCountryCode ?? "")
       ? featureCountryCode?.toUpperCase()
       : undefined;
 

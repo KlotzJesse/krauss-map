@@ -88,12 +88,15 @@ export function findPostalCodeMatches(
 
   for (const f of availableData.features) {
     const raw = f.properties?.code || f.properties?.PLZ || f.properties?.plz;
-    const country = (f.properties?.country as string | undefined)?.toUpperCase();
+    const country = (
+      f.properties?.country as string | undefined
+    )?.toUpperCase();
     if (raw) {
       const code = normalizePostalCode(raw);
       allCodesSet.add(code);
       if (country) {
-        if (!codesByCountry.has(country)) codesByCountry.set(country, new Set());
+        if (!codesByCountry.has(country))
+          codesByCountry.set(country, new Set());
         codesByCountry.get(country)!.add(code);
       }
     }
@@ -110,10 +113,9 @@ export function findPostalCodeMatches(
       (parsed.countryCode ?? defaultCountry ?? null)?.toUpperCase() ?? null;
 
     // Scope search to the resolved country, or fall back to all codes
-    const searchSet: Set<string> =
-      effectiveCountry
-        ? (codesByCountry.get(effectiveCountry) ?? new Set<string>())
-        : allCodesSet;
+    const searchSet: Set<string> = effectiveCountry
+      ? (codesByCountry.get(effectiveCountry) ?? new Set<string>())
+      : allCodesSet;
 
     const matchedCodes: string[] = [];
 

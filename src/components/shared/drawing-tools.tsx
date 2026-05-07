@@ -520,14 +520,21 @@ function LänderSection({
 
   if (countryKeys.length === 0) return null;
 
-  const activeKeys = countryKeys.filter((c) => (countryAssigned.get(c) ?? 0) > 0);
-  const inactiveKeys = countryKeys.filter((c) => (countryAssigned.get(c) ?? 0) === 0);
+  const activeKeys = countryKeys.filter(
+    (c) => (countryAssigned.get(c) ?? 0) > 0
+  );
+  const inactiveKeys = countryKeys.filter(
+    (c) => (countryAssigned.get(c) ?? 0) === 0
+  );
 
   const handleRemoveCountry = async (countryCode: string) => {
     if (!areaId) return;
     setIsRemoving(true);
     try {
-      const result = await removePostalCodesByCountryAction(areaId, countryCode);
+      const result = await removePostalCodesByCountryAction(
+        areaId,
+        countryCode
+      );
       if (result.success) {
         toast.success(
           `${result.data?.removed ?? 0} ${COUNTRY_META[countryCode]?.name ?? countryCode}-PLZ entfernt`
@@ -549,10 +556,7 @@ function LänderSection({
     const inUse = assigned > 0;
     const coveragePct = total > 0 ? Math.round((assigned / total) * 100) : 0;
     return (
-      <div
-        key={c}
-        className="flex items-center gap-1.5 rounded px-1 py-0.5"
-      >
+      <div key={c} className="flex items-center gap-1.5 rounded px-1 py-0.5">
         <span className="text-sm leading-none">{meta?.flag}</span>
         <span className="flex-1 truncate text-[10px] text-muted-foreground">
           {meta?.name ?? c}
@@ -3253,7 +3257,9 @@ const LayerManagementSection = memo(function LayerManagementSection({
                         onZoomToLayer={onZoomToLayer}
                         onClearPLZ={handleClearLayerPLZ}
                         onAddPlzRange={addPostalCodesToLayer ?? undefined}
-                        allCodesSetSize={activeCodesTotal ?? allCodesSet?.size ?? 0}
+                        allCodesSetSize={
+                          activeCodesTotal ?? allCodesSet?.size ?? 0
+                        }
                         getAllCodesSet={getAllCodesSet}
                         onBulkMovePlz={handleBulkMovePlz}
                         onBulkRemovePlz={handleBulkRemovePlz}
@@ -3432,7 +3438,9 @@ const LayerManagementSection = memo(function LayerManagementSection({
                             onZoomToLayer={onZoomToLayer}
                             onClearPLZ={handleClearLayerPLZ}
                             onAddPlzRange={addPostalCodesToLayer ?? undefined}
-                            allCodesSetSize={activeCodesTotal ?? allCodesSet?.size ?? 0}
+                            allCodesSetSize={
+                              activeCodesTotal ?? allCodesSet?.size ?? 0
+                            }
                             getAllCodesSet={getAllCodesSet}
                             onBulkMovePlz={handleBulkMovePlz}
                             onBulkRemovePlz={handleBulkRemovePlz}

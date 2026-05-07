@@ -64,7 +64,9 @@ export function PostalCodeImportDialog({
   const [activeTab, setActiveTab] = useState("paste");
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   // Country to use for codes that have no explicit country prefix
-  const [defaultCountry, setDefaultCountry] = useState<CountryCode | null>(null);
+  const [defaultCountry, setDefaultCountry] = useState<CountryCode | null>(
+    null
+  );
 
   // Parse and validate input
   const parsedCodes = useMemo(() => {
@@ -85,7 +87,12 @@ export function PostalCodeImportDialog({
     if (parsedCodes.length === 0) {
       return [];
     }
-    return findPostalCodeMatches(parsedCodes, data, granularity, defaultCountry);
+    return findPostalCodeMatches(
+      parsedCodes,
+      data,
+      granularity,
+      defaultCountry
+    );
   }, [parsedCodes, data, granularity, defaultCountry]);
 
   const groupedMatches = useMemo(
@@ -196,7 +203,9 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
                     <Select
                       value={defaultCountry ?? "auto"}
                       onValueChange={(v) =>
-                        setDefaultCountry(v === "auto" ? null : (v as CountryCode))
+                        setDefaultCountry(
+                          v === "auto" ? null : (v as CountryCode)
+                        )
                       }
                     >
                       <SelectTrigger className="h-7 w-44 border-amber-300 bg-background text-xs">

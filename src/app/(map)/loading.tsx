@@ -1,5 +1,5 @@
-import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
+import { ChangelogPageSkeleton } from "@/components/ui/loading-skeletons";
 
 export default function Loading() {
-  return <LoadingSkeleton className="h-full w-full" />;
+  return <ChangelogPageSkeleton />;
 }

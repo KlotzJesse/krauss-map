@@ -1,5 +1,5 @@
-import { MapLoadingSkeleton } from "@/components/ui/loading-skeleton";
+import { OverviewPageSkeleton } from "@/components/ui/loading-skeletons";
 
-export default async function Loading() {
-  return <MapLoadingSkeleton className="h-full w-full" />;
+export default function Loading() {
+  return <OverviewPageSkeleton />;
 }

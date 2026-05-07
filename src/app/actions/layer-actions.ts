@@ -517,12 +517,14 @@ export async function removePostalCodesByCountryAction(
 
     const codeList = codesToRemove.map((r) => r.postalCode);
 
-    await db.delete(areaLayerPostalCodes).where(
-      and(
-        inArray(areaLayerPostalCodes.layerId, layerIds),
-        inArray(areaLayerPostalCodes.postalCode, codeList)
-      )
-    );
+    await db
+      .delete(areaLayerPostalCodes)
+      .where(
+        and(
+          inArray(areaLayerPostalCodes.layerId, layerIds),
+          inArray(areaLayerPostalCodes.postalCode, codeList)
+        )
+      );
 
     await recordChangeAction(areaId, {
       changeType: "remove_postal_codes",
