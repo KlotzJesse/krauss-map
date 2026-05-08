@@ -298,9 +298,13 @@ export const NavAreas = memo(function NavAreas({
     return [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [optimisticAreas]);
 
-  const baseVisibleAreas = showArchived
-    ? optimisticAreas
-    : optimisticAreas.filter((a) => a.isArchived !== "true");
+  const baseVisibleAreas = useMemo(
+    () =>
+      showArchived
+        ? optimisticAreas
+        : optimisticAreas.filter((a) => a.isArchived !== "true"),
+    [showArchived, optimisticAreas]
+  );
 
   const visibleAreas = useMemo(() => {
     const q = areaSearch.trim().toLowerCase();
@@ -327,20 +331,24 @@ export const NavAreas = memo(function NavAreas({
     return sorted;
   }, [baseVisibleAreas, areaSearch, activeTagId, pinnedIds, sortBy]);
 
-  const archivedCount = optimisticAreas.filter(
-    (a) => a.isArchived === "true"
-  ).length;
-
-  const activeAreaCount = optimisticAreas.filter(
-    (a) => a.isArchived !== "true"
-  ).length;
-  const totalPlzCount = useMemo(
-    () =>
-      optimisticAreas
-        .filter((a) => a.isArchived !== "true")
-        .reduce((sum, a) => sum + (a.postalCodeCount ?? 0), 0),
-    [optimisticAreas]
-  );
+  const { archivedCount, activeAreaCount, totalPlzCount } = useMemo(() => {
+    let archived = 0;
+    let active = 0;
+    let plz = 0;
+    for (const a of optimisticAreas) {
+      if (a.isArchived === "true") {
+        archived++;
+      } else {
+        active++;
+        plz += a.postalCodeCount ?? 0;
+      }
+    }
+    return {
+      archivedCount: archived,
+      activeAreaCount: active,
+      totalPlzCount: plz,
+    };
+  }, [optimisticAreas]);
 
   // Group visibleAreas by tag (when groupByTag is on)
   const groupedByTag = useMemo(() => {
@@ -868,7 +876,7 @@ export const NavAreas = memo(function NavAreas({
                   key={area.id}
                   area={area}
                   isEditing={editingAreaId === area.id}
-                  editingAreaName={editingAreaName}
+                  editingAreaName={editingAreaId === area.id ? editingAreaName : ""}
                   editInputRef={editInputRef}
                   isCurrentRoute={currentAreaIdFromRoute === String(area.id)}
                   isPinned={isPinned(area.id)}
@@ -916,7 +924,9 @@ export const NavAreas = memo(function NavAreas({
                       key={area.id}
                       area={area}
                       isEditing={editingAreaId === area.id}
-                      editingAreaName={editingAreaName}
+                      editingAreaName={
+                        editingAreaId === area.id ? editingAreaName : ""
+                      }
                       editInputRef={editInputRef}
                       isCurrentRoute={
                         currentAreaIdFromRoute === String(area.id)
