@@ -98,40 +98,39 @@ export const AreaItemMenu = memo(function AreaItemMenu({
   children,
   disabled = false,
 }: AreaItemMenuProps) {
-  const [mounted, setMounted] = useState(false);
-  const mountRef = useRef(mounted);
-  mountRef.current = mounted;
+  const [contentMounted, setContentMounted] = useState(false);
+  const contentMountedRef = useRef(contentMounted);
+  contentMountedRef.current = contentMounted;
 
   const handlePointerEnter = useCallback(() => {
-    if (!mountRef.current) setMounted(true);
+    if (!contentMountedRef.current) setContentMounted(true);
   }, []);
 
   if (disabled) {
     return <>{children}</>;
   }
 
-  if (!mounted) {
-    return (
-      <div className="w-full" onPointerEnter={handlePointerEnter}>
-        {children}
-      </div>
-    );
-  }
-
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="w-full">{children}</ContextMenuTrigger>
-      <ContextMenuContent className="w-44">
-        <MenuItems
-          area={area}
-          onStartRename={onStartRename}
-          onStartDelete={onStartDelete}
-          onDuplicate={onDuplicate}
-          onArchive={onArchive}
-          onEditNotes={onEditNotes}
-          variant="context"
-        />
-      </ContextMenuContent>
+      <ContextMenuTrigger
+        className="w-full"
+        onPointerEnter={handlePointerEnter}
+      >
+        {children}
+      </ContextMenuTrigger>
+      {contentMounted && (
+        <ContextMenuContent className="w-44">
+          <MenuItems
+            area={area}
+            onStartRename={onStartRename}
+            onStartDelete={onStartDelete}
+            onDuplicate={onDuplicate}
+            onArchive={onArchive}
+            onEditNotes={onEditNotes}
+            variant="context"
+          />
+        </ContextMenuContent>
+      )}
     </ContextMenu>
   );
 });
