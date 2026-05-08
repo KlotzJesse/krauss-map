@@ -277,21 +277,21 @@ export async function addPostalCodesToLayerAction(
   createdBy?: string
 ) {
   try {
-    // Load area for country/granularity context needed for normalization
-    const area = await db.query.areas.findFirst({
-      where: eq(areas.id, areaId),
-      columns: { country: true, granularity: true },
-    });
+    // Fetch area context and existing layer codes in parallel
+    const [area, layer] = await Promise.all([
+      db.query.areas.findFirst({
+        where: eq(areas.id, areaId),
+        columns: { country: true, granularity: true },
+      }),
+      db.query.areaLayers.findFirst({
+        where: eq(areaLayers.id, layerId),
+        with: {
+          postalCodes: { columns: { postalCode: true } },
+        },
+      }),
+    ]);
     const areaCountry = (area?.country ?? "DE") as CountryCode;
     const areaGranularity = area?.granularity ?? "5digit";
-
-    // Get existing postal codes for this layer (already in stored format after migration)
-    const layer = await db.query.areaLayers.findFirst({
-      where: eq(areaLayers.id, layerId),
-      with: {
-        postalCodes: { columns: { postalCode: true } },
-      },
-    });
 
     if (!layer) {
       return { success: false, error: "Layer not found" };

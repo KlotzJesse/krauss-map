@@ -938,26 +938,28 @@ export async function duplicateLayerAction(
   createdBy?: string
 ): ServerActionResponse<{ id: number }> {
   try {
-    const sourceLayer = await db.query.areaLayers.findFirst({
-      where: eq(areaLayers.id, layerId),
-      with: { postalCodes: true },
-    });
+    // Fetch source layer, max order, and sibling colors in parallel
+    const [sourceLayer, [maxOrder], siblingLayers] = await Promise.all([
+      db.query.areaLayers.findFirst({
+        where: eq(areaLayers.id, layerId),
+        with: { postalCodes: true },
+      }),
+      db
+        .select({
+          max: sql<number>`coalesce(max(${areaLayers.orderIndex}), 0)`,
+        })
+        .from(areaLayers)
+        .where(eq(areaLayers.areaId, areaId)),
+      db
+        .select({ color: areaLayers.color })
+        .from(areaLayers)
+        .where(eq(areaLayers.areaId, areaId)),
+    ]);
 
     if (!sourceLayer) {
       return { success: false, error: "Layer not found" };
     }
 
-    // Get max orderIndex for the area to place copy at end
-    const [maxOrder] = await db
-      .select({ max: sql<number>`coalesce(max(${areaLayers.orderIndex}), 0)` })
-      .from(areaLayers)
-      .where(eq(areaLayers.areaId, areaId));
-
-    // Generate a contrasting color based on all sibling layers
-    const siblingLayers = await db
-      .select({ color: areaLayers.color })
-      .from(areaLayers)
-      .where(eq(areaLayers.areaId, areaId));
     const newColor = generateNextColor(siblingLayers.map((l) => l.color));
 
     const newLayerId = await db.transaction(async (tx) => {
@@ -1021,33 +1023,36 @@ export async function copyLayerToAreaAction(
   createdBy?: string
 ): ServerActionResponse<{ id: number }> {
   try {
-    const sourceLayer = await db.query.areaLayers.findFirst({
-      where: eq(areaLayers.id, sourceLayerId),
-      with: { postalCodes: true },
-    });
+    // Fetch source layer, target area, max order, and sibling colors in parallel
+    const [sourceLayer, targetArea, [maxOrder], siblingLayers] =
+      await Promise.all([
+        db.query.areaLayers.findFirst({
+          where: eq(areaLayers.id, sourceLayerId),
+          with: { postalCodes: true },
+        }),
+        db.query.areas.findFirst({
+          where: eq(areas.id, targetAreaId),
+        }),
+        db
+          .select({
+            max: sql<number>`coalesce(max(${areaLayers.orderIndex}), 0)`,
+          })
+          .from(areaLayers)
+          .where(eq(areaLayers.areaId, targetAreaId)),
+        db
+          .select({ color: areaLayers.color })
+          .from(areaLayers)
+          .where(eq(areaLayers.areaId, targetAreaId)),
+      ]);
 
     if (!sourceLayer) {
       return { success: false, error: "Source layer not found" };
     }
 
-    // Verify target area exists
-    const targetArea = await db.query.areas.findFirst({
-      where: eq(areas.id, targetAreaId),
-    });
-
     if (!targetArea) {
       return { success: false, error: "Target area not found" };
     }
 
-    const [maxOrder] = await db
-      .select({ max: sql<number>`coalesce(max(${areaLayers.orderIndex}), 0)` })
-      .from(areaLayers)
-      .where(eq(areaLayers.areaId, targetAreaId));
-
-    const siblingLayers = await db
-      .select({ color: areaLayers.color })
-      .from(areaLayers)
-      .where(eq(areaLayers.areaId, targetAreaId));
     const newColor = generateNextColor(siblingLayers.map((l) => l.color));
 
     const newLayerId = await db.transaction(async (tx) => {
