@@ -263,7 +263,7 @@ export function ChangelogPageSkeleton() {
 // Loading skeleton for postal codes view - mirrors the actual floating-panel map layout
 export function PostalCodesViewSkeleton() {
   return (
-    <div className="h-full relative overflow-hidden bg-muted/50">
+    <div className="h-full relative overflow-hidden bg-muted">
       {/* Search bar + active layer badge + import button — top right */}
       <div className="absolute top-4 right-16 z-30 flex items-center gap-2">
         <Skeleton className="h-8 w-72 rounded-md" />
