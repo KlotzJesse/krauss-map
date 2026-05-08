@@ -1,10 +1,5 @@
 import { sql } from "drizzle-orm";
-import type {
-  FeatureCollection,
-  GeoJsonProperties,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { cacheTag, cacheLife } from "next/cache";
 
 import {
@@ -16,15 +11,10 @@ import { db } from "@/lib/db";
 
 // Define the type for a postal code DB row
 interface PostalCodeRow {
-  id: string | number;
   code: string;
   country: string;
   granularity: string;
   geometry: string;
-  properties?: GeoJsonProperties;
-  bbox?: number[];
-  created_at?: string;
-  updated_at?: string;
 }
 
 type PostalFeatureCollection = FeatureCollection<Polygon | MultiPolygon>;
@@ -40,7 +30,6 @@ function rowToFeature(row: unknown) {
       code: typedRow.code,
       country: typedRow.country,
       granularity: typedRow.granularity,
-      ...(typedRow.properties ?? {}),
     },
     geometry: JSON.parse(typedRow.geometry),
   };
@@ -62,8 +51,8 @@ export async function getPostalCodesDataForGranularity(
   cacheTag("postal-codes-geodata", tag);
   try {
     const query = country
-      ? sql`SELECT id, code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
-      : sql`SELECT id, code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry, properties, bbox FROM postal_codes WHERE granularity = ${granularity} AND is_active = 'true'`;
+      ? sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 5) as geometry FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
+      : sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 5) as geometry FROM postal_codes WHERE granularity = ${granularity} AND is_active = 'true'`;
     const { rows } = await db.execute(query);
     return {
       type: "FeatureCollection",
@@ -93,9 +82,8 @@ export async function getNativePostalCodesData(): Promise<PostalFeatureCollectio
 
     const whereClause = sql.join(conditions, sql` OR `);
     const query = sql`
-      SELECT id, code, country, granularity,
-             ST_AsGeoJSON(ST_Simplify(geometry, 0.002)) as geometry,
-             properties, bbox
+      SELECT code, country, granularity,
+             ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 5) as geometry
       FROM postal_codes
       WHERE (${whereClause}) AND is_active = 'true'
     `;
