@@ -3483,132 +3483,119 @@ const LayerManagementSection = memo(function LayerManagementSection({
             )}
           </div>
 
-          {/* Layer stats summary — shown when there are layers with codes */}
-          {layerStats.totalCodes > 0 && (
+          {/* Duplicate PLZ detail panel — only rendered when duplicates are shown */}
+          {showDuplicates && duplicateCodeMap.size > 0 && (
             <div className="border-t pt-1.5 mt-0.5 space-y-1.5">
-              {/* Duplicate PLZ detail panel */}
-              {showDuplicates && duplicateCodeMap.size > 0 && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-amber-500 font-medium uppercase tracking-wide">
-                      Doppelte PLZ ({duplicateCodeMap.size})
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        className="text-[9px] text-amber-500 hover:text-amber-600 font-medium hover:underline"
-                        title="Alle Duplikate automatisch bereinigen"
-                        onClick={async () => {
-                          for (const [
-                            code,
-                            layerIds,
-                          ] of duplicateCodeMap.entries()) {
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-amber-500 font-medium uppercase tracking-wide">
+                    Doppelte PLZ ({duplicateCodeMap.size})
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      className="text-[9px] text-amber-500 hover:text-amber-600 font-medium hover:underline"
+                      title="Alle Duplikate automatisch bereinigen"
+                      onClick={async () => {
+                        for (const [
+                          code,
+                          layerIds,
+                        ] of duplicateCodeMap.entries()) {
+                          await fixDuplicateCodeAction(areaId, code, layerIds);
+                        }
+                        onLayerUpdate?.();
+                        setShowDuplicates(false);
+                      }}
+                    >
+                      Alle fixen
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[9px] text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowDuplicates(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-28 overflow-y-auto space-y-0.5">
+                  {[...duplicateCodeMap.entries()]
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([code, layerIds]) => (
+                      <div
+                        key={code}
+                        className="flex items-center gap-1 text-[10px]"
+                      >
+                        <button
+                          type="button"
+                          className="font-mono font-medium text-amber-500 hover:underline shrink-0"
+                          title={`PLZ ${code} auf der Karte anzeigen`}
+                          onClick={() => {
+                            onPreviewPostalCode?.(code);
+                            setTimeout(() => onPreviewPostalCode?.(null), 2000);
+                          }}
+                        >
+                          {code}
+                        </button>
+                        <span className="text-muted-foreground shrink-0">
+                          →
+                        </span>
+                        <span className="flex gap-0.5 flex-wrap flex-1">
+                          {layerIds.map((id: number) => {
+                            const l = optimisticLayers.find((x) => x.id === id);
+                            return l ? (
+                              <Tooltip key={id}>
+                                <TooltipTrigger
+                                  render={
+                                    <button
+                                      type="button"
+                                      className="px-1 rounded text-[9px] font-medium border border-transparent hover:border-current transition-all hover:scale-105"
+                                      style={{
+                                        backgroundColor: l.color + "33",
+                                        color: l.color,
+                                      }}
+                                      onClick={async () => {
+                                        await fixDuplicateWithLayerAction(
+                                          areaId,
+                                          code,
+                                          id,
+                                          layerIds
+                                        );
+                                        onLayerUpdate?.();
+                                      }}
+                                    />
+                                  }
+                                >
+                                  {l.name}
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-[10px]">
+                                    Nur in „{l.name}" behalten
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : null;
+                          })}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-[9px] text-muted-foreground hover:text-amber-500 shrink-0"
+                          title="Duplikat bereinigen (behalte Ebene mit den meisten PLZ)"
+                          onClick={async () => {
                             await fixDuplicateCodeAction(
                               areaId,
                               code,
                               layerIds
                             );
-                          }
-                          onLayerUpdate?.();
-                          setShowDuplicates(false);
-                        }}
-                      >
-                        Alle fixen
-                      </button>
-                      <button
-                        type="button"
-                        className="text-[9px] text-muted-foreground hover:text-foreground"
-                        onClick={() => setShowDuplicates(false)}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                  <div className="max-h-28 overflow-y-auto space-y-0.5">
-                    {[...duplicateCodeMap.entries()]
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([code, layerIds]) => (
-                        <div
-                          key={code}
-                          className="flex items-center gap-1 text-[10px]"
+                            onLayerUpdate?.();
+                          }}
                         >
-                          <button
-                            type="button"
-                            className="font-mono font-medium text-amber-500 hover:underline shrink-0"
-                            title={`PLZ ${code} auf der Karte anzeigen`}
-                            onClick={() => {
-                              onPreviewPostalCode?.(code);
-                              setTimeout(
-                                () => onPreviewPostalCode?.(null),
-                                2000
-                              );
-                            }}
-                          >
-                            {code}
-                          </button>
-                          <span className="text-muted-foreground shrink-0">
-                            →
-                          </span>
-                          <span className="flex gap-0.5 flex-wrap flex-1">
-                            {layerIds.map((id: number) => {
-                              const l = optimisticLayers.find(
-                                (x) => x.id === id
-                              );
-                              return l ? (
-                                <Tooltip key={id}>
-                                  <TooltipTrigger
-                                    render={
-                                      <button
-                                        type="button"
-                                        className="px-1 rounded text-[9px] font-medium border border-transparent hover:border-current transition-all hover:scale-105"
-                                        style={{
-                                          backgroundColor: l.color + "33",
-                                          color: l.color,
-                                        }}
-                                        onClick={async () => {
-                                          await fixDuplicateWithLayerAction(
-                                            areaId,
-                                            code,
-                                            id,
-                                            layerIds
-                                          );
-                                          onLayerUpdate?.();
-                                        }}
-                                      />
-                                    }
-                                  >
-                                    {l.name}
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top">
-                                    <p className="text-[10px]">
-                                      Nur in „{l.name}" behalten
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              ) : null;
-                            })}
-                          </span>
-                          <button
-                            type="button"
-                            className="text-[9px] text-muted-foreground hover:text-amber-500 shrink-0"
-                            title="Duplikat bereinigen (behalte Ebene mit den meisten PLZ)"
-                            onClick={async () => {
-                              await fixDuplicateCodeAction(
-                                areaId,
-                                code,
-                                layerIds
-                              );
-                              onLayerUpdate?.();
-                            }}
-                          >
-                            Fix
-                          </button>
-                        </div>
-                      ))}
-                  </div>
+                          Fix
+                        </button>
+                      </div>
+                    ))}
                 </div>
-              )}
-              {/* PLZ prefix distribution (2-digit) — collapsible sparkline */}
+              </div>
             </div>
           )}
         </CollapsibleContent>

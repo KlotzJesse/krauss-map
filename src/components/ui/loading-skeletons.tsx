@@ -112,7 +112,7 @@ export function OverviewPageSkeleton() {
                   <Skeleton className="h-4 w-20" />
                 </CardHeader>
                 <CardContent className="pt-0 space-y-2">
-                  {[1, 2].map((i) => (
+                  {[1, 2, 3].map((i) => (
                     <div key={i} className="space-y-1">
                       <div className="flex items-center justify-between">
                         <Skeleton className="h-3 w-8" />
@@ -263,7 +263,7 @@ export function ChangelogPageSkeleton() {
 // Loading skeleton for postal codes view - mirrors the actual floating-panel map layout
 export function PostalCodesViewSkeleton() {
   return (
-    <div className="h-full relative overflow-hidden bg-muted/30">
+    <div className="h-full relative overflow-hidden bg-muted/50">
       {/* Search bar + active layer badge + import button — top right */}
       <div className="absolute top-4 right-16 z-30 flex items-center gap-2">
         <Skeleton className="h-8 w-72 rounded-md" />
@@ -277,12 +277,9 @@ export function PostalCodesViewSkeleton() {
       {/* Kartentools panel — left */}
       <div className="absolute top-4 left-4 bottom-4 z-10 w-80 flex flex-col">
         <div className="bg-background rounded-lg border shadow flex flex-col h-full overflow-hidden">
-          {/* Panel header row */}
+          {/* Panel header: title on left, action buttons on right (matches CardHeader + CardAction) */}
           <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b shrink-0">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-4 w-4 rounded" />
-              <Skeleton className="h-4 w-24" />
-            </div>
+            <Skeleton className="h-4 w-24" />
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="h-7 w-7 rounded" />
