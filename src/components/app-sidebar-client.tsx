@@ -2,6 +2,7 @@
 
 import { IconDashboard, IconHistory, IconMapPin2 } from "@tabler/icons-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
@@ -46,15 +47,21 @@ interface AppSidebarClientProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebarClient({
   areas,
   recentActivity = [],
-  currentAreaId,
+  currentAreaId: currentAreaIdProp,
   onAreaSelect,
   ...props
 }: AppSidebarClientProps) {
   const [createAreaDialogOpen, setCreateAreaDialogOpen] = React.useState(false);
+  const pathname = usePathname();
+  const currentAreaId =
+    currentAreaIdProp ??
+    (pathname
+      ? Number(pathname.match(/\/postal-codes\/(\d+)/)?.[1]) || null
+      : null);
 
-  const handleCreateArea = () => {
+  const handleCreateArea = React.useCallback(() => {
     setCreateAreaDialogOpen(true);
-  };
+  }, []);
 
   return (
     <>

@@ -11,7 +11,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import type { RecentActivityItem } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
@@ -107,7 +107,9 @@ interface RecentActivityFeedProps {
   items: RecentActivityItem[];
 }
 
-export function RecentActivityFeed({ items }: RecentActivityFeedProps) {
+export const RecentActivityFeed = memo(function RecentActivityFeed({
+  items,
+}: RecentActivityFeedProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (items.length === 0) return null;
@@ -168,4 +170,4 @@ export function RecentActivityFeed({ items }: RecentActivityFeedProps) {
       )}
     </div>
   );
-}
+});

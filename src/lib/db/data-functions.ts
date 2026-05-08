@@ -161,7 +161,12 @@ export async function getAreaMeta(id: number): Promise<{
   try {
     const row = await db.query.areas.findFirst({
       where: eq(areas.id, id),
-      columns: { name: true, granularity: true, country: true, description: true },
+      columns: {
+        name: true,
+        granularity: true,
+        country: true,
+        description: true,
+      },
     });
     return {
       name: row?.name ?? null,

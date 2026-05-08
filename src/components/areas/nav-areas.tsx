@@ -12,7 +12,7 @@ import {
   IconTags,
   IconX,
 } from "@tabler/icons-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   memo,
   useOptimistic,
@@ -202,7 +202,7 @@ interface NavAreasProps {
 export const NavAreas = memo(function NavAreas({
   areas,
   isLoading = false,
-  currentAreaId: _currentAreaId,
+  currentAreaId,
   onAreaSelect,
 }: NavAreasProps) {
   const [state, dispatch] = useReducer(navAreasReducer, initialState);
@@ -225,9 +225,10 @@ export const NavAreas = memo(function NavAreas({
     }
   }, [editingAreaId]);
   const router = useRouter();
-  const pathname = usePathname();
   const currentAreaIdFromRoute =
-    pathname?.match(/\/postal-codes\/(\d+)/)?.[1] ?? null;
+    currentAreaId !== null && currentAreaId !== undefined
+      ? String(currentAreaId)
+      : null;
 
   // Optimistic state for areas
   const [optimisticAreas, updateOptimisticAreas] = useOptimistic(

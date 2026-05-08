@@ -19,7 +19,7 @@ import {
 const MemoizedSidebarMenuButton = memo(SidebarMenuButton);
 MemoizedSidebarMenuButton.displayName = "MemoizedSidebarMenuButton";
 
-export function NavMain({
+export const NavMain = memo(function NavMain({
   items,
   onCreateArea,
 }: {
@@ -62,4 +62,4 @@ export function NavMain({
       </SidebarGroupContent>
     </SidebarGroup>
   );
-}
+});
