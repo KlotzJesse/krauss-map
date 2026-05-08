@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card";
 import { getAreas, getRecentActivity } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
+import { connection } from "next/server";
 
 import { CompareAreasButton } from "./compare-areas-button";
 import { ExportAllAreasButton } from "./export-all-areas-button";
@@ -72,6 +73,7 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 export async function PostalCodesOverview() {
+  await connection();
   const [areas, rawActivity] = await Promise.all([
     getAreas(),
     getRecentActivity(40),

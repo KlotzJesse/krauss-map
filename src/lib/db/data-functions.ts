@@ -382,7 +382,7 @@ export async function getChangeSummaries(
   }
 ) {
   "use cache";
-  cacheLife("seconds");
+  cacheLife("minutes");
   cacheTag(`area-${areaId}-change-history`);
   try {
     const conditions = [eq(areaChanges.areaId, areaId)];
@@ -444,7 +444,7 @@ export async function getChangeSummaries(
 // Recent changes for a specific layer (for layer activity history popup)
 export async function getLayerRecentChanges(layerId: number, limit = 10) {
   "use cache";
-  cacheLife("seconds");
+  cacheLife("minutes");
   cacheTag(`layer-${layerId}-history`);
   try {
     return await db
@@ -479,7 +479,7 @@ export async function getLayerRecentChanges(layerId: number, limit = 10) {
 
 export async function getUndoRedoStatus(areaId: number) {
   "use cache";
-  cacheLife("seconds");
+  cacheLife("minutes");
   cacheTag(`area-${areaId}-undo-redo`);
   try {
     const result = await db
@@ -562,7 +562,7 @@ export async function getRecentActivity(
   limit = 12
 ): Promise<RecentActivityItem[]> {
   "use cache";
-  cacheLife("seconds");
+  cacheLife("minutes");
   cacheTag("recent-activity");
   try {
     const result = await db.execute(sql`
@@ -634,7 +634,7 @@ export async function getGlobalChangelog(options?: {
   includeUndone?: boolean;
 }): Promise<{ items: GlobalChangelogItem[]; total: number }> {
   "use cache";
-  cacheLife("seconds");
+  cacheLife("minutes");
   cacheTag("recent-activity");
 
   const limit = options?.limit ?? 50;
