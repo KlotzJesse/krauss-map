@@ -703,6 +703,8 @@ export const NavAreas = memo(function NavAreas({
                 <IconArrowsSort className="h-3.5 w-3.5" />
               </button>
               <button
+                type="button"
+                onClick={handleToggleSelectMode}
                 className={`hover:bg-sidebar-accent rounded p-0.5 ${selectMode ? "text-primary" : "text-muted-foreground"}`}
                 title={
                   selectMode
