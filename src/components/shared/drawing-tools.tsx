@@ -174,6 +174,7 @@ import type {
   areaLayers,
 } from "@/lib/schema/schema";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
+import { storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
 import {
   copyPostalCodesCSV,
   downloadLayerCSV,
@@ -269,7 +270,9 @@ function StatsSection({
 
   const countryAssigned = new Map<string, number>();
   for (const code of assignedSet) {
-    const c = codeCountryMap.get(code);
+    // Use stored-format prefix for unambiguous country identification (e.g. "D-12345" → "DE")
+    const composite = storedCodeToCompositeKey(code);
+    const c = composite ? composite.split(":")[0] : codeCountryMap.get(code);
     if (c) countryAssigned.set(c, (countryAssigned.get(c) ?? 0) + 1);
   }
 
@@ -515,7 +518,9 @@ function LänderSection({
 
   const countryAssigned = new Map<string, number>();
   for (const code of assignedSet) {
-    const c = codeCountryMap.get(code);
+    // Use stored-format prefix for unambiguous country identification (e.g. "D-12345" → "DE")
+    const composite = storedCodeToCompositeKey(code);
+    const c = composite ? composite.split(":")[0] : codeCountryMap.get(code);
     if (c) countryAssigned.set(c, (countryAssigned.get(c) ?? 0) + 1);
   }
 
@@ -4325,7 +4330,11 @@ function DrawingToolsImpl({
     const countriesInUse = new Set<string>();
     for (const layer of optimisticLayers) {
       for (const pc of layer.postalCodes ?? []) {
-        const c = codeCountryMap.get(pc.postalCode);
+        // Use stored-format prefix for unambiguous country identification
+        const composite = storedCodeToCompositeKey(pc.postalCode);
+        const c = composite
+          ? composite.split(":")[0]
+          : codeCountryMap.get(pc.postalCode);
         if (c) countriesInUse.add(c);
       }
     }
