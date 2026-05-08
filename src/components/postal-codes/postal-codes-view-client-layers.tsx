@@ -32,6 +32,7 @@ import {
   useCallback,
   useMemo,
   useRef,
+  memo,
 } from "react";
 import { toast } from "sonner";
 
@@ -370,302 +371,312 @@ function usePostalCodesLayerActions({
   };
 }
 
-export function PostalCodesViewClientWithLayers({
-  defaultGranularity,
-  country,
-  areaNamePromise,
-  areaDescriptionPromise,
-  areaTagsPromise,
-  areaId,
-  layersPromise,
-  undoRedoStatusPromise,
-  versionsPromise,
-  changesPromise,
-  isViewingVersion = false,
-  versionId,
-}: PostalCodesViewClientWithLayersProps) {
-  // Client Component: use() to consume server-provided promises
-  const initialLayers = use(layersPromise);
-  const initialUndoRedoStatus = use(undoRedoStatusPromise);
-  const versions = use(versionsPromise);
-  const changes = use(changesPromise);
-  const areaName = use(areaNamePromise);
-  const areaDescription = areaDescriptionPromise
-    ? use(areaDescriptionPromise)
-    : null;
-  const areaTags = areaTagsPromise ? use(areaTagsPromise) : EMPTY_TAGS;
-
-  // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)
-  // "native" = all DACH countries at their full resolution
-  const { data, isLoading: isGeodataLoading } = useGeodata("native");
-
-  // Read activeLayerId directly from URL state for instant switching
-  const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
-  const setMapCenterZoom = useSetMapCenterZoom();
-  const activeLayerId = urlActiveLayerId || initialLayers[0]?.id || null;
-
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const openImportDialog = useCallback(() => setImportDialogOpen(true), []);
-  const [previewPostalCode, setPreviewPostalCode] = useState<string | null>(
-    null
-  );
-
-  const {
-    optimisticLayers,
-    optimisticLayersRef,
-    optimisticUndoRedo,
-    addPostalCodesToLayer,
-    removePostalCodesFromLayer,
-    handleAddressSelect,
-    handleRadiusSelect,
-    handleImport,
-    performDrivingRadiusSearchWrapper,
-  } = usePostalCodesLayerActions({
+export const PostalCodesViewClientWithLayers = memo(
+  function PostalCodesViewClientWithLayers({
+    defaultGranularity,
+    country,
+    areaNamePromise,
+    areaDescriptionPromise,
+    areaTagsPromise,
     areaId,
-    activeLayerId,
-    data,
-    initialLayers,
-    initialUndoRedoStatus,
-  });
+    layersPromise,
+    undoRedoStatusPromise,
+    versionsPromise,
+    changesPromise,
+    isViewingVersion = false,
+    versionId,
+  }: PostalCodesViewClientWithLayersProps) {
+    // Client Component: use() to consume server-provided promises
+    const initialLayers = use(layersPromise);
+    const initialUndoRedoStatus = use(undoRedoStatusPromise);
+    const versions = use(versionsPromise);
+    const changes = use(changesPromise);
+    const areaName = use(areaNamePromise);
+    const areaDescription = areaDescriptionPromise
+      ? use(areaDescriptionPromise)
+      : null;
+    const areaTags = areaTagsPromise ? use(areaTagsPromise) : EMPTY_TAGS;
 
-  // Stable ref for geodata so handleZoomToLayer doesn't recreate on every data change
-  const dataRef = useRef(data);
-  dataRef.current = data;
+    // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)
+    // "native" = all DACH countries at their full resolution
+    const { data, isLoading: isGeodataLoading } = useGeodata("native");
 
-  const handlePreviewSelect = useCallback(
-    (coords: [number, number] | null, _label: string, postalCode?: string) => {
-      if (!postalCode) {
-        return;
-      }
-      setPreviewPostalCode((prev) => (prev === postalCode ? null : postalCode));
-      if (coords) {
-        setMapCenterZoom([coords[0], coords[1]], 11);
-      }
-    },
-    [setMapCenterZoom]
-  );
+    // Read activeLayerId directly from URL state for instant switching
+    const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
+    const setMapCenterZoom = useSetMapCenterZoom();
+    const activeLayerId = urlActiveLayerId || initialLayers[0]?.id || null;
 
-  const handleBadgePreviewPostalCode = useStableCallback(
-    (postalCode: string | null) => {
-      setPreviewPostalCode(postalCode);
-      if (postalCode && data) {
-        const feature = data.features.find(
-          (f) => f.properties?.code === extractRawCode(postalCode)
+    const [importDialogOpen, setImportDialogOpen] = useState(false);
+    const openImportDialog = useCallback(() => setImportDialogOpen(true), []);
+    const [previewPostalCode, setPreviewPostalCode] = useState<string | null>(
+      null
+    );
+
+    const {
+      optimisticLayers,
+      optimisticLayersRef,
+      optimisticUndoRedo,
+      addPostalCodesToLayer,
+      removePostalCodesFromLayer,
+      handleAddressSelect,
+      handleRadiusSelect,
+      handleImport,
+      performDrivingRadiusSearchWrapper,
+    } = usePostalCodesLayerActions({
+      areaId,
+      activeLayerId,
+      data,
+      initialLayers,
+      initialUndoRedoStatus,
+    });
+
+    // Stable ref for geodata so handleZoomToLayer doesn't recreate on every data change
+    const dataRef = useRef(data);
+    dataRef.current = data;
+
+    const handlePreviewSelect = useCallback(
+      (
+        coords: [number, number] | null,
+        _label: string,
+        postalCode?: string
+      ) => {
+        if (!postalCode) {
+          return;
+        }
+        setPreviewPostalCode((prev) =>
+          prev === postalCode ? null : postalCode
         );
-        if (feature) {
-          const [lng, lat] = getLargestPolygonCentroid(
-            feature as import("geojson").Feature<Polygon | MultiPolygon>
+        if (coords) {
+          setMapCenterZoom([coords[0], coords[1]], 11);
+        }
+      },
+      [setMapCenterZoom]
+    );
+
+    const handleBadgePreviewPostalCode = useStableCallback(
+      (postalCode: string | null) => {
+        setPreviewPostalCode(postalCode);
+        if (postalCode && data) {
+          const feature = data.features.find(
+            (f) => f.properties?.code === extractRawCode(postalCode)
           );
-          setMapCenterZoom([lng, lat], 11);
+          if (feature) {
+            const [lng, lat] = getLargestPolygonCentroid(
+              feature as import("geojson").Feature<Polygon | MultiPolygon>
+            );
+            setMapCenterZoom([lng, lat], 11);
+          }
         }
       }
-    }
-  );
+    );
 
-  const handleZoomToLayer = useCallback(
-    (layerId: number) => {
-      const data = dataRef.current;
-      if (!data) return;
-      const layer = optimisticLayersRef.current.find((l) => l.id === layerId);
-      if (!layer?.postalCodes?.length) return;
+    const handleZoomToLayer = useCallback(
+      (layerId: number) => {
+        const data = dataRef.current;
+        if (!data) return;
+        const layer = optimisticLayersRef.current.find((l) => l.id === layerId);
+        if (!layer?.postalCodes?.length) return;
 
-      const codeSet = new Set(layer.postalCodes.map((pc) => pc.postalCode));
-      let minLng = Infinity,
-        maxLng = -Infinity,
-        minLat = Infinity,
-        maxLat = -Infinity;
-      let found = false;
+        const codeSet = new Set(layer.postalCodes.map((pc) => pc.postalCode));
+        let minLng = Infinity,
+          maxLng = -Infinity,
+          minLat = Infinity,
+          maxLat = -Infinity;
+        let found = false;
 
-      for (const feature of data.features) {
-        if (!codeSet.has(feature.properties?.code)) continue;
-        found = true;
-        const coords: number[][] = [];
-        const geom = feature.geometry;
-        if (geom.type === "Polygon") {
-          for (const ring of geom.coordinates)
-            for (const c of ring) coords.push(c);
-        } else if (geom.type === "MultiPolygon") {
-          for (const poly of geom.coordinates)
-            for (const ring of poly) for (const c of ring) coords.push(c);
+        for (const feature of data.features) {
+          if (!codeSet.has(feature.properties?.code)) continue;
+          found = true;
+          const coords: number[][] = [];
+          const geom = feature.geometry;
+          if (geom.type === "Polygon") {
+            for (const ring of geom.coordinates)
+              for (const c of ring) coords.push(c);
+          } else if (geom.type === "MultiPolygon") {
+            for (const poly of geom.coordinates)
+              for (const ring of poly) for (const c of ring) coords.push(c);
+          }
+          for (const [lng, lat] of coords) {
+            if (lng < minLng) minLng = lng;
+            if (lng > maxLng) maxLng = lng;
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+          }
         }
-        for (const [lng, lat] of coords) {
-          if (lng < minLng) minLng = lng;
-          if (lng > maxLng) maxLng = lng;
-          if (lat < minLat) minLat = lat;
-          if (lat > maxLat) maxLat = lat;
+
+        if (!found) return;
+
+        const centerLng = (minLng + maxLng) / 2;
+        const centerLat = (minLat + maxLat) / 2;
+        // Approximate zoom: wider bbox → lower zoom
+        const lngSpan = maxLng - minLng;
+        const latSpan = maxLat - minLat;
+        const span = Math.max(lngSpan, latSpan);
+        const zoom = Math.max(
+          5,
+          Math.min(13, Math.round(Math.log2(360 / span)) - 1)
+        );
+
+        setMapCenterZoom([centerLng, centerLat], zoom);
+      },
+      [setMapCenterZoom]
+    );
+
+    const handleGranularityChange = useCallback(
+      (newGranularity: string) => {
+        if (newGranularity === defaultGranularity) {
+          return;
         }
-      }
 
-      if (!found) return;
+        // Granularity changes are now handled through the GranularitySelector component
+        // which updates the area's granularity via server action and triggers a refresh
 
-      const centerLng = (minLng + maxLng) / 2;
-      const centerLat = (minLat + maxLat) / 2;
-      // Approximate zoom: wider bbox → lower zoom
-      const lngSpan = maxLng - minLng;
-      const latSpan = maxLat - minLat;
-      const span = Math.max(lngSpan, latSpan);
-      const zoom = Math.max(
-        5,
-        Math.min(13, Math.round(Math.log2(360 / span)) - 1)
-      );
+        toast.info("Granularität wird aktualisiert", {
+          description: "Änderung wird gespeichert",
 
-      setMapCenterZoom([centerLng, centerLat], zoom);
-    },
-    [setMapCenterZoom]
-  );
+          duration: 3000,
+        });
+      },
+      [defaultGranularity]
+    );
 
-  const handleGranularityChange = useCallback(
-    (newGranularity: string) => {
-      if (newGranularity === defaultGranularity) {
-        return;
-      }
+    const activeLayer = useMemo(
+      () => optimisticLayers.find((l) => l.id === activeLayerId),
+      [optimisticLayers, activeLayerId]
+    );
 
-      // Granularity changes are now handled through the GranularitySelector component
-      // which updates the area's granularity via server action and triggers a refresh
-
-      toast.info("Granularität wird aktualisiert", {
-        description: "Änderung wird gespeichert",
-
-        duration: 3000,
-      });
-    },
-    [defaultGranularity]
-  );
-
-  const activeLayer = useMemo(
-    () => optimisticLayers.find((l) => l.id === activeLayerId),
-    [optimisticLayers, activeLayerId]
-  );
-
-  // Per-layer duplicate postal code counts
-  const duplicateCountByLayer = useMemo(() => {
-    const counts = new Map<number, number>();
-    const codeToLayers = new Map<string, number[]>();
-    for (const layer of optimisticLayers) {
-      if (!layer.postalCodes) continue;
-      for (const pc of layer.postalCodes) {
-        const existing = codeToLayers.get(pc.postalCode);
-        if (existing) {
-          existing.push(layer.id);
-        } else {
-          codeToLayers.set(pc.postalCode, [layer.id]);
-        }
-      }
-    }
-    for (const [, layerIds] of codeToLayers) {
-      if (layerIds.length > 1) {
-        for (const id of layerIds) {
-          counts.set(id, (counts.get(id) ?? 0) + 1);
+    // Per-layer duplicate postal code counts
+    const duplicateCountByLayer = useMemo(() => {
+      const counts = new Map<number, number>();
+      const codeToLayers = new Map<string, number[]>();
+      for (const layer of optimisticLayers) {
+        if (!layer.postalCodes) continue;
+        for (const pc of layer.postalCodes) {
+          const existing = codeToLayers.get(pc.postalCode);
+          if (existing) {
+            existing.push(layer.id);
+          } else {
+            codeToLayers.set(pc.postalCode, [layer.id]);
+          }
         }
       }
-    }
-    return counts;
-  }, [optimisticLayers]);
+      for (const [, layerIds] of codeToLayers) {
+        if (layerIds.length > 1) {
+          for (const id of layerIds) {
+            counts.set(id, (counts.get(id) ?? 0) + 1);
+          }
+        }
+      }
+      return counts;
+    }, [optimisticLayers]);
 
-  return (
-    <div className="h-full relative">
-      {/* Address and Postal Code Tools - horizontal, top right */}
-      <div className="absolute top-4 right-16 z-30 flex flex-row items-center gap-2 w-auto">
-        <div className="w-80">
-          <AddressAutocompleteErrorBoundary>
-            <AddressAutocompleteEnhanced
-              onAddressSelect={handleAddressSelect}
-              onBoundarySelect={handleImport}
-              onRadiusSelect={handleRadiusSelect}
-              onPreviewSelect={handlePreviewSelect}
-              performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}
-              granularity={defaultGranularity}
-              triggerClassName="truncate"
-              previewPostalCode={previewPostalCode}
-              layers={optimisticLayers}
-            />
-          </AddressAutocompleteErrorBoundary>
-        </div>
-
-        {/* Active layer indicator */}
-        {activeLayer && (
-          <div
-            className="shrink-0 flex items-center px-2.5 h-8 rounded-md shadow-sm text-xs font-semibold select-none"
-            style={{
-              backgroundColor: activeLayer.color,
-              color: isLightColor(activeLayer.color) ? "#1a1a1a" : "#fff",
-            }}
-          >
-            <span className="truncate max-w-[140px]">{activeLayer.name}</span>
-            <span className="ml-1.5 opacity-75">
-              {activeLayer.postalCodes?.length ?? 0}
-            </span>
+    return (
+      <div className="h-full relative">
+        {/* Address and Postal Code Tools - horizontal, top right */}
+        <div className="absolute top-4 right-16 z-30 flex flex-row items-center gap-2 w-auto">
+          <div className="w-80">
+            <AddressAutocompleteErrorBoundary>
+              <AddressAutocompleteEnhanced
+                onAddressSelect={handleAddressSelect}
+                onBoundarySelect={handleImport}
+                onRadiusSelect={handleRadiusSelect}
+                onPreviewSelect={handlePreviewSelect}
+                performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}
+                granularity={defaultGranularity}
+                triggerClassName="truncate"
+                previewPostalCode={previewPostalCode}
+                layers={optimisticLayers}
+              />
+            </AddressAutocompleteErrorBoundary>
           </div>
-        )}
 
-        {/* Import Button - Opens the import dialog */}
-        <div className="shrink-0">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="outline"
-                  onClick={openImportDialog}
-                  size="icon"
-                  className="shadow-sm bg-background h-8 w-8"
-                  title="PLZ importieren"
-                  disabled={isGeodataLoading}
-                />
-              }
+          {/* Active layer indicator */}
+          {activeLayer && (
+            <div
+              className="shrink-0 flex items-center px-2.5 h-8 rounded-md shadow-sm text-xs font-semibold select-none"
+              style={{
+                backgroundColor: activeLayer.color,
+                color: isLightColor(activeLayer.color) ? "#1a1a1a" : "#fff",
+              }}
             >
-              <FileUpIcon className="h-4 w-4" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>PLZ importieren</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-
-      {/* Map with integrated tools */}
-      <div className="relative h-full overflow-hidden">
-        <MapErrorBoundary>
-          <PostalCodesMap
-            data={data}
-            granularity={defaultGranularity}
-            country={country}
-            onGranularityChange={handleGranularityChange}
-            layers={optimisticLayers}
-            activeLayerId={activeLayerId}
-            areaId={areaId}
-            areaName={areaName ?? undefined}
-            areaDescription={areaDescription}
-            areaTags={areaTags}
-            previewPostalCode={previewPostalCode}
-            onSetPreviewPostalCode={handleBadgePreviewPostalCode}
-            onZoomToLayer={handleZoomToLayer}
-            addPostalCodesToLayer={addPostalCodesToLayer}
-            removePostalCodesFromLayer={removePostalCodesFromLayer}
-            isViewingVersion={isViewingVersion}
-            versionId={versionId!}
-            versions={versions}
-            changes={changes}
-            initialUndoRedoStatus={optimisticUndoRedo}
-          />
-        </MapErrorBoundary>
-        {isGeodataLoading && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/30 backdrop-blur-[1px] pointer-events-none">
-            <div className="bg-background/80 rounded-lg px-4 py-2 text-sm text-muted-foreground shadow-sm">
-              Geodaten werden geladen…
+              <span className="truncate max-w-[140px]">{activeLayer.name}</span>
+              <span className="ml-1.5 opacity-75">
+                {activeLayer.postalCodes?.length ?? 0}
+              </span>
             </div>
-          </div>
-        )}
-      </div>
+          )}
 
-      {/* Import Dialog */}
-      <PostalCodeImportDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        data={data}
-        granularity={defaultGranularity}
-        onImport={handleImport}
-        areaId={areaId}
-      />
-    </div>
-  );
-}
+          {/* Import Button - Opens the import dialog */}
+          <div className="shrink-0">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    onClick={openImportDialog}
+                    size="icon"
+                    className="shadow-sm bg-background h-8 w-8"
+                    title="PLZ importieren"
+                    disabled={isGeodataLoading}
+                  />
+                }
+              >
+                <FileUpIcon className="h-4 w-4" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>PLZ importieren</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+
+        {/* Map with integrated tools */}
+        <div className="relative h-full overflow-hidden">
+          <MapErrorBoundary>
+            <PostalCodesMap
+              data={data}
+              granularity={defaultGranularity}
+              country={country}
+              onGranularityChange={handleGranularityChange}
+              layers={optimisticLayers}
+              activeLayerId={activeLayerId}
+              areaId={areaId}
+              areaName={areaName ?? undefined}
+              areaDescription={areaDescription}
+              areaTags={areaTags}
+              previewPostalCode={previewPostalCode}
+              onSetPreviewPostalCode={handleBadgePreviewPostalCode}
+              onZoomToLayer={handleZoomToLayer}
+              addPostalCodesToLayer={addPostalCodesToLayer}
+              removePostalCodesFromLayer={removePostalCodesFromLayer}
+              isViewingVersion={isViewingVersion}
+              versionId={versionId!}
+              versions={versions}
+              changes={changes}
+              initialUndoRedoStatus={optimisticUndoRedo}
+            />
+          </MapErrorBoundary>
+          {isGeodataLoading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/30 backdrop-blur-[1px] pointer-events-none">
+              <div className="bg-background/80 rounded-lg px-4 py-2 text-sm text-muted-foreground shadow-sm">
+                Geodaten werden geladen…
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Import Dialog */}
+        <PostalCodeImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          data={data}
+          granularity={defaultGranularity}
+          onImport={handleImport}
+          areaId={areaId}
+        />
+      </div>
+    );
+  }
+);
+
+PostalCodesViewClientWithLayers.displayName = "PostalCodesViewClientWithLayers";

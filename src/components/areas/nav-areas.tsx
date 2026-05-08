@@ -876,7 +876,9 @@ export const NavAreas = memo(function NavAreas({
                   key={area.id}
                   area={area}
                   isEditing={editingAreaId === area.id}
-                  editingAreaName={editingAreaId === area.id ? editingAreaName : ""}
+                  editingAreaName={
+                    editingAreaId === area.id ? editingAreaName : ""
+                  }
                   editInputRef={editInputRef}
                   isCurrentRoute={currentAreaIdFromRoute === String(area.id)}
                   isPinned={isPinned(area.id)}
