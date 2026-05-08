@@ -753,55 +753,39 @@ export const LayerListItem = memo(function LayerListItem({
                 )}
               >
                 {onSoloLayer && (
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <button
-                          type="button"
-                          className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSoloLayer(layer.id);
-                          }}
-                        />
-                      }
-                    >
-                      <Focus className="h-3 w-3" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Nur dieses Gebiet anzeigen</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <button
+                    type="button"
+                    className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                    title="Nur dieses Gebiet anzeigen"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSoloLayer(layer.id);
+                    }}
+                  >
+                    <Focus className="h-3 w-3" />
+                  </button>
                 )}
 
                 {postalCodes.length > 0 && (
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <button
-                          type="button"
-                          className={cn(
-                            "shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground",
-                            codesExpanded && "bg-muted text-foreground"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCodesExpanded((v) => !v);
-                            if (codesExpanded) setCodeSearch("");
-                          }}
-                        />
-                      }
-                    >
-                      <List className="h-3 w-3" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        {codesExpanded
-                          ? "PLZ-Liste schließen"
-                          : "PLZ-Liste anzeigen"}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <button
+                    type="button"
+                    className={cn(
+                      "shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground",
+                      codesExpanded && "bg-muted text-foreground"
+                    )}
+                    title={
+                      codesExpanded
+                        ? "PLZ-Liste schließen"
+                        : "PLZ-Liste anzeigen"
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCodesExpanded((v) => !v);
+                      if (codesExpanded) setCodeSearch("");
+                    }}
+                  >
+                    <List className="h-3 w-3" />
+                  </button>
                 )}
 
                 {/* ⋮ More actions */}
@@ -1375,39 +1359,30 @@ export const LayerListItem = memo(function LayerListItem({
                       {!plzSelectMode &&
                         onMovePlz &&
                         otherLayers.length > 0 && (
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <div className="relative inline-flex opacity-0 group-hover/badge:opacity-100 transition-opacity" />
-                              }
+                          <div className="relative inline-flex opacity-0 group-hover/badge:opacity-100 transition-opacity">
+                            <select
+                              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                              defaultValue=""
+                              onChange={(e) => {
+                                const toId = Number(e.target.value);
+                                if (toId)
+                                  onMovePlz(layer.id, toId, pc.postalCode);
+                                e.target.value = "";
+                              }}
+                              title={`PLZ ${pc.postalCode} verschieben`}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <select
-                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                                defaultValue=""
-                                onChange={(e) => {
-                                  const toId = Number(e.target.value);
-                                  if (toId)
-                                    onMovePlz(layer.id, toId, pc.postalCode);
-                                  e.target.value = "";
-                                }}
-                                title={`PLZ ${pc.postalCode} verschieben`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <option value="" disabled>
-                                  Verschieben nach…
+                              <option value="" disabled>
+                                Verschieben nach…
+                              </option>
+                              {otherLayers.map((ol) => (
+                                <option key={ol.id} value={ol.id}>
+                                  {ol.name}
                                 </option>
-                                {otherLayers.map((ol) => (
-                                  <option key={ol.id} value={ol.id}>
-                                    {ol.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <ArrowRightLeft className="h-2 w-2 text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>PLZ verschieben</p>
-                            </TooltipContent>
-                          </Tooltip>
+                              ))}
+                            </select>
+                            <ArrowRightLeft className="h-2 w-2 text-muted-foreground" />
+                          </div>
                         )}
                       {!plzSelectMode && onRemovePostalCode && (
                         <button
