@@ -95,8 +95,12 @@ interface PostalCodesViewClientWithLayersProps {
   defaultGranularity: string;
   country?: import("@/lib/config/countries").CountryCode;
   areaId: number;
-  areaNamePromise: Promise<string | null>;
-  areaDescriptionPromise?: Promise<string | null>;
+  areaMetaPromise: Promise<{
+    name: string | null;
+    granularity: string | null;
+    country: string | null;
+    description: string | null;
+  }>;
   areaTagsPromise?: Promise<{ id: number; name: string; color: string }[]>;
   layersPromise: Promise<Layer[]>;
   undoRedoStatusPromise: Promise<{
@@ -375,8 +379,7 @@ export const PostalCodesViewClientWithLayers = memo(
   function PostalCodesViewClientWithLayers({
     defaultGranularity,
     country,
-    areaNamePromise,
-    areaDescriptionPromise,
+    areaMetaPromise,
     areaTagsPromise,
     areaId,
     layersPromise,
@@ -391,10 +394,9 @@ export const PostalCodesViewClientWithLayers = memo(
     const initialUndoRedoStatus = use(undoRedoStatusPromise);
     const versions = use(versionsPromise);
     const changes = use(changesPromise);
-    const areaName = use(areaNamePromise);
-    const areaDescription = areaDescriptionPromise
-      ? use(areaDescriptionPromise)
-      : null;
+    const areaMeta = use(areaMetaPromise);
+    const areaName = areaMeta.name;
+    const areaDescription = areaMeta.description;
     const areaTags = areaTagsPromise ? use(areaTagsPromise) : EMPTY_TAGS;
 
     // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)

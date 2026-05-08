@@ -153,6 +153,7 @@ export async function getAreaMeta(id: number): Promise<{
   name: string | null;
   granularity: string | null;
   country: string | null;
+  description: string | null;
 }> {
   "use cache";
   cacheLife("minutes");
@@ -160,16 +161,17 @@ export async function getAreaMeta(id: number): Promise<{
   try {
     const row = await db.query.areas.findFirst({
       where: eq(areas.id, id),
-      columns: { name: true, granularity: true, country: true },
+      columns: { name: true, granularity: true, country: true, description: true },
     });
     return {
       name: row?.name ?? null,
       granularity: row?.granularity ?? null,
       country: row?.country ?? null,
+      description: row?.description ?? null,
     };
   } catch (error) {
     console.error("Error fetching area meta:", error);
-    return { name: null, granularity: null, country: null };
+    return { name: null, granularity: null, country: null, description: null };
   }
 }
 
