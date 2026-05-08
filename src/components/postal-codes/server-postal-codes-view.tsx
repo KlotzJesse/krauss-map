@@ -20,19 +20,27 @@ interface ServerPostalCodesViewProps {
   defaultGranularity: string;
   country?: CountryCode;
   areaId: number;
-  versionId: number;
+  searchParamsPromise: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function ServerPostalCodesView({
   defaultGranularity,
   country = DEFAULT_COUNTRY,
   areaId,
-  versionId,
+  searchParamsPromise,
 }: ServerPostalCodesViewProps) {
   // Guard against NaN areaId (can happen during redirect race conditions)
   if (!areaId || Number.isNaN(areaId)) {
     return <PostalCodesViewSkeleton />;
   }
+
+  // Resolve versionId from searchParams here (inside Suspense boundary).
+  // This keeps the page's static shell free of dynamic searchParams access.
+  const searchParams = await searchParamsPromise;
+  const versionIdRaw = Array.isArray(searchParams.versionId)
+    ? searchParams.versionId[0]
+    : searchParams.versionId;
+  const versionId = versionIdRaw ? parseInt(versionIdRaw, 10) : null;
 
   // Server Component: initiate all fetches as promises
   // Geodata (postal codes) is now fetched client-side via API route
@@ -58,8 +66,8 @@ export default async function ServerPostalCodesView({
           areaTagsPromise={areaTagsPromise}
           layersPromise={layersPromise}
           undoRedoStatusPromise={undoRedoStatusPromise}
-          isViewingVersion={false}
-          versionId={versionId || null}
+          isViewingVersion={versionId !== null && versionId > 0}
+          versionId={versionId}
           versionsPromise={versionsPromise}
           changesPromise={changesPromise}
         />

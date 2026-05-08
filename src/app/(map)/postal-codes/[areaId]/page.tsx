@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import { cache } from "react";
 import { Suspense } from "react";
 
 import ServerPostalCodesView from "@/components/postal-codes/server-postal-codes-view";
@@ -23,47 +22,6 @@ interface PostalCodesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/** Resolve granularity, country, and name from area or version snapshot.
- * Wrapped in React cache() to deduplicate between generateMetadata and page component
- * within the same request. Uses a single DB query via getAreaMeta. */
-const resolveAreaMeta = cache(
-  async (
-    areaId: number,
-    versionId: number | null
-  ): Promise<{
-    granularity: string;
-    country: CountryCode;
-    areaName: string | null;
-  }> => {
-    const isValidVersion =
-      versionId !== null && versionId !== undefined && versionId > 0;
-
-    const [meta, version] = await Promise.all([
-      getAreaMeta(areaId),
-      isValidVersion ? getVersion(areaId, versionId) : Promise.resolve(null),
-    ]);
-
-    const resolvedCountry: CountryCode =
-      meta.country && isValidCountryCode(meta.country)
-        ? meta.country
-        : DEFAULT_COUNTRY;
-
-    if (isValidVersion && version?.snapshot) {
-      const snap = version.snapshot as { granularity?: string };
-      return {
-        granularity: snap.granularity ?? "1digit",
-        country: resolvedCountry,
-        areaName: meta.name,
-      };
-    }
-    return {
-      granularity: meta.granularity ?? "1digit",
-      country: resolvedCountry,
-      areaName: meta.name,
-    };
-  }
-);
-
 export async function generateMetadata({
   params,
   searchParams,
@@ -81,8 +39,17 @@ export async function generateMetadata({
         ? search.versionId[0]
         : search.versionId;
       const versionId = versionIdRaw ? parseInt(versionIdRaw, 10) : null;
-      const meta = await resolveAreaMeta(areaId, versionId);
-      granularity = meta.granularity;
+      const isValidVersion = versionId !== null && versionId > 0;
+      const [meta, version] = await Promise.all([
+        getAreaMeta(areaId),
+        isValidVersion ? getVersion(areaId, versionId!) : Promise.resolve(null),
+      ]);
+      if (isValidVersion && version?.snapshot) {
+        const snap = version.snapshot as { granularity?: string };
+        granularity = snap.granularity ?? "1digit";
+      } else {
+        granularity = meta.granularity ?? "1digit";
+      }
     } catch (error) {
       console.error("Failed to fetch area metadata:", error);
     }
@@ -103,15 +70,9 @@ export default async function PostalCodesPage({
   params,
   searchParams,
 }: PostalCodesPageProps) {
-  const [{ areaId: areaIdParam }, search] = await Promise.all([
-    params,
-    searchParams,
-  ]);
+  const { areaId: areaIdParam } = await params;
 
   const areaId = parseInt(areaIdParam, 10);
-  const versionId = search.versionId
-    ? parseInt(search.versionId as string, 10)
-    : null;
 
   // Guard against NaN areaId (can happen during redirect race conditions)
   if (Number.isNaN(areaId) || areaId <= 0) {
@@ -125,20 +86,23 @@ export default async function PostalCodesPage({
     );
   }
 
+  // Get area meta using only static params — no searchParams access here.
+  // This allows the static PPR shell (header + skeleton) to be prerendered.
+  // versionId is resolved inside ServerPostalCodesView (inside Suspense).
   let granularity = "1digit";
   let country: CountryCode = DEFAULT_COUNTRY;
   let areaName: string | null = null;
   try {
-    const meta = await resolveAreaMeta(areaId, versionId);
-    granularity = meta.granularity;
-    country = meta.country;
-    areaName = meta.areaName;
+    const meta = await getAreaMeta(areaId);
+    granularity = meta.granularity ?? "1digit";
+    country =
+      meta.country && isValidCountryCode(meta.country)
+        ? meta.country
+        : DEFAULT_COUNTRY;
+    areaName = meta.name;
   } catch (error) {
     console.error("Failed to fetch area metadata:", error);
   }
-
-  // Geodata is now fetched client-side via API routes to avoid
-  // serializing ~9.6MB of GeoJSON into the RSC payload (TTFB: 1.3s → ~150ms)
 
   return (
     <>
@@ -154,7 +118,7 @@ export default async function PostalCodesPage({
               defaultGranularity={granularity}
               country={country}
               areaId={areaId}
-              versionId={versionId!}
+              searchParamsPromise={searchParams}
             />
           </Suspense>
         </PostalCodesErrorBoundary>

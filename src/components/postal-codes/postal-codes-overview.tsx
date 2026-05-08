@@ -13,6 +13,7 @@ import {
 } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,7 +25,6 @@ import {
 } from "@/components/ui/card";
 import { getAreas, getRecentActivity } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
-import { connection } from "next/server";
 
 import { CompareAreasButton } from "./compare-areas-button";
 import { ExportAllAreasButton } from "./export-all-areas-button";

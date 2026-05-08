@@ -700,7 +700,12 @@ export function useDeckLayers({
             )
             .map((l) => ({ name: l.name, color: l.color }));
           // Update tooltip via direct DOM — no React re-render
-          showTooltip(info.x ?? 0, info.y ?? 0, extractRawCode(storedCode), matchingLayers);
+          showTooltip(
+            info.x ?? 0,
+            info.y ?? 0,
+            extractRawCode(storedCode),
+            matchingLayers
+          );
         }
       } else if (hoveredCodeRef.current !== null) {
         hoveredCodeRef.current = null;
