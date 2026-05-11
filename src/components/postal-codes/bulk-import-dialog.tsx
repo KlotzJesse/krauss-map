@@ -223,8 +223,8 @@ export function BulkImportDialog({
             Excel/CSV-Import
           </DialogTitle>
           <DialogDescription>
-            Excel (.xlsx, .xls) oder CSV hochladen. Format: "12345" oder
-            "D-12345".
+            Excel (.xlsx, .xls) oder CSV hochladen. Format: "12345",
+            "D-12345", "A-1010" oder "CH-8001".
           </DialogDescription>
         </DialogHeader>
 

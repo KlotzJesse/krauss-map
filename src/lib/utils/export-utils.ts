@@ -5,6 +5,7 @@ import {
   formatWithAllPrefixes,
   getPrefixLabel,
   formatPostalCodeForCountry,
+  detectCountryFromCode,
 } from "@/lib/config/countries";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
@@ -319,8 +320,10 @@ export async function exportAllAreasXLSX(
         if (wsData.length > 1) wsData.push([null, null, null, null]);
         wsData.push([`[${layer.layerName}]`, null, null, null]);
         for (const code of layer.postalCodes) {
-          const fmt = formatWithAllPrefixes(code, country);
-          const raw = code.replace(/^[A-Z]{1,2}-?/i, "");
+          const detected = detectCountryFromCode(code);
+          const codeCountry: CountryCode = detected.country ?? country;
+          const fmt = formatWithAllPrefixes(code, codeCountry);
+          const raw = detected.code;
           wsData.push([null, raw, fmt, `${fmt},`]);
           totalCodes++;
         }

@@ -353,7 +353,7 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
                     <p>✓ Automatische Spaltenerkennung</p>
                     <p>✓ Vorschau und Validierung</p>
                     <p>✓ Bulk-Erstellung von Layern</p>
-                    <p>✓ Format: 12345 oder D-12345</p>
+                    <p>✓ Format: 12345, D-12345, A-1010, CH-8001</p>
                   </div>
                 </div>
               </TabsContent>

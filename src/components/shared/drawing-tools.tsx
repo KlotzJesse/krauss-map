@@ -1160,7 +1160,7 @@ function useDrawingToolsActions({
       toast.warning("Keine Ebenen mit Postleitzahlen zum Exportieren");
       return;
     }
-    await exportLayersXLSX(layersWithCodes, areaName);
+    await exportLayersXLSX(layersWithCodes, areaName, country ?? "DE");
   };
 
   const handleExportPDF = async () => {
@@ -1178,7 +1178,7 @@ function useDrawingToolsActions({
       toast.warning("Keine Ebenen mit Postleitzahlen zum Exportieren");
       return;
     }
-    await exportLayersPDF(layersWithCodes, areaName);
+    await exportLayersPDF(layersWithCodes, areaName, country ?? "DE");
   };
 
   const handleExportGeoJSON = async () => {

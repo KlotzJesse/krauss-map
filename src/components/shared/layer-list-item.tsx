@@ -85,6 +85,7 @@ import {
 import { cn } from "@/lib/utils";
 import { extractRawCode } from "@/lib/utils/deck-gl-utils";
 import { copyPostalCodesCSV } from "@/lib/utils/export-utils";
+import { detectCountryFromCode } from "@/lib/config/countries";
 import { generatePalette } from "@/lib/utils/layer-colors";
 
 export const DEFAULT_LAYER_COLORS = generatePalette(16);
@@ -898,11 +899,10 @@ export const LayerListItem = memo(function LayerListItem({
                       <DropdownMenuItem
                         onClick={async () => {
                           const codes =
-                            layer.postalCodes?.map(
-                              (pc) => `D-${pc.postalCode}`
-                            ) ?? [];
+                            layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
                           if (codes.length > 0) {
-                            await copyPostalCodesCSV(codes);
+                            const detected = detectCountryFromCode(codes[0] ?? "");
+                            await copyPostalCodesCSV(codes, detected.country ?? "DE");
                           } else {
                             toast.info("Keine Postleitzahlen zum Kopieren");
                           }
@@ -1546,9 +1546,10 @@ export const LayerListItem = memo(function LayerListItem({
           <ContextMenuItem
             onClick={async () => {
               const codes =
-                layer.postalCodes?.map((pc) => `D-${pc.postalCode}`) ?? [];
+                layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
               if (codes.length > 0) {
-                await copyPostalCodesCSV(codes);
+                const detected = detectCountryFromCode(codes[0] ?? "");
+                await copyPostalCodesCSV(codes, detected.country ?? "DE");
               } else {
                 toast.info("Keine Postleitzahlen zum Kopieren");
               }
