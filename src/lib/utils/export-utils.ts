@@ -2,9 +2,9 @@ import type { Content, PageSize } from "pdfmake/interfaces";
 
 import type { CountryCode } from "@/lib/config/countries";
 import {
-  formatWithPrefix,
+  formatWithAllPrefixes,
+  getPrefixLabel,
   formatPostalCodeForCountry,
-  getCountryConfig,
 } from "@/lib/config/countries";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 
@@ -41,7 +41,6 @@ export function exportLayersPDF(
   areaName?: string,
   country: CountryCode = "DE"
 ) {
-  const config = getCountryConfig(country);
   const exportPromise = async () => {
     // Use pdfmake for PDF generation without manual positioning
     const pdfMake = await import("pdfmake/build/pdfmake");
@@ -72,7 +71,7 @@ export function exportLayersPDF(
 
       // Layer postal codes
       const formattedCodes = postalCodes
-        .map((code) => formatWithPrefix(code, country))
+        .map((code) => formatWithAllPrefixes(code, country))
         .join(", ");
       content.push({
         text: formattedCodes,
@@ -143,8 +142,7 @@ export async function exportLayersXLSX(
   areaName?: string,
   country: CountryCode = "DE"
 ) {
-  const config = getCountryConfig(country);
-  const prefix = config.prefix;
+  const prefixLabel = getPrefixLabel(country);
   const exportPromise = async () => {
     const XLSX = await import("xlsx");
 
@@ -156,7 +154,7 @@ export async function exportLayersXLSX(
       // Transform postal codes into the 3 required formats
       const sheetData = postalCodes.map((plz) => {
         const plzFormatted = formatPostalCode(plz, country);
-        const plzWithPrefix = `${prefix}-${plzFormatted}`;
+        const plzWithPrefix = formatWithAllPrefixes(plz, country);
         const plzWithPrefixAndComma = `${plzWithPrefix},`;
 
         return [plzFormatted, plzWithPrefix, plzWithPrefixAndComma];
@@ -165,9 +163,9 @@ export async function exportLayersXLSX(
       // Add header row (include color column if available)
       const wsData: (string | null)[][] = [
         [
-          `PLZ ohne ${prefix}-`,
-          `PLZ mit ${prefix}-`,
-          `PLZ mit ${prefix}- und Komma`,
+          `PLZ ohne ${prefixLabel}-`,
+          `PLZ mit ${prefixLabel}-`,
+          `PLZ mit ${prefixLabel}- und Komma`,
           ...(color ? ["Ebenenfarbe"] : []),
         ],
         ...sheetData.map((row, i) => [
@@ -253,16 +251,15 @@ export async function downloadLayerCSV(
   postalCodes: string[],
   country: CountryCode = "DE"
 ) {
-  const config = getCountryConfig(country);
-  const prefix = config.prefix;
+  const prefixLabel = getPrefixLabel(country);
 
   const downloadPromise = async () => {
     const lines = [
-      `PLZ,${prefix}-PLZ`,
+      `PLZ,${prefixLabel}-PLZ`,
       ...postalCodes.map((code) => {
         const clean = code.replace(/^[A-Z]{1,2}-?/i, "");
         const formatted = formatPostalCode(clean, country);
-        return `${formatted},${prefix}-${formatted}`;
+        return `${formatted},${formatWithAllPrefixes(clean, country)}`;
       }),
     ];
     const blob = new Blob([lines.join("\n")], {
@@ -299,8 +296,7 @@ export async function exportAllAreasXLSX(
   rows: MultiAreaExportRow[],
   country: CountryCode = "DE"
 ) {
-  const config = getCountryConfig(country);
-  const prefix = config.prefix;
+  const prefixLabel = getPrefixLabel(country);
 
   const exportPromise = async () => {
     const XLSX = await import("xlsx");
@@ -317,13 +313,13 @@ export async function exportAllAreasXLSX(
     let totalCodes = 0;
     for (const [areaName, layers] of byArea) {
       const wsData: (string | null)[][] = [
-        ["Ebene", "PLZ", `${prefix}-PLZ`, `${prefix}-PLZ,`],
+        ["Ebene", "PLZ", `${prefixLabel}-PLZ`, `${prefixLabel}-PLZ,`],
       ];
       for (const layer of layers) {
         if (wsData.length > 1) wsData.push([null, null, null, null]);
         wsData.push([`[${layer.layerName}]`, null, null, null]);
         for (const code of layer.postalCodes) {
-          const fmt = formatWithPrefix(code, country);
+          const fmt = formatWithAllPrefixes(code, country);
           const raw = code.replace(/^[A-Z]{1,2}-?/i, "");
           wsData.push([null, raw, fmt, `${fmt},`]);
           totalCodes++;

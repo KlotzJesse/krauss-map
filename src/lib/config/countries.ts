@@ -12,6 +12,8 @@ export interface CountryConfig {
   flag: string;
   /** ISO postal code prefix (used in export/import) */
   prefix: string;
+  /** Alternative/secondary prefix shown alongside primary in exports (e.g. "AT" for Austria) */
+  altPrefix?: string;
   /** Number of digits in full postal codes */
   maxDigits: number;
   /** Map center [longitude, latitude] */
@@ -52,6 +54,7 @@ export const COUNTRY_CONFIGS: Record<CountryCode, CountryConfig> = {
     localName: "Österreich",
     flag: "🇦🇹",
     prefix: "A",
+    altPrefix: "AT",
     maxDigits: 4,
     center: [13.3333, 47.5167],
     zoom: 6,
@@ -143,6 +146,32 @@ export function formatWithPrefix(code: string, country: CountryCode): string {
   const config = getCountryConfig(country);
   const formatted = formatPostalCodeForCountry(code, country);
   return `${config.prefix}-${formatted}`;
+}
+
+/**
+ * Format with all recognised prefixes for export cells.
+ * For countries with an altPrefix (e.g. AT): returns "AT-1010 / A-1010".
+ * For other countries returns the single prefix form (e.g. "D-12345", "CH-8001").
+ */
+export function formatWithAllPrefixes(code: string, country: CountryCode): string {
+  const config = getCountryConfig(country);
+  const formatted = formatPostalCodeForCountry(code, country);
+  const primary = `${config.prefix}-${formatted}`;
+  if (config.altPrefix) {
+    return `${config.altPrefix}-${formatted} / ${primary}`;
+  }
+  return primary;
+}
+
+/**
+ * Returns a short label for all prefixes of a country (e.g. "AT/A" for AT, "D" for DE, "CH" for CH).
+ */
+export function getPrefixLabel(country: CountryCode): string {
+  const config = getCountryConfig(country);
+  if (config.altPrefix) {
+    return `${config.altPrefix}/${config.prefix}`;
+  }
+  return config.prefix;
 }
 
 /**
