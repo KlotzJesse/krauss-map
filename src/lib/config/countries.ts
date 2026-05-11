@@ -158,7 +158,7 @@ export function formatWithAllPrefixes(code: string, country: CountryCode): strin
   const formatted = formatPostalCodeForCountry(code, country);
   const primary = `${config.prefix}-${formatted}`;
   if (config.altPrefix) {
-    return `${config.altPrefix}-${formatted} / ${primary}`;
+    return `${primary}, ${config.altPrefix}-${formatted}`;
   }
   return primary;
 }
