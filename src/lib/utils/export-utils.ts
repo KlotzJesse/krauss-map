@@ -70,9 +70,14 @@ export function exportLayersPDF(
         margin: [0, 0, 0, 10],
       });
 
-      // Layer postal codes
+      // Layer postal codes — detect country per code for correct prefix
       const formattedCodes = postalCodes
-        .map((code) => formatWithAllPrefixes(code, country))
+        .map((code) => {
+          const detected = detectCountryFromCode(code);
+          const codeCountry: CountryCode = detected.country ?? country;
+          const rawCode = detected.code || code.replace(/^[A-Z]{1,2}-?/i, "");
+          return formatWithAllPrefixes(rawCode, codeCountry);
+        })
         .join(", ");
       content.push({
         text: formattedCodes,
@@ -152,10 +157,14 @@ export async function exportLayersXLSX(
 
     // Create a sheet for each layer
     layers.forEach(({ layerName, postalCodes, color }) => {
-      // Transform postal codes into the 3 required formats
+      // Transform postal codes into the 3 required formats.
+      // Detect country per code so mixed-country layers export correctly.
       const sheetData = postalCodes.map((plz) => {
-        const plzFormatted = formatPostalCode(plz, country);
-        const plzWithPrefix = formatWithAllPrefixes(plz, country);
+        const detected = detectCountryFromCode(plz);
+        const codeCountry: CountryCode = detected.country ?? country;
+        const rawCode = detected.code || plz.replace(/^[A-Z]{1,2}-?/i, "");
+        const plzFormatted = formatPostalCode(rawCode, codeCountry);
+        const plzWithPrefix = formatWithAllPrefixes(rawCode, codeCountry);
         const plzWithPrefixAndComma = `${plzWithPrefix},`;
 
         return [plzFormatted, plzWithPrefix, plzWithPrefixAndComma];
@@ -258,9 +267,11 @@ export async function downloadLayerCSV(
     const lines = [
       `PLZ,${prefixLabel}-PLZ`,
       ...postalCodes.map((code) => {
-        const clean = code.replace(/^[A-Z]{1,2}-?/i, "");
-        const formatted = formatPostalCode(clean, country);
-        return `${formatted},${formatWithAllPrefixes(clean, country)}`;
+        const detected = detectCountryFromCode(code);
+        const codeCountry: CountryCode = detected.country ?? country;
+        const rawCode = detected.code || code.replace(/^[A-Z]{1,2}-?/i, "");
+        const formatted = formatPostalCode(rawCode, codeCountry);
+        return `${formatted},${formatWithAllPrefixes(rawCode, codeCountry)}`;
       }),
     ];
     const blob = new Blob([lines.join("\n")], {
