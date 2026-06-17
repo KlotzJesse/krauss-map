@@ -106,6 +106,19 @@ export default async function PostalCodesPage({
 
   return (
     <>
+      {/* Preload map data APIs so fetches start during HTML streaming */}
+      <link
+        rel="preload"
+        href="/api/states"
+        as="fetch"
+        crossOrigin="anonymous"
+      />
+      <link
+        rel="preload"
+        href="/api/countries"
+        as="fetch"
+        crossOrigin="anonymous"
+      />
       <SiteHeader title={areaName ?? "Gebietsmanagement"}>
         <Suspense fallback={<VersionIndicatorSkeleton />}>
           <VersionIndicator areaId={areaId} />

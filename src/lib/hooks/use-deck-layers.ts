@@ -487,17 +487,16 @@ export function useDeckLayers({
   }, [allAssignedCodeSet]);
 
   // Composite keys of features whose country is not represented in any layer.
+  // Uses featureIndex keys (unique codes) instead of iterating all features — O(unique codes) vs O(features).
   const inactiveCountryCodes = useMemo(() => {
-    if (countriesInUse.size === 0) return new Set<string>();
+    if (countriesInUse.size === 0 || !featureIndex) return new Set<string>();
     const inactive = new Set<string>();
-    for (const f of data.features) {
-      const code = getFeatureCode(f);
-      if (!code) continue;
+    for (const code of featureIndex.keys()) {
       const c = code.split(":")[0];
       if (c && !countriesInUse.has(c)) inactive.add(code);
     }
     return inactive;
-  }, [countriesInUse, data]);
+  }, [countriesInUse, featureIndex]);
 
   const inactiveCountryFeaturesData = useMemo(
     () =>
@@ -510,18 +509,14 @@ export function useDeckLayers({
   );
 
   // Unassigned feature data — postal codes not in any layer, excluding inactive-country codes.
+  // Uses featureIndex keys instead of iterating all features to collect unique codes.
   const unassignedFeaturesData = useMemo(() => {
-    if (!showUnassigned)
+    if (!showUnassigned || !featureIndex)
       return EMPTY_FEATURE_COLLECTION as FeatureCollection<
         Polygon | MultiPolygon
       >;
-    const allCodes = new Set<string>();
-    for (const f of data.features) {
-      const code = getFeatureCode(f);
-      if (code) allCodes.add(code);
-    }
     const unassignedCodes = new Set<string>();
-    for (const code of allCodes) {
+    for (const code of featureIndex.keys()) {
       if (!allAssignedCodeSet.has(code) && !inactiveCountryCodes.has(code))
         unassignedCodes.add(code);
     }
@@ -1162,21 +1157,17 @@ export function useDeckLayers({
     unassignedFeaturesData,
   ]);
 
-  /** Count of postal codes not assigned to any layer, excluding inactive-country codes */
+  /** Count of unique postal codes not assigned to any layer, excluding inactive-country codes.
+   *  Uses featureIndex keys (unique codes) — O(unique codes) instead of O(all features). */
   const unassignedCount = useMemo(() => {
-    if (countriesInUse.size === 0) return 0;
+    if (countriesInUse.size === 0 || !featureIndex) return 0;
     let count = 0;
-    for (const f of data.features) {
-      const code = getFeatureCode(f);
-      if (
-        code &&
-        !allAssignedCodeSet.has(code) &&
-        !inactiveCountryCodes.has(code)
-      )
+    for (const code of featureIndex.keys()) {
+      if (!allAssignedCodeSet.has(code) && !inactiveCountryCodes.has(code))
         count++;
     }
     return count;
-  }, [data, allAssignedCodeSet, inactiveCountryCodes, countriesInUse]);
+  }, [featureIndex, allAssignedCodeSet, inactiveCountryCodes, countriesInUse]);
 
   // Keep deckLayersRef current after every render so onHover always reads the latest layers.
   deckLayersRef.current = deckLayers;

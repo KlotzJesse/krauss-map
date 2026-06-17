@@ -65,11 +65,11 @@ export function useMapView() {
   return [{ center: stableCenter, zoom: parsed.zoom }, setMapView] as const;
 }
 
-// Narrow hook: only active layer ID and setter (triggers server re-render)
+// Narrow hook: only active layer ID and setter (client-only, no server re-render)
 export function useActiveLayerState() {
   const [isLayerPending, startLayerTransition] = useTransition();
   const [activeLayerId, setActiveLayerId] = useQueryState("activeLayerId", {
-    shallow: false,
+    shallow: true,
     startTransition: startLayerTransition,
   });
 

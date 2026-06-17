@@ -66,7 +66,9 @@ function largestPolygonCentroid(
   groupFeatures: Feature<Polygon | MultiPolygon>[]
 ): number[] {
   let maxArea = -1;
-  let bestCoords = [0, 0];
+  // Track the best polygon geometry to compute centerOfMass only once at the end.
+  let bestFeature: Feature<Polygon | MultiPolygon> | null = null;
+  let bestPolyCoords: number[][][] | null = null;
   for (const f of groupFeatures) {
     if (f.geometry.type === "Polygon") {
       const polyArea = area({
@@ -75,7 +77,8 @@ function largestPolygonCentroid(
       });
       if (polyArea > maxArea) {
         maxArea = polyArea;
-        bestCoords = centerOfMass(f).geometry.coordinates;
+        bestFeature = f;
+        bestPolyCoords = null;
       }
     } else if (f.geometry.type === "MultiPolygon") {
       for (const coords of f.geometry.coordinates) {
@@ -83,17 +86,24 @@ function largestPolygonCentroid(
           const polyArea = area({ type: "Polygon", coordinates: coords });
           if (polyArea > maxArea) {
             maxArea = polyArea;
-            bestCoords = centerOfMass({
-              type: "Feature",
-              geometry: { type: "Polygon", coordinates: coords },
-              properties: null,
-            }).geometry.coordinates;
+            bestFeature = null;
+            bestPolyCoords = coords;
           }
         }
       }
     }
   }
-  return bestCoords;
+  if (bestFeature) {
+    return centerOfMass(bestFeature).geometry.coordinates;
+  }
+  if (bestPolyCoords) {
+    return centerOfMass({
+      type: "Feature",
+      geometry: { type: "Polygon", coordinates: bestPolyCoords },
+      properties: null,
+    }).geometry.coordinates;
+  }
+  return [0, 0];
 }
 
 /**
