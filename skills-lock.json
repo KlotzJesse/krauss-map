@@ -19,7 +19,8 @@
     "next-browser": {
       "source": "vercel-labs/next-browser",
       "sourceType": "github",
-      "computedHash": "9ca23118a91c5a733bcb848786c276175eeede673138e6b1bc992499f8509cd6"
+      "skillPath": "skills/next-browser/SKILL.md",
+      "computedHash": "d8e316eaad3004a1de8f6f4e1b1f774a180a65f22bc821ec07eb492a3f2689ae"
     },
     "nextjs-app-router-fundamentals": {
       "source": "wsimmonds/claude-nextjs-skills",
