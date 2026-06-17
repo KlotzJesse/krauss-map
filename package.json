@@ -68,6 +68,7 @@
     "@radix-ui/react-tooltip": "^1.2.10",
     "@tabler/icons-react": "^3.44.0",
     "@tanstack/react-table": "^8.21.3",
+    "@turf/area": "^7.3.5",
     "@turf/boolean-point-in-polygon": "^7.3.5",
     "@turf/center-of-mass": "^7.3.5",
     "@types/pdfmake": "^0.3.3",
