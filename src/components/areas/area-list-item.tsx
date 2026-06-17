@@ -12,7 +12,7 @@ import {
 } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { memo, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
 import type { AreaSummary } from "@/lib/types/area-types";
 
-import { AreaItemDropdown, AreaItemMenu } from "./area-item-menu";
+import { AreaItemDropdown } from "./area-item-menu";
 import { TagBadge } from "./tag-badge";
 
 function relativeTime(date: Date | string | null | undefined): string {
@@ -61,6 +61,7 @@ interface AreaListItemProps {
   onArchive: (area: AreaSummary, archive: boolean) => void;
   onEditNotes?: (area: AreaSummary) => void;
   onAreaClick: (area: AreaSummary) => void;
+  onContextMenu?: (area: AreaSummary, e: React.MouseEvent) => void;
 }
 
 export const AreaListItem = memo(
@@ -84,9 +85,16 @@ export const AreaListItem = memo(
     onArchive,
     onEditNotes,
     onAreaClick,
+    onContextMenu,
   }: AreaListItemProps) {
     const isArchived = area.isArchived === "true";
     const itemRef = useRef<HTMLLIElement>(null);
+    // Lazy-mount the DropdownMenu only after first hover to avoid
+    // 33 Menu.Root instances on initial render
+    const [dropdownMounted, setDropdownMounted] = useState(false);
+    const handlePointerEnter = useCallback(() => {
+      if (!dropdownMounted) setDropdownMounted(true);
+    }, [dropdownMounted]);
 
     useEffect(() => {
       if (isCurrentRoute && itemRef.current) {
@@ -161,121 +169,124 @@ export const AreaListItem = memo(
 
     return (
       <SidebarMenuItem ref={itemRef}>
-        <AreaItemMenu
-          area={area}
-          onStartRename={onStartRename}
-          onStartDelete={onStartDelete}
-          onDuplicate={onDuplicate}
-          onArchive={onArchive}
-          onEditNotes={onEditNotes}
-          disabled={isSelectable}
+        <div
+          className="group/item relative flex flex-col w-full"
+          onPointerEnter={!isSelectable ? handlePointerEnter : undefined}
+          onContextMenu={
+            !isSelectable && onContextMenu
+              ? (e) => {
+                  e.preventDefault();
+                  onContextMenu(area, e);
+                }
+              : undefined
+          }
         >
-          <div className="group/item relative flex flex-col w-full">
-            <div
-              className={`relative flex items-center gap-2 w-full h-6 px-2 rounded-md transition-colors ${
-                isSelectable && isSelected
-                  ? "bg-primary/10 text-primary"
-                  : isCurrentRoute && !isSelectable
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold border-l-[3px] border-primary !pl-[5px]"
-                    : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-              } ${isArchived ? "opacity-50" : ""} ${isSelectable ? "cursor-pointer select-none" : ""}`}
-              onClick={
-                isSelectable
-                  ? (e) => {
-                      e.preventDefault();
-                      onToggleSelect?.(area.id);
-                    }
-                  : undefined
-              }
-              onDoubleClick={
-                isSelectable
-                  ? undefined
-                  : (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onStartRename(area, e);
-                    }
-              }
-            >
-              {isSelectable ? (
-                <span className="h-4 w-4 shrink-0 flex items-center justify-center text-primary">
-                  {isSelected ? (
-                    <IconCheckbox className="h-4 w-4" />
-                  ) : (
-                    <IconSquare className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </span>
-              ) : isArchived ? (
-                <IconArchive
-                  className="h-4 w-4 shrink-0 text-muted-foreground"
-                  title="Archiviert"
-                />
-              ) : (
-                <IconFolder
-                  className={`h-4 w-4 shrink-0 ${isCurrentRoute ? "text-primary" : "text-muted-foreground"}`}
-                  title={
-                    area.updatedAt
-                      ? `Geändert: ${relativeTime(area.updatedAt)}`
-                      : undefined
+          <div
+            className={`relative flex items-center gap-2 w-full h-6 px-2 rounded-md transition-colors ${
+              isSelectable && isSelected
+                ? "bg-primary/10 text-primary"
+                : isCurrentRoute && !isSelectable
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold border-l-[3px] border-primary !pl-[5px]"
+                  : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+            } ${isArchived ? "opacity-50" : ""} ${isSelectable ? "cursor-pointer select-none" : ""}`}
+            onClick={
+              isSelectable
+                ? (e) => {
+                    e.preventDefault();
+                    onToggleSelect?.(area.id);
                   }
-                />
-              )}
-              {isSelectable ? (
+                : undefined
+            }
+            onDoubleClick={
+              isSelectable
+                ? undefined
+                : (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onStartRename(area, e);
+                  }
+            }
+          >
+            {isSelectable ? (
+              <span className="h-4 w-4 shrink-0 flex items-center justify-center text-primary">
+                {isSelected ? (
+                  <IconCheckbox className="h-4 w-4" />
+                ) : (
+                  <IconSquare className="h-4 w-4 text-muted-foreground" />
+                )}
+              </span>
+            ) : isArchived ? (
+              <IconArchive
+                className="h-4 w-4 shrink-0 text-muted-foreground"
+                title="Archiviert"
+              />
+            ) : (
+              <IconFolder
+                className={`h-4 w-4 shrink-0 ${isCurrentRoute ? "text-primary" : "text-muted-foreground"}`}
+                title={
+                  area.updatedAt
+                    ? `Geändert: ${relativeTime(area.updatedAt)}`
+                    : undefined
+                }
+              />
+            )}
+            {isSelectable ? (
+              <span
+                title={area.name}
+                className={`flex-1 text-sm font-medium min-w-0 truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}
+              >
+                {area.name}
+              </span>
+            ) : (
+              <Link
+                href={`/postal-codes/${area.id}` as Route}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAreaClick(area);
+                }}
+                className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
+              >
                 <span
                   title={area.name}
-                  className={`flex-1 text-sm font-medium min-w-0 truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}
+                  className={`truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}
                 >
                   {area.name}
                 </span>
-              ) : (
-                <Link
-                  href={`/postal-codes/${area.id}` as Route}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAreaClick(area);
-                  }}
-                  className="flex flex-1 items-center gap-1 text-sm font-medium min-w-0"
-                >
-                  <span
-                    title={area.name}
-                    className={`truncate ${isArchived ? "line-through text-muted-foreground" : ""}`}
-                  >
-                    {area.name}
-                  </span>
-                  <LinkPendingIndicator />
-                </Link>
-              )}
-              {!isSelectable && !!area.postalCodeCount && (
-                <span
-                  className="shrink-0 text-[9px] font-medium text-muted-foreground bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity"
-                  title={`${area.postalCodeCount} PLZ`}
-                >
-                  {area.postalCodeCount}
-                </span>
-              )}
+                <LinkPendingIndicator />
+              </Link>
+            )}
+            {!isSelectable && !!area.postalCodeCount && (
+              <span
+                className="shrink-0 text-[9px] font-medium text-muted-foreground bg-muted rounded px-1 py-0.5 leading-none group-hover/item:opacity-0 transition-opacity"
+                title={`${area.postalCodeCount} PLZ`}
+              >
+                {area.postalCodeCount}
+              </span>
+            )}
 
-              {!isSelectable && isPinned && (
-                <IconPinFilled className="shrink-0 h-2.5 w-2.5 text-amber-500 group-hover/item:opacity-0 transition-opacity" />
-              )}
-              {!isSelectable && (
-                <div className="shrink-0 w-6 h-6 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0 flex items-center">
-                  {onTogglePin && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTogglePin(area.id);
-                      }}
-                      className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-amber-500 transition-colors"
-                      title={isPinned ? "Anheften aufheben" : "Anheften"}
-                    >
-                      {isPinned ? (
-                        <IconPinFilled className="h-3 w-3 text-amber-500" />
-                      ) : (
-                        <IconPin className="h-3 w-3" />
-                      )}
-                    </button>
-                  )}
+            {!isSelectable && isPinned && (
+              <IconPinFilled className="shrink-0 h-2.5 w-2.5 text-amber-500 group-hover/item:opacity-0 transition-opacity" />
+            )}
+            {!isSelectable && (
+              <div className="shrink-0 w-6 h-6 opacity-0 group-hover/item:opacity-100 transition-opacity absolute right-0 flex items-center">
+                {onTogglePin && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTogglePin(area.id);
+                    }}
+                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-amber-500 transition-colors"
+                    title={isPinned ? "Anheften aufheben" : "Anheften"}
+                  >
+                    {isPinned ? (
+                      <IconPinFilled className="h-3 w-3 text-amber-500" />
+                    ) : (
+                      <IconPin className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
+                {dropdownMounted && (
                   <AreaItemDropdown
                     area={area}
                     onStartRename={onStartRename}
@@ -284,56 +295,56 @@ export const AreaListItem = memo(
                     onArchive={onArchive}
                     onEditNotes={onEditNotes}
                   />
-                </div>
-              )}
-            </div>
-            {area.tags && area.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 px-2 pb-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150">
-                {area.tags.map((tag) => (
-                  <TagBadge
-                    key={tag.id}
-                    name={tag.name}
-                    color={tag.color}
-                    className="text-[9px] px-1 py-0 h-3.5"
-                  />
-                ))}
+                )}
               </div>
             )}
-            {!isSelectable &&
-              !isArchived &&
-              (area.totalPostalCodeCount ?? 0) > 0 && (
-                <div className="absolute bottom-0 left-2 right-2 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150">
-                  {(() => {
-                    const pct = Math.min(
-                      100,
-                      Math.round(
-                        ((area.uniquePostalCodeCount ?? 0) /
-                          (area.totalPostalCodeCount ?? 1)) *
-                          100
-                      )
-                    );
-                    return (
-                      <div
-                        className="h-0.5 bg-muted rounded-full overflow-hidden"
-                        title={`Abdeckung: ${pct}%`}
-                      >
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            pct >= 80
-                              ? "bg-green-500"
-                              : pct >= 40
-                                ? "bg-primary/70"
-                                : "bg-amber-400"
-                          }`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
           </div>
-        </AreaItemMenu>
+          {area.tags && area.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 px-2 pb-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150">
+              {area.tags.map((tag) => (
+                <TagBadge
+                  key={tag.id}
+                  name={tag.name}
+                  color={tag.color}
+                  className="text-[9px] px-1 py-0 h-3.5"
+                />
+              ))}
+            </div>
+          )}
+          {!isSelectable &&
+            !isArchived &&
+            (area.totalPostalCodeCount ?? 0) > 0 && (
+              <div className="absolute bottom-0 left-2 right-2 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150">
+                {(() => {
+                  const pct = Math.min(
+                    100,
+                    Math.round(
+                      ((area.uniquePostalCodeCount ?? 0) /
+                        (area.totalPostalCodeCount ?? 1)) *
+                        100
+                    )
+                  );
+                  return (
+                    <div
+                      className="h-0.5 bg-muted rounded-full overflow-hidden"
+                      title={`Abdeckung: ${pct}%`}
+                    >
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          pct >= 80
+                            ? "bg-green-500"
+                            : pct >= 40
+                              ? "bg-primary/70"
+                              : "bg-amber-400"
+                        }`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+        </div>
       </SidebarMenuItem>
     );
   },

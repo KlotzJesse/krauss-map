@@ -1,4 +1,3 @@
-import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { memo } from "react";
 
@@ -7,13 +6,10 @@ import type { CountryCode } from "@/lib/config/countries";
 import type {
   ChangeSummary,
   VersionSummary,
-  areaLayers,
 } from "@/lib/schema/schema";
+import type { Layer } from "@/lib/types/area-types";
 
 const EMPTY_ARRAY: never[] = [];
-type Layer = InferSelectModel<typeof areaLayers> & {
-  postalCodes?: { postalCode: string }[];
-};
 
 interface PostalCodesMapProps {
   data: FeatureCollection<Polygon | MultiPolygon>;

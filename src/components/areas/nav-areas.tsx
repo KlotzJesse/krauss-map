@@ -2,14 +2,17 @@
 
 import {
   IconArchive,
+  IconArchiveOff,
   IconArrowsSort,
-  IconCheckbox,
+  IconCopy,
   IconDownload,
+  IconEdit,
+  IconFileText,
   IconLayoutList,
   IconPlus,
   IconSearch,
-  IconSquare,
   IconTags,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
@@ -187,7 +190,7 @@ type SortMode = "default" | "name" | "plz" | "modified";
 const SORT_MODES: SortMode[] = ["default", "name", "plz", "modified"];
 const SORT_LABELS: Record<SortMode, string> = {
   default: "Standard",
-  name: "Name (A–Z)",
+  name: "Name (A-Z)",
   plz: "PLZ-Anzahl",
   modified: "Zuletzt geändert",
 };
@@ -389,7 +392,7 @@ export const NavAreas = memo(function NavAreas({
     [onAreaSelect]
   );
 
-  // Alt+Shift+↑/↓: navigate between areas in the sidebar
+  // Alt+Shift+up/down: navigate between areas in the sidebar
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!e.altKey || !e.shiftKey) return;
@@ -644,6 +647,36 @@ export const NavAreas = memo(function NavAreas({
     });
   };
 
+  // --- Shared context menu state (single instance for all area items) ---
+  const [contextMenu, setContextMenu] = useState<{
+    area: AreaSummary;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const handleItemContextMenu = useCallback(
+    (area: AreaSummary, e: React.MouseEvent) => {
+      setContextMenu({ area, x: e.clientX, y: e.clientY });
+    },
+    []
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // Close context menu on scroll or outside click
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClose = () => setContextMenu(null);
+    document.addEventListener("scroll", handleClose, true);
+    document.addEventListener("mousedown", handleClose);
+    return () => {
+      document.removeEventListener("scroll", handleClose, true);
+      document.removeEventListener("mousedown", handleClose);
+    };
+  }, [contextMenu]);
+
   return (
     <>
       <div className="group-data-[collapsible=icon]:hidden">
@@ -735,7 +768,7 @@ export const NavAreas = memo(function NavAreas({
                 type="text"
                 value={areaSearch}
                 onChange={(e) => setAreaSearch(e.target.value)}
-                placeholder="Gebiete filtern… (/)"
+                placeholder="Gebiete filtern... (/)"
                 className="w-full h-6 pl-6 pr-5 text-xs bg-muted/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-colors"
               />
               {areaSearch && (
@@ -762,7 +795,7 @@ export const NavAreas = memo(function NavAreas({
                     title={
                       activeTagId === tag.id
                         ? "Filter entfernen"
-                        : `Nur „${tag.name}" anzeigen`
+                        : `Nur "${tag.name}" anzeigen`
                     }
                   >
                     <TagBadge
@@ -815,7 +848,7 @@ export const NavAreas = memo(function NavAreas({
                         <button
                           type="button"
                           onClick={() => handleBulkAssignTag(tag.id)}
-                          title={`Tag „${tag.name}" zuweisen`}
+                          title={`Tag "${tag.name}" zuweisen`}
                         >
                           <TagBadge
                             name={tag.name}
@@ -828,7 +861,7 @@ export const NavAreas = memo(function NavAreas({
                           type="button"
                           onClick={() => handleBulkRemoveTag(tag.id)}
                           className="text-muted-foreground hover:text-destructive transition-colors"
-                          title={`Tag „${tag.name}" entfernen`}
+                          title={`Tag "${tag.name}" entfernen`}
                         >
                           <IconX className="h-2.5 w-2.5" />
                         </button>
@@ -844,6 +877,7 @@ export const NavAreas = memo(function NavAreas({
               )}
             </div>
           )}
+
           <SidebarMenu>
             {isLoading && (
               <SidebarMenuItem>
@@ -898,11 +932,15 @@ export const NavAreas = memo(function NavAreas({
                   onArchive={handleArchive}
                   onEditNotes={handleEditNotes}
                   onAreaClick={handleAreaClick}
+                  onContextMenu={handleItemContextMenu}
                 />
               ))}
-            {!isLoading &&
-              groupByTag &&
-              groupedByTag?.map((group) => (
+          </SidebarMenu>
+
+          {/* Grouped list (groups have variable structure) */}
+          {!isLoading && groupByTag && (
+            <SidebarMenu>
+              {groupedByTag?.map((group) => (
                 <li key={group.tag?.id ?? "no-tag"} className="list-none">
                   <div className="flex items-center gap-1.5 px-2 pt-2 pb-0.5">
                     {group.tag ? (
@@ -950,11 +988,14 @@ export const NavAreas = memo(function NavAreas({
                       onArchive={handleArchive}
                       onEditNotes={handleEditNotes}
                       onAreaClick={handleAreaClick}
+                      onContextMenu={handleItemContextMenu}
                     />
                   ))}
                 </li>
               ))}
-          </SidebarMenu>
+            </SidebarMenu>
+          )}
+
         </SidebarGroupContent>
       </SidebarGroup>
 
@@ -1108,6 +1149,157 @@ export const NavAreas = memo(function NavAreas({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Shared context menu for all area items */}
+      {contextMenu && (
+        <SharedContextMenuPopover
+          area={contextMenu.area}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={closeContextMenu}
+          onStartRename={handleStartRename}
+          onStartDelete={handleStartDelete}
+          onDuplicate={handleDuplicate}
+          onArchive={handleArchive}
+          onEditNotes={handleEditNotes}
+        />
+      )}
     </>
   );
 });
+
+/**
+ * Lightweight context menu popover rendered at cursor coordinates.
+ * Uses a simple fixed-position div instead of a full ContextMenu component,
+ * avoiding the overhead of base-ui's menu root context per item.
+ */
+function SharedContextMenuPopover({
+  area,
+  x,
+  y,
+  onClose,
+  onStartRename,
+  onStartDelete,
+  onDuplicate,
+  onArchive,
+  onEditNotes,
+}: {
+  area: AreaSummary;
+  x: number;
+  y: number;
+  onClose: () => void;
+  onStartRename: (area: AreaSummary, e: React.MouseEvent) => void;
+  onStartDelete: (area: AreaSummary, e: React.MouseEvent) => void;
+  onDuplicate: (area: AreaSummary) => void;
+  onArchive: (area: AreaSummary, archive: boolean) => void;
+  onEditNotes?: (area: AreaSummary) => void;
+}) {
+  const isArchived = area.isArchived === "true";
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Adjust position to keep menu in viewport
+  const [adjustedPos, setAdjustedPos] = useState({ x, y });
+  useEffect(() => {
+    const el = menuRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    setAdjustedPos({
+      x: x + rect.width > viewW ? Math.max(0, viewW - rect.width - 4) : x,
+      y: y + rect.height > viewH ? Math.max(0, viewH - rect.height - 4) : y,
+    });
+  }, [x, y]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handleAction = useCallback(
+    (fn: () => void) => {
+      onClose();
+      fn();
+    },
+    [onClose]
+  );
+
+  const itemClass =
+    "relative flex min-h-7 w-full cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs/relaxed outline-hidden select-none hover:bg-accent hover:text-accent-foreground";
+  const destructiveItemClass =
+    "relative flex min-h-7 w-full cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs/relaxed outline-hidden select-none text-destructive hover:bg-destructive/10 hover:text-destructive";
+
+  return (
+    <div
+      className="fixed inset-0 z-50"
+      onClick={onClose}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div
+        ref={menuRef}
+        className="fixed z-50 min-w-44 rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 animate-in fade-in-0 zoom-in-95"
+        style={{ left: adjustedPos.x, top: adjustedPos.y }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className={itemClass}
+          onClick={(e) =>
+            handleAction(() => onStartRename(area, e as React.MouseEvent))
+          }
+        >
+          <IconEdit className="h-4 w-4 mr-2" />
+          Umbenennen
+        </button>
+        {onEditNotes && (
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleAction(() => onEditNotes(area))}
+          >
+            <IconFileText className="h-4 w-4 mr-2" />
+            Notizen bearbeiten
+          </button>
+        )}
+        <button
+          type="button"
+          className={itemClass}
+          onClick={() => handleAction(() => onDuplicate(area))}
+        >
+          <IconCopy className="h-4 w-4 mr-2" />
+          Duplizieren
+        </button>
+        <button
+          type="button"
+          className={itemClass}
+          onClick={() => handleAction(() => onArchive(area, !isArchived))}
+        >
+          {isArchived ? (
+            <IconArchiveOff className="h-4 w-4 mr-2" />
+          ) : (
+            <IconArchive className="h-4 w-4 mr-2" />
+          )}
+          {isArchived ? "Wiederherstellen" : "Archivieren"}
+        </button>
+        <div className="-mx-1 my-1 h-px bg-border/50" />
+        <button
+          type="button"
+          className={destructiveItemClass}
+          onClick={(e) =>
+            handleAction(() => onStartDelete(area, e as React.MouseEvent))
+          }
+        >
+          <IconTrash className="h-4 w-4 mr-2" />
+          Löschen
+        </button>
+      </div>
+    </div>
+  );
+}

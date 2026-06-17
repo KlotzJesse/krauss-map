@@ -1,6 +1,5 @@
 "use client";
 
-import type { InferSelectModel } from "drizzle-orm";
 import React, {
   createContext,
   useContext,
@@ -10,14 +9,9 @@ import React, {
 } from "react";
 import type { ReactNode } from "react";
 
-import type { areaLayers, areas } from "../schema/schema";
+import type { Area, Layer } from "../types/area-types";
 
 const EMPTY_ARRAY: never[] = [];
-type Layer = InferSelectModel<typeof areaLayers> & {
-  postalCodes?: { postalCode: string }[];
-};
-
-type Area = InferSelectModel<typeof areas>;
 
 // Optimistic update action types
 type LayerAction =

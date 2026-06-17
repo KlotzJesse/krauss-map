@@ -30,7 +30,6 @@ import {
   IconLayoutColumns,
   IconPlus,
 } from "@tabler/icons-react";
-import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import {
   ArrowDownUp,
@@ -45,14 +44,12 @@ import {
   FileSpreadsheet,
   FileText,
   Folder,
-  GripVertical,
   HelpCircle,
   MapPin,
   Palette,
   Redo2,
   Search,
   Square,
-  TriangleAlert,
   Trash2,
   Undo2,
   Upload,
@@ -171,8 +168,8 @@ import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type {
   ChangeSummary,
   VersionSummary,
-  areaLayers,
 } from "@/lib/schema/schema";
+import type { Layer } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import { storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
 import {
@@ -421,6 +418,7 @@ function StatsSection({
                     type="button"
                     className="text-[9px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
                     title="Statistik als CSV exportieren"
+                    aria-label="Statistik als CSV exportieren"
                     onClick={() => {
                       const total = layerSizes.reduce((s, l) => s + l.count, 0);
                       const header = "Layer;Farbe;PLZ;Anteil %;Von;Bis;Notizen";
@@ -475,10 +473,6 @@ function StatsSection({
     </>
   );
 }
-
-type Layer = InferSelectModel<typeof areaLayers> & {
-  postalCodes?: { postalCode: string }[];
-};
 
 const COUNTRY_META: Record<string, { flag: string; name: string }> = {
   DE: { flag: "🇩🇪", name: "Deutschland" },
@@ -2494,26 +2488,6 @@ const LayerManagementSection = memo(function LayerManagementSection({
     [handleReorderLayers]
   );
 
-  // Stable layer item callbacks — extracted from the map loop to prevent per-render identity changes
-  const handleItemSelect = useCallback(
-    (id: number) => {
-      if (!selectMode) onLayerSelect?.(id);
-    },
-    [selectMode, onLayerSelect]
-  );
-  const handleItemStartEdit = useCallback(
-    (id: number, name: string) =>
-      dispatchForm({ type: "START_EDIT", layerId: id, name }),
-    [dispatchForm]
-  );
-  const handleItemCancelEdit = useCallback(
-    () => dispatchForm({ type: "CANCEL_EDIT" }),
-    [dispatchForm]
-  );
-  const handleItemEditNameChange = useCallback(
-    (name: string) => dispatchForm({ type: "SET_EDIT_NAME", name }),
-    [dispatchForm]
-  );
   // Stable otherLayersMap: reuses array references when id/name/color haven't changed.
   // Without this, every optimisticLayers update (e.g. visibility toggle) creates new
   // arrays that defeat memo() on SortableLayerListItem for unchanged layers.
@@ -2647,6 +2621,212 @@ const LayerManagementSection = memo(function LayerManagementSection({
         },
       };
     }, [optimisticLayers]);
+
+  // Shared group header renderer — used in both drag-disabled and DnD paths
+  const renderGroupHeader = useCallback(
+    (gName: string, gLayers: Layer[]) => (
+      <div
+        key={`group-${gName}`}
+        className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr rounded-sm"
+        style={{
+          borderLeft: `3px solid ${hashGroupColor(gName)}`,
+          paddingLeft: 6,
+          backgroundColor: `${hashGroupColor(gName)}14`,
+        }}
+      >
+        <button
+          type="button"
+          className="shrink-0 text-muted-foreground hover:text-foreground transition-transform"
+          style={{
+            transform: collapsedGroups.has(gName) ? "" : "rotate(90deg)",
+            fontSize: 8,
+          }}
+          onClick={() => toggleGroupCollapse(gName)}
+          aria-label={
+            collapsedGroups.has(gName)
+              ? "Gruppe aufklappen"
+              : "Gruppe zuklappen"
+          }
+        >
+          ▶
+        </button>
+        <Folder className="h-3 w-3 shrink-0 text-muted-foreground" />
+        {editingGroupName === gName ? (
+          <input
+            autoFocus
+            className="flex-1 text-xs font-medium border rounded px-1 py-0.5 bg-background min-w-0"
+            value={editingGroupValue}
+            onChange={(e) => setEditingGroupValue(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") {
+                handleRenameGroup(gName, editingGroupValue);
+                setEditingGroupName(null);
+              } else if (e.key === "Escape") {
+                setEditingGroupName(null);
+              }
+            }}
+            onBlur={() => {
+              handleRenameGroup(gName, editingGroupValue);
+              setEditingGroupName(null);
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <button
+            type="button"
+            className="flex-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground transition-colors truncate"
+            onDoubleClick={() => {
+              setEditingGroupName(gName);
+              setEditingGroupValue(gName);
+            }}
+            onClick={() => toggleGroupCollapse(gName)}
+          >
+            {gName}
+          </button>
+        )}
+        <span className="text-[10px] text-muted-foreground/60 shrink-0">
+          {gLayers.length}
+          {" · "}
+          {gLayers.reduce(
+            (sum, l) => sum + (l.postalCodes?.length ?? 0),
+            0
+          )}{" "}
+          PLZ
+        </span>
+        <button
+          type="button"
+          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
+          onClick={() => handleExportGroupCSV(gName)}
+          aria-label="Gruppe als CSV exportieren"
+          title="Gruppe als CSV exportieren"
+        >
+          <Download className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
+          onClick={() => handleToggleGroupVisibility(gName)}
+          aria-label="Gruppe ein-/ausblenden"
+        >
+          {gLayers.every((l) => l.isVisible !== "false") ? (
+            <Eye className="h-3 w-3" />
+          ) : (
+            <EyeOff className="h-3 w-3" />
+          )}
+        </button>
+      </div>
+    ),
+    [
+      collapsedGroups,
+      editingGroupName,
+      editingGroupValue,
+      toggleGroupCollapse,
+      handleRenameGroup,
+      handleExportGroupCSV,
+      handleToggleGroupVisibility,
+    ]
+  );
+
+  // Shared layer item props factory — eliminates duplication between DnD and non-DnD paths
+  const getLayerItemProps = useCallback(
+    (layer: Layer) => ({
+      layer,
+      activeLayerId,
+      isLayerSwitchPending,
+      duplicateCount: duplicateCountByLayer.get(layer.id) ?? 0,
+      editingLayerId: form.editingLayerId,
+      editingLayerName: form.editingLayerName,
+      editLayerInputRef,
+      onSelect: handleLayerSelect,
+      onStartEdit: handleLayerStartEdit,
+      onConfirmEdit: handleRenameLayer,
+      onCancelEdit: handleLayerCancelEdit,
+      onEditNameChange: handleLayerEditNameChange,
+      onColorChange: handleColorChange,
+      onOpacityChange: handleOpacityChange,
+      onDelete: handleDeleteLayer,
+      onDuplicateLayer: handleDuplicateLayer,
+      onCopyToArea: handleOpenCopyToArea,
+      onMergeLayer:
+        (otherLayersMap.get(layer.id)?.length ?? 0) > 0
+          ? handleOpenMergeLayers
+          : undefined,
+      onToggleVisibility: handleToggleVisibility,
+      onSoloLayer: handleSoloLayer,
+      onRemovePostalCode: guardedRemovePostalCode,
+      onImportCSV: addPostalCodesToLayer ? guardedImportCSV : undefined,
+      onNotesChange: handleNotesChange,
+      onMovePlz: handleMovePlz,
+      otherLayers: otherLayersMap.get(layer.id) ?? EMPTY_ARRAY,
+      isSelected: selectMode ? selectedIds.has(layer.id) : undefined,
+      onToggleSelect: selectMode ? toggleSelect : undefined,
+      isLocked: isLocked(layer.id),
+      onToggleLock: toggleLock,
+      onPreviewPostalCode,
+      onZoomToLayer,
+      onClearPLZ: handleClearLayerPLZ,
+      onAddPlzRange: addPostalCodesToLayer ?? undefined,
+      allCodesSetSize: activeCodesTotal ?? allCodesSet?.size ?? 0,
+      getAllCodesSet,
+      onBulkMovePlz: handleBulkMovePlz,
+      onBulkRemovePlz: handleBulkRemovePlz,
+      onExportCSV: handleExportLayerCSV,
+      onSplitLayer: handleSplitLayer,
+      onCompareLayer: openDiffDialog,
+      onSetGroup: handleSetLayerGroup,
+      existingGroups,
+      maxLayerPLZ,
+      onHighlightCodes,
+    }),
+    [
+      activeLayerId,
+      isLayerSwitchPending,
+      duplicateCountByLayer,
+      form.editingLayerId,
+      form.editingLayerName,
+      editLayerInputRef,
+      handleLayerSelect,
+      handleLayerStartEdit,
+      handleRenameLayer,
+      handleLayerCancelEdit,
+      handleLayerEditNameChange,
+      handleColorChange,
+      handleOpacityChange,
+      handleDeleteLayer,
+      handleDuplicateLayer,
+      handleOpenCopyToArea,
+      handleOpenMergeLayers,
+      otherLayersMap,
+      handleToggleVisibility,
+      handleSoloLayer,
+      guardedRemovePostalCode,
+      addPostalCodesToLayer,
+      guardedImportCSV,
+      handleNotesChange,
+      handleMovePlz,
+      selectMode,
+      selectedIds,
+      toggleSelect,
+      isLocked,
+      toggleLock,
+      onPreviewPostalCode,
+      onZoomToLayer,
+      handleClearLayerPLZ,
+      activeCodesTotal,
+      allCodesSet,
+      getAllCodesSet,
+      handleBulkMovePlz,
+      handleBulkRemovePlz,
+      handleExportLayerCSV,
+      handleSplitLayer,
+      openDiffDialog,
+      handleSetLayerGroup,
+      existingGroups,
+      maxLayerPLZ,
+      onHighlightCodes,
+    ]
+  );
 
   return (
     <>
@@ -3047,6 +3227,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                     type="button"
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground"
                     onClick={() => setLayerSearch("")}
+                    aria-label="Suche zurücksetzen"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -3057,6 +3238,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                   render={
                     <button
                       type="button"
+                      aria-label="Sortierreihenfolge wechseln"
                       className={`shrink-0 h-7 w-7 flex items-center justify-center rounded border text-muted-foreground transition-colors hover:bg-muted ${layerSortMode !== "default" ? "border-primary/50 bg-primary/5 text-primary" : "border-transparent"}`}
                       onClick={() => {
                         setLayerSortMode((m) =>
@@ -3133,167 +3315,14 @@ const LayerManagementSection = memo(function LayerManagementSection({
             ) : isDragDisabled ? (
               groupedLayers.flatMap(({ name: gName, layers: gLayers }) => [
                 ...(gName !== null
-                  ? [
-                      <div
-                        key={`group-${gName}`}
-                        className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr rounded-sm"
-                        style={{
-                          borderLeft: `3px solid ${hashGroupColor(gName)}`,
-                          paddingLeft: 6,
-                          backgroundColor: `${hashGroupColor(gName)}14`,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="shrink-0 text-muted-foreground hover:text-foreground transition-transform"
-                          style={{
-                            transform: collapsedGroups.has(gName)
-                              ? ""
-                              : "rotate(90deg)",
-                            fontSize: 8,
-                          }}
-                          onClick={() => toggleGroupCollapse(gName)}
-                          aria-label={
-                            collapsedGroups.has(gName)
-                              ? "Gruppe aufklappen"
-                              : "Gruppe zuklappen"
-                          }
-                        >
-                          ▶
-                        </button>
-                        <Folder className="h-3 w-3 shrink-0 text-muted-foreground" />
-                        {editingGroupName === gName ? (
-                          <input
-                            autoFocus
-                            className="flex-1 text-xs font-medium border rounded px-1 py-0.5 bg-background min-w-0"
-                            value={editingGroupValue}
-                            onChange={(e) =>
-                              setEditingGroupValue(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              e.stopPropagation();
-                              if (e.key === "Enter") {
-                                handleRenameGroup(gName, editingGroupValue);
-                                setEditingGroupName(null);
-                              } else if (e.key === "Escape") {
-                                setEditingGroupName(null);
-                              }
-                            }}
-                            onBlur={() => {
-                              handleRenameGroup(gName, editingGroupValue);
-                              setEditingGroupName(null);
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            className="flex-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground transition-colors truncate"
-                            onDoubleClick={() => {
-                              setEditingGroupName(gName);
-                              setEditingGroupValue(gName);
-                            }}
-                            onClick={() => toggleGroupCollapse(gName)}
-                          >
-                            {gName}
-                          </button>
-                        )}
-                        <span className="text-[10px] text-muted-foreground/60 shrink-0">
-                          {gLayers.length}
-                          {" · "}
-                          {gLayers.reduce(
-                            (sum, l) => sum + (l.postalCodes?.length ?? 0),
-                            0
-                          )}{" "}
-                          PLZ
-                        </span>
-                        <button
-                          type="button"
-                          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
-                          onClick={() => handleExportGroupCSV(gName)}
-                          aria-label="Gruppe als CSV exportieren"
-                          title="Gruppe als CSV exportieren"
-                        >
-                          <Download className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
-                          onClick={() => handleToggleGroupVisibility(gName)}
-                          aria-label="Gruppe ein-/ausblenden"
-                        >
-                          {gLayers.every((l) => l.isVisible !== "false") ? (
-                            <Eye className="h-3 w-3" />
-                          ) : (
-                            <EyeOff className="h-3 w-3" />
-                          )}
-                        </button>
-                      </div>,
-                    ]
+                  ? [renderGroupHeader(gName, gLayers)]
                   : []),
                 ...(collapsedGroups.has(gName ?? "") && gName !== null
                   ? []
-                  : gLayers.map((layer, layerIndex) => (
+                  : gLayers.map((layer) => (
                       <LayerListItem
                         key={layer.id}
-                        layer={layer}
-                        activeLayerId={activeLayerId}
-                        isLayerSwitchPending={isLayerSwitchPending}
-                        duplicateCount={
-                          duplicateCountByLayer.get(layer.id) ?? 0
-                        }
-                        editingLayerId={form.editingLayerId}
-                        editingLayerName={form.editingLayerName}
-                        editLayerInputRef={editLayerInputRef}
-                        onSelect={handleLayerSelect}
-                        onStartEdit={handleLayerStartEdit}
-                        onConfirmEdit={handleRenameLayer}
-                        onCancelEdit={handleLayerCancelEdit}
-                        onEditNameChange={handleLayerEditNameChange}
-                        onColorChange={handleColorChange}
-                        onOpacityChange={handleOpacityChange}
-                        onDelete={handleDeleteLayer}
-                        onDuplicateLayer={handleDuplicateLayer}
-                        onCopyToArea={handleOpenCopyToArea}
-                        onMergeLayer={
-                          (otherLayersMap.get(layer.id)?.length ?? 0) > 0
-                            ? handleOpenMergeLayers
-                            : undefined
-                        }
-                        onToggleVisibility={handleToggleVisibility}
-                        onSoloLayer={handleSoloLayer}
-                        onRemovePostalCode={guardedRemovePostalCode}
-                        onImportCSV={
-                          addPostalCodesToLayer ? guardedImportCSV : undefined
-                        }
-                        onNotesChange={handleNotesChange}
-                        onMovePlz={handleMovePlz}
-                        otherLayers={
-                          otherLayersMap.get(layer.id) ?? EMPTY_ARRAY
-                        }
-                        isSelected={
-                          selectMode ? selectedIds.has(layer.id) : undefined
-                        }
-                        onToggleSelect={selectMode ? toggleSelect : undefined}
-                        isLocked={isLocked(layer.id)}
-                        onToggleLock={toggleLock}
-                        onPreviewPostalCode={onPreviewPostalCode}
-                        onZoomToLayer={onZoomToLayer}
-                        onClearPLZ={handleClearLayerPLZ}
-                        onAddPlzRange={addPostalCodesToLayer ?? undefined}
-                        allCodesSetSize={
-                          activeCodesTotal ?? allCodesSet?.size ?? 0
-                        }
-                        getAllCodesSet={getAllCodesSet}
-                        onBulkMovePlz={handleBulkMovePlz}
-                        onBulkRemovePlz={handleBulkRemovePlz}
-                        onExportCSV={handleExportLayerCSV}
-                        onSplitLayer={handleSplitLayer}
-                        onCompareLayer={openDiffDialog}
-                        onSetGroup={handleSetLayerGroup}
-                        existingGroups={existingGroups}
-                        maxLayerPLZ={maxLayerPLZ}
-                        onHighlightCodes={onHighlightCodes}
+                        {...getLayerItemProps(layer)}
                       />
                     ))),
               ])
@@ -3310,171 +3339,14 @@ const LayerManagementSection = memo(function LayerManagementSection({
                 >
                   {groupedLayers.flatMap(({ name: gName, layers: gLayers }) => [
                     ...(gName !== null
-                      ? [
-                          <div
-                            key={`group-${gName}`}
-                            className="flex items-center gap-1 px-1 py-0.5 mt-1 first:mt-0 group/ghdr rounded-sm"
-                            style={{
-                              borderLeft: `3px solid ${hashGroupColor(gName)}`,
-                              paddingLeft: 6,
-                              backgroundColor: `${hashGroupColor(gName)}14`,
-                            }}
-                          >
-                            <button
-                              type="button"
-                              className="shrink-0 text-muted-foreground hover:text-foreground transition-transform"
-                              style={{
-                                transform: collapsedGroups.has(gName)
-                                  ? ""
-                                  : "rotate(90deg)",
-                                fontSize: 8,
-                              }}
-                              onClick={() => toggleGroupCollapse(gName)}
-                              aria-label={
-                                collapsedGroups.has(gName)
-                                  ? "Gruppe aufklappen"
-                                  : "Gruppe zuklappen"
-                              }
-                            >
-                              ▶
-                            </button>
-                            <Folder className="h-3 w-3 shrink-0 text-muted-foreground" />
-                            {editingGroupName === gName ? (
-                              <input
-                                autoFocus
-                                className="flex-1 text-xs font-medium border rounded px-1 py-0.5 bg-background min-w-0"
-                                value={editingGroupValue}
-                                onChange={(e) =>
-                                  setEditingGroupValue(e.target.value)
-                                }
-                                onKeyDown={(e) => {
-                                  e.stopPropagation();
-                                  if (e.key === "Enter") {
-                                    handleRenameGroup(gName, editingGroupValue);
-                                    setEditingGroupName(null);
-                                  } else if (e.key === "Escape") {
-                                    setEditingGroupName(null);
-                                  }
-                                }}
-                                onBlur={() => {
-                                  handleRenameGroup(gName, editingGroupValue);
-                                  setEditingGroupName(null);
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            ) : (
-                              <button
-                                type="button"
-                                className="flex-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground transition-colors truncate"
-                                onDoubleClick={() => {
-                                  setEditingGroupName(gName);
-                                  setEditingGroupValue(gName);
-                                }}
-                                onClick={() => toggleGroupCollapse(gName)}
-                              >
-                                {gName}
-                              </button>
-                            )}
-                            <span className="text-[10px] text-muted-foreground/60 shrink-0">
-                              {gLayers.length}
-                              {" · "}
-                              {gLayers.reduce(
-                                (sum, l) => sum + (l.postalCodes?.length ?? 0),
-                                0
-                              )}{" "}
-                              PLZ
-                            </span>
-                            <button
-                              type="button"
-                              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
-                              onClick={() => handleExportGroupCSV(gName)}
-                              aria-label="Gruppe als CSV exportieren"
-                              title="Gruppe als CSV exportieren"
-                            >
-                              <Download className="h-3 w-3" />
-                            </button>
-                            <button
-                              type="button"
-                              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/ghdr:opacity-100"
-                              onClick={() => handleToggleGroupVisibility(gName)}
-                              aria-label="Gruppe ein-/ausblenden"
-                            >
-                              {gLayers.every((l) => l.isVisible !== "false") ? (
-                                <Eye className="h-3 w-3" />
-                              ) : (
-                                <EyeOff className="h-3 w-3" />
-                              )}
-                            </button>
-                          </div>,
-                        ]
+                      ? [renderGroupHeader(gName, gLayers)]
                       : []),
                     ...(collapsedGroups.has(gName ?? "") && gName !== null
                       ? []
-                      : gLayers.map((layer, layerIndex) => (
+                      : gLayers.map((layer) => (
                           <SortableLayerListItem
                             key={layer.id}
-                            layer={layer}
-                            activeLayerId={activeLayerId}
-                            isLayerSwitchPending={isLayerSwitchPending}
-                            duplicateCount={
-                              duplicateCountByLayer.get(layer.id) ?? 0
-                            }
-                            editingLayerId={form.editingLayerId}
-                            editingLayerName={form.editingLayerName}
-                            editLayerInputRef={editLayerInputRef}
-                            onSelect={handleItemSelect}
-                            onStartEdit={handleItemStartEdit}
-                            onConfirmEdit={handleRenameLayer}
-                            onCancelEdit={handleItemCancelEdit}
-                            onEditNameChange={handleItemEditNameChange}
-                            onColorChange={handleColorChange}
-                            onOpacityChange={handleOpacityChange}
-                            onDelete={handleDeleteLayer}
-                            onDuplicateLayer={handleDuplicateLayer}
-                            onCopyToArea={handleOpenCopyToArea}
-                            onMergeLayer={
-                              (otherLayersMap.get(layer.id)?.length ?? 0) > 0
-                                ? handleOpenMergeLayers
-                                : undefined
-                            }
-                            onToggleVisibility={handleToggleVisibility}
-                            onSoloLayer={handleSoloLayer}
-                            onRemovePostalCode={guardedRemovePostalCode}
-                            onImportCSV={
-                              addPostalCodesToLayer
-                                ? guardedImportCSV
-                                : undefined
-                            }
-                            onNotesChange={handleNotesChange}
-                            onMovePlz={handleMovePlz}
-                            otherLayers={
-                              otherLayersMap.get(layer.id) ?? EMPTY_ARRAY
-                            }
-                            isSelected={
-                              selectMode ? selectedIds.has(layer.id) : undefined
-                            }
-                            onToggleSelect={
-                              selectMode ? toggleSelect : undefined
-                            }
-                            isLocked={isLocked(layer.id)}
-                            onToggleLock={toggleLock}
-                            onPreviewPostalCode={onPreviewPostalCode}
-                            onZoomToLayer={onZoomToLayer}
-                            onClearPLZ={handleClearLayerPLZ}
-                            onAddPlzRange={addPostalCodesToLayer ?? undefined}
-                            allCodesSetSize={
-                              activeCodesTotal ?? allCodesSet?.size ?? 0
-                            }
-                            getAllCodesSet={getAllCodesSet}
-                            onBulkMovePlz={handleBulkMovePlz}
-                            onBulkRemovePlz={handleBulkRemovePlz}
-                            onExportCSV={handleExportLayerCSV}
-                            onSplitLayer={handleSplitLayer}
-                            onCompareLayer={openDiffDialog}
-                            onSetGroup={handleSetLayerGroup}
-                            existingGroups={existingGroups}
-                            maxLayerPLZ={maxLayerPLZ}
-                            onHighlightCodes={onHighlightCodes}
+                            {...getLayerItemProps(layer)}
                           />
                         ))),
                   ])}
@@ -3513,6 +3385,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
                       type="button"
                       className="text-[9px] text-muted-foreground hover:text-foreground"
                       onClick={() => setShowDuplicates(false)}
+                      aria-label="Duplikat-Ansicht schließen"
                     >
                       ✕
                     </button>
@@ -4947,24 +4820,40 @@ function DrawingToolsImpl({
               <IconAlertTriangle className="h-4 w-4" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleOpenKeyboardHelp}
-            title="Tastaturkürzel anzeigen"
-            aria-label="Tastaturkürzel anzeigen"
-            className="p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary text-muted-foreground"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onToggleVisibility}
-            title="Werkzeugleiste ausblenden"
-            aria-label="Werkzeugleiste ausblenden"
-            className="ml-auto p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={handleOpenKeyboardHelp}
+                  aria-label="Tastaturkürzel anzeigen"
+                  className="p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary text-muted-foreground"
+                />
+              }
+            >
+              <HelpCircle className="h-4 w-4" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Tastaturkürzel <kbd className="ml-1 px-1 py-0.5 text-[10px] font-mono bg-muted border rounded">?</kbd></p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={onToggleVisibility}
+                  aria-label="Werkzeugleiste ausblenden"
+                  className="ml-auto p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              }
+            >
+              <X className="h-4 w-4" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Ausblenden <kbd className="ml-1 px-1 py-0.5 text-[10px] font-mono bg-muted border rounded">H</kbd></p>
+            </TooltipContent>
+          </Tooltip>
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-1 overflow-y-auto min-h-0 flex-1">

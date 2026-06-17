@@ -2,7 +2,6 @@ import type { PickingInfo } from "@deck.gl/core";
 import { FillStyleExtension } from "@deck.gl/extensions";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import type { MapboxOverlay } from "@deck.gl/mapbox";
-import type { InferSelectModel } from "drizzle-orm";
 import type {
   Feature,
   FeatureCollection,
@@ -12,7 +11,7 @@ import type {
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { MutableRefObject, RefObject } from "react";
 
-import type { areaLayers } from "@/lib/schema/schema";
+import type { Layer } from "@/lib/types/area-types";
 import {
   EMPTY_FEATURE_COLLECTION,
   compositeKeyToStoredCode,
@@ -25,10 +24,6 @@ import {
   createStripePatternAtlas,
   hexColorsAreSimilar,
 } from "@/lib/utils/stripe-pattern";
-
-type Layer = InferSelectModel<typeof areaLayers> & {
-  postalCodes?: { postalCode: string }[];
-};
 
 // Pre-computed RGBA arrays for state colors — avoids per-feature hexToRgba in accessors.
 // Fill colors at 10% opacity, line colors at full opacity.

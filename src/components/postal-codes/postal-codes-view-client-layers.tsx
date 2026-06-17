@@ -1,6 +1,5 @@
 "use client";
 
-import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import {
@@ -13,14 +12,10 @@ import { Button } from "@/components/ui/button";
 import { useGeodata } from "@/lib/hooks/use-geodata";
 import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
 import type {
-  areaLayers,
   ChangeSummary,
   VersionSummary,
 } from "@/lib/schema/schema";
-
-type Layer = InferSelectModel<typeof areaLayers> & {
-  postalCodes?: { postalCode: string }[];
-};
+import type { Layer } from "@/lib/types/area-types";
 
 import { FileUpIcon } from "lucide-react";
 import dynamic from "next/dynamic";

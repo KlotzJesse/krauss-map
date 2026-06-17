@@ -1,16 +1,11 @@
-import type { InferSelectModel } from "drizzle-orm";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import type { CountryCode } from "@/lib/config/countries";
 import type {
   VersionSummary,
   ChangeSummary,
-  areaLayers,
 } from "@/lib/schema/schema";
-
-type Layer = InferSelectModel<typeof areaLayers> & {
-  postalCodes?: { postalCode: string }[];
-};
+import type { Layer } from "@/lib/types/area-types";
 
 export interface BaseMapProps {
   data: FeatureCollection<Polygon | MultiPolygon>;

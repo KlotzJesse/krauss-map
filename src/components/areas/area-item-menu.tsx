@@ -9,15 +9,8 @@ import {
   IconFileText,
   IconTrash,
 } from "@tabler/icons-react";
-import { memo, useCallback, useRef, useState } from "react";
+import { memo } from "react";
 
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,11 +27,9 @@ interface AreaItemMenuProps {
   onDuplicate: (area: AreaSummary) => void;
   onArchive: (area: AreaSummary, archive: boolean) => void;
   onEditNotes?: (area: AreaSummary) => void;
-  children: React.ReactNode;
-  disabled?: boolean;
 }
 
-/** Shared menu items rendered identically in both ContextMenu and DropdownMenu */
+/** Menu items for the dropdown */
 function MenuItems({
   area,
   onStartRename,
@@ -46,94 +37,44 @@ function MenuItems({
   onDuplicate,
   onArchive,
   onEditNotes,
-  variant,
-}: Omit<AreaItemMenuProps, "children"> & {
-  variant: "context" | "dropdown";
-}) {
-  const Item = variant === "context" ? ContextMenuItem : DropdownMenuItem;
-  const Sep =
-    variant === "context" ? ContextMenuSeparator : DropdownMenuSeparator;
+}: AreaItemMenuProps) {
   const isArchived = area.isArchived === "true";
 
   return (
     <>
-      <Item onClick={(e) => onStartRename(area, e)}>
+      <DropdownMenuItem onClick={(e) => onStartRename(area, e)}>
         <IconEdit className="h-4 w-4 mr-2" />
         Umbenennen
-      </Item>
+      </DropdownMenuItem>
       {onEditNotes && (
-        <Item onClick={() => onEditNotes(area)}>
+        <DropdownMenuItem onClick={() => onEditNotes(area)}>
           <IconFileText className="h-4 w-4 mr-2" />
           Notizen bearbeiten
-        </Item>
+        </DropdownMenuItem>
       )}
-      <Item onClick={() => onDuplicate(area)}>
+      <DropdownMenuItem onClick={() => onDuplicate(area)}>
         <IconCopy className="h-4 w-4 mr-2" />
         Duplizieren
-      </Item>
-      <Item onClick={() => onArchive(area, !isArchived)}>
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => onArchive(area, !isArchived)}>
         {isArchived ? (
           <IconArchiveOff className="h-4 w-4 mr-2" />
         ) : (
           <IconArchive className="h-4 w-4 mr-2" />
         )}
         {isArchived ? "Wiederherstellen" : "Archivieren"}
-      </Item>
-      <Sep />
-      <Item onClick={(e) => onStartDelete(area, e)} variant="destructive">
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onClick={(e) => onStartDelete(area, e)}
+        variant="destructive"
+      >
         <IconTrash className="h-4 w-4 mr-2" />
         Löschen
-      </Item>
+      </DropdownMenuItem>
     </>
   );
 }
-
-export const AreaItemMenu = memo(function AreaItemMenu({
-  area,
-  onStartRename,
-  onStartDelete,
-  onDuplicate,
-  onArchive,
-  onEditNotes,
-  children,
-  disabled = false,
-}: AreaItemMenuProps) {
-  const [contentMounted, setContentMounted] = useState(false);
-  const contentMountedRef = useRef(contentMounted);
-  contentMountedRef.current = contentMounted;
-
-  const handlePointerEnter = useCallback(() => {
-    if (!contentMountedRef.current) setContentMounted(true);
-  }, []);
-
-  if (disabled) {
-    return <>{children}</>;
-  }
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger
-        className="w-full"
-        onPointerEnter={handlePointerEnter}
-      >
-        {children}
-      </ContextMenuTrigger>
-      {contentMounted && (
-        <ContextMenuContent className="w-44">
-          <MenuItems
-            area={area}
-            onStartRename={onStartRename}
-            onStartDelete={onStartDelete}
-            onDuplicate={onDuplicate}
-            onArchive={onArchive}
-            onEditNotes={onEditNotes}
-            variant="context"
-          />
-        </ContextMenuContent>
-      )}
-    </ContextMenu>
-  );
-});
 
 /** Standalone 3-dots dropdown button for area items */
 export const AreaItemDropdown = memo(
@@ -144,7 +85,7 @@ export const AreaItemDropdown = memo(
     onDuplicate,
     onArchive,
     onEditNotes,
-  }: Omit<AreaItemMenuProps, "children">) {
+  }: AreaItemMenuProps) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -163,7 +104,6 @@ export const AreaItemDropdown = memo(
             onDuplicate={onDuplicate}
             onArchive={onArchive}
             onEditNotes={onEditNotes}
-            variant="dropdown"
           />
         </DropdownMenuContent>
       </DropdownMenu>

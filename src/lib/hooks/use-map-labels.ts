@@ -1,7 +1,6 @@
 import turfArea from "@turf/area";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import centerOfMass from "@turf/center-of-mass";
-import type { InferSelectModel } from "drizzle-orm";
 import type {
   Feature,
   FeatureCollection,
@@ -16,12 +15,8 @@ import type {
 } from "maplibre-gl";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
-import type { areaLayers } from "@/lib/schema/schema";
+import type { Layer } from "@/lib/types/area-types";
 import { resolveFeatureKey } from "@/lib/utils/deck-gl-utils";
-
-type Layer = InferSelectModel<typeof areaLayers> & {
-  postalCodes?: { postalCode: string }[];
-};
 
 /**
  * Returns the ID of the first label/symbol layer AFTER basemap boundary lines.
