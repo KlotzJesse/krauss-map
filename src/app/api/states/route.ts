@@ -10,8 +10,15 @@ export async function GET(request: Request) {
     countryParam && isValidCountryCode(countryParam) ? countryParam : undefined;
 
   const data = await getStatesData(country);
-  return NextResponse.json(data, {
+  const json = JSON.stringify(data);
+  const stream = new Blob([json]).stream().pipeThrough(
+    new CompressionStream("gzip")
+  );
+
+  return new Response(stream, {
     headers: {
+      "Content-Type": "application/json",
+      "Content-Encoding": "gzip",
       "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
     },
   });

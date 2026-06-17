@@ -51,8 +51,8 @@ export async function getPostalCodesDataForGranularity(
   cacheTag("postal-codes-geodata", tag);
   try {
     const query = country
-      ? sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 5) as geometry FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
-      : sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 5) as geometry FROM postal_codes WHERE granularity = ${granularity} AND is_active = 'true'`;
+      ? sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 4) as geometry FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
+      : sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 4) as geometry FROM postal_codes WHERE granularity = ${granularity} AND is_active = 'true'`;
     const { rows } = await db.execute(query);
     return {
       type: "FeatureCollection",
@@ -74,19 +74,25 @@ export async function getNativePostalCodesData(): Promise<PostalFeatureCollectio
   cacheLife("hours");
   cacheTag("postal-codes-geodata", "postal-codes-geodata-native");
   try {
-    // Build a UNION ALL query for each country at its native resolution
-    const conditions = COUNTRY_CODES.map((code) => {
+    // Per-country simplify tolerances: 5-digit (DE) needs finer detail,
+    // 4-digit (AT/CH) polygons are larger so can tolerate more simplification
+    const SIMPLIFY_TOLERANCE: Record<CountryCode, number> = {
+      DE: 0.002,
+      AT: 0.004,
+      CH: 0.004,
+    };
+
+    // Build a UNION ALL with per-country ST_Simplify tolerance
+    const perCountryQueries = COUNTRY_CODES.map((code) => {
       const maxDigits = COUNTRY_CONFIGS[code].maxDigits;
-      return sql`(country = ${code} AND granularity = ${`${maxDigits}digit`})`;
+      const tolerance = SIMPLIFY_TOLERANCE[code];
+      return sql`SELECT code, country, granularity,
+             ST_AsGeoJSON(ST_Simplify(geometry, ${tolerance}), 4) as geometry
+      FROM postal_codes
+      WHERE country = ${code} AND granularity = ${`${maxDigits}digit`} AND is_active = 'true'`;
     });
 
-    const whereClause = sql.join(conditions, sql` OR `);
-    const query = sql`
-      SELECT code, country, granularity,
-             ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 5) as geometry
-      FROM postal_codes
-      WHERE (${whereClause}) AND is_active = 'true'
-    `;
+    const query = sql.join(perCountryQueries, sql` UNION ALL `);
     const { rows } = await db.execute(query);
     return {
       type: "FeatureCollection",
