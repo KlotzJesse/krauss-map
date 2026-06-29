@@ -641,6 +641,12 @@ export const areaChanges = pgTable(
       table.entityId.asc().nullsLast().op("int4_ops")
     ),
 
+    index("idx_area_changes_area_undone").using(
+      "btree",
+      table.areaId.asc().nullsLast().op("int4_ops"),
+      table.isUndone.asc().nullsLast().op("text_ops")
+    ),
+
     // Foreign key to areas
 
     foreignKey({

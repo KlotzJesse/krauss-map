@@ -143,10 +143,13 @@ export function useMapInteractions({
     handleFeatureDeselect();
   });
 
+  // Ref-ify layers to avoid recreating handleDeckClick on every layer change
+  const layersRef = useRef(layers);
+  layersRef.current = layers;
+
   // deck.gl click handler — replaces useMapClickInteraction
   const handleDeckClick = useCallback(
     async (info: PickingInfo) => {
-      // Shape interactions take priority over postal-code clicks
       if (terraEventFiredRef.current || editingFeatureId) {
         return;
       }
@@ -155,7 +158,6 @@ export function useMapInteractions({
         return;
       }
 
-      // Get stored-format code ("D-12345" / "A-1010" / "CH-3800") for DB operations
       const storedCode = getFeatureStoredCode(info.object);
       if (!storedCode) {
         return;
@@ -174,10 +176,11 @@ export function useMapInteractions({
         return;
       }
 
-      const activeLayer = layers?.find((l) => l.id === activeLayerId);
+      const currentLayers = layersRef.current;
+      const activeLayer = currentLayers?.find((l) => l.id === activeLayerId);
       if (!activeLayer) {
         toast.warning(
-          `Aktiver Layer (ID: ${activeLayerId}) nicht gefunden. Verfügbare Layer: ${layers?.length || 0}`,
+          `Aktiver Layer (ID: ${activeLayerId}) nicht gefunden. Verfügbare Layer: ${currentLayers?.length || 0}`,
           { duration: 3000 }
         );
         return;
@@ -187,7 +190,6 @@ export function useMapInteractions({
         activeLayer.postalCodes?.map((pc) => pc.postalCode)
       );
 
-      // Normalize postal codes for comparison (handles both prefixed and non-prefixed)
       const normalizeCode = (code: string): string => {
         return code.replace(/[^0-9]/g, "").toUpperCase();
       };
@@ -198,8 +200,7 @@ export function useMapInteractions({
           (code) => normalizeCode(code) === normalizedStoredCode
         );
 
-      // Find layers (other than active) that also contain this PLZ
-      const otherLayersWithCode = (layers ?? []).filter(
+      const otherLayersWithCode = (currentLayers ?? []).filter(
         (l) =>
           l.id !== activeLayerId &&
           l.postalCodes?.some(
@@ -211,13 +212,11 @@ export function useMapInteractions({
 
       try {
         if (codeExists) {
-          // PLZ is in the active layer → remove it
           await removePostalCodesFromLayer(activeLayerId, [storedCode]);
           toast.success(`PLZ ${storedCode} aus Gebiet entfernt`, {
             duration: 2000,
           });
         } else if (otherLayersWithCode.length > 0 && onNeedsReassign) {
-          // PLZ belongs to a different layer → ask user to reassign or duplicate
           onNeedsReassign({
             x: info.x ?? 0,
             y: info.y ?? 0,
@@ -229,7 +228,6 @@ export function useMapInteractions({
             })),
           });
         } else {
-          // PLZ not in any layer → add to active layer
           await addPostalCodesToLayer(activeLayerId, [storedCode]);
           toast.success(`PLZ ${storedCode} zu Gebiet hinzugefügt`, {
             duration: 2000,
@@ -246,7 +244,6 @@ export function useMapInteractions({
       editingFeatureId,
       areaId,
       activeLayerId,
-      layers,
       addPostalCodesToLayer,
       removePostalCodesFromLayer,
       onNeedsReassign,

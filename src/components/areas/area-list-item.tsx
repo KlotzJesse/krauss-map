@@ -92,9 +92,13 @@ export const AreaListItem = memo(
     // Lazy-mount the DropdownMenu only after first hover to avoid
     // 33 Menu.Root instances on initial render
     const [dropdownMounted, setDropdownMounted] = useState(false);
+    const dropdownMountedRef = useRef(false);
     const handlePointerEnter = useCallback(() => {
-      if (!dropdownMounted) setDropdownMounted(true);
-    }, [dropdownMounted]);
+      if (!dropdownMountedRef.current) {
+        dropdownMountedRef.current = true;
+        setDropdownMounted(true);
+      }
+    }, []);
 
     useEffect(() => {
       if (isCurrentRoute && itemRef.current) {

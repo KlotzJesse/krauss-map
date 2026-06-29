@@ -369,7 +369,18 @@ export const LayerListItem = memo(function LayerListItem({
   }, [layer.id]);
   const isVisible = layer.isVisible !== "false";
   const currentOpacity = layer.opacity ?? 70;
-  const postalCodes = layer.postalCodes ?? [];
+  const rawPostalCodes = layer.postalCodes ?? [];
+  // Stabilize reference: only update when actual content changes (not just parent re-render)
+  const postalCodesRef = useRef(rawPostalCodes);
+  if (
+    rawPostalCodes.length !== postalCodesRef.current.length ||
+    rawPostalCodes[0]?.postalCode !== postalCodesRef.current[0]?.postalCode ||
+    rawPostalCodes[rawPostalCodes.length - 1]?.postalCode !==
+      postalCodesRef.current[rawPostalCodes.length - 1]?.postalCode
+  ) {
+    postalCodesRef.current = rawPostalCodes;
+  }
+  const postalCodes = postalCodesRef.current;
 
   const filteredCodes = useMemo(() => {
     const q = codeSearch.trim();

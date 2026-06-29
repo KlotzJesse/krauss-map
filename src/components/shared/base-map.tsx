@@ -1,4 +1,3 @@
-"use no memo";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import {
   Camera,
@@ -328,29 +327,30 @@ function PlzSearch({
       const key = resolveFeatureKey(code, country, featureIndex);
       const features = featureIndex?.get(key) ?? featureIndex?.get(code);
       if (!features || features.length === 0) return;
-      // Compute bounding box of first feature
-      const allCoords: number[][] = [];
+      let minLng = Infinity,
+        maxLng = -Infinity,
+        minLat = Infinity,
+        maxLat = -Infinity;
+      let found = false;
       for (const ft of features) {
         const geom = ft.geometry;
-        if (geom.type === "Polygon") {
-          for (const ring of geom.coordinates) {
-            for (const c of ring) allCoords.push(c);
-          }
-        } else if (geom.type === "MultiPolygon") {
-          for (const poly of geom.coordinates) {
-            for (const ring of poly) {
-              for (const c of ring) allCoords.push(c);
-            }
+        const rings: number[][][] =
+          geom.type === "Polygon"
+            ? geom.coordinates
+            : geom.type === "MultiPolygon"
+              ? geom.coordinates.flat()
+              : [];
+        for (const ring of rings) {
+          for (const c of ring) {
+            found = true;
+            if (c[0] < minLng) minLng = c[0];
+            if (c[0] > maxLng) maxLng = c[0];
+            if (c[1] < minLat) minLat = c[1];
+            if (c[1] > maxLat) maxLat = c[1];
           }
         }
       }
-      if (allCoords.length === 0) return;
-      const lngs = allCoords.map((c) => c[0]);
-      const lats = allCoords.map((c) => c[1]);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
+      if (!found) return;
       mapRef.fitBounds(
         [
           [minLng, minLat],

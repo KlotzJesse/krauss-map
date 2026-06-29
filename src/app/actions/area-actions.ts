@@ -423,30 +423,55 @@ export async function importAreaFromDataAction(
 
       newAreaId = newArea.id;
 
-      // Import tags: find or create each tag, then assign to area
+      // Import tags: batch-find existing, bulk-create missing, bulk-assign
       if (Array.isArray(raw.tags) && raw.tags.length > 0) {
-        for (const tagData of raw.tags) {
-          if (!tagData.name?.trim()) continue;
-          // Find existing tag by name (case-insensitive) or create it
-          const existing = await tx.query.areaTags.findFirst({
-            where: (t, { sql: s }) =>
-              s`lower(${t.name}) = lower(${tagData.name.trim()})`,
-          });
-          const tagId =
-            existing?.id ??
-            (
-              await tx
-                .insert(areaTags)
-                .values({
-                  name: tagData.name.trim(),
-                  color: tagData.color ?? "#6366f1",
-                })
-                .returning()
-            )[0].id;
-          await tx
-            .insert(areaTagAssignments)
-            .values({ areaId: newArea.id, tagId })
-            .onConflictDoNothing();
+        const validTags = raw.tags.filter(
+          (t: { name?: string }) => t.name?.trim()
+        );
+        if (validTags.length > 0) {
+          const tagNames = validTags.map(
+            (t: { name: string }) => t.name.trim().toLowerCase()
+          );
+          const existingTags = await tx
+            .select({ id: areaTags.id, name: areaTags.name })
+            .from(areaTags)
+            .where(sql`lower(${areaTags.name}) IN ${tagNames}`);
+          const existingByName = new Map(
+            existingTags.map((t) => [t.name.toLowerCase(), t.id])
+          );
+
+          const toCreate = validTags.filter(
+            (t: { name: string }) =>
+              !existingByName.has(t.name.trim().toLowerCase())
+          );
+          if (toCreate.length > 0) {
+            const created = await tx
+              .insert(areaTags)
+              .values(
+                toCreate.map((t: { name: string; color?: string }) => ({
+                  name: t.name.trim(),
+                  color: t.color ?? "#6366f1",
+                }))
+              )
+              .onConflictDoNothing()
+              .returning();
+            for (const c of created) {
+              existingByName.set(c.name.toLowerCase(), c.id);
+            }
+          }
+
+          const assignmentValues = validTags
+            .map((t: { name: string }) => {
+              const tagId = existingByName.get(t.name.trim().toLowerCase());
+              return tagId ? { areaId: newArea.id, tagId } : null;
+            })
+            .filter(Boolean) as { areaId: number; tagId: number }[];
+          if (assignmentValues.length > 0) {
+            await tx
+              .insert(areaTagAssignments)
+              .values(assignmentValues)
+              .onConflictDoNothing();
+          }
         }
       }
 
@@ -1293,27 +1318,30 @@ export async function balanceLayersAction(
     }
 
     const result = await db.transaction(async (tx) => {
-      // Fetch all layers with their postal codes
-      const layerData = await Promise.all(
-        layerIds.map(async (id) => {
-          const codes = await tx
-            .select({ postalCode: areaLayerPostalCodes.postalCode })
-            .from(areaLayerPostalCodes)
-            .where(eq(areaLayerPostalCodes.layerId, id));
-          return { id, codes: codes.map((r) => r.postalCode) };
-        })
-      );
-
-      // Verify all layers belong to the area
-      const validLayers = await tx
-        .select({ id: areaLayers.id })
-        .from(areaLayers)
-        .where(
-          and(eq(areaLayers.areaId, areaId), inArray(areaLayers.id, layerIds))
-        );
+      // Fetch all layer postal codes in a single query instead of N parallel queries
+      const [allRows, validLayers] = await Promise.all([
+        tx
+          .select({
+            layerId: areaLayerPostalCodes.layerId,
+            postalCode: areaLayerPostalCodes.postalCode,
+          })
+          .from(areaLayerPostalCodes)
+          .where(inArray(areaLayerPostalCodes.layerId, layerIds)),
+        tx
+          .select({ id: areaLayers.id })
+          .from(areaLayers)
+          .where(
+            and(eq(areaLayers.areaId, areaId), inArray(areaLayers.id, layerIds))
+          ),
+      ]);
       if (validLayers.length !== layerIds.length) {
         throw new Error("Some layers do not belong to this area");
       }
+
+      const layerData = layerIds.map((id) => ({
+        id,
+        codes: allRows.filter((r) => r.layerId === id).map((r) => r.postalCode),
+      }));
 
       const allCodes = layerData.flatMap((l) => l.codes);
       const totalCodes = allCodes.length;
@@ -1378,39 +1406,59 @@ export async function balanceLayersAction(
 
       if (moves.length === 0) return moves;
 
-      // Apply all moves in one transaction
+      // Batch all deletes grouped by fromLayerId
+      const deleteGroups = new Map<number, string[]>();
+      const insertGroups = new Map<number, string[]>();
       for (const move of moves) {
-        await tx
-          .delete(areaLayerPostalCodes)
-          .where(
-            and(
-              eq(areaLayerPostalCodes.layerId, move.fromLayerId),
-              inArray(areaLayerPostalCodes.postalCode, move.codes)
-            )
-          );
-        await tx
-          .insert(areaLayerPostalCodes)
-          .values(
-            move.codes.map((c) => ({ layerId: move.toLayerId, postalCode: c }))
-          )
-          .onConflictDoNothing();
-
-        // Record each move as a change
-        await recordChangeWithTx(tx, areaId, {
-          changeType: "remove_postal_codes",
-          entityType: "postal_code",
-          entityId: move.fromLayerId,
-          changeData: { postalCodes: move.codes, layerId: move.fromLayerId },
-          previousData: { postalCodes: move.codes },
-        });
-        await recordChangeWithTx(tx, areaId, {
-          changeType: "add_postal_codes",
-          entityType: "postal_code",
-          entityId: move.toLayerId,
-          changeData: { postalCodes: move.codes, layerId: move.toLayerId },
-          previousData: {},
-        });
+        const del = deleteGroups.get(move.fromLayerId) ?? [];
+        del.push(...move.codes);
+        deleteGroups.set(move.fromLayerId, del);
+        const ins = insertGroups.get(move.toLayerId) ?? [];
+        ins.push(...move.codes);
+        insertGroups.set(move.toLayerId, ins);
       }
+
+      await Promise.all([
+        ...Array.from(deleteGroups, ([layerId, codes]) =>
+          tx
+            .delete(areaLayerPostalCodes)
+            .where(
+              and(
+                eq(areaLayerPostalCodes.layerId, layerId),
+                inArray(areaLayerPostalCodes.postalCode, codes)
+              )
+            )
+        ),
+        ...Array.from(insertGroups, ([layerId, codes]) =>
+          tx
+            .insert(areaLayerPostalCodes)
+            .values(codes.map((c) => ({ layerId, postalCode: c })))
+            .onConflictDoNothing()
+        ),
+      ]);
+
+      // Batch record all changes
+      await Promise.all(
+        moves.flatMap((move) => [
+          recordChangeWithTx(tx, areaId, {
+            changeType: "remove_postal_codes",
+            entityType: "postal_code",
+            entityId: move.fromLayerId,
+            changeData: {
+              postalCodes: move.codes,
+              layerId: move.fromLayerId,
+            },
+            previousData: { postalCodes: move.codes },
+          }),
+          recordChangeWithTx(tx, areaId, {
+            changeType: "add_postal_codes",
+            entityType: "postal_code",
+            entityId: move.toLayerId,
+            changeData: { postalCodes: move.codes, layerId: move.toLayerId },
+            previousData: {},
+          }),
+        ])
+      );
 
       return moves;
     });

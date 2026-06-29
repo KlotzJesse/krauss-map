@@ -210,11 +210,21 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
     secondaryFillColor = secondaryEntries[0].color;
   } else {
     const n = secondaryEntries.length;
+    let sr = 0,
+      sg = 0,
+      sb = 0,
+      sa = 0;
+    for (const e of secondaryEntries) {
+      sr += e.color[0];
+      sg += e.color[1];
+      sb += e.color[2];
+      sa += e.color[3];
+    }
     secondaryFillColor = [
-      Math.round(secondaryEntries.reduce((s, e) => s + e.color[0], 0) / n),
-      Math.round(secondaryEntries.reduce((s, e) => s + e.color[1], 0) / n),
-      Math.round(secondaryEntries.reduce((s, e) => s + e.color[2], 0) / n),
-      Math.round(secondaryEntries.reduce((s, e) => s + e.color[3], 0) / n),
+      Math.round(sr / n),
+      Math.round(sg / n),
+      Math.round(sb / n),
+      Math.round(sa / n),
     ];
   }
 
@@ -431,38 +441,71 @@ export function useDeckLayers({
   // Stripe pattern texture atlas — created once per browser session (client-only)
   const stripeAtlas = useMemo(() => createStripePatternAtlas(), []);
 
-  // Resolve per-postal-code styles from all area layers (keyed by country:code)
+  // Resolve per-postal-code styles from all area layers (keyed by country:code).
+  // resolvedStyles is stored in a ref so that style-only changes (color, opacity,
+  // active layer) don't cause the deckLayers useMemo to rebuild all GeoJsonLayer
+  // instances. Instead, deck.gl's updateTriggers (keyed by resolvedStylesVersion)
+  // tell it to re-evaluate accessor functions which read from the ref.
+  const resolvedStylesRef = useRef<Map<string, ResolvedStyle>>(new Map());
+  const prevMultiLayerCodesRef = useRef<Set<string>>(new Set());
+  const prevSameColorCodesRef = useRef<Set<string>>(new Set());
   const {
-    map: resolvedStyles,
     version: resolvedStylesVersion,
     multiLayerCodes,
     sameColorCodes,
-  } = useMemo(
-    () => buildResolvedStyleMap(layers, activeLayerId, country, featureIndex),
-    [layers, activeLayerId, country, featureIndex]
-  );
+  } = useMemo(() => {
+    const result = buildResolvedStyleMap(
+      layers,
+      activeLayerId,
+      country,
+      featureIndex
+    );
+    resolvedStylesRef.current = result.map;
+    // Stabilize Set references when only styling changed (not membership)
+    const prevMulti = prevMultiLayerCodesRef.current;
+    if (
+      prevMulti.size === result.multiLayerCodes.size &&
+      [...result.multiLayerCodes].every((c) => prevMulti.has(c))
+    ) {
+      result.multiLayerCodes = prevMulti;
+    } else {
+      prevMultiLayerCodesRef.current = result.multiLayerCodes;
+    }
+    const prevSame = prevSameColorCodesRef.current;
+    if (
+      prevSame.size === result.sameColorCodes.size &&
+      [...result.sameColorCodes].every((c) => prevSame.has(c))
+    ) {
+      result.sameColorCodes = prevSame;
+    } else {
+      prevSameColorCodesRef.current = result.sameColorCodes;
+    }
+    return result;
+  }, [layers, activeLayerId, country, featureIndex]);
 
   // Stable set of composite keys (country:code) across all visible layers.
-  // Switching active layer changes styling but NOT which codes are in the set,
-  // so areaFeaturesData avoids unnecessary recomputation on layer switches.
+  // Ref-stabilized: returns same Set reference when only colors/opacity changed
+  // (not membership), preventing cascading FeatureCollection rebuilds.
+  const prevResolvedCodeSetRef = useRef<Set<string>>(new Set());
   const resolvedCodeSet = useMemo(() => {
     const codes = new Set<string>();
-    if (!layers) {
-      return codes;
-    }
+    if (!layers) return codes;
     for (const layer of layers) {
-      if (layer.isVisible !== "true") {
-        continue;
-      }
-      const postalCodes = layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
-      for (const rawCode of postalCodes) {
-        codes.add(resolveFeatureKey(rawCode, country, featureIndex));
+      if (layer.isVisible !== "true") continue;
+      for (const pc of layer.postalCodes ?? []) {
+        codes.add(resolveFeatureKey(pc.postalCode, country, featureIndex));
       }
     }
+    const prev = prevResolvedCodeSetRef.current;
+    if (prev.size === codes.size && [...codes].every((c) => prev.has(c))) {
+      return prev;
+    }
+    prevResolvedCodeSetRef.current = codes;
     return codes;
   }, [layers, country, featureIndex]);
 
   // All assigned codes (across all layers, regardless of visibility) — used for unassigned overlay.
+  const prevAllAssignedRef = useRef<Set<string>>(new Set());
   const allAssignedCodeSet = useMemo(() => {
     const codes = new Set<string>();
     if (!layers) return codes;
@@ -471,6 +514,11 @@ export function useDeckLayers({
         codes.add(resolveFeatureKey(pc.postalCode, country, featureIndex));
       }
     }
+    const prev = prevAllAssignedRef.current;
+    if (prev.size === codes.size && [...codes].every((c) => prev.has(c))) {
+      return prev;
+    }
+    prevAllAssignedRef.current = codes;
     return codes;
   }, [layers, country, featureIndex]);
 
@@ -929,18 +977,18 @@ export function useDeckLayers({
         getFillColor: (f) => {
           const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
           return code
-            ? (resolvedStyles.get(code)?.fillColor ?? [0, 0, 0, 0])
+            ? (resolvedStylesRef.current.get(code)?.fillColor ?? [0, 0, 0, 0])
             : [0, 0, 0, 0];
         },
         getLineColor: (f) => {
           const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
           return code
-            ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+            ? (resolvedStylesRef.current.get(code)?.lineColor ?? [0, 0, 0, 0])
             : [0, 0, 0, 0];
         },
         getLineWidth: (f) => {
           const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-          return code ? (resolvedStyles.get(code)?.lineWidth ?? 1.5) : 1.5;
+          return code ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5) : 1.5;
         },
         lineWidthUnits: "pixels" as const,
         pickable: false,
@@ -969,18 +1017,18 @@ export function useDeckLayers({
           getFillColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
-              ? (resolvedStyles.get(code)?.primaryFillColor ?? [0, 0, 0, 0])
+              ? (resolvedStylesRef.current.get(code)?.primaryFillColor ?? [0, 0, 0, 0])
               : [0, 0, 0, 0];
           },
           getLineColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
-              ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+              ? (resolvedStylesRef.current.get(code)?.lineColor ?? [0, 0, 0, 0])
               : [0, 0, 0, 0];
           },
           getLineWidth: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code ? (resolvedStyles.get(code)?.lineWidth ?? 1.5) : 1.5;
+            return code ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5) : 1.5;
           },
           lineWidthUnits: "pixels" as const,
           pickable: false,
@@ -1002,7 +1050,7 @@ export function useDeckLayers({
           getFillColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
-              ? (resolvedStyles.get(code)?.secondaryFillColor ?? [0, 0, 0, 0])
+              ? (resolvedStylesRef.current.get(code)?.secondaryFillColor ?? [0, 0, 0, 0])
               : [0, 0, 0, 0];
           },
           lineWidthUnits: "pixels" as const,
@@ -1036,7 +1084,7 @@ export function useDeckLayers({
           getLineColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             if (!code) return [0, 0, 0, 0];
-            const style = resolvedStyles.get(code);
+            const style = resolvedStylesRef.current.get(code);
             if (!style || style.layerLineColors.length === 0) {
               return [0, 0, 0, 0];
             }
@@ -1065,7 +1113,7 @@ export function useDeckLayers({
           getLineColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             if (!code) return [0, 0, 0, 0];
-            const style = resolvedStyles.get(code);
+            const style = resolvedStylesRef.current.get(code);
             if (!style || style.layerLineColors.length < 2) {
               return [0, 0, 0, 0];
             }
@@ -1094,7 +1142,7 @@ export function useDeckLayers({
           getLineColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             if (!code) return [0, 0, 0, 0];
-            const style = resolvedStyles.get(code);
+            const style = resolvedStylesRef.current.get(code);
             // Only show for 3+ layer codes
             if (!style || style.layerLineColors.length < 3) {
               return [0, 0, 0, 0];
@@ -1124,18 +1172,18 @@ export function useDeckLayers({
           getFillColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
-              ? (resolvedStyles.get(code)?.fillColor ?? [0, 0, 0, 0])
+              ? (resolvedStylesRef.current.get(code)?.fillColor ?? [0, 0, 0, 0])
               : [0, 0, 0, 0];
           },
           getLineColor: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
             return code
-              ? (resolvedStyles.get(code)?.lineColor ?? [0, 0, 0, 0])
+              ? (resolvedStylesRef.current.get(code)?.lineColor ?? [0, 0, 0, 0])
               : [0, 0, 0, 0];
           },
           getLineWidth: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code ? (resolvedStyles.get(code)?.lineWidth ?? 1.5) : 1.5;
+            return code ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5) : 1.5;
           },
           lineWidthUnits: "pixels" as const,
           pickable: false,
@@ -1189,7 +1237,6 @@ export function useDeckLayers({
     data,
     singleLayerFeaturesData,
     multiLayerFeaturesData,
-    resolvedStyles,
     resolvedStylesVersion,
     sameColorCodes,
     stripeAtlas,
