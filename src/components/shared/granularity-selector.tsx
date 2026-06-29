@@ -5,8 +5,8 @@ import {
   useState,
   useTransition,
   useOptimistic,
-  Activity,
   useMemo,
+  useEffect,
 } from "react";
 import { toast } from "sonner";
 
@@ -110,13 +110,20 @@ function useGranularityActions({
   );
   const [_isPending, startTransition] = useTransition();
 
+  const [baseGranularity, setBaseGranularity] = useState(currentGranularity);
+
   const [optimisticGranularity, updateOptimisticGranularity] = useOptimistic(
-    currentGranularity,
+    baseGranularity,
     (_state, newGranularity: string) => newGranularity
   );
 
+  // Sync base state when currentGranularity prop changes
+  useEffect(() => {
+    setBaseGranularity(currentGranularity);
+  }, [currentGranularity]);
+
   const handleGranularitySelect = (newGranularity: string) => {
-    if (newGranularity === currentGranularity) {
+    if (newGranularity === baseGranularity) {
       return;
     }
     if (!areaId) {
@@ -131,7 +138,7 @@ function useGranularityActions({
             changeAreaGranularityAction(
               areaId,
               newGranularity,
-              currentGranularity
+              baseGranularity
             ),
           createToastCallbacks({
             loadingMessage: `Wechsle zu ${newLabel}...`,
@@ -141,6 +148,7 @@ function useGranularityActions({
         );
         const result = await action();
         if (result?.success) {
+          setBaseGranularity(newGranularity);
           onGranularityChange(newGranularity);
         }
       });
@@ -149,7 +157,7 @@ function useGranularityActions({
 
     if (
       wouldGranularityChangeCauseDataLoss(
-        currentGranularity,
+        baseGranularity,
         newGranularity,
         hasPostalCodes
       )
@@ -159,7 +167,7 @@ function useGranularityActions({
       return;
     }
 
-    if (isGranularityChangeCompatible(currentGranularity, newGranularity)) {
+    if (isGranularityChangeCompatible(baseGranularity, newGranularity)) {
       startTransition(async () => {
         updateOptimisticGranularity(newGranularity);
         const newLabel = getGranularityLabel(newGranularity);
@@ -168,7 +176,7 @@ function useGranularityActions({
             changeAreaGranularityAction(
               areaId,
               newGranularity,
-              currentGranularity
+              baseGranularity
             ),
           createToastCallbacks({
             loadingMessage: `Wechsle zu ${newLabel} PLZ-Ansicht...`,
@@ -188,6 +196,7 @@ function useGranularityActions({
         );
         const result = await action();
         if (result?.success && result.data) {
+          setBaseGranularity(newGranularity);
           onGranularityChange(newGranularity);
         }
       });
@@ -210,7 +219,7 @@ function useGranularityActions({
           changeAreaGranularityAction(
             areaId,
             pendingGranularity,
-            currentGranularity
+            baseGranularity
           ),
         createToastCallbacks({
           loadingMessage: `Wechsle zu ${newLabel}...`,
@@ -229,6 +238,7 @@ function useGranularityActions({
       );
       const result = await action();
       if (result?.success) {
+        setBaseGranularity(pendingGranularity);
         onGranularityChange(pendingGranularity);
       }
       setShowConfirmDialog(false);
@@ -328,27 +338,17 @@ export function GranularitySelector({
                       <div className="flex items-center justify-between w-full">
                         <span>{option.label}</span>
                         <div className="flex items-center gap-1 ml-2">
-                          <Activity
-                            mode={status === "current" ? "visible" : "hidden"}
-                          >
+                          {status === "current" && (
                             <Badge variant="secondary" className="text-xs px-1">
                               Aktiv
                             </Badge>
-                          </Activity>
-                          <Activity
-                            mode={
-                              status === "destructive" ? "visible" : "hidden"
-                            }
-                          >
+                          )}
+                          {status === "destructive" && (
                             <AlertTriangle className="h-3 w-3 text-destructive" />
-                          </Activity>
-                          <Activity
-                            mode={
-                              status === "compatible" ? "visible" : "hidden"
-                            }
-                          >
+                          )}
+                          {status === "compatible" && (
                             <Info className="h-3 w-3 text-green-600" />
-                          </Activity>
+                          )}
                         </div>
                       </div>
                     </TooltipTrigger>

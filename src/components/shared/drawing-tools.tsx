@@ -165,10 +165,7 @@ import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
-import type {
-  ChangeSummary,
-  VersionSummary,
-} from "@/lib/schema/schema";
+import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
 import type { Layer } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import { storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
@@ -936,8 +933,9 @@ function useDrawingToolsActions({
   country,
   postalCodesData,
 }: UseDrawingToolsActionsProps) {
+  const [baseLayers, setBaseLayers] = useState(layers);
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
-    layers,
+    baseLayers,
     (
       currentLayers: Layer[],
       update: {
@@ -964,6 +962,11 @@ function useDrawingToolsActions({
       return currentLayers;
     }
   );
+
+  // Sync base state when layers prop changes (e.g., on refetch)
+  useEffect(() => {
+    setBaseLayers(layers);
+  }, [layers]);
 
   // Stable ref so callbacks that iterate all layers don't include optimisticLayers
   // in their dep array (which would recreate them on every layer change,
@@ -1040,6 +1043,11 @@ function useDrawingToolsActions({
       orderIndex: data.orderIndex,
     });
     if (result.success) {
+      // Update base state to persist optimistic change
+      setBaseLayers((prev) => [
+        ...prev,
+        { ...result.data, id: Date.now() } as Layer,
+      ]);
       onLayerUpdate?.();
       return result.data;
     }
@@ -1055,6 +1063,10 @@ function useDrawingToolsActions({
     }
     const result = await updateLayerAction(areaId, layerId, data);
     if (result.success) {
+      // Update base state to persist optimistic change
+      setBaseLayers((prev) =>
+        prev.map((l) => (l.id === layerId ? { ...l, ...data } : l))
+      );
       onLayerUpdate?.();
     } else {
       throw new Error(result.error);
@@ -1067,6 +1079,8 @@ function useDrawingToolsActions({
     }
     const result = await deleteLayerAction(areaId, layerId);
     if (result.success) {
+      // Update base state to persist optimistic change
+      setBaseLayers((prev) => prev.filter((l) => l.id !== layerId));
       onLayerUpdate?.();
     } else {
       throw new Error(result.error);
@@ -2308,12 +2322,26 @@ const LayerManagementSection = memo(function LayerManagementSection({
     [optimisticLayers]
   );
 
-  // PLZ cross-layer finder: when search looks like a 5-digit postal code
+  // PLZ cross-layer finder: when search looks like a postal code (with or without prefix)
   const plzSearchResults = useMemo(() => {
     const q = layerSearch.trim();
-    if (!/^\d{5}$/.test(q)) return null;
+    if (!/^(D|A|CH|DE|AT)?-?\d{1,5}$/.test(q)) return null;
+    
+    // Normalize the search query for comparison
+    const normalizeCode = (code: string): string => {
+      return code.replace(/[^0-9]/g, "").toUpperCase();
+    };
+    const normalizedQ = normalizeCode(q);
+    if (normalizedQ.length < 1) return null;
+
     return optimisticLayers
-      .filter((l) => l.postalCodes?.some((pc) => pc.postalCode === q))
+      .filter((l) =>
+        l.postalCodes?.some(
+          (pc) =>
+            normalizeCode(pc.postalCode) === normalizedQ ||
+            pc.postalCode === q
+        )
+      )
       .map((l) => ({ id: l.id, name: l.name, color: l.color ?? "#6366f1" }));
   }, [layerSearch, optimisticLayers]);
 
@@ -3314,9 +3342,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
               </p>
             ) : isDragDisabled ? (
               groupedLayers.flatMap(({ name: gName, layers: gLayers }) => [
-                ...(gName !== null
-                  ? [renderGroupHeader(gName, gLayers)]
-                  : []),
+                ...(gName !== null ? [renderGroupHeader(gName, gLayers)] : []),
                 ...(collapsedGroups.has(gName ?? "") && gName !== null
                   ? []
                   : gLayers.map((layer) => (
@@ -4834,7 +4860,12 @@ function DrawingToolsImpl({
               <HelpCircle className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Tastaturkürzel <kbd className="ml-1 px-1 py-0.5 text-[10px] font-mono bg-muted border rounded">?</kbd></p>
+              <p>
+                Tastaturkürzel{" "}
+                <kbd className="ml-1 px-1 py-0.5 text-[10px] font-mono bg-muted border rounded">
+                  ?
+                </kbd>
+              </p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -4851,7 +4882,12 @@ function DrawingToolsImpl({
               <X className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Ausblenden <kbd className="ml-1 px-1 py-0.5 text-[10px] font-mono bg-muted border rounded">H</kbd></p>
+              <p>
+                Ausblenden{" "}
+                <kbd className="ml-1 px-1 py-0.5 text-[10px] font-mono bg-muted border rounded">
+                  H
+                </kbd>
+              </p>
             </TooltipContent>
           </Tooltip>
         </CardAction>

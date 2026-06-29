@@ -1,8 +1,8 @@
 "use client";
 
 import { Diamond, Loader2Icon, X } from "lucide-react";
-import { Activity } from "react";
 
+import { Activity } from "@/components/ui/activity";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 

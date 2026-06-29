@@ -1,8 +1,8 @@
 "use client";
 
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Activity } from "react";
 
+import { Activity } from "@/components/ui/activity";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,

@@ -1,28 +1,11 @@
 "use client";
 
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-
-import {
-  addPostalCodesToLayerAction,
-  removePostalCodesFromLayerAction,
-  radiusSearchAction,
-  drivingRadiusSearchAction,
-} from "@/app/actions/area-actions";
-import { Button } from "@/components/ui/button";
-import { useGeodata } from "@/lib/hooks/use-geodata";
-import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
-import type {
-  ChangeSummary,
-  VersionSummary,
-} from "@/lib/schema/schema";
-import type { Layer } from "@/lib/types/area-types";
-
 import { FileUpIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   useState,
   useTransition,
-  useOptimistic,
   use,
   useCallback,
   useMemo,
@@ -32,6 +15,13 @@ import {
 import { toast } from "sonner";
 
 import {
+  addPostalCodesToLayerAction,
+  removePostalCodesFromLayerAction,
+  radiusSearchAction,
+  drivingRadiusSearchAction,
+} from "@/app/actions/area-actions";
+import { Button } from "@/components/ui/button";
+import {
   AddressAutocompleteErrorBoundary,
   MapErrorBoundary,
 } from "@/components/ui/error-boundaries";
@@ -39,7 +29,11 @@ import {
   AddressAutocompleteSkeleton,
   MapSkeleton,
 } from "@/components/ui/loading-skeletons";
+import { useGeodata } from "@/lib/hooks/use-geodata";
+import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
+import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
+import type { Layer } from "@/lib/types/area-types";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import { extractRawCode } from "@/lib/utils/deck-gl-utils";
@@ -131,40 +125,71 @@ function usePostalCodesLayerActions({
   initialUndoRedoStatus,
 }: PostalCodesLayerActionsOptions) {
   const [_isPending, startTransition] = useTransition();
+  const restoreDroppedQueryParams = useStableCallback(
+    (searchBeforeAction: string) => {
+      if (!searchBeforeAction) {
+        return;
+      }
+      queueMicrotask(() => {
+        const currentUrl = new URL(window.location.href);
+        if (currentUrl.search === searchBeforeAction) {
+          return;
+        }
+        currentUrl.search = searchBeforeAction;
+        window.history.replaceState(
+          window.history.state,
+          "__nuqs__",
+          currentUrl.toString()
+        );
+      });
+    }
+  );
 
-  const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
-    initialLayers,
+  const [optimisticLayers, setOptimisticLayers] = useState(initialLayers);
+  const [optimisticUndoRedo, setOptimisticUndoRedo] = useState(
+    initialUndoRedoStatus
+  );
+
+  const applyLayerUpdate = useStableCallback(
     (
       currentLayers: Layer[],
-      update: {
-        type: "add" | "remove";
-        layerId: number;
-        postalCodes: string[];
-      }
+      update: { type: "add" | "remove"; layerId: number; postalCodes: string[] }
     ) =>
       currentLayers.map((layer) => {
-        if (layer.id === update.layerId) {
-          const currentCodes =
-            layer.postalCodes?.map((pc) => pc.postalCode) || [];
-          let newCodes: string[];
-          if (update.type === "add") {
-            newCodes = [...new Set([...currentCodes, ...update.postalCodes])];
-          } else {
-            const removeSet = new Set(update.postalCodes);
-            newCodes = currentCodes.filter((code) => !removeSet.has(code));
-          }
+        if (layer.id !== update.layerId) {
+          return layer;
+        }
+
+        const currentCodes =
+          layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
+        
+        if (update.type === "add") {
+          const newCodes = [...new Set([...currentCodes, ...update.postalCodes])];
           return {
             ...layer,
             postalCodes: newCodes.map((code) => ({ postalCode: code })),
           };
         }
-        return layer;
+
+        // For removal, normalize postal codes to handle prefix variations
+        // e.g., "26781" should match "D-26781" in storage
+        const normalizedRemoveCodes = new Set(
+          update.postalCodes.map((code) => code.replace(/[^0-9]/g, ""))
+        );
+        const newCodes = currentCodes.filter((code) => {
+          const normalized = code.replace(/[^0-9]/g, "");
+          return !normalizedRemoveCodes.has(normalized);
+        });
+
+        return {
+          ...layer,
+          postalCodes: newCodes.map((code) => ({ postalCode: code })),
+        };
       })
   );
 
-  const [optimisticUndoRedo, updateOptimisticUndoRedo] = useOptimistic(
-    initialUndoRedoStatus,
-    (current, _action: "increment") => ({
+  const incrementUndoRedo = useStableCallback(
+    (current: typeof initialUndoRedoStatus) => ({
       ...current,
       undoCount: current.undoCount + 1,
       redoCount: 0,
@@ -177,6 +202,8 @@ function usePostalCodesLayerActions({
   // don't recreate on every render and break React.memo on children.
   const optimisticLayersRef = useRef(optimisticLayers);
   optimisticLayersRef.current = optimisticLayers;
+  const optimisticUndoRedoRef = useRef(optimisticUndoRedo);
+  optimisticUndoRedoRef.current = optimisticUndoRedo;
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -188,19 +215,32 @@ function usePostalCodesLayerActions({
         toast.error("Kein Gebiet ausgewählt");
         return;
       }
+      const searchBeforeAction = window.location.search;
       startTransition(async () => {
-        updateOptimisticLayers({ type: "add", layerId, postalCodes });
-        updateOptimisticUndoRedo("increment");
+        const previousLayers = optimisticLayersRef.current;
+        const previousUndoRedo = optimisticUndoRedoRef.current;
+        setOptimisticLayers((current) =>
+          applyLayerUpdate(current, { type: "add", layerId, postalCodes })
+        );
+        setOptimisticUndoRedo((current) => incrementUndoRedo(current));
         try {
           const result = await addPostalCodesToLayerAction(
             areaId,
             layerId,
-            postalCodes
+            postalCodes,
+            undefined,
+            { skipInvalidate: true }
           );
           if (!result.success) {
+            setOptimisticLayers(previousLayers);
+            setOptimisticUndoRedo(previousUndoRedo);
             toast.error(result.error);
+            return;
           }
+          restoreDroppedQueryParams(searchBeforeAction);
         } catch (error) {
+          setOptimisticLayers(previousLayers);
+          setOptimisticUndoRedo(previousUndoRedo);
           let message = "Fehler beim Hinzufügen der PLZ";
           if (error instanceof Error) {
             message = error.message;
@@ -217,19 +257,32 @@ function usePostalCodesLayerActions({
         toast.error("Kein Gebiet ausgewählt");
         return;
       }
+      const searchBeforeAction = window.location.search;
       startTransition(async () => {
-        updateOptimisticLayers({ type: "remove", layerId, postalCodes });
-        updateOptimisticUndoRedo("increment");
+        const previousLayers = optimisticLayersRef.current;
+        const previousUndoRedo = optimisticUndoRedoRef.current;
+        setOptimisticLayers((current) =>
+          applyLayerUpdate(current, { type: "remove", layerId, postalCodes })
+        );
+        setOptimisticUndoRedo((current) => incrementUndoRedo(current));
         try {
           const result = await removePostalCodesFromLayerAction(
             areaId,
             layerId,
-            postalCodes
+            postalCodes,
+            undefined,
+            { skipInvalidate: true }
           );
           if (!result.success) {
+            setOptimisticLayers(previousLayers);
+            setOptimisticUndoRedo(previousUndoRedo);
             toast.error(result.error);
+            return;
           }
+          restoreDroppedQueryParams(searchBeforeAction);
         } catch (error) {
+          setOptimisticLayers(previousLayers);
+          setOptimisticUndoRedo(previousUndoRedo);
           let message = "Fehler beim Entfernen der PLZ";
           if (error instanceof Error) {
             message = error.message;

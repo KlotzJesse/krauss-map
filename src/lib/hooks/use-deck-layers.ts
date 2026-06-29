@@ -583,10 +583,27 @@ export function useDeckLayers({
   const hoverTooltipRefInternal = useRef<HTMLDivElement | null>(null);
   const effectiveTooltipRef = hoverTooltipRef ?? hoverTooltipRefInternal;
 
-  const layersRef = useRef(layers);
-  layersRef.current = layers;
-  const countryRef = useRef(country);
-  countryRef.current = country;
+  const lastTooltipCodeRef = useRef<string | null>(null);
+  const lastTooltipLayersKeyRef = useRef<string>("");
+  const layerMembershipByPostalCode = useMemo(() => {
+    const memberships = new Map<
+      string,
+      Array<{ name: string; color: string }>
+    >();
+    for (const layer of layers ?? []) {
+      const layerInfo = { name: layer.name, color: layer.color };
+      for (const postalCodeEntry of layer.postalCodes ?? []) {
+        const postalCode = postalCodeEntry.postalCode;
+        const current = memberships.get(postalCode);
+        if (current) {
+          current.push(layerInfo);
+        } else {
+          memberships.set(postalCode, [layerInfo]);
+        }
+      }
+    }
+    return memberships;
+  }, [layers]);
 
   const showTooltip = useCallback(
     (
@@ -600,6 +617,15 @@ export function useDeckLayers({
       tooltipEl.style.left = `${x + 12}px`;
       tooltipEl.style.top = `${y - 10}px`;
       tooltipEl.style.display = "block";
+      const layersKey = matchingLayers
+        .map((layer) => `${layer.name}:${layer.color}`)
+        .join("|");
+      if (
+        lastTooltipCodeRef.current === code &&
+        lastTooltipLayersKeyRef.current === layersKey
+      ) {
+        return;
+      }
       const codeEl = tooltipEl.querySelector<HTMLElement>(
         "[data-tooltip-code]"
       );
@@ -623,6 +649,8 @@ export function useDeckLayers({
           layersEl.appendChild(row);
         }
       }
+      lastTooltipCodeRef.current = code;
+      lastTooltipLayersKeyRef.current = layersKey;
     },
     // effectiveTooltipRef is a stable ref object — intentionally excluded from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -632,6 +660,8 @@ export function useDeckLayers({
   const hideTooltip = useCallback(() => {
     const tooltipEl = effectiveTooltipRef.current;
     if (tooltipEl) tooltipEl.style.display = "none";
+    lastTooltipCodeRef.current = null;
+    lastTooltipLayersKeyRef.current = "";
     // effectiveTooltipRef is a stable ref object — intentionally excluded from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -684,11 +714,8 @@ export function useDeckLayers({
           // code is a composite featureIndex key like "CH:3800" — convert to stored
           // format so it matches pc.postalCode stored in the DB as "CH-3800"
           const storedCode = compositeKeyToStoredCode(code);
-          const matchingLayers = (layersRef.current ?? [])
-            .filter((l) =>
-              l.postalCodes?.some((pc) => pc.postalCode === storedCode)
-            )
-            .map((l) => ({ name: l.name, color: l.color }));
+          const matchingLayers =
+            layerMembershipByPostalCode.get(storedCode) ?? [];
           // Update tooltip via direct DOM — no React re-render
           showTooltip(
             info.x ?? 0,
@@ -709,7 +736,15 @@ export function useDeckLayers({
         }
       }
     },
-    [isCursorMode, mapCanvasRef, showTooltip, hideTooltip, overlayRef, beforeId]
+    [
+      isCursorMode,
+      mapCanvasRef,
+      showTooltip,
+      hideTooltip,
+      overlayRef,
+      beforeId,
+      layerMembershipByPostalCode,
+    ]
   );
 
   // Clear hover state when leaving cursor mode (e.g., switching to drawing)
@@ -828,8 +863,7 @@ export function useDeckLayers({
         lineJointRounded: true,
         lineCapRounded: true,
         pickable: isCursorMode,
-        autoHighlight: isCursorMode,
-        highlightColor: [37, 99, 235, 50],
+        autoHighlight: false,
       })
     );
 

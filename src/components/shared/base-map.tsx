@@ -28,12 +28,12 @@ import {
   useEffect,
   useRef,
   useState,
-  Activity,
 } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Map, useMap, type MapRef } from "react-map-gl/maplibre";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+import { Activity } from "@/components/ui/activity";
 import {
   DrawingToolsErrorBoundary,
   MapErrorBoundary,
@@ -454,6 +454,8 @@ const MapInner = memo(function MapInner({
   const { current: mapRef } = useMap();
   const rawMapRef = useRef<maplibregl.Map | null>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rightPanActiveRef = useRef(false);
+  const rightPanLastPointRef = useRef<[number, number] | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const setMapCenterZoom = useSetMapCenterZoom();
   const [isGeolocating, setIsGeolocating] = useState(false);
@@ -563,6 +565,60 @@ const MapInner = memo(function MapInner({
       setIsMapLoaded(false);
     };
   }, [mapRef]);
+
+  // Enable right-button drag panning while rotation is disabled.
+  useEffect(() => {
+    const map = rawMapRef.current;
+    const canvas = mapCanvasRef.current;
+    if (!isMapLoaded || !map || !canvas) {
+      return;
+    }
+
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.button !== 2) {
+        return;
+      }
+      event.preventDefault();
+      rightPanActiveRef.current = true;
+      rightPanLastPointRef.current = [event.clientX, event.clientY];
+      canvas.style.cursor = "grabbing";
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!rightPanActiveRef.current || !rightPanLastPointRef.current) {
+        return;
+      }
+      event.preventDefault();
+      const [lastX, lastY] = rightPanLastPointRef.current;
+      const dx = event.clientX - lastX;
+      const dy = event.clientY - lastY;
+      if (dx !== 0 || dy !== 0) {
+        map.panBy([dx, dy], { animate: false });
+        rightPanLastPointRef.current = [event.clientX, event.clientY];
+      }
+    };
+
+    const stopRightPan = () => {
+      if (!rightPanActiveRef.current) {
+        return;
+      }
+      rightPanActiveRef.current = false;
+      rightPanLastPointRef.current = null;
+      canvas.style.cursor = "grab";
+    };
+
+    canvas.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", stopRightPan);
+    window.addEventListener("blur", stopRightPan);
+
+    return () => {
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", stopRightPan);
+      window.removeEventListener("blur", stopRightPan);
+    };
+  }, [isMapLoaded]);
 
   // URL state management (narrow: only layer switching, not view state)
   const { setActiveLayer, isLayerPending } = useActiveLayerState();
@@ -1359,6 +1415,8 @@ const BaseMapComponent = ({
             onMove={handleMove}
             mapStyle={currentMapStyle}
             style={MAP_STYLE}
+            dragRotate={false}
+            onContextMenu={(event) => event.preventDefault()}
             minZoom={3}
             maxZoom={18}
             canvasContextAttributes={{ preserveDrawingBuffer: true }}

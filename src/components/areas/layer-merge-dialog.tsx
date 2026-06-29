@@ -1,7 +1,7 @@
 "use client";
 
 import { IconGitMerge } from "@tabler/icons-react";
-import { useState, useOptimistic, useTransition } from "react";
+import { useState, useOptimistic, useTransition, useEffect } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,8 +121,9 @@ export function LayerMergeDialog({
   const [_isPending, startTransition] = useTransition();
 
   // Optimistic merge state
+  const [baseLayers, setBaseLayers] = useState(layers);
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
-    layers,
+    baseLayers,
     (
       state,
       {
@@ -131,6 +132,11 @@ export function LayerMergeDialog({
       }: { targetId: number; sourceIds: number[] }
     ) => state.filter((layer) => !sourceIds.includes(layer.id))
   );
+
+  // Sync base state when layers prop changes
+  useEffect(() => {
+    setBaseLayers(layers);
+  }, [layers]);
 
   const toggleLayer = (layerId: number) => {
     const newSet = new Set(selectedLayers);
@@ -164,6 +170,11 @@ export function LayerMergeDialog({
           success: `${sourceIds.length} Gebiete erfolgreich zusammengeführt`,
           error: "Fehler beim Zusammenführen der Gebiete",
         });
+
+        // Update base state to persist optimistic change
+        setBaseLayers((prev) =>
+          prev.filter((layer) => !sourceIds.includes(layer.id))
+        );
 
         setSelectedLayers(new Set());
         setTargetLayerId("");

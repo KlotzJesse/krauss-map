@@ -1,5 +1,5 @@
 import { useQueryState } from "nuqs";
-import { useEffect, useMemo, useReducer, useRef, useTransition } from "react";
+import { useEffect, useMemo, useReducer, useRef } from "react";
 
 import { DACH_CENTER, DACH_ZOOM } from "../config/countries";
 import { useStableCallback } from "../hooks/use-stable-callback";
@@ -67,10 +67,9 @@ export function useMapView() {
 
 // Narrow hook: only active layer ID and setter (client-only, no server re-render)
 export function useActiveLayerState() {
-  const [isLayerPending, startLayerTransition] = useTransition();
   const [activeLayerId, setActiveLayerId] = useQueryState("activeLayerId", {
     shallow: true,
-    startTransition: startLayerTransition,
+    history: "replace",
   });
 
   const parsedActiveLayerId = useMemo(
@@ -79,10 +78,14 @@ export function useActiveLayerState() {
   );
 
   const setActiveLayer = useStableCallback((id: number | null) => {
-    setActiveLayerId(id !== null ? id.toString() : null);
+    void setActiveLayerId(id !== null ? id.toString() : null);
   });
 
-  return { activeLayerId: parsedActiveLayerId, isLayerPending, setActiveLayer };
+  return {
+    activeLayerId: parsedActiveLayerId,
+    isLayerPending: false,
+    setActiveLayer,
+  };
 }
 
 // Writes mapView directly to URL — bypasses nuqs to prevent any re-render

@@ -3,10 +3,7 @@ import { memo } from "react";
 
 import { BaseMap } from "@/components/shared/base-map";
 import type { CountryCode } from "@/lib/config/countries";
-import type {
-  ChangeSummary,
-  VersionSummary,
-} from "@/lib/schema/schema";
+import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
 import type { Layer } from "@/lib/types/area-types";
 
 const EMPTY_ARRAY: never[] = [];

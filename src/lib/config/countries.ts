@@ -153,7 +153,10 @@ export function formatWithPrefix(code: string, country: CountryCode): string {
  * For countries with an altPrefix (e.g. AT): returns "AT-1010 / A-1010".
  * For other countries returns the single prefix form (e.g. "D-12345", "CH-8001").
  */
-export function formatWithAllPrefixes(code: string, country: CountryCode): string {
+export function formatWithAllPrefixes(
+  code: string,
+  country: CountryCode
+): string {
   const config = getCountryConfig(country);
   const formatted = formatPostalCodeForCountry(code, country);
   const primary = `${config.prefix}-${formatted}`;

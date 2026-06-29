@@ -11,6 +11,9 @@ import type { CountryCode } from "@/lib/config/countries";
 import { DEFAULT_COUNTRY, isValidCountryCode } from "@/lib/config/countries";
 import { getAreaMeta, getVersion } from "@/lib/db/data-functions";
 
+export const instant = true;
+export const prefetch = "allow-runtime";
+
 const VersionIndicator = dynamic(() =>
   import("@/components/shared/version-indicator").then((m) => ({
     default: m.VersionIndicator,

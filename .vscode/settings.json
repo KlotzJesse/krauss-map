@@ -20,5 +20,6 @@
   },
   "typescript.tsdk": "node_modules/typescript/lib",
   "oxc.enable": false,
-  "oxc.enable.oxlint": true
+  "oxc.enable.oxlint": true,
+  "typescript.native-preview.tsdk": "node_modules\\@typescript\\native-preview"
 }

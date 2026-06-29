@@ -12,9 +12,9 @@ export async function GET(request: Request) {
   const data = await getCountryShapesData(country);
 
   const json = JSON.stringify(data);
-  const stream = new Blob([json]).stream().pipeThrough(
-    new CompressionStream("gzip")
-  );
+  const stream = new Blob([json])
+    .stream()
+    .pipeThrough(new CompressionStream("gzip"));
 
   return new Response(stream, {
     headers: {

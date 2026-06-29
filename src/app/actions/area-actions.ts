@@ -5,7 +5,7 @@ import type { Route } from "next";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { type CountryCode, formatWithPrefix } from "../../lib/config/countries";
+import { type CountryCode, formatWithPrefix, detectCountryFromCode } from "../../lib/config/countries";
 import { db } from "../../lib/db";
 import {
   areas,
@@ -1114,7 +1114,8 @@ export async function addPostalCodesToLayerAction(
   areaId: number,
   layerId: number,
   postalCodes: string[],
-  createdBy?: string
+  createdBy?: string,
+  options?: { skipInvalidate?: boolean }
 ): ServerActionResponse {
   try {
     if (!areaId || !layerId || !postalCodes || postalCodes.length === 0) {
@@ -1170,9 +1171,11 @@ export async function addPostalCodesToLayerAction(
       return { success: true };
     }
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-change-history`);
+    if (!options?.skipInvalidate) {
+      updateTag(`area-${areaId}-layers`);
+      updateTag(`area-${areaId}-undo-redo`);
+      updateTag(`area-${areaId}-change-history`);
+    }
 
     return { success: true };
   } catch (error) {
@@ -1189,7 +1192,8 @@ export async function removePostalCodesFromLayerAction(
 
   postalCodes: string[],
 
-  createdBy?: string
+  createdBy?: string,
+  options?: { skipInvalidate?: boolean }
 ): ServerActionResponse {
   try {
     if (!areaId || !layerId || !postalCodes || postalCodes.length === 0) {
@@ -1249,9 +1253,11 @@ export async function removePostalCodesFromLayerAction(
       return { success: true };
     }
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-change-history`);
+    if (!options?.skipInvalidate) {
+      updateTag(`area-${areaId}-layers`);
+      updateTag(`area-${areaId}-undo-redo`);
+      updateTag(`area-${areaId}-change-history`);
+    }
 
     return { success: true };
   } catch (error) {
@@ -2209,11 +2215,19 @@ export interface PlzSearchResult {
 export async function searchPostalCodeInAreasAction(
   postalCode: string
 ): ServerActionResponse<PlzSearchResult[]> {
-  const code = postalCode.trim().toUpperCase();
-  if (!code) return { success: true, data: [] };
+  const input = postalCode.trim();
+  if (!input) return { success: true, data: [] };
+
   try {
+    // Detect country prefix and format with prefix for normalized search
+    const { country, code: cleanCode } = detectCountryFromCode(input);
+    const searchCountry = (country ?? "DE") as CountryCode;
+    const formattedCode = formatWithPrefix(cleanCode, searchCountry);
+
+    // Also try unprefixed version for backward compatibility
+    // In case there are legacy rows stored without prefix
     const { rows } = await db.execute<Record<string, unknown>>(sql`
-      SELECT
+      SELECT DISTINCT
         a.id AS "areaId",
         a.name AS "areaName",
         al.id AS "layerId",
@@ -2224,7 +2238,7 @@ export async function searchPostalCodeInAreasAction(
       FROM area_layer_postal_codes alpc
       INNER JOIN area_layers al ON al.id = alpc.layer_id
       INNER JOIN areas a ON a.id = al.area_id
-      WHERE alpc.postal_code = ${code}
+      WHERE (alpc.postal_code = ${formattedCode} OR alpc.postal_code = ${cleanCode})
         AND a.is_archived != 'true'
       ORDER BY a.name, al.order_index
     `);

@@ -243,8 +243,18 @@ function useAddressAutocomplete({
     if (!layers || layers.length === 0) {
       return [];
     }
+    // Normalize postal code for comparison - handle both prefixed and unprefixed formats
+    const normalizeCode = (code: string): string => {
+      return code.replace(/[^0-9]/g, "").toUpperCase();
+    };
+    const normalizedInput = normalizeCode(postalCode);
+
     return layers.filter((layer) =>
-      layer.postalCodes?.some((pc) => pc.postalCode === postalCode)
+      layer.postalCodes?.some(
+        (pc) =>
+          normalizeCode(pc.postalCode) === normalizedInput ||
+          pc.postalCode === postalCode
+      )
     );
   });
 
@@ -773,12 +783,12 @@ export const AddressAutocompleteEnhanced = memo(
       return () => clearTimeout(timeoutId);
     }, [open]);
 
-    return (
+     return (
       <>
         <div className="relative w-full" ref={wrapperRef}>
-          {open ? (
-            <div className="absolute left-0 top-full w-full z-50 mt-1">
-              <div className="bg-background border rounded-md shadow-sm">
+          {open && (
+            <div className="absolute left-0 top-0 w-full z-50 pointer-events-auto">
+              <div className="bg-background border rounded-md shadow-lg">
                 <Command>
                   <CommandInput
                     ref={inputRef}
@@ -968,24 +978,25 @@ export const AddressAutocompleteEnhanced = memo(
                 </Command>
               </div>
             </div>
-          ) : (
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={false}
-              aria-controls="address-search-listbox"
-              className={`w-full justify-start shadow-sm bg-background h-8 ${triggerClassName}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                dispatch({ type: "SET_OPEN", open: true });
-                setTimeout(() => inputRef.current?.focus(), 0);
-              }}
-            >
-              <ChevronsUpDownIcon className="h-4 w-4 shrink-0 opacity-50" />
-              <span className="ml-2 text-muted-foreground">
-                PLZ, Adresse, Stadt oder Region suchen...
-              </span>
-            </Button>
+          )}
+          {!open && (
+           <Button
+             variant="outline"
+             role="combobox"
+             aria-expanded={false}
+             aria-controls="address-search-listbox"
+             className={`w-full justify-start shadow-sm bg-background h-8 ${triggerClassName}`}
+             onClick={(e) => {
+               e.stopPropagation();
+               dispatch({ type: "SET_OPEN", open: true });
+               setTimeout(() => inputRef.current?.focus(), 0);
+             }}
+           >
+             <ChevronsUpDownIcon className="h-4 w-4 shrink-0 opacity-50" />
+             <span className="ml-2 text-muted-foreground">
+               PLZ, Adresse, Stadt oder Region suchen...
+             </span>
+           </Button>
           )}
         </div>
 

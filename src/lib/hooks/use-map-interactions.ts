@@ -186,13 +186,27 @@ export function useMapInteractions({
       const existingCodesSet = new Set(
         activeLayer.postalCodes?.map((pc) => pc.postalCode)
       );
-      const codeExists = existingCodesSet.has(storedCode);
+      
+      // Normalize postal codes for comparison (handles both prefixed and non-prefixed)
+      const normalizeCode = (code: string): string => {
+        return code.replace(/[^0-9]/g, "").toUpperCase();
+      };
+      const normalizedStoredCode = normalizeCode(storedCode);
+      const codeExists =
+        existingCodesSet.has(storedCode) ||
+        Array.from(existingCodesSet).some(
+          (code) => normalizeCode(code) === normalizedStoredCode
+        );
 
       // Find layers (other than active) that also contain this PLZ
       const otherLayersWithCode = (layers ?? []).filter(
         (l) =>
           l.id !== activeLayerId &&
-          l.postalCodes?.some((pc) => pc.postalCode === storedCode)
+          l.postalCodes?.some(
+            (pc) =>
+              pc.postalCode === storedCode ||
+              normalizeCode(pc.postalCode) === normalizedStoredCode
+          )
       );
 
       try {

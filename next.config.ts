@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
-
+  partialPrefetching: true,
   cacheComponents: true,
 
   reactCompiler: true,
@@ -25,7 +25,6 @@ const nextConfig: NextConfig = {
     authInterrupts: true,
     turbopackFileSystemCacheForDev: true,
     viewTransition: true,
-    instantNavigationDevToolsToggle: true,
     // dynamic:30 = Router Cache serves recently-visited area pages from client cache for 30s,
     // eliminating the server round-trip on back/forward and quick area switches.
     // static:30 = prefetched static shells reused for 30s.

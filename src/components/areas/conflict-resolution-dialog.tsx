@@ -9,9 +9,10 @@ import {
   IconWand,
 } from "@tabler/icons-react";
 import { X } from "lucide-react";
-import { useState, useEffect, useCallback, Activity } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import { updateLayerAction } from "@/app/actions/layer-actions";
+import { Activity } from "@/components/ui/activity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

@@ -233,9 +233,10 @@ export const NavAreas = memo(function NavAreas({
       ? String(currentAreaId)
       : null;
 
+  const [baseAreas, setBaseAreas] = useState(areas);
   // Optimistic state for areas
   const [optimisticAreas, updateOptimisticAreas] = useOptimistic(
-    areas,
+    baseAreas,
     (
       currentAreas: AreaSummary[],
       update: {
@@ -263,6 +264,11 @@ export const NavAreas = memo(function NavAreas({
       return currentAreas;
     }
   );
+
+  // Sync base state when areas prop changes
+  useEffect(() => {
+    setBaseAreas(areas);
+  }, [areas]);
 
   const [showArchived, setShowArchived] = useReducer((v: boolean) => !v, false);
   const [areaSearch, setAreaSearch] = useState("");
@@ -462,7 +468,7 @@ export const NavAreas = memo(function NavAreas({
     }
 
     // Don't save if name hasn't changed
-    const area = areas.find((a) => a.id === areaId);
+    const area = baseAreas.find((a) => a.id === areaId);
     if (area && editingAreaName.trim() === area.name) {
       handleCancelRename();
       return;
@@ -488,6 +494,12 @@ export const NavAreas = memo(function NavAreas({
       );
 
       if (result && "success" in result && result.success) {
+        // Update base state to persist optimistic change
+        setBaseAreas((prev) =>
+          prev.map((a) =>
+            a.id === areaId ? { ...a, name: editingAreaName.trim() } : a
+          )
+        );
         dispatch({ type: "FINISH_EDIT" });
       }
     });
@@ -531,15 +543,28 @@ export const NavAreas = memo(function NavAreas({
           id: area.id,
           isArchived: archive ? "true" : "false",
         });
-        await executeAction(archiveAreaAction(area.id, archive), {
-          loading: archive
-            ? `Archiviere "${area.name}"...`
-            : `Stelle "${area.name}" wieder her...`,
-          success: archive
-            ? `"${area.name}" archiviert`
-            : `"${area.name}" wiederhergestellt`,
-          error: "Fehler beim Archivieren",
-        });
+        const result = await executeAction(
+          archiveAreaAction(area.id, archive),
+          {
+            loading: archive
+              ? `Archiviere "${area.name}"...`
+              : `Stelle "${area.name}" wieder her...`,
+            success: archive
+              ? `"${area.name}" archiviert`
+              : `"${area.name}" wiederhergestellt`,
+            error: "Fehler beim Archivieren",
+          }
+        );
+        if (result && "success" in result && result.success) {
+          // Update base state to persist optimistic change
+          setBaseAreas((prev) =>
+            prev.map((a) =>
+              a.id === area.id
+                ? { ...a, isArchived: archive ? "true" : "false" }
+                : a
+            )
+          );
+        }
       });
     },
     [startTransition]
@@ -638,11 +663,17 @@ export const NavAreas = memo(function NavAreas({
       const areaName = areaToDelete.name;
 
       // Server action now handles redirect
-      await executeAction(deleteAreaAction(areaToDelete.id), {
+      const result = await executeAction(deleteAreaAction(areaToDelete.id), {
         loading: `Lösche "${areaName}"...`,
         success: `"${areaName}" gelöscht`,
         error: "Löschen fehlgeschlagen",
       });
+
+      if (result && "success" in result && result.success) {
+        // Update base state to persist optimistic change
+        setBaseAreas((prev) => prev.filter((a) => a.id !== areaToDelete.id));
+      }
+
       dispatch({ type: "FINISH_DELETING" });
     });
   };
@@ -995,7 +1026,6 @@ export const NavAreas = memo(function NavAreas({
               ))}
             </SidebarMenu>
           )}
-
         </SidebarGroupContent>
       </SidebarGroup>
 

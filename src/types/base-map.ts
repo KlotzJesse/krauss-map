@@ -1,10 +1,7 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import type { CountryCode } from "@/lib/config/countries";
-import type {
-  VersionSummary,
-  ChangeSummary,
-} from "@/lib/schema/schema";
+import type { VersionSummary, ChangeSummary } from "@/lib/schema/schema";
 import type { Layer } from "@/lib/types/area-types";
 
 export interface BaseMapProps {
