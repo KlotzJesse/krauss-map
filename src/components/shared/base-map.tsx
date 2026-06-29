@@ -226,7 +226,7 @@ function MapLegend({
   );
 
   return (
-    <div className="absolute bottom-20 right-4 z-10 print:hidden">
+    <div className="absolute bottom-22.5 right-2.5 z-10 print:hidden">
       <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-md overflow-hidden max-w-[200px]">
         <button
           type="button"
@@ -456,6 +456,7 @@ const MapInner = memo(function MapInner({
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightPanActiveRef = useRef(false);
   const rightPanLastPointRef = useRef<[number, number] | null>(null);
+  const isMapInteractingRef = useRef(false);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const setMapCenterZoom = useSetMapCenterZoom();
   const [isGeolocating, setIsGeolocating] = useState(false);
@@ -593,7 +594,7 @@ const MapInner = memo(function MapInner({
       const dx = event.clientX - lastX;
       const dy = event.clientY - lastY;
       if (dx !== 0 || dy !== 0) {
-        map.panBy([dx, dy], { animate: false });
+        map.panBy([-dx, -dy], { animate: false });
         rightPanLastPointRef.current = [event.clientX, event.clientY];
       }
     };
@@ -653,7 +654,7 @@ const MapInner = memo(function MapInner({
   // deck.gl layers (polygons, fills, preview) — hover pushed directly to overlay, no React re-render
   const hoverTooltipRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
-  const { deckLayers, onHover, unassignedCount } = useDeckLayers({
+  const { deckLayers, onHover, clearHover, unassignedCount } = useDeckLayers({
     data,
     statesData,
     countryShapesData,
@@ -669,7 +670,30 @@ const MapInner = memo(function MapInner({
     showUnassigned,
     hoverTooltipRef,
     overlayRef,
+    isMapInteractingRef,
   });
+
+  // Track map interaction state for hover suppression during pan/zoom.
+  // Placed after useDeckLayers so clearHover is available.
+  const clearHoverRef = useRef(clearHover);
+  clearHoverRef.current = clearHover;
+  useEffect(() => {
+    const map = rawMapRef.current;
+    if (!isMapLoaded || !map) return;
+    const onStart = () => {
+      isMapInteractingRef.current = true;
+      clearHoverRef.current();
+    };
+    const onEnd = () => {
+      isMapInteractingRef.current = false;
+    };
+    map.on("movestart", onStart);
+    map.on("moveend", onEnd);
+    return () => {
+      map.off("movestart", onStart);
+      map.off("moveend", onEnd);
+    };
+  }, [isMapLoaded]);
 
   // MapLibre native labels (hybrid escape hatch)
   useMapLabels({
@@ -848,6 +872,19 @@ const MapInner = memo(function MapInner({
     startTransition(() => interactions.deselectEditingFeature())
   );
 
+  // When a drawing tool is active, let TerraDraw own the cursor.
+  // deck.gl's default getCursor forces "grab"/"grabbing" on the container,
+  // overriding the canvas cursor TerraDraw sets.
+  const isCursorModeRef = useRef(interactions.isCursorMode);
+  isCursorModeRef.current = interactions.isCursorMode;
+  const getDeckCursor = useCallback(
+    ({ isDragging }: { isDragging: boolean }) => {
+      if (!isCursorModeRef.current) return "unset";
+      return isDragging ? "grabbing" : "grab";
+    },
+    []
+  );
+
   return (
     <>
       <DeckGLOverlay
@@ -855,6 +892,7 @@ const MapInner = memo(function MapInner({
         onHover={onHover}
         onClick={interactions.handleDeckClick}
         overlayRef={overlayRef}
+        getCursor={getDeckCursor}
       />
 
       {/* Floating Drawing Toolbar - Center bottom */}
@@ -873,77 +911,72 @@ const MapInner = memo(function MapInner({
         />
       )}
 
-      <Activity
-        mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
-      >
-        <div
-          className="absolute top-4 left-4 bottom-4 z-10 flex flex-col"
-          role="region"
-          aria-label="Kartentools-Panel"
+      {/* Left panel area: DrawingTools card + toolbar sit in a flex row so buttons are always flush */}
+      <div className="absolute top-4 left-4 bottom-4 z-10 flex items-start gap-0 print:hidden">
+        {/* DrawingTools panel or collapse button */}
+        <Activity
+          mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
         >
-          <DrawingToolsErrorBoundary>
-            <Suspense fallback={<DrawingToolsSkeleton />}>
-              <DrawingTools
-                currentMode={interactions.currentDrawingMode}
-                onModeChange={interactions.handleDrawingModeChange}
-                onClearAll={handleClearAll}
-                onToggleVisibility={handleHideTools}
-                granularity={granularity}
-                onGranularityChange={onGranularityChange}
-                postalCodesData={data}
-                pendingPostalCodes={interactions.pendingPostalCodes}
-                onAddPending={interactions.addPendingToSelection}
-                onRemovePending={interactions.removePendingFromSelection}
-                areaId={areaId ?? undefined}
-                areaName={areaName}
-                areaDescription={areaDescription}
-                areaTags={areaTags}
-                activeLayerId={activeLayerId}
-                onLayerSelect={setActiveLayer}
-                isLayerSwitchPending={isLayerPending}
-                addPostalCodesToLayer={addPostalCodesToLayer}
-                removePostalCodesFromLayer={removePostalCodesFromLayer}
-                layers={layers}
-                isViewingVersion={isViewingVersion}
-                country={country}
-                versionId={versionId}
-                versions={versions}
-                changes={changes}
-                onOpenConflicts={handleOpenConflicts}
-                undoRedoStatus={initialUndoRedoStatus}
-                onPreviewPostalCode={onSetPreviewPostalCode}
-                onZoomToLayer={onZoomToLayer}
-                onHighlightCodes={setHighlightedConflictCodes}
-              />
-            </Suspense>
-          </DrawingToolsErrorBoundary>
-        </div>
-      </Activity>
-
-      <Activity
-        mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}
-      >
-        <div
-          className="absolute top-4 left-4 z-10"
-          role="region"
-          aria-label="Kartentools-Panel"
-        >
-          <ToggleButton
-            onClick={handleShowTools}
-            title="Kartentools anzeigen"
-            ariaLabel="Kartentools-Panel anzeigen"
+          <div
+            className="flex flex-col h-full"
+            role="region"
+            aria-label="Kartentools-Panel"
           >
-            <PanelLeftOpen className="h-4 w-4" />
-          </ToggleButton>
-        </div>
-      </Activity>
+            <DrawingToolsErrorBoundary>
+              <Suspense fallback={<DrawingToolsSkeleton />}>
+                <DrawingTools
+                  currentMode={interactions.currentDrawingMode}
+                  onModeChange={interactions.handleDrawingModeChange}
+                  onClearAll={handleClearAll}
+                  onToggleVisibility={handleHideTools}
+                  granularity={granularity}
+                  onGranularityChange={onGranularityChange}
+                  postalCodesData={data}
+                  pendingPostalCodes={interactions.pendingPostalCodes}
+                  onAddPending={interactions.addPendingToSelection}
+                  onRemovePending={interactions.removePendingFromSelection}
+                  areaId={areaId ?? undefined}
+                  areaName={areaName}
+                  areaDescription={areaDescription}
+                  areaTags={areaTags}
+                  activeLayerId={activeLayerId}
+                  onLayerSelect={setActiveLayer}
+                  isLayerSwitchPending={isLayerPending}
+                  addPostalCodesToLayer={addPostalCodesToLayer}
+                  removePostalCodesFromLayer={removePostalCodesFromLayer}
+                  layers={layers}
+                  isViewingVersion={isViewingVersion}
+                  country={country}
+                  versionId={versionId}
+                  versions={versions}
+                  changes={changes}
+                  onOpenConflicts={handleOpenConflicts}
+                  undoRedoStatus={initialUndoRedoStatus}
+                  onPreviewPostalCode={onSetPreviewPostalCode}
+                  onZoomToLayer={onZoomToLayer}
+                  onHighlightCodes={setHighlightedConflictCodes}
+                />
+              </Suspense>
+            </DrawingToolsErrorBoundary>
+          </div>
+        </Activity>
 
-      {/* Map toolbar — always top, shifts right when Kartentools panel is open */}
-      <div
-        className={`absolute z-10 flex flex-col gap-1 print:hidden transition-all duration-200 top-4 ${
-          interactions.isDrawingToolsVisible ? "left-[413px]" : "left-14"
-        }`}
-      >
+        <Activity
+          mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}
+        >
+          <div role="region" aria-label="Kartentools-Panel">
+            <ToggleButton
+              onClick={handleShowTools}
+              title="Kartentools anzeigen"
+              ariaLabel="Kartentools-Panel anzeigen"
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+            </ToggleButton>
+          </div>
+        </Activity>
+
+        {/* Map toolbar — flush right of card/collapse button */}
+        <div className="flex flex-col gap-1 ml-1">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -1079,6 +1112,7 @@ const MapInner = memo(function MapInner({
           }}
           onJumpTo={handleBookmarkJump}
         />
+      </div>
       </div>
 
       {/* PLZ search overlay — top right */}

@@ -118,10 +118,10 @@ async function main() {
         }
 
         // Read data from sheet
-        const data = XLSX.utils.sheet_to_json<Record<string, string>>(ws, {
+        const data = XLSX.utils.sheet_to_json(ws, {
           header: 1,
           raw: false,
-        }) as string[][];
+        }) as unknown as string[][];
 
         if (data.length < 2) continue; // Only header, no data
 

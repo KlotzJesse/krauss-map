@@ -396,6 +396,8 @@ interface UseDeckLayersProps {
    * so MapInner does not re-render on every hover boundary crossing.
    */
   overlayRef?: MutableRefObject<MapboxOverlay | null>;
+  /** Ref that is true while the map is being panned/zoomed — hover picking is skipped. */
+  isMapInteractingRef?: RefObject<boolean>;
 }
 
 /**
@@ -418,6 +420,7 @@ export function useDeckLayers({
   showUnassigned = false,
   hoverTooltipRef,
   overlayRef,
+  isMapInteractingRef,
 }: UseDeckLayersProps) {
   // Hover tracking — ref only, no state. Hover updates go directly to overlay.setProps().
   const hoveredCodeRef = useRef<string | null>(null);
@@ -672,6 +675,12 @@ export function useDeckLayers({
         return;
       }
 
+      // Skip hover processing while the map is being panned/zoomed — avoids
+      // expensive GeoJsonLayer creation + overlay.setProps() on every frame.
+      if (isMapInteractingRef?.current) {
+        return;
+      }
+
       const canvas = mapCanvasRef.current;
       if (info.object) {
         const feature = info.object as Feature<Polygon | MultiPolygon>;
@@ -747,7 +756,8 @@ export function useDeckLayers({
     ]
   );
 
-  // Clear hover state when leaving cursor mode (e.g., switching to drawing)
+  // Clear hover state when leaving cursor mode (e.g., switching to drawing).
+  // Don't touch canvas cursor here — TerraDraw owns it during drawing modes.
   useEffect(() => {
     if (!isCursorMode) {
       hoveredCodeRef.current = null;
@@ -755,12 +765,17 @@ export function useDeckLayers({
         overlayRef.current.setProps({ layers: deckLayersRef.current });
       }
       hideTooltip();
-      const canvas = mapCanvasRef.current;
-      if (canvas) {
-        canvas.style.cursor = "grab";
-      }
     }
-  }, [isCursorMode, mapCanvasRef, hideTooltip, overlayRef]);
+  }, [isCursorMode, hideTooltip, overlayRef]);
+
+  const clearHover = useCallback(() => {
+    if (hoveredCodeRef.current === null) return;
+    hoveredCodeRef.current = null;
+    if (overlayRef?.current) {
+      overlayRef.current.setProps({ layers: deckLayersRef.current });
+    }
+    hideTooltip();
+  }, [overlayRef, hideTooltip]);
 
   // State boundaries layer — isolated since statesData never changes after load
   const stateBoundariesLayer = useMemo(
@@ -1204,6 +1219,7 @@ export function useDeckLayers({
   return {
     deckLayers,
     onHover,
+    clearHover,
     unassignedCount,
   } as const;
 }

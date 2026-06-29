@@ -127,17 +127,28 @@ export function useTerraDraw({
           new TerraDrawFreehandMode({
             pointerDistance: 40,
             minDistance: 10,
+            cursors: { start: "crosshair", close: "pointer" },
           }),
-          new TerraDrawCircleMode(),
+          new TerraDrawCircleMode({
+            cursors: { start: "cell" },
+          }),
           new TerraDrawPolygonMode({
             pointerDistance: 40,
+            cursors: { start: "crosshair", close: "pointer" },
           }),
-          new TerraDrawPointMode(),
+          new TerraDrawPointMode({
+            cursors: { create: "copy" },
+          }),
           new TerraDrawLineStringMode({
             pointerDistance: 40,
+            cursors: { start: "crosshair", close: "pointer" },
           }),
-          new TerraDrawRectangleMode(),
-          new TerraDrawAngledRectangleMode(),
+          new TerraDrawRectangleMode({
+            cursors: { start: "nw-resize" },
+          }),
+          new TerraDrawAngledRectangleMode({
+            cursors: { start: "ne-resize" },
+          }),
           new TerraDrawSectorMode(),
         ],
       });
@@ -240,16 +251,11 @@ export function useTerraDraw({
 
       // Now handle mode switching
       if (isEnabled && mode && mode !== "cursor") {
-        // Disable map interactions BEFORE setting mode
-
         map.dragPan.disable();
         map.scrollZoom.disable();
         map.boxZoom.disable();
         map.doubleClickZoom.disable();
         map.keyboard.disable();
-        map.getContainer().style.cursor = "crosshair";
-
-        // Set the drawing mode
 
         drawRef.current.setMode(mode);
 
@@ -268,7 +274,7 @@ export function useTerraDraw({
         map.boxZoom.enable();
         map.doubleClickZoom.enable();
         map.keyboard.enable();
-        map.getContainer().style.cursor = "";
+        map.getCanvas().style.cursor = "";
 
         onStopEvent();
       }
@@ -306,7 +312,7 @@ export function useTerraDraw({
           currentMap.boxZoom.enable();
           currentMap.doubleClickZoom.enable();
           currentMap.keyboard.enable();
-          currentMap.getContainer().style.cursor = "";
+          currentMap.getCanvas().style.cursor = "";
         }
       } catch (error) {
         // Only log if map is still alive (unexpected error vs expected removal race)

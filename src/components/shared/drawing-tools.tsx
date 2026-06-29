@@ -4649,12 +4649,12 @@ function DrawingToolsImpl({
     <Card
       role="region"
       aria-label="Kartentools-Panel"
-      className="gap-2 max-w-md min-w-80 flex flex-col max-h-full min-h-0"
+      className="gap-1.5 max-w-md min-w-80 flex flex-col max-h-full min-h-0 py-3"
     >
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Kartentools</CardTitle>
+      <CardHeader className="pb-0 gap-0.5">
+        <CardTitle className="text-base leading-tight">Kartentools</CardTitle>
         {areaName && (
-          <div className="mt-0.5">
+          <div>
             <p className="text-xs font-medium text-foreground truncate">
               {areaName}
             </p>
@@ -4677,29 +4677,22 @@ function DrawingToolsImpl({
                 }}
                 placeholder="Beschreibung hinzufügen…"
                 rows={2}
-                className="w-full mt-0.5 text-xs text-muted-foreground bg-muted border border-input rounded px-1.5 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full text-xs text-muted-foreground bg-muted border border-input rounded px-1.5 py-0.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
               />
-            ) : (
+            ) : descDraft ? (
               <button
                 type="button"
                 onClick={() => {
                   if (areaId && !isViewingVersion) setDescEditing(true);
                 }}
                 title={isViewingVersion ? undefined : "Beschreibung bearbeiten"}
-                className="w-full text-left mt-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors truncate"
+                className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors truncate"
               >
-                {descDraft ||
-                  (isViewingVersion ? (
-                    ""
-                  ) : (
-                    <span className="italic opacity-50">
-                      Beschreibung hinzufügen…
-                    </span>
-                  ))}
+                {descDraft}
               </button>
-            )}
+            ) : null}
             {areaId && !isViewingVersion && (
-              <div className="mt-1.5">
+              <div className="mt-1">
                 <AreaTagsManager
                   areaId={areaId}
                   initialTags={initialAreaTags}
