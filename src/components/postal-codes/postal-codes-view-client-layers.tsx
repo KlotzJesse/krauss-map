@@ -162,9 +162,11 @@ function usePostalCodesLayerActions({
 
         const currentCodes =
           layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
-        
+
         if (update.type === "add") {
-          const newCodes = [...new Set([...currentCodes, ...update.postalCodes])];
+          const newCodes = [
+            ...new Set([...currentCodes, ...update.postalCodes]),
+          ];
           return {
             ...layer,
             postalCodes: newCodes.map((code) => ({ postalCode: code })),

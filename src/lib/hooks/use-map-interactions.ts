@@ -186,7 +186,7 @@ export function useMapInteractions({
       const existingCodesSet = new Set(
         activeLayer.postalCodes?.map((pc) => pc.postalCode)
       );
-      
+
       // Normalize postal codes for comparison (handles both prefixed and non-prefixed)
       const normalizeCode = (code: string): string => {
         return code.replace(/[^0-9]/g, "").toUpperCase();

@@ -783,9 +783,9 @@ export const AddressAutocompleteEnhanced = memo(
       return () => clearTimeout(timeoutId);
     }, [open]);
 
-     return (
+    return (
       <>
-        <div className="relative w-full" ref={wrapperRef}>
+        <div className="relative w-full min-h-8" ref={wrapperRef}>
           {open && (
             <div className="absolute left-0 top-0 w-full z-50 pointer-events-auto">
               <div className="bg-background border rounded-md shadow-lg">
@@ -980,23 +980,23 @@ export const AddressAutocompleteEnhanced = memo(
             </div>
           )}
           {!open && (
-           <Button
-             variant="outline"
-             role="combobox"
-             aria-expanded={false}
-             aria-controls="address-search-listbox"
-             className={`w-full justify-start shadow-sm bg-background h-8 ${triggerClassName}`}
-             onClick={(e) => {
-               e.stopPropagation();
-               dispatch({ type: "SET_OPEN", open: true });
-               setTimeout(() => inputRef.current?.focus(), 0);
-             }}
-           >
-             <ChevronsUpDownIcon className="h-4 w-4 shrink-0 opacity-50" />
-             <span className="ml-2 text-muted-foreground">
-               PLZ, Adresse, Stadt oder Region suchen...
-             </span>
-           </Button>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={false}
+              aria-controls="address-search-listbox"
+              className={`w-full justify-start shadow-sm bg-background h-8 ${triggerClassName}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: "SET_OPEN", open: true });
+                setTimeout(() => inputRef.current?.focus(), 0);
+              }}
+            >
+              <ChevronsUpDownIcon className="h-4 w-4 shrink-0 opacity-50" />
+              <span className="ml-2 text-muted-foreground">
+                PLZ, Adresse, Stadt oder Region suchen...
+              </span>
+            </Button>
           )}
         </div>
 

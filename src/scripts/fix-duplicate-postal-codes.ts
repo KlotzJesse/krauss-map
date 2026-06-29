@@ -1,19 +1,23 @@
 /**
  * Find and merge duplicate postal codes (with/without country prefixes).
- * 
+ *
  * Problem: Some postal codes are stored as both "26781" and "D-26781"
  * This causes:
  * - Duplicates in the database
  * - Search failures
  * - UI inconsistencies
- * 
+ *
  * Solution: Normalize all codes to prefixed format and merge duplicates
  */
 
 import { sql } from "drizzle-orm";
-import { db } from "../lib/db";
-import { detectCountryFromCode, formatWithPrefix } from "../lib/config/countries";
+
+import {
+  detectCountryFromCode,
+  formatWithPrefix,
+} from "../lib/config/countries";
 import type { CountryCode } from "../lib/config/countries";
+import { db } from "../lib/db";
 
 async function main() {
   console.log("🔍 Finding duplicate postal codes...\n");
@@ -29,7 +33,9 @@ async function main() {
     GROUP BY postal_code
   `);
 
-  console.log(`Found ${rawNumericCodes.rows.length} different raw numeric codes`);
+  console.log(
+    `Found ${rawNumericCodes.rows.length} different raw numeric codes`
+  );
   console.log("Sample raw codes:", rawNumericCodes.rows.slice(0, 5));
 
   // Step 2: Find all prefixed codes (D-, A-, CH-)
@@ -67,7 +73,9 @@ async function main() {
     GROUP BY r.postal_code, p.postal_code
   `);
 
-  console.log(`\n⚠️  Found ${duplicates.rows.length} duplicate pairs (numeric + prefixed)\n`);
+  console.log(
+    `\n⚠️  Found ${duplicates.rows.length} duplicate pairs (numeric + prefixed)\n`
+  );
 
   if (duplicates.rows.length > 0) {
     console.log("Duplicates to merge:");
@@ -84,7 +92,9 @@ async function main() {
   // Step 4: Merge strategy
   console.log("\n📋 Merge Strategy:");
   console.log("  1. Keep prefixed version (e.g., 'D-26781')");
-  console.log("  2. Redirect all numeric version (e.g., '26781') rows to prefixed");
+  console.log(
+    "  2. Redirect all numeric version (e.g., '26781') rows to prefixed"
+  );
   console.log("  3. Delete raw numeric rows to avoid duplicates\n");
 
   // Step 5: Execute merge - update all references from numeric to prefixed, then delete numeric
@@ -111,10 +121,7 @@ async function main() {
       LIMIT 1
     `);
 
-    if (
-      numericResult.rows.length > 0 &&
-      prefixedResult.rows.length > 0
-    ) {
+    if (numericResult.rows.length > 0 && prefixedResult.rows.length > 0) {
       // Update any foreign key references from numeric to prefixed
       // Then delete the numeric rows
       const deleteResult = await db.execute(sql`

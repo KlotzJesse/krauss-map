@@ -5,7 +5,11 @@ import type { Route } from "next";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { type CountryCode, formatWithPrefix, detectCountryFromCode } from "../../lib/config/countries";
+import {
+  type CountryCode,
+  formatWithPrefix,
+  detectCountryFromCode,
+} from "../../lib/config/countries";
 import { db } from "../../lib/db";
 import {
   areas,

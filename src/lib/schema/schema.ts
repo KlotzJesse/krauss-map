@@ -559,6 +559,14 @@ export const areaLayerPostalCodes = pgTable(
     ),
 
     foreignKey({
+      columns: [table.layerId],
+
+      foreignColumns: [areaLayers.id],
+
+      name: "fk_area_layer_postal_codes_layer_id",
+    }).onDelete("cascade"),
+
+    foreignKey({
       columns: [table.postalCodeId],
 
       foreignColumns: [postalCodes.id],

@@ -2326,7 +2326,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
   const plzSearchResults = useMemo(() => {
     const q = layerSearch.trim();
     if (!/^(D|A|CH|DE|AT)?-?\d{1,5}$/.test(q)) return null;
-    
+
     // Normalize the search query for comparison
     const normalizeCode = (code: string): string => {
       return code.replace(/[^0-9]/g, "").toUpperCase();
@@ -2338,8 +2338,7 @@ const LayerManagementSection = memo(function LayerManagementSection({
       .filter((l) =>
         l.postalCodes?.some(
           (pc) =>
-            normalizeCode(pc.postalCode) === normalizedQ ||
-            pc.postalCode === q
+            normalizeCode(pc.postalCode) === normalizedQ || pc.postalCode === q
         )
       )
       .map((l) => ({ id: l.id, name: l.name, color: l.color ?? "#6366f1" }));
