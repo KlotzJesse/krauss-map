@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useTransition } from "react";
 
 import type { Layer } from "../types/area-types";
 
@@ -23,13 +23,10 @@ export interface ConflictGroup {
 
 export function useLayerConflicts(layers: Layer[]) {
   const [conflicts, setConflicts] = useState<ConflictingPostalCode[]>([]);
-  const [isDetecting, setIsDetecting] = useState(false);
+  const [isDetecting, startDetection] = useTransition();
 
   const detectConflicts = useCallback(() => {
-    setIsDetecting(true);
-
-    // Small delay to show loading state
-    setTimeout(() => {
+    startDetection(() => {
       const postalCodeMap = new Map<string, Layer[]>();
 
       for (const layer of layers) {
@@ -59,8 +56,7 @@ export function useLayerConflicts(layers: Layer[]) {
       }
 
       setConflicts(conflictsList);
-      setIsDetecting(false);
-    }, 100);
+    });
   }, [layers]);
 
   /** Conflicts grouped by their exact layer-pair (or layer-set). Sorted largest group first. */

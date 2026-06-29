@@ -210,11 +210,9 @@ export async function createVersionAction(
 
     await clearUndoRedoStacksAction(areaId);
 
-    updateTag("versions");
     updateTag(`area-${areaId}-versions`);
     updateTag(`area-${areaId}`);
     updateTag(`area-${areaId}-undo-redo`);
-    updateTag("version-info");
     updateTag(`area-${areaId}-version-info`);
 
     return { success: true, data: result };
@@ -495,8 +493,11 @@ export async function compareVersionsAction(
       return (
         l1.color !== l2.color ||
         l1.opacity !== l2.opacity ||
-        JSON.stringify(l1.postalCodes.sort()) !==
-          JSON.stringify(l2.postalCodes.sort())
+        l1.postalCodes.length !== l2.postalCodes.length ||
+          (() => {
+            const s = new Set(l1.postalCodes);
+            return l2.postalCodes.some((c) => !s.has(c));
+          })()
       );
     });
 

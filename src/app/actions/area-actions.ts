@@ -145,23 +145,13 @@ export async function updateAreaAction(
   createdBy?: string
 ): ServerActionResponse {
   try {
-    // Get previous state
-
-    const previousArea = await db.query.areas.findFirst({
-      where: eq(areas.id, id),
-    });
-
-    await db
-
-      .update(areas)
-
-      .set({
-        ...data,
-
-        updatedAt: new Date().toISOString(),
-      })
-
-      .where(eq(areas.id, id));
+    const [previousArea] = await Promise.all([
+      db.query.areas.findFirst({ where: eq(areas.id, id) }),
+      db
+        .update(areas)
+        .set({ ...data, updatedAt: new Date().toISOString() })
+        .where(eq(areas.id, id)),
+    ]);
 
     // Record change
 

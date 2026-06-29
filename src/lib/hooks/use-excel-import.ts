@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useTransition } from "react";
 
 import {
   parseSpreadsheetFile,
@@ -22,7 +22,6 @@ interface ExcelImportState {
   processedRows: ProcessedImportRow[];
   layerGroups: LayerGroup[];
   stats: ImportStats | null;
-  isProcessing: boolean;
   error: string | null;
 }
 
@@ -33,30 +32,28 @@ export function useExcelImport() {
     processedRows: [],
     layerGroups: [],
     stats: null,
-    isProcessing: false,
     error: null,
   });
+  const [isProcessing, startProcessing] = useTransition();
 
   const loadFile = useStableCallback(async (file: File) => {
-    setState((prev) => ({ ...prev, isProcessing: true, error: null }));
+    setState((prev) => ({ ...prev, error: null }));
 
     try {
       const fileData = await parseSpreadsheetFile(file);
       const columnMapping = autoDetectColumns(fileData.headers, fileData.rows);
 
-      setState((prev) => ({
-        ...prev,
-        fileData,
-        columnMapping,
-        isProcessing: false,
-      }));
-
-      // Automatically process with detected columns
-      processData(fileData, columnMapping);
+      startProcessing(() => {
+        setState((prev) => ({
+          ...prev,
+          fileData,
+          columnMapping,
+        }));
+        processData(fileData, columnMapping);
+      });
     } catch (error) {
       setState((prev) => ({
         ...prev,
-        isProcessing: false,
         error: error instanceof Error ? error.message : "Failed to parse file",
       }));
     }
@@ -144,13 +141,13 @@ export function useExcelImport() {
       processedRows: [],
       layerGroups: [],
       stats: null,
-      isProcessing: false,
       error: null,
     });
   });
 
   return {
     ...state,
+    isProcessing,
     loadFile,
     updateColumnMapping,
     toggleHeaders,
