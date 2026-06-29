@@ -19,9 +19,8 @@ const pool =
   global.__pgPool ??
   new Pool({
     connectionString,
-    // Keep a minimum of 1 idle connection so the first query after HMR
-    // doesn't pay the full Neon cold-start cost.
     min: 1,
+    max: 20,
     idleTimeoutMillis: 30_000,
   });
 

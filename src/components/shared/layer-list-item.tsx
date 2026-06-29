@@ -282,6 +282,8 @@ function LayerColorPickerContent({
   );
 }
 
+const PLZ_RENDER_LIMIT = 100;
+
 export const LayerListItem = memo(function LayerListItem({
   layer,
   activeLayerId,
@@ -344,6 +346,7 @@ export const LayerListItem = memo(function LayerListItem({
   const [selectedPlzCodes, setSelectedPlzCodes] = useState<Set<string>>(
     new Set()
   );
+  const [showAllCodes, setShowAllCodes] = useState(false);
   type HistoryRow = {
     changeType: string;
     createdAt: string;
@@ -1338,7 +1341,10 @@ export const LayerListItem = memo(function LayerListItem({
                     Keine PLZ gefunden
                   </p>
                 ) : (
-                  filteredCodes.map((pc) => (
+                  (showAllCodes
+                    ? filteredCodes
+                    : filteredCodes.slice(0, PLZ_RENDER_LIMIT)
+                  ).map((pc) => (
                     <span
                       key={pc.postalCode}
                       className={cn(
@@ -1414,6 +1420,15 @@ export const LayerListItem = memo(function LayerListItem({
                       )}
                     </span>
                   ))
+                )}
+                {!showAllCodes && filteredCodes.length > PLZ_RENDER_LIMIT && (
+                  <button
+                    type="button"
+                    className="text-[10px] text-primary hover:underline px-1 py-0.5"
+                    onClick={() => setShowAllCodes(true)}
+                  >
+                    +{filteredCodes.length - PLZ_RENDER_LIMIT} weitere…
+                  </button>
                 )}
               </div>
               {/* PLZ range input */}

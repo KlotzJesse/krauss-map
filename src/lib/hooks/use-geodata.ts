@@ -10,11 +10,16 @@ const geodataCache = new Map<
   string,
   FeatureCollection<Polygon | MultiPolygon>
 >();
+const inflightRequests = new Map<
+  string,
+  Promise<FeatureCollection<Polygon | MultiPolygon>>
+>();
 
 /**
  * Client-side hook to fetch postal code geodata from the API route.
  * Unified DACH map: loads all countries' data for the given granularity.
  * Use "native" for full resolution (DE@5digit + AT@4digit + CH@4digit).
+ * Deduplicates concurrent requests to the same endpoint.
  */
 export function useGeodata(granularity: string): {
   data: FeatureCollection<Polygon | MultiPolygon>;
@@ -25,7 +30,6 @@ export function useGeodata(granularity: string): {
     () => geodataCache.get(cacheKey) ?? EMPTY_FC
   );
   const [isLoading, setIsLoading] = useState(() => !geodataCache.has(cacheKey));
-  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const cached = geodataCache.get(cacheKey);
@@ -36,32 +40,46 @@ export function useGeodata(granularity: string): {
     }
 
     setIsLoading(true);
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+    let cancelled = false;
 
-    const url = `/api/geodata/${granularity}`;
+    const existing = inflightRequests.get(cacheKey);
+    const promise =
+      existing ??
+      fetch(`/api/geodata/${granularity}`)
+        .then((res) => {
+          if (!res.ok)
+            throw new Error(`Failed to fetch geodata: ${res.status}`);
+          return res.json() as Promise<
+            FeatureCollection<Polygon | MultiPolygon>
+          >;
+        })
+        .then((result) => {
+          geodataCache.set(cacheKey, result);
+          inflightRequests.delete(cacheKey);
+          return result;
+        })
+        .catch((error) => {
+          inflightRequests.delete(cacheKey);
+          throw error;
+        });
 
-    fetch(url, { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch geodata: ${res.status}`);
-        }
-        return res.json() as Promise<FeatureCollection<Polygon | MultiPolygon>>;
-      })
+    if (!existing) {
+      inflightRequests.set(cacheKey, promise);
+    }
+
+    promise
       .then((result) => {
-        geodataCache.set(cacheKey, result);
-        setData(result);
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        if (error.name !== "AbortError") {
+        if (!cancelled) {
+          setData(result);
           setIsLoading(false);
         }
+      })
+      .catch(() => {
+        if (!cancelled) setIsLoading(false);
       });
 
     return () => {
-      controller.abort();
+      cancelled = true;
     };
   }, [granularity, cacheKey]);
 

@@ -43,14 +43,21 @@ export function ResizableSidebarLayout({
     [width]
   );
 
+  const rafRef = useRef(0);
+  const pendingWidthRef = useRef(0);
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging.current) return;
     const delta = e.clientX - startX.current;
-    const newWidth = Math.min(
+    pendingWidthRef.current = Math.min(
       MAX_WIDTH,
       Math.max(MIN_WIDTH, startWidth.current + delta)
     );
-    setWidth(newWidth);
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(() => {
+        setWidth(pendingWidthRef.current);
+        rafRef.current = 0;
+      });
+    }
   }, []);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
