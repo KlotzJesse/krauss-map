@@ -218,13 +218,17 @@ function usePostalCodesLayerActions({
         return;
       }
       const searchBeforeAction = window.location.search;
+      // Capture snapshot BEFORE the urgent update so rollback is correct
+      const previousLayers = optimisticLayersRef.current;
+      const previousUndoRedo = optimisticUndoRedoRef.current;
+      // URGENT: update map immediately — outside startTransition so React
+      // treats this as high-priority and renders before the server round-trip.
+      setOptimisticLayers((current) =>
+        applyLayerUpdate(current, { type: "add", layerId, postalCodes })
+      );
+      setOptimisticUndoRedo((current) => incrementUndoRedo(current));
+      // NON-URGENT: persist to server in background
       startTransition(async () => {
-        const previousLayers = optimisticLayersRef.current;
-        const previousUndoRedo = optimisticUndoRedoRef.current;
-        setOptimisticLayers((current) =>
-          applyLayerUpdate(current, { type: "add", layerId, postalCodes })
-        );
-        setOptimisticUndoRedo((current) => incrementUndoRedo(current));
         try {
           const result = await addPostalCodesToLayerAction(
             areaId,
@@ -260,13 +264,15 @@ function usePostalCodesLayerActions({
         return;
       }
       const searchBeforeAction = window.location.search;
+      const previousLayers = optimisticLayersRef.current;
+      const previousUndoRedo = optimisticUndoRedoRef.current;
+      // URGENT: update map immediately — outside startTransition
+      setOptimisticLayers((current) =>
+        applyLayerUpdate(current, { type: "remove", layerId, postalCodes })
+      );
+      setOptimisticUndoRedo((current) => incrementUndoRedo(current));
+      // NON-URGENT: persist to server in background
       startTransition(async () => {
-        const previousLayers = optimisticLayersRef.current;
-        const previousUndoRedo = optimisticUndoRedoRef.current;
-        setOptimisticLayers((current) =>
-          applyLayerUpdate(current, { type: "remove", layerId, postalCodes })
-        );
-        setOptimisticUndoRedo((current) => incrementUndoRedo(current));
         try {
           const result = await removePostalCodesFromLayerAction(
             areaId,

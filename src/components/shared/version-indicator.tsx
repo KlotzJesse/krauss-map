@@ -1,4 +1,5 @@
 import { IconEye, IconHistory } from "@tabler/icons-react";
+import { connection } from "next/server";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ export async function VersionIndicator({ areaId }: VersionIndicatorProps) {
     return null;
   }
 
+  await connection();
   const versionInfo = await getVersionIndicatorInfo(areaId);
 
   // Don't show anything if no versions exist

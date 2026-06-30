@@ -45,6 +45,8 @@ export async function GET(
       "Content-Type": "application/json",
       "Content-Encoding": "gzip",
       "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+      // Version used by client IndexedDB cache for staleness check
+      "X-Geodata-Version": process.env.GEODATA_VERSION ?? "1",
     },
   });
 }

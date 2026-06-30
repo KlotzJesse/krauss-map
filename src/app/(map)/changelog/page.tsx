@@ -8,6 +8,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import type { Route } from "next";
+import { connection } from "next/server";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -133,9 +134,13 @@ interface ChangelogPageProps {
   searchParams: Promise<{ page?: string; area?: string; type?: string }>;
 }
 
+export const instant = true;
+export const prefetch = "allow-runtime";
+
 export default async function ChangelogPage({
   searchParams,
 }: ChangelogPageProps) {
+  await connection();
   const params = await searchParams;
   const page = Math.max(1, Number(params.page ?? 1));
   const areaId = params.area ? Number(params.area) : undefined;

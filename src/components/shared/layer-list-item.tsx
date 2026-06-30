@@ -375,13 +375,18 @@ export const LayerListItem = memo(function LayerListItem({
   const rawPostalCodes = layer.postalCodes ?? [];
   // Stabilize reference: only update when actual content changes (not just parent re-render)
   const postalCodesRef = useRef(rawPostalCodes);
-  if (
-    rawPostalCodes.length !== postalCodesRef.current.length ||
-    rawPostalCodes[0]?.postalCode !== postalCodesRef.current[0]?.postalCode ||
-    rawPostalCodes[rawPostalCodes.length - 1]?.postalCode !==
-      postalCodesRef.current[rawPostalCodes.length - 1]?.postalCode
-  ) {
-    postalCodesRef.current = rawPostalCodes;
+  if (rawPostalCodes !== postalCodesRef.current) {
+    const prev = postalCodesRef.current;
+    const mid = Math.floor(rawPostalCodes.length / 2);
+    if (
+      rawPostalCodes.length !== prev.length ||
+      rawPostalCodes[0]?.postalCode !== prev[0]?.postalCode ||
+      rawPostalCodes[mid]?.postalCode !== prev[mid]?.postalCode ||
+      rawPostalCodes[rawPostalCodes.length - 1]?.postalCode !==
+        prev[rawPostalCodes.length - 1]?.postalCode
+    ) {
+      postalCodesRef.current = rawPostalCodes;
+    }
   }
   const postalCodes = postalCodesRef.current;
 

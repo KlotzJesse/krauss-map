@@ -45,6 +45,12 @@ const nextConfig: NextConfig = {
       "@deck.gl/layers",
       "@deck.gl/extensions",
       "@deck.gl/mapbox",
+      "nuqs",
+      "next-themes",
+      "clsx",
+      "tailwind-merge",
+      "class-variance-authority",
+      "fflate",
     ],
   },
   logging: {

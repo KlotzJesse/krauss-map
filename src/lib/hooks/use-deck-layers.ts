@@ -8,7 +8,7 @@ import type {
   MultiPolygon,
   Polygon,
 } from "geojson";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject, RefObject } from "react";
 
 import type { Layer } from "@/lib/types/area-types";
@@ -449,39 +449,114 @@ export function useDeckLayers({
   const resolvedStylesRef = useRef<Map<string, ResolvedStyle>>(new Map());
   const prevMultiLayerCodesRef = useRef<Set<string>>(new Set());
   const prevSameColorCodesRef = useRef<Set<string>>(new Set());
-  const {
-    version: resolvedStylesVersion,
-    multiLayerCodes,
-    sameColorCodes,
-  } = useMemo(() => {
-    const result = buildResolvedStyleMap(
-      layers,
-      activeLayerId,
-      country,
-      featureIndex
-    );
+
+  // Shared Set-stabilization logic used by both sync and async paths
+  const stabilizeSets = useCallback(
+    (result: ReturnType<typeof buildResolvedStyleMap>) => {
+      const prevMulti = prevMultiLayerCodesRef.current;
+      if (
+        prevMulti.size === result.multiLayerCodes.size &&
+        [...result.multiLayerCodes].every((c) => prevMulti.has(c))
+      ) {
+        result.multiLayerCodes = prevMulti;
+      } else {
+        prevMultiLayerCodesRef.current = result.multiLayerCodes;
+      }
+      const prevSame = prevSameColorCodesRef.current;
+      if (
+        prevSame.size === result.sameColorCodes.size &&
+        [...result.sameColorCodes].every((c) => prevSame.has(c))
+      ) {
+        result.sameColorCodes = prevSame;
+      } else {
+        prevSameColorCodesRef.current = result.sameColorCodes;
+      }
+      return result;
+    },
+    []
+  );
+
+  // First-render sync seed — populates refs immediately so deck.gl has styles
+  // before the worker responds. Also used as SSR/Worker-unavailable fallback.
+  const initialResult = useMemo(() => {
+    const result = buildResolvedStyleMap(layers, activeLayerId, country, featureIndex);
     resolvedStylesRef.current = result.map;
-    // Stabilize Set references when only styling changed (not membership)
-    const prevMulti = prevMultiLayerCodesRef.current;
-    if (
-      prevMulti.size === result.multiLayerCodes.size &&
-      [...result.multiLayerCodes].every((c) => prevMulti.has(c))
-    ) {
-      result.multiLayerCodes = prevMulti;
-    } else {
-      prevMultiLayerCodesRef.current = result.multiLayerCodes;
+    return stabilizeSets(result);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // runs once on mount only
+
+  const [resolvedStylesState, setResolvedStylesState] = useState<{
+    version: string;
+    multiLayerCodes: Set<string>;
+    sameColorCodes: Set<string>;
+  }>({
+    version: initialResult.version,
+    multiLayerCodes: initialResult.multiLayerCodes,
+    sameColorCodes: initialResult.sameColorCodes,
+  });
+
+  // Web Worker lifecycle — created once, terminated on unmount
+  const workerRef = useRef<Worker | null>(null);
+  useEffect(() => {
+    if (typeof Worker === "undefined") return; // SSR guard
+    const worker = new Worker(
+      new URL("../workers/resolve-styles.worker.ts", import.meta.url)
+    );
+    workerRef.current = worker;
+    return () => {
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
+  // Dispatch to worker on input changes; fall back to sync when worker unavailable
+  useEffect(() => {
+    const featureIndexKeys = featureIndex
+      ? [...featureIndex.keys()]
+      : ([] as string[]);
+
+    if (!workerRef.current) {
+      const result = buildResolvedStyleMap(layers, activeLayerId, country, featureIndex);
+      resolvedStylesRef.current = result.map;
+      const stable = stabilizeSets(result);
+      setResolvedStylesState({
+        version: stable.version,
+        multiLayerCodes: stable.multiLayerCodes,
+        sameColorCodes: stable.sameColorCodes,
+      });
+      return;
     }
-    const prevSame = prevSameColorCodesRef.current;
-    if (
-      prevSame.size === result.sameColorCodes.size &&
-      [...result.sameColorCodes].every((c) => prevSame.has(c))
-    ) {
-      result.sameColorCodes = prevSame;
-    } else {
-      prevSameColorCodesRef.current = result.sameColorCodes;
-    }
-    return result;
-  }, [layers, activeLayerId, country, featureIndex]);
+
+    const worker = workerRef.current;
+    worker.onmessage = ({
+      data,
+    }: MessageEvent<{
+      styleEntries: [string, ResolvedStyle][];
+      multiLayerCodes: string[];
+      sameColorCodes: string[];
+      version: string;
+    }>) => {
+      resolvedStylesRef.current = new Map(data.styleEntries);
+      const workerResult = {
+        map: resolvedStylesRef.current,
+        version: data.version,
+        multiLayerCodes: new Set(data.multiLayerCodes),
+        sameColorCodes: new Set(data.sameColorCodes),
+      };
+      const stable = stabilizeSets(workerResult);
+      setResolvedStylesState({
+        version: stable.version,
+        multiLayerCodes: stable.multiLayerCodes,
+        sameColorCodes: stable.sameColorCodes,
+      });
+    };
+
+    worker.postMessage({ layers, activeLayerId, country, featureIndexKeys });
+  }, [layers, activeLayerId, country, featureIndex, stabilizeSets]);
+
+  const resolvedStylesVersion = resolvedStylesState.version;
+  const multiLayerCodes = resolvedStylesState.multiLayerCodes;
+  const sameColorCodes = resolvedStylesState.sameColorCodes;
 
   // Stable set of composite keys (country:code) across all visible layers.
   // Ref-stabilized: returns same Set reference when only colors/opacity changed
