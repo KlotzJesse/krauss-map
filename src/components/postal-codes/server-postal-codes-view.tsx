@@ -6,6 +6,7 @@ import type { CountryCode } from "@/lib/config/countries";
 import { DEFAULT_COUNTRY } from "@/lib/config/countries";
 import {
   getAreaMeta,
+  getAreaCountries,
   getLayers,
   getVersionSummaries,
   getChangeSummaries,
@@ -48,6 +49,7 @@ export default async function ServerPostalCodesView({
   // getAreaMeta is already called by page.tsx — this hits the same "use cache"
   // entry (same function + same areaId arg), avoiding extra DB queries
   const areaMetaPromise = getAreaMeta(areaId);
+  const areaCountriesPromise = getAreaCountries(areaId);
   const areaTagsPromise = getAreaTags(areaId);
   const layersPromise = getLayers(areaId);
   const versionsPromise = getVersionSummaries(areaId);
@@ -60,6 +62,7 @@ export default async function ServerPostalCodesView({
         <PostalCodesViewClientWithLayers
           defaultGranularity={defaultGranularity}
           country={country}
+          areaCountriesPromise={areaCountriesPromise}
           areaId={areaId}
           areaMetaPromise={areaMetaPromise}
           areaTagsPromise={areaTagsPromise}

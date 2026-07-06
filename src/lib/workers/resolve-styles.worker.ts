@@ -49,15 +49,18 @@ function hexToRgba(hex: string, alpha = 1): RgbaColor {
 
 const PREFIX_TO_COUNTRY: Record<string, string> = {
   D: "DE",
+  DE: "DE",
   A: "AT",
+  AT: "AT",
   CH: "CH",
 };
 
 function storedCodeToCompositeKey(stored: string): string | null {
-  const dashIdx = stored.indexOf("-");
+  const normalizedStored = stored.trim();
+  const dashIdx = normalizedStored.indexOf("-");
   if (dashIdx < 0) return null;
-  const prefix = stored.slice(0, dashIdx);
-  const rawCode = stored.slice(dashIdx + 1);
+  const prefix = normalizedStored.slice(0, dashIdx).toUpperCase();
+  const rawCode = normalizedStored.slice(dashIdx + 1).trim();
   const country = PREFIX_TO_COUNTRY[prefix];
   return country ? `${country}:${rawCode}` : null;
 }

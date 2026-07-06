@@ -10,6 +10,7 @@ export interface BaseMapProps {
   center?: [number, number];
   zoom?: number;
   country?: CountryCode;
+  countries?: CountryCode[];
   granularity?: string;
   onGranularityChange?: (granularity: string) => void;
   layers: Layer[];

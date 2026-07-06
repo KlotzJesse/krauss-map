@@ -12,6 +12,7 @@ interface PostalCodesMapProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
   granularity?: string;
   country?: CountryCode;
+  countries?: CountryCode[];
   onGranularityChange?: (granularity: string) => void;
   layers?: Layer[];
   activeLayerId?: number | null;
@@ -43,6 +44,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
   data,
   granularity,
   country,
+  countries,
   onGranularityChange,
   layers = EMPTY_ARRAY,
   activeLayerId = null,
@@ -66,6 +68,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
       data={data}
       layerId="postal-codes"
       country={country}
+      countries={countries}
       granularity={granularity}
       onGranularityChange={onGranularityChange}
       layers={layers}

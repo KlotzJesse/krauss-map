@@ -8,8 +8,12 @@ import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
 import { VersionIndicatorSkeleton } from "@/components/ui/loading-skeleton";
 import { PostalCodesViewSkeleton } from "@/components/ui/loading-skeletons";
 import type { CountryCode } from "@/lib/config/countries";
-import { DEFAULT_COUNTRY, isValidCountryCode } from "@/lib/config/countries";
-import { getAreaMeta, getVersion } from "@/lib/db/data-functions";
+import {
+  DEFAULT_COUNTRY,
+  isValidCountryCode,
+  resolveGranularityForCountry,
+} from "@/lib/config/countries";
+import { getAreaCountries, getAreaMeta, getVersion } from "@/lib/db/data-functions";
 
 export const instant = true;
 export const prefetch = "allow-runtime";
@@ -95,13 +99,18 @@ export default async function PostalCodesPage({
   let granularity = "1digit";
   let country: CountryCode = DEFAULT_COUNTRY;
   let areaName: string | null = null;
+  let areaCountries: CountryCode[] = [DEFAULT_COUNTRY];
   try {
-    const meta = await getAreaMeta(areaId);
+    const [meta, countries] = await Promise.all([
+      getAreaMeta(areaId),
+      getAreaCountries(areaId),
+    ]);
     granularity = meta.granularity ?? "1digit";
     country =
       meta.country && isValidCountryCode(meta.country)
         ? meta.country
         : DEFAULT_COUNTRY;
+    areaCountries = countries.length > 0 ? countries : [country];
     areaName = meta.name;
   } catch (error) {
     console.error("Failed to fetch area metadata:", error);
@@ -110,16 +119,36 @@ export default async function PostalCodesPage({
   return (
     <>
       {/* Preload map data APIs so fetches start during HTML streaming */}
+      {areaCountries.map((countryCode) => (
+        <link
+          key={`states-${countryCode}`}
+          rel="preload"
+          href={`/api/states?country=${countryCode}`}
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+      ))}
+      {areaCountries.map((countryCode) => (
+        <link
+          key={`countries-${countryCode}`}
+          rel="preload"
+          href={`/api/countries?country=${countryCode}`}
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+      ))}
+      {areaCountries.map((countryCode) => (
+        <link
+          key={`geodata-${countryCode}`}
+          rel="preload"
+          href={`/api/geodata/${resolveGranularityForCountry(granularity, countryCode)}?country=${countryCode}`}
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+      ))}
       <link
-        rel="preload"
-        href="/api/states"
-        as="fetch"
-        crossOrigin="anonymous"
-      />
-      <link
-        rel="preload"
-        href="/api/countries"
-        as="fetch"
+        rel="preconnect"
+        href="https://tiles.versatiles.org"
         crossOrigin="anonymous"
       />
       <SiteHeader title={areaName ?? "Gebietsmanagement"}>

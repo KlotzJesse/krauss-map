@@ -128,6 +128,32 @@ export function getFullGranularity(country: CountryCode): string {
 }
 
 /**
+ * Resolve a requested granularity to the closest supported level for a country.
+ * If exact level is unavailable, falls back to the nearest lower level, otherwise
+ * to the smallest supported level.
+ */
+export function resolveGranularityForCountry(
+  granularity: string,
+  country: CountryCode
+): string {
+  const config = getCountryConfig(country);
+  const requestedLevel = Number.parseInt(granularity, 10);
+  if (Number.isNaN(requestedLevel)) {
+    return config.defaultGranularity;
+  }
+  if (config.granularityLevels.includes(requestedLevel)) {
+    return `${requestedLevel}digit`;
+  }
+  const lowerLevels = config.granularityLevels.filter(
+    (level) => level < requestedLevel
+  );
+  if (lowerLevels.length > 0) {
+    return `${Math.max(...lowerLevels)}digit`;
+  }
+  return `${Math.min(...config.granularityLevels)}digit`;
+}
+
+/**
  * Format a postal code for display/export with leading zeros.
  */
 export function formatPostalCodeForCountry(

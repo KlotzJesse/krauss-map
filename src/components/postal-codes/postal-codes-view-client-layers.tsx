@@ -39,6 +39,10 @@ import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks
 import { extractRawCode } from "@/lib/utils/deck-gl-utils";
 import { isLightColor } from "@/lib/utils/layer-colors";
 import { getLargestPolygonCentroid } from "@/lib/utils/map-data";
+import {
+  detectCountryFromCode,
+  type CountryCode,
+} from "@/lib/config/countries";
 
 const AddressAutocompleteEnhanced = dynamic(
   () =>
@@ -83,6 +87,7 @@ const EMPTY_TAGS: { id: number; name: string; color: string }[] = [];
 interface PostalCodesViewClientWithLayersProps {
   defaultGranularity: string;
   country?: import("@/lib/config/countries").CountryCode;
+  areaCountriesPromise?: Promise<CountryCode[]>;
   areaId: number;
   areaMetaPromise: Promise<{
     name: string | null;
@@ -435,6 +440,7 @@ export const PostalCodesViewClientWithLayers = memo(
   function PostalCodesViewClientWithLayers({
     defaultGranularity,
     country,
+    areaCountriesPromise,
     areaMetaPromise,
     areaTagsPromise,
     areaId,
@@ -451,13 +457,38 @@ export const PostalCodesViewClientWithLayers = memo(
     const versions = use(versionsPromise);
     const changes = use(changesPromise);
     const areaMeta = use(areaMetaPromise);
+    const areaCountriesFromServer: CountryCode[] = areaCountriesPromise
+      ? use(areaCountriesPromise)
+      : [];
     const areaName = areaMeta.name;
     const areaDescription = areaMeta.description;
     const areaTags = areaTagsPromise ? use(areaTagsPromise) : EMPTY_TAGS;
 
-    // Geodata fetched client-side to avoid 9.6MB RSC payload (TTFB: 1.3s → ~150ms)
-    // "native" = all DACH countries at their full resolution
-    const { data, isLoading: isGeodataLoading } = useGeodata("native");
+    // Load only the active area's country/granularity dataset by default.
+    // If the area contains prefixed cross-country postal codes, include those countries too.
+    const areaCountries = useMemo(() => {
+      const countrySet = new Set<CountryCode>();
+      for (const areaCountry of areaCountriesFromServer) {
+        countrySet.add(areaCountry);
+      }
+      if (country) {
+        countrySet.add(country);
+      }
+      for (const layer of initialLayers) {
+        for (const postalCodeEntry of layer.postalCodes ?? []) {
+          const detected = detectCountryFromCode(postalCodeEntry.postalCode).country;
+          if (detected) {
+            countrySet.add(detected);
+          }
+        }
+      }
+      return [...countrySet];
+    }, [areaCountriesFromServer, country, initialLayers]);
+
+    const { data, isLoading: isGeodataLoading } = useGeodata(
+      defaultGranularity,
+      areaCountries
+    );
 
     // Read activeLayerId directly from URL state for instant switching
     const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
@@ -603,31 +634,6 @@ export const PostalCodesViewClientWithLayers = memo(
       [optimisticLayers, activeLayerId]
     );
 
-    // Per-layer duplicate postal code counts
-    const duplicateCountByLayer = useMemo(() => {
-      const counts = new Map<number, number>();
-      const codeToLayers = new Map<string, number[]>();
-      for (const layer of optimisticLayers) {
-        if (!layer.postalCodes) continue;
-        for (const pc of layer.postalCodes) {
-          const existing = codeToLayers.get(pc.postalCode);
-          if (existing) {
-            existing.push(layer.id);
-          } else {
-            codeToLayers.set(pc.postalCode, [layer.id]);
-          }
-        }
-      }
-      for (const [, layerIds] of codeToLayers) {
-        if (layerIds.length > 1) {
-          for (const id of layerIds) {
-            counts.set(id, (counts.get(id) ?? 0) + 1);
-          }
-        }
-      }
-      return counts;
-    }, [optimisticLayers]);
-
     return (
       <div className="h-full relative">
         {/* Address and Postal Code Tools - horizontal, top right */}
@@ -695,6 +701,7 @@ export const PostalCodesViewClientWithLayers = memo(
               data={data}
               granularity={defaultGranularity}
               country={country}
+              countries={areaCountries}
               onGranularityChange={handleGranularityChange}
               layers={optimisticLayers}
               activeLayerId={activeLayerId}

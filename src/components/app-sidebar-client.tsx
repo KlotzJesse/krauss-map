@@ -1,16 +1,15 @@
 "use client";
 
 import { IconDashboard, IconHistory, IconMapPin2 } from "@tabler/icons-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
-import { NavAreas } from "@/components/areas/nav-areas";
-import { RecentActivityFeed } from "@/components/areas/recent-activity-feed";
 import { NavMain } from "@/components/nav-main";
-import { CommandPalette } from "@/components/shared/command-palette";
 import { LinkPendingIndicator } from "@/components/shared/link-pending-indicator";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +20,26 @@ import {
 } from "@/components/ui/sidebar";
 import type { RecentActivityItem } from "@/lib/db/data-functions";
 import type { AreaSummary } from "@/lib/types/area-types";
+
+const NavAreas = dynamic(() =>
+  import("@/components/areas/nav-areas").then((m) => ({
+    default: m.NavAreas,
+  }))
+);
+
+const RecentActivityFeed = dynamic(() =>
+  import("@/components/areas/recent-activity-feed").then((m) => ({
+    default: m.RecentActivityFeed,
+  }))
+);
+
+const CommandPalette = dynamic(
+  () =>
+    import("@/components/shared/command-palette").then((m) => ({
+      default: m.CommandPalette,
+    })),
+  { ssr: false }
+);
 
 const data = {
   navMain: [
@@ -53,14 +72,25 @@ export function AppSidebarClient({
 }: AppSidebarClientProps) {
   const [createAreaDialogOpen, setCreateAreaDialogOpen] = React.useState(false);
   const pathname = usePathname();
+  const isPostalCodesRoute = pathname?.startsWith("/postal-codes/") ?? false;
   const currentAreaId =
     currentAreaIdProp ??
     (pathname
       ? Number(pathname.match(/\/postal-codes\/(\d+)/)?.[1]) || null
       : null);
+  const [isSidebarDataMounted, setIsSidebarDataMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isPostalCodesRoute) {
+      setIsSidebarDataMounted(true);
+    }
+  }, [isPostalCodesRoute]);
 
   const handleCreateArea = React.useCallback(() => {
     setCreateAreaDialogOpen(true);
+  }, []);
+  const mountSidebarData = React.useCallback(() => {
+    setIsSidebarDataMounted(true);
   }, []);
 
   return (
@@ -84,21 +114,39 @@ export function AppSidebarClient({
         </SidebarHeader>
         <SidebarContent>
           <NavMain items={data.navMain} onCreateArea={handleCreateArea} />
-          {/* Consume promise directly in client component with Suspense */}
-          <NavAreas
-            areas={areas}
-            isLoading={false}
-            currentAreaId={currentAreaId}
-            onAreaSelect={onAreaSelect}
-          />
-          <RecentActivityFeed items={recentActivity} />
+          {isSidebarDataMounted ? (
+            <>
+              <NavAreas
+                areas={areas}
+                isLoading={false}
+                currentAreaId={currentAreaId}
+                onAreaSelect={onAreaSelect}
+              />
+              <RecentActivityFeed items={recentActivity} />
+            </>
+          ) : (
+            <div className="px-3 py-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 w-full text-xs"
+                onClick={mountSidebarData}
+              >
+                Gebiete laden
+              </Button>
+            </div>
+          )}
         </SidebarContent>
       </Sidebar>
-      <CreateAreaDialog
-        open={createAreaDialogOpen}
-        onOpenChange={setCreateAreaDialogOpen}
-      />
-      <CommandPalette areas={areas} onCreateArea={handleCreateArea} />
+      {createAreaDialogOpen && (
+        <CreateAreaDialog
+          open={createAreaDialogOpen}
+          onOpenChange={setCreateAreaDialogOpen}
+        />
+      )}
+      {isSidebarDataMounted && (
+        <CommandPalette areas={areas} onCreateArea={handleCreateArea} />
+      )}
     </>
   );
 }

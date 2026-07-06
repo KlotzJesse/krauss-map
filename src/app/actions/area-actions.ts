@@ -26,7 +26,7 @@ import {
   recordChangeAction,
   recordChangeWithTx,
 } from "./change-tracking-actions";
-import { createVersionAction } from "./version-actions";
+import { createVersionAction, createVersionWithTx } from "./version-actions";
 
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
@@ -591,9 +591,8 @@ export async function duplicateAreaAction(
           );
       }
 
-      // 6. Create initial version
-      const { createVersionAction } = await import("./version-actions");
-      await createVersionAction(newArea.id, {
+      // 6. Create initial version in the same transaction.
+      await createVersionWithTx(tx, newArea.id, {
         name: "Erstversion",
         description: `Dupliziert von "${sourceArea.name}"`,
       });

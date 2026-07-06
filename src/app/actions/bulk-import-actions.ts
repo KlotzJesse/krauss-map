@@ -3,9 +3,14 @@
 import { eq } from "drizzle-orm";
 import { updateTag } from "next/cache";
 
+import {
+  type CountryCode,
+  detectCountryFromCode,
+  formatWithPrefix,
+} from "@/lib/config/countries";
 import { db } from "../../lib/db";
-import { areaLayers, areaLayerPostalCodes } from "../../lib/schema/schema";
-import { recordChangeAction } from "./change-tracking-actions";
+import { areas, areaLayers, areaLayerPostalCodes } from "../../lib/schema/schema";
+import { recordChangeWithTx } from "./change-tracking-actions";
 
 export interface BulkImportLayer {
   name: string;
@@ -38,6 +43,12 @@ export async function bulkImportPostalCodesAndLayers(
   const errors: string[] = [];
 
   try {
+    const area = await db.query.areas.findFirst({
+      where: eq(areas.id, areaId),
+      columns: { country: true },
+    });
+    const areaCountry = (area?.country ?? "DE") as CountryCode;
+
     // Get existing layers for this area (outside transaction)
     const existingLayers = await db.query.areaLayers.findMany({
       where: eq(areaLayers.areaId, areaId),
@@ -83,7 +94,7 @@ export async function bulkImportPostalCodesAndLayers(
             }
             addedPostalCodes = newCodes.length;
 
-            await recordChangeAction(areaId, {
+            await recordChangeWithTx(tx, areaId, {
               changeType: "add_postal_codes",
               entityType: "postal_code",
               entityId: txLayerId,
@@ -131,7 +142,7 @@ export async function bulkImportPostalCodesAndLayers(
             addedPostalCodes = uniquePostalCodes.length;
           }
 
-          await recordChangeAction(areaId, {
+          await recordChangeWithTx(tx, areaId, {
             changeType: "create_layer",
             entityType: "layer",
             entityId: txLayerId,
@@ -160,7 +171,21 @@ export async function bulkImportPostalCodesAndLayers(
         const layerNameLower = layerData.name.toLowerCase();
         const existingLayer = existingLayerMap.get(layerNameLower);
 
-        const uniquePostalCodes = [...new Set(layerData.postalCodes)];
+        const uniquePostalCodes = [
+          ...new Set(
+            layerData.postalCodes
+              .map((code) => {
+                const detected = detectCountryFromCode(code);
+                const country = (detected.country ?? areaCountry) as CountryCode;
+                const rawCode = detected.code;
+                if (!rawCode || rawCode.length < 1 || rawCode.length > 6) {
+                  return null;
+                }
+                return formatWithPrefix(rawCode, country);
+              })
+              .filter((code): code is string => code !== null)
+          ),
+        ];
         if (uniquePostalCodes.length === 0) {
           continue;
         }
@@ -206,6 +231,8 @@ export async function bulkImportPostalCodesAndLayers(
     updateTag(`area-${areaId}-layers`);
     updateTag(`area-${areaId}`);
     updateTag(`area-${areaId}-undo-redo`);
+    updateTag(`area-${areaId}-change-history`);
+    updateTag("recent-activity");
 
     return {
       success: errors.length === 0,

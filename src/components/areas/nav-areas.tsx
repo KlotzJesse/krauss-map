@@ -1049,136 +1049,144 @@ export const NavAreas = memo(function NavAreas({
         </div>
       )}
 
-      <CreateAreaDialog
-        open={createDialogOpen}
-        onOpenChange={(open) =>
-          dispatch(open ? { type: "OPEN_CREATE" } : { type: "CLOSE_CREATE" })
-        }
-      />
+      {createDialogOpen && (
+        <CreateAreaDialog
+          open={createDialogOpen}
+          onOpenChange={(open) =>
+            dispatch(open ? { type: "OPEN_CREATE" } : { type: "CLOSE_CREATE" })
+          }
+        />
+      )}
 
       {/* Delete confirmation dialog */}
-      <AlertDialog
-        open={deleteDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            dispatch({ type: "CLOSE_DELETE" });
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Gebiet löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Gebiet &quot;{areaToDelete?.name}
-              &quot; wirklich löschen?
-              <br />
-              <br />
-              <strong>
-                Alle Layer und Regionen werden unwiderruflich gelöscht.
-              </strong>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => dispatch({ type: "CLOSE_DELETE" })}
-              disabled={isDeleting}
-            >
-              Abbrechen
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-              variant="destructive"
-            >
-              {isDeleting ? "Lösche..." : "Löschen"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {deleteDialogOpen && areaToDelete && (
+        <AlertDialog
+          open={deleteDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              dispatch({ type: "CLOSE_DELETE" });
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Gebiet löschen?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Gebiet &quot;{areaToDelete.name}
+                &quot; wirklich löschen?
+                <br />
+                <br />
+                <strong>
+                  Alle Layer und Regionen werden unwiderruflich gelöscht.
+                </strong>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => dispatch({ type: "CLOSE_DELETE" })}
+                disabled={isDeleting}
+              >
+                Abbrechen
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                variant="destructive"
+              >
+                {isDeleting ? "Lösche..." : "Löschen"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       {/* Duplicate area dialog */}
-      <Dialog
-        open={duplicateDialogOpen}
-        onOpenChange={(v) => {
-          if (!v) dispatch({ type: "CLOSE_DUPLICATE" });
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Gebiet duplizieren</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 py-1">
-            <Label htmlFor="duplicate-name-input" className="text-sm">
-              Name der Kopie
-            </Label>
-            <Input
-              id="duplicate-name-input"
-              value={duplicateName}
-              onChange={(e) =>
-                dispatch({ type: "SET_DUPLICATE_NAME", name: e.target.value })
-              }
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && duplicateName.trim())
-                  handleConfirmDuplicate();
-                if (e.key === "Escape") dispatch({ type: "CLOSE_DUPLICATE" });
-              }}
-              placeholder={
-                areaToDuplicate ? `${areaToDuplicate.name} (Kopie)` : ""
-              }
+      {duplicateDialogOpen && (
+        <Dialog
+          open={duplicateDialogOpen}
+          onOpenChange={(v) => {
+            if (!v) dispatch({ type: "CLOSE_DUPLICATE" });
+          }}
+        >
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Gebiet duplizieren</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 py-1">
+              <Label htmlFor="duplicate-name-input" className="text-sm">
+                Name der Kopie
+              </Label>
+              <Input
+                id="duplicate-name-input"
+                value={duplicateName}
+                onChange={(e) =>
+                  dispatch({ type: "SET_DUPLICATE_NAME", name: e.target.value })
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && duplicateName.trim())
+                    handleConfirmDuplicate();
+                  if (e.key === "Escape") dispatch({ type: "CLOSE_DUPLICATE" });
+                }}
+                placeholder={
+                  areaToDuplicate ? `${areaToDuplicate.name} (Kopie)` : ""
+                }
+                autoFocus
+                className="h-8 text-sm"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => dispatch({ type: "CLOSE_DUPLICATE" })}
+              >
+                Abbrechen
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleConfirmDuplicate}
+                disabled={!duplicateName.trim()}
+              >
+                Duplizieren
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {notesArea && (
+        <Dialog
+          open={notesArea !== null}
+          onOpenChange={(v) => {
+            if (!v) setNotesArea(null);
+          }}
+        >
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Notizen — {notesArea.name}</DialogTitle>
+            </DialogHeader>
+            <Textarea
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              placeholder="Notizen zu diesem Gebiet..."
+              rows={5}
+              className="resize-none"
               autoFocus
-              className="h-8 text-sm"
             />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => dispatch({ type: "CLOSE_DUPLICATE" })}
-            >
-              Abbrechen
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleConfirmDuplicate}
-              disabled={!duplicateName.trim()}
-            >
-              Duplizieren
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={notesArea !== null}
-        onOpenChange={(v) => {
-          if (!v) setNotesArea(null);
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Notizen — {notesArea?.name}</DialogTitle>
-          </DialogHeader>
-          <Textarea
-            value={notesText}
-            onChange={(e) => setNotesText(e.target.value)}
-            placeholder="Notizen zu diesem Gebiet..."
-            rows={5}
-            className="resize-none"
-            autoFocus
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setNotesArea(null)}
-              disabled={isSavingNotes}
-            >
-              Abbrechen
-            </Button>
-            <Button onClick={handleSaveNotes} disabled={isSavingNotes}>
-              {isSavingNotes ? "Speichere..." : "Speichern"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setNotesArea(null)}
+                disabled={isSavingNotes}
+              >
+                Abbrechen
+              </Button>
+              <Button onClick={handleSaveNotes} disabled={isSavingNotes}>
+                {isSavingNotes ? "Speichere..." : "Speichern"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Shared context menu for all area items */}
       {contextMenu && (

@@ -422,6 +422,7 @@ const MapInner = memo(function MapInner({
   layerId,
   granularity,
   country,
+  countries,
   onGranularityChange,
   layers,
   activeLayerId,
@@ -624,10 +625,9 @@ const MapInner = memo(function MapInner({
   // URL state management (narrow: only layer switching, not view state)
   const { setActiveLayer, isLayerPending } = useActiveLayerState();
 
-  // States data fetched client-side to avoid 246KB RSC payload bloat
-  // Unified DACH map: load all states regardless of area country
-  const statesData = useStatesData();
-  const countryShapesData = useCountryShapesData();
+  // Load only countries that are actually referenced by area layers (usually one country).
+  const statesData = useStatesData(countries ?? country);
+  const countryShapesData = useCountryShapesData(countries ?? country);
 
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });
@@ -1309,6 +1309,7 @@ const BaseMapComponent = ({
   center,
   zoom,
   country,
+  countries,
   granularity,
   onGranularityChange,
   layers,
@@ -1450,10 +1451,10 @@ const BaseMapComponent = ({
             mapStyle={currentMapStyle}
             style={MAP_STYLE}
             dragRotate={false}
+            fadeDuration={0}
             onContextMenu={(event) => event.preventDefault()}
             minZoom={3}
             maxZoom={18}
-            canvasContextAttributes={{ preserveDrawingBuffer: true }}
           >
             <MapInner
               data={data}
@@ -1461,6 +1462,7 @@ const BaseMapComponent = ({
               country={country}
               granularity={granularity}
               onGranularityChange={onGranularityChange}
+              countries={countries}
               layers={layers}
               activeLayerId={activeLayerId}
               areaId={areaId}

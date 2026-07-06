@@ -4,6 +4,13 @@ import "server-only";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { cacheTag, cacheLife } from "next/cache";
 
+import {
+  COUNTRY_CODES,
+  detectCountryFromCode,
+  isValidCountryCode,
+  type CountryCode,
+} from "@/lib/config/countries";
+
 import { db } from "../db";
 import {
   areas,
@@ -243,6 +250,61 @@ export async function getAreaDescription(id: number): Promise<string | null> {
   } catch (error) {
     console.error("Error fetching area description:", error);
     return null;
+  }
+}
+
+/**
+ * Returns all countries referenced by an area's layer postal codes.
+ * Uses FK-linked country first, then falls back to parsing prefixed stored codes.
+ */
+export async function getAreaCountries(areaId: number): Promise<CountryCode[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("areas", `area-${areaId}`, `area-${areaId}-layers`);
+  try {
+    const result = new Set<CountryCode>();
+
+    const linkedCountries = await db.execute<{ country: string | null }>(sql`
+      SELECT DISTINCT pc.country
+      FROM area_layer_postal_codes alpc
+      INNER JOIN area_layers al ON al.id = alpc.layer_id
+      INNER JOIN postal_codes pc ON pc.id = alpc.postal_code_id
+      WHERE al.area_id = ${areaId} AND pc.country IS NOT NULL
+    `);
+    for (const row of linkedCountries.rows) {
+      if (row.country && isValidCountryCode(row.country)) {
+        result.add(row.country);
+      }
+    }
+
+    const storedCodes = await db.execute<{ postal_code: string | null }>(sql`
+      SELECT DISTINCT alpc.postal_code
+      FROM area_layer_postal_codes alpc
+      INNER JOIN area_layers al ON al.id = alpc.layer_id
+      WHERE al.area_id = ${areaId}
+    `);
+    for (const row of storedCodes.rows) {
+      if (!row.postal_code) {
+        continue;
+      }
+      const detected = detectCountryFromCode(row.postal_code).country;
+      if (detected) {
+        result.add(detected);
+      }
+    }
+
+    if (result.size === 0) {
+      const fallback = await getAreaCountry(areaId);
+      if (fallback && isValidCountryCode(fallback)) {
+        result.add(fallback);
+      }
+    }
+
+    return COUNTRY_CODES.filter((code) => result.has(code));
+  } catch (error) {
+    console.error("Error fetching area countries:", error);
+    const fallback = await getAreaCountry(areaId);
+    return fallback && isValidCountryCode(fallback) ? [fallback] : [];
   }
 }
 

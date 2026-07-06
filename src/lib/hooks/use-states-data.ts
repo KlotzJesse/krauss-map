@@ -1,5 +1,5 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { CountryCode } from "@/lib/config/countries";
 
@@ -8,12 +8,32 @@ type StatesData = FeatureCollection<Polygon | MultiPolygon>;
 const statesCache = new Map<string, StatesData>();
 const statesInflight = new Map<string, Promise<StatesData>>();
 
+const normalizeCountries = (
+  country?: CountryCode | readonly CountryCode[]
+): CountryCode[] => {
+  if (!country) {
+    return [];
+  }
+  const source = Array.isArray(country) ? country : [country];
+  return [...new Set(source)];
+};
+
+const mergeFeatureCollections = (
+  collections: StatesData[]
+): FeatureCollection<Polygon | MultiPolygon> => ({
+  type: "FeatureCollection",
+  features: collections.flatMap((collection) => collection.features),
+});
+
 /**
  * Fetches state boundary data. Pass a country code to filter, or omit for all DACH states.
  * Deduplicates concurrent requests to the same endpoint.
  */
-export function useStatesData(country?: CountryCode): StatesData | null {
-  const cacheKey = country ?? "ALL";
+export function useStatesData(
+  country?: CountryCode | readonly CountryCode[]
+): StatesData | null {
+  const countries = useMemo(() => normalizeCountries(country), [country]);
+  const cacheKey = countries.length > 0 ? countries.join(",") : "ALL";
   const [data, setData] = useState<StatesData | null>(
     statesCache.get(cacheKey) ?? null
   );
@@ -26,22 +46,52 @@ export function useStatesData(country?: CountryCode): StatesData | null {
     }
 
     let cancelled = false;
-    const url = country ? `/api/states?country=${country}` : "/api/states";
+    const urls =
+      countries.length > 0
+        ? countries.map((countryCode) => `/api/states?country=${countryCode}`)
+        : ["/api/states"];
 
     const existing = statesInflight.get(cacheKey);
     const promise =
       existing ??
-      fetch(url)
-        .then((res) => res.json() as Promise<StatesData>)
-        .then((json) => {
-          statesCache.set(cacheKey, json);
-          statesInflight.delete(cacheKey);
-          return json;
-        })
-        .catch((error) => {
-          statesInflight.delete(cacheKey);
-          throw error;
-        });
+      (async () => {
+        const [primaryUrl, ...secondaryUrls] = urls;
+        const primaryRes = await fetch(primaryUrl);
+        if (!primaryRes.ok) {
+          throw new Error(`Failed to fetch states data: ${primaryRes.status}`);
+        }
+        const primaryCollection = (await primaryRes.json()) as StatesData;
+
+        if (secondaryUrls.length > 0) {
+          statesCache.set(cacheKey, primaryCollection);
+          if (!cancelled) {
+            setData(primaryCollection);
+          }
+        }
+
+        const secondaryResponses = await Promise.all(
+          secondaryUrls.map(async (url) => fetch(url))
+        );
+        for (const res of secondaryResponses) {
+          if (!res.ok) {
+            throw new Error(`Failed to fetch states data: ${res.status}`);
+          }
+        }
+        const secondaryCollections = (await Promise.all(
+          secondaryResponses.map(async (res) => (await res.json()) as StatesData)
+        )) as StatesData[];
+        const collections = [primaryCollection, ...secondaryCollections];
+        const merged =
+          collections.length === 1
+            ? collections[0]
+            : mergeFeatureCollections(collections);
+        statesCache.set(cacheKey, merged);
+        statesInflight.delete(cacheKey);
+        return merged;
+      })().catch((error) => {
+        statesInflight.delete(cacheKey);
+        throw error;
+      });
 
     if (!existing) statesInflight.set(cacheKey, promise);
 
@@ -54,7 +104,7 @@ export function useStatesData(country?: CountryCode): StatesData | null {
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, country]);
+  }, [cacheKey, countries]);
 
   return data;
 }

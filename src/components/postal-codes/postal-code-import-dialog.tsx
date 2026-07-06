@@ -7,8 +7,7 @@ import {
   FileSpreadsheet,
   FileText,
 } from "lucide-react";
-import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -38,9 +37,8 @@ import {
   parsePostalCodeInput,
 } from "@/lib/utils/postal-code-parser";
 
-const BulkImportDialog = dynamic(
-  () => import("./bulk-import-dialog").then((m) => m.BulkImportDialog),
-  { ssr: false }
+const BulkImportDialog = lazy(() =>
+  import("./bulk-import-dialog").then((m) => ({ default: m.BulkImportDialog }))
 );
 
 interface PostalCodeImportDialogProps {
@@ -382,16 +380,18 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
       </DialogContent>
 
       {/* Bulk Import Dialog */}
-      {areaId && (
-        <BulkImportDialog
-          open={bulkImportOpen}
-          onOpenChange={setBulkImportOpen}
-          areaId={areaId}
-          onImportComplete={() => {
-            setBulkImportOpen(false);
-            onOpenChange(false);
-          }}
-        />
+      {areaId && bulkImportOpen && (
+        <Suspense fallback={null}>
+          <BulkImportDialog
+            open={bulkImportOpen}
+            onOpenChange={setBulkImportOpen}
+            areaId={areaId}
+            onImportComplete={() => {
+              setBulkImportOpen(false);
+              onOpenChange(false);
+            }}
+          />
+        </Suspense>
       )}
     </Dialog>
   );

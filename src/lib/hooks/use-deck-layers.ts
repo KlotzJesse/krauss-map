@@ -672,6 +672,20 @@ export function useDeckLayers({
     [data, multiLayerCodes, featureIndex]
   );
 
+  const hasMultiLayerCodes = multiLayerFeaturesData.features.length > 0;
+  const hasThreePlusLayerCodes = useMemo(() => {
+    if (!hasMultiLayerCodes) {
+      return false;
+    }
+    for (const code of multiLayerCodes) {
+      const style = resolvedStylesRef.current.get(code);
+      if ((style?.layerLineColors.length ?? 0) >= 3) {
+        return true;
+      }
+    }
+    return false;
+  }, [hasMultiLayerCodes, multiLayerCodes, resolvedStylesVersion]);
+
   // Preview feature data — try composite key lookup (country:code) for DACH dedup
   const previewData = useMemo(() => {
     if (!previewPostalCode || !featureIndex) {
@@ -1178,63 +1192,65 @@ export function useDeckLayers({
       );
 
       // Secondary color with semi-transparency for dashed effect
-      result.push(
-        new GeoJsonLayer({
-          id: "duplicate-outline-secondary",
-          data: multiLayerFeaturesData,
-          beforeId,
-          filled: false,
-          stroked: true,
-          getLineColor: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            if (!code) return [0, 0, 0, 0];
-            const style = resolvedStylesRef.current.get(code);
-            if (!style || style.layerLineColors.length < 2) {
-              return [0, 0, 0, 0];
-            }
-            const [r, g, b] = style.layerLineColors[1];
-            return [r, g, b, 110] as [number, number, number, number];
-          },
-          getLineWidth: 1.5,
-          lineWidthUnits: "pixels" as const,
-          lineCap: "round" as const,
-          lineJoint: "round" as const,
-          pickable: false,
-          updateTriggers: {
-            getLineColor: [resolvedStylesVersion],
-          },
-        })
-      );
+      if (hasMultiLayerCodes) {
+        result.push(
+          new GeoJsonLayer({
+            id: "duplicate-outline-secondary",
+            data: multiLayerFeaturesData,
+            beforeId,
+            filled: false,
+            stroked: true,
+            getLineColor: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              if (!code) return [0, 0, 0, 0];
+              const style = resolvedStylesRef.current.get(code);
+              if (!style || style.layerLineColors.length < 2) {
+                return [0, 0, 0, 0];
+              }
+              const [r, g, b] = style.layerLineColors[1];
+              return [r, g, b, 110] as [number, number, number, number];
+            },
+            getLineWidth: 1.5,
+            lineWidthUnits: "pixels" as const,
+            lineCap: "round" as const,
+            lineJoint: "round" as const,
+            pickable: false,
+            updateTriggers: {
+              getLineColor: [resolvedStylesVersion],
+            },
+          })
+        );
+      }
 
-      // Tertiary outline for 3+ layers: thin gray dashed line indicating multiple layer involvement
-      result.push(
-        new GeoJsonLayer({
-          id: "duplicate-outline-tertiary",
-          data: multiLayerFeaturesData,
-          beforeId,
-          filled: false,
-          stroked: true,
-          getLineColor: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            if (!code) return [0, 0, 0, 0];
-            const style = resolvedStylesRef.current.get(code);
-            // Only show for 3+ layer codes
-            if (!style || style.layerLineColors.length < 3) {
-              return [0, 0, 0, 0];
-            }
-            // Neutral gray to indicate "has 3+ layers"
-            return [120, 120, 120, 90] as [number, number, number, number];
-          },
-          getLineWidth: 0.8,
-          lineWidthUnits: "pixels" as const,
-          lineCap: "butt" as const,
-          lineJoint: "bevel" as const,
-          pickable: false,
-          updateTriggers: {
-            getLineColor: [resolvedStylesVersion],
-          },
-        })
-      );
+      // Tertiary outline only when there are actual 3+ layer overlaps
+      if (hasThreePlusLayerCodes) {
+        result.push(
+          new GeoJsonLayer({
+            id: "duplicate-outline-tertiary",
+            data: multiLayerFeaturesData,
+            beforeId,
+            filled: false,
+            stroked: true,
+            getLineColor: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              if (!code) return [0, 0, 0, 0];
+              const style = resolvedStylesRef.current.get(code);
+              if (!style || style.layerLineColors.length < 3) {
+                return [0, 0, 0, 0];
+              }
+              return [120, 120, 120, 90] as [number, number, number, number];
+            },
+            getLineWidth: 0.8,
+            lineWidthUnits: "pixels" as const,
+            lineCap: "butt" as const,
+            lineJoint: "bevel" as const,
+            pickable: false,
+            updateTriggers: {
+              getLineColor: [resolvedStylesVersion],
+            },
+          })
+        );
+      }
     } else {
       // Fallback when canvas is unavailable (SSR): solid blended fill with stroke
       result.push(
@@ -1319,6 +1335,8 @@ export function useDeckLayers({
     highlightData,
     isCursorMode,
     beforeId,
+    hasMultiLayerCodes,
+    hasThreePlusLayerCodes,
     showUnassigned,
     unassignedFeaturesData,
   ]);
