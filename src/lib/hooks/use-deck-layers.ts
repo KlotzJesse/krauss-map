@@ -723,15 +723,14 @@ export function useDeckLayers({
         Polygon | MultiPolygon
       >;
     }
-    // Try with area's country prefix first, then try all DACH prefixes
-    const prefixedKey = country
-      ? `${country}:${previewPostalCode}`
-      : previewPostalCode;
-    let features = featureIndex.get(prefixedKey);
+    // Resolve stored/raw preview code to canonical composite key first.
+    const previewKey = resolveFeatureKey(previewPostalCode, country, featureIndex);
+    let features = featureIndex.get(previewKey);
     if (!features) {
-      // Fallback: search all country prefixes for the code
+      const rawCode = extractRawCode(previewPostalCode);
+      // Fallback: search all country prefixes for the raw code
       for (const cc of ["DE", "AT", "CH"]) {
-        features = featureIndex.get(`${cc}:${previewPostalCode}`);
+        features = featureIndex.get(`${cc}:${rawCode}`);
         if (features) {
           break;
         }
@@ -1008,14 +1007,25 @@ export function useDeckLayers({
   );
 
   // Conflict-highlight feature collection (memoized on codes + data)
+  const normalizedHighlightedCodes = useMemo(() => {
+    if (!highlightedCodes || highlightedCodes.size === 0) {
+      return null;
+    }
+    const normalized = new Set<string>();
+    for (const code of highlightedCodes) {
+      normalized.add(resolveFeatureKey(code, country, featureIndex));
+    }
+    return normalized;
+  }, [highlightedCodes, country, featureIndex]);
+
   const highlightData = useMemo(
     () =>
-      highlightedCodes && highlightedCodes.size > 0
-        ? filterAreaFeatures(data, highlightedCodes, featureIndex)
+      normalizedHighlightedCodes && normalizedHighlightedCodes.size > 0
+        ? filterAreaFeatures(data, normalizedHighlightedCodes, featureIndex)
         : (EMPTY_FEATURE_COLLECTION as FeatureCollection<
             Polygon | MultiPolygon
           >),
-    [highlightedCodes, data, featureIndex]
+    [normalizedHighlightedCodes, data, featureIndex]
   );
 
   // Build all deck.gl layers

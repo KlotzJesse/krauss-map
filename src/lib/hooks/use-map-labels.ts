@@ -66,6 +66,20 @@ const LABEL_MIN_ZOOM: Record<number, number> = {
   5: 9,
 };
 
+function hashPostalCodes(codes: string[]): string {
+  let sumHash = 0;
+  let xorHash = 0;
+  for (const code of codes) {
+    let codeHash = 0;
+    for (let i = 0; i < code.length; i++) {
+      codeHash = ((codeHash * 31) + code.charCodeAt(i)) >>> 0;
+    }
+    sumHash = (sumHash + codeHash) >>> 0;
+    xorHash = (xorHash ^ ((codeHash << 1) | (codeHash >>> 31))) >>> 0;
+  }
+  return `${sumHash.toString(36)}:${xorHash.toString(36)}`;
+}
+
 /**
  * Computes the best label placement for a layer's postal codes.
  * Area-weighted centerOfMass, falling back to the largest polygon centroid.
@@ -389,12 +403,12 @@ export function useMapLabels({
       codeCount: number;
     }[] = [];
 
-    // Build a fingerprint from layer IDs + postal code counts.
-    // This only changes when postal code membership changes, NOT on color/opacity tweaks.
+    // Build a fingerprint from layer IDs + postal code membership hash.
+    // This changes when membership changes, even if total counts stay identical.
     let fingerprint = "";
     for (const layer of layers) {
-      const count = layer.postalCodes?.length ?? 0;
-      fingerprint += `${layer.id}:${count};`;
+      const codes = layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
+      fingerprint += `${layer.id}:${codes.length}:${hashPostalCodes(codes)};`;
     }
 
     const cacheState = labelCenterCacheRef.current;

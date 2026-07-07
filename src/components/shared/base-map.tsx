@@ -43,6 +43,7 @@ import {
   COUNTRY_CONFIGS,
   DACH_CENTER,
   DACH_ZOOM,
+  detectCountryFromCode,
 } from "@/lib/config/countries";
 import { useCountryShapesData } from "@/lib/hooks/use-country-shapes-data";
 import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
@@ -135,6 +136,16 @@ const MAP_STYLES = [
   },
 ] as const;
 type MapStyleId = (typeof MAP_STYLES)[number]["id"];
+
+function toCompositePostalCode(
+  postalCode: string,
+  fallbackCountry?: string
+): string {
+  const detected = detectCountryFromCode(postalCode);
+  const normalizedCountry = detected.country ?? fallbackCountry;
+  const rawCode = detected.code;
+  return normalizedCountry ? `${normalizedCountry}:${rawCode}` : rawCode;
+}
 
 // Memoized error message component to prevent re-renders
 const MapErrorMessage = memo(({ message }: MapErrorMessageProps) => (
@@ -731,7 +742,11 @@ const MapInner = memo(function MapInner({
   const handleFitAllLayers = useCallback(() => {
     if (!data?.features || !layers?.length) return;
     const allCodes = new Set(
-      layers.flatMap((l) => l.postalCodes?.map((pc) => pc.postalCode) ?? [])
+      layers.flatMap((l) =>
+        (l.postalCodes ?? []).map((pc) =>
+          toCompositePostalCode(pc.postalCode, country)
+        )
+      )
     );
     if (allCodes.size === 0) return;
 
@@ -742,7 +757,13 @@ const MapInner = memo(function MapInner({
     let found = false;
 
     for (const feature of data.features) {
-      if (!allCodes.has(feature.properties?.code)) continue;
+      const rawCode = String(feature.properties?.code ?? "");
+      if (!rawCode) continue;
+      const featureCountry = String(feature.properties?.country ?? "");
+      const featureCode = featureCountry
+        ? `${featureCountry}:${rawCode}`
+        : rawCode;
+      if (!allCodes.has(featureCode)) continue;
       if (!feature.geometry || !feature.geometry.type) continue;
       found = true;
       const geom = feature.geometry;
@@ -773,7 +794,7 @@ const MapInner = memo(function MapInner({
     const center: [number, number] = [centerLng, centerLat];
     setMapCenterZoom(center, zoom);
     rawMapRef.current?.flyTo({ center, zoom });
-  }, [data, layers, setMapCenterZoom]);
+  }, [data, layers, country, setMapCenterZoom]);
 
   // G key: zoom to fit all layers
   useEffect(() => {

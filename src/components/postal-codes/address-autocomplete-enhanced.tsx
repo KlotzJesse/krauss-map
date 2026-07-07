@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
+import { extractRawCode, storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
 
 const EMPTY_ARRAY: never[] = [];
 
@@ -243,17 +244,21 @@ function useAddressAutocomplete({
     if (!layers || layers.length === 0) {
       return [];
     }
-    // Normalize postal code for comparison - handle both prefixed and unprefixed formats
-    const normalizeCode = (code: string): string => {
-      return code.replace(/[^0-9]/g, "").toUpperCase();
+    const arePostalCodesEquivalent = (leftCode: string, rightCode: string) => {
+      const leftComposite = storedCodeToCompositeKey(leftCode);
+      const rightComposite = storedCodeToCompositeKey(rightCode);
+      if (leftComposite && rightComposite) {
+        return leftComposite === rightComposite;
+      }
+      if (!leftComposite && !rightComposite) {
+        return extractRawCode(leftCode) === extractRawCode(rightCode);
+      }
+      return extractRawCode(leftCode) === extractRawCode(rightCode);
     };
-    const normalizedInput = normalizeCode(postalCode);
 
     return layers.filter((layer) =>
       layer.postalCodes?.some(
-        (pc) =>
-          normalizeCode(pc.postalCode) === normalizedInput ||
-          pc.postalCode === postalCode
+        (pc) => arePostalCodesEquivalent(pc.postalCode, postalCode)
       )
     );
   });

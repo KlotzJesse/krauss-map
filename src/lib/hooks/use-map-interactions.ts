@@ -11,8 +11,9 @@ import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useTerraDraw } from "@/lib/hooks/use-terradraw";
 import type { SelectAreaLayers } from "@/lib/schema/schema";
 import {
-  getFeatureCode,
+  extractRawCode,
   getFeatureStoredCode,
+  storedCodeToCompositeKey,
 } from "@/lib/utils/deck-gl-utils";
 
 type LayerWithPostalCodes = SelectAreaLayers & {
@@ -58,6 +59,21 @@ export function useMapInteractions({
   removePostalCodesFromLayer,
   onNeedsReassign,
 }: UseMapInteractionsProps) {
+  const arePostalCodesEquivalent = useStableCallback(
+    (leftCode: string, rightCode: string): boolean => {
+      const leftComposite = storedCodeToCompositeKey(leftCode);
+      const rightComposite = storedCodeToCompositeKey(rightCode);
+      if (leftComposite && rightComposite) {
+        return leftComposite === rightComposite;
+      }
+      if (!leftComposite && !rightComposite) {
+        return extractRawCode(leftCode) === extractRawCode(rightCode);
+      }
+      // Legacy raw code support: treat raw and prefixed code as equal only by raw part.
+      return extractRawCode(leftCode) === extractRawCode(rightCode);
+    }
+  );
+
   // Drawing tools state management
   const {
     currentDrawingMode,
@@ -190,23 +206,17 @@ export function useMapInteractions({
         activeLayer.postalCodes?.map((pc) => pc.postalCode)
       );
 
-      const normalizeCode = (code: string): string => {
-        return code.replace(/[^0-9]/g, "").toUpperCase();
-      };
-      const normalizedStoredCode = normalizeCode(storedCode);
       const codeExists =
         existingCodesSet.has(storedCode) ||
         Array.from(existingCodesSet).some(
-          (code) => normalizeCode(code) === normalizedStoredCode
+          (code) => arePostalCodesEquivalent(code, storedCode)
         );
 
       const otherLayersWithCode = (currentLayers ?? []).filter(
         (l) =>
           l.id !== activeLayerId &&
           l.postalCodes?.some(
-            (pc) =>
-              pc.postalCode === storedCode ||
-              normalizeCode(pc.postalCode) === normalizedStoredCode
+            (pc) => arePostalCodesEquivalent(pc.postalCode, storedCode)
           )
       );
 
@@ -247,6 +257,7 @@ export function useMapInteractions({
       addPostalCodesToLayer,
       removePostalCodesFromLayer,
       onNeedsReassign,
+      arePostalCodesEquivalent,
     ]
   );
 

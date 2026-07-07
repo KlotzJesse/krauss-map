@@ -36,7 +36,7 @@ import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
 import type { Layer } from "@/lib/types/area-types";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
-import { extractRawCode } from "@/lib/utils/deck-gl-utils";
+import { extractRawCode, storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
 import { isLightColor } from "@/lib/utils/layer-colors";
 import { getLargestPolygonCentroid } from "@/lib/utils/map-data";
 import {
@@ -83,6 +83,28 @@ const PostalCodeImportDialog = dynamic(
 );
 
 const EMPTY_TAGS: { id: number; name: string; color: string }[] = [];
+
+function toCompositePostalCode(
+  postalCode: string,
+  fallbackCountry?: CountryCode
+): string {
+  const detected = detectCountryFromCode(postalCode);
+  const country = detected.country ?? fallbackCountry;
+  const rawCode = extractRawCode(postalCode);
+  return country ? `${country}:${rawCode}` : rawCode;
+}
+
+function arePostalCodesEquivalent(leftCode: string, rightCode: string): boolean {
+  const leftComposite = storedCodeToCompositeKey(leftCode);
+  const rightComposite = storedCodeToCompositeKey(rightCode);
+  if (leftComposite && rightComposite) {
+    return leftComposite === rightComposite;
+  }
+  if (!leftComposite && !rightComposite) {
+    return extractRawCode(leftCode) === extractRawCode(rightCode);
+  }
+  return extractRawCode(leftCode) === extractRawCode(rightCode);
+}
 
 interface PostalCodesViewClientWithLayersProps {
   defaultGranularity: string;
@@ -178,15 +200,12 @@ function usePostalCodesLayerActions({
           };
         }
 
-        // For removal, normalize postal codes to handle prefix variations
-        // e.g., "26781" should match "D-26781" in storage
-        const normalizedRemoveCodes = new Set(
-          update.postalCodes.map((code) => code.replace(/[^0-9]/g, ""))
+        const newCodes = currentCodes.filter(
+          (code) =>
+            !update.postalCodes.some((removeCode) =>
+              arePostalCodesEquivalent(code, removeCode)
+            )
         );
-        const newCodes = currentCodes.filter((code) => {
-          const normalized = code.replace(/[^0-9]/g, "");
-          return !normalizedRemoveCodes.has(normalized);
-        });
 
         return {
           ...layer,
@@ -205,12 +224,52 @@ function usePostalCodesLayerActions({
     })
   );
 
+  type LayerMutationUpdate = {
+    type: "add" | "remove";
+    layerId: number;
+    postalCodes: string[];
+  };
+  type PendingLayerMutation = { id: number; update: LayerMutationUpdate };
+
+  const mutationIdRef = useRef(0);
+  const pendingMutationsRef = useRef<PendingLayerMutation[]>([]);
+  const committedLayersRef = useRef(initialLayers);
+  const committedUndoRedoRef = useRef(initialUndoRedoStatus);
+
+  const buildOptimisticUndoRedo = useStableCallback(
+    (
+      committed: typeof initialUndoRedoStatus,
+      pendingMutationsCount: number
+    ) => {
+      const undoCount = committed.undoCount + pendingMutationsCount;
+      return {
+        ...committed,
+        undoCount,
+        redoCount: 0,
+        canUndo: undoCount > 0,
+        canRedo: false,
+      };
+    }
+  );
+
+  const recomputeOptimisticState = useStableCallback(() => {
+    let nextLayers = committedLayersRef.current;
+    for (const mutation of pendingMutationsRef.current) {
+      nextLayers = applyLayerUpdate(nextLayers, mutation.update);
+    }
+    setOptimisticLayers(nextLayers);
+    setOptimisticUndoRedo(
+      buildOptimisticUndoRedo(
+        committedUndoRedoRef.current,
+        pendingMutationsRef.current.length
+      )
+    );
+  });
+
   // Stable refs so callbacks that only read (not depend on) these values
   // don't recreate on every render and break React.memo on children.
   const optimisticLayersRef = useRef(optimisticLayers);
   optimisticLayersRef.current = optimisticLayers;
-  const optimisticUndoRedoRef = useRef(optimisticUndoRedo);
-  optimisticUndoRedoRef.current = optimisticUndoRedo;
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -223,15 +282,21 @@ function usePostalCodesLayerActions({
         return;
       }
       const searchBeforeAction = window.location.search;
-      // Capture snapshot BEFORE the urgent update so rollback is correct
-      const previousLayers = optimisticLayersRef.current;
-      const previousUndoRedo = optimisticUndoRedoRef.current;
+      const update: LayerMutationUpdate = { type: "add", layerId, postalCodes };
+      const mutationId = ++mutationIdRef.current;
+      pendingMutationsRef.current = [
+        ...pendingMutationsRef.current,
+        { id: mutationId, update },
+      ];
       // URGENT: update map immediately — outside startTransition so React
       // treats this as high-priority and renders before the server round-trip.
-      setOptimisticLayers((current) =>
-        applyLayerUpdate(current, { type: "add", layerId, postalCodes })
+      setOptimisticLayers((current) => applyLayerUpdate(current, update));
+      setOptimisticUndoRedo(
+        buildOptimisticUndoRedo(
+          committedUndoRedoRef.current,
+          pendingMutationsRef.current.length
+        )
       );
-      setOptimisticUndoRedo((current) => incrementUndoRedo(current));
       // NON-URGENT: persist to server in background
       startTransition(async () => {
         try {
@@ -243,15 +308,30 @@ function usePostalCodesLayerActions({
             { skipInvalidate: true }
           );
           if (!result.success) {
-            setOptimisticLayers(previousLayers);
-            setOptimisticUndoRedo(previousUndoRedo);
+            pendingMutationsRef.current = pendingMutationsRef.current.filter(
+              (mutation) => mutation.id !== mutationId
+            );
+            recomputeOptimisticState();
             toast.error(result.error);
             return;
           }
+          committedLayersRef.current = applyLayerUpdate(
+            committedLayersRef.current,
+            update
+          );
+          committedUndoRedoRef.current = incrementUndoRedo(
+            committedUndoRedoRef.current
+          );
+          pendingMutationsRef.current = pendingMutationsRef.current.filter(
+            (mutation) => mutation.id !== mutationId
+          );
+          recomputeOptimisticState();
           restoreDroppedQueryParams(searchBeforeAction);
         } catch (error) {
-          setOptimisticLayers(previousLayers);
-          setOptimisticUndoRedo(previousUndoRedo);
+          pendingMutationsRef.current = pendingMutationsRef.current.filter(
+            (mutation) => mutation.id !== mutationId
+          );
+          recomputeOptimisticState();
           let message = "Fehler beim Hinzufügen der PLZ";
           if (error instanceof Error) {
             message = error.message;
@@ -269,13 +349,24 @@ function usePostalCodesLayerActions({
         return;
       }
       const searchBeforeAction = window.location.search;
-      const previousLayers = optimisticLayersRef.current;
-      const previousUndoRedo = optimisticUndoRedoRef.current;
+      const update: LayerMutationUpdate = {
+        type: "remove",
+        layerId,
+        postalCodes,
+      };
+      const mutationId = ++mutationIdRef.current;
+      pendingMutationsRef.current = [
+        ...pendingMutationsRef.current,
+        { id: mutationId, update },
+      ];
       // URGENT: update map immediately — outside startTransition
-      setOptimisticLayers((current) =>
-        applyLayerUpdate(current, { type: "remove", layerId, postalCodes })
+      setOptimisticLayers((current) => applyLayerUpdate(current, update));
+      setOptimisticUndoRedo(
+        buildOptimisticUndoRedo(
+          committedUndoRedoRef.current,
+          pendingMutationsRef.current.length
+        )
       );
-      setOptimisticUndoRedo((current) => incrementUndoRedo(current));
       // NON-URGENT: persist to server in background
       startTransition(async () => {
         try {
@@ -287,15 +378,30 @@ function usePostalCodesLayerActions({
             { skipInvalidate: true }
           );
           if (!result.success) {
-            setOptimisticLayers(previousLayers);
-            setOptimisticUndoRedo(previousUndoRedo);
+            pendingMutationsRef.current = pendingMutationsRef.current.filter(
+              (mutation) => mutation.id !== mutationId
+            );
+            recomputeOptimisticState();
             toast.error(result.error);
             return;
           }
+          committedLayersRef.current = applyLayerUpdate(
+            committedLayersRef.current,
+            update
+          );
+          committedUndoRedoRef.current = incrementUndoRedo(
+            committedUndoRedoRef.current
+          );
+          pendingMutationsRef.current = pendingMutationsRef.current.filter(
+            (mutation) => mutation.id !== mutationId
+          );
+          recomputeOptimisticState();
           restoreDroppedQueryParams(searchBeforeAction);
         } catch (error) {
-          setOptimisticLayers(previousLayers);
-          setOptimisticUndoRedo(previousUndoRedo);
+          pendingMutationsRef.current = pendingMutationsRef.current.filter(
+            (mutation) => mutation.id !== mutationId
+          );
+          recomputeOptimisticState();
           let message = "Fehler beim Entfernen der PLZ";
           if (error instanceof Error) {
             message = error.message;
@@ -547,8 +653,17 @@ export const PostalCodesViewClientWithLayers = memo(
       (postalCode: string | null) => {
         setPreviewPostalCode(postalCode);
         if (postalCode && data) {
+          const targetCode = toCompositePostalCode(postalCode, country);
           const feature = data.features.find(
-            (f) => f.properties?.code === extractRawCode(postalCode)
+            (f) => {
+              const rawCode = String(f.properties?.code ?? "");
+              if (!rawCode) return false;
+              const featureCountry = String(f.properties?.country ?? "");
+              const featureCode = featureCountry
+                ? `${featureCountry}:${rawCode}`
+                : rawCode;
+              return featureCode === targetCode;
+            }
           );
           if (feature) {
             const [lng, lat] = getLargestPolygonCentroid(
@@ -567,7 +682,11 @@ export const PostalCodesViewClientWithLayers = memo(
         const layer = optimisticLayersRef.current.find((l) => l.id === layerId);
         if (!layer?.postalCodes?.length) return;
 
-        const codeSet = new Set(layer.postalCodes.map((pc) => pc.postalCode));
+        const codeSet = new Set(
+          layer.postalCodes.map((pc) =>
+            toCompositePostalCode(pc.postalCode, country)
+          )
+        );
         let minLng = Infinity,
           maxLng = -Infinity,
           minLat = Infinity,
@@ -575,7 +694,13 @@ export const PostalCodesViewClientWithLayers = memo(
         let found = false;
 
         for (const feature of data.features) {
-          if (!codeSet.has(feature.properties?.code)) continue;
+          const rawCode = String(feature.properties?.code ?? "");
+          if (!rawCode) continue;
+          const featureCountry = String(feature.properties?.country ?? "");
+          const featureCode = featureCountry
+            ? `${featureCountry}:${rawCode}`
+            : rawCode;
+          if (!codeSet.has(featureCode)) continue;
           found = true;
           const coords: number[][] = [];
           const geom = feature.geometry;
@@ -609,7 +734,7 @@ export const PostalCodesViewClientWithLayers = memo(
 
         setMapCenterZoom([centerLng, centerLat], zoom);
       },
-      [setMapCenterZoom]
+      [country, setMapCenterZoom]
     );
 
     const handleGranularityChange = useCallback(
