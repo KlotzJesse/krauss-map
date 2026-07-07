@@ -1,6 +1,7 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { useMemo } from "react";
 
+import { getFeatureStoredCode } from "@/lib/utils/deck-gl-utils";
 import { isPointInPolygon } from "@/lib/utils/map-data";
 
 import { useStableCallback } from "./use-stable-callback";
@@ -10,6 +11,7 @@ interface UsePostalCodeLookupOptions {
 }
 
 interface SpatialEntry {
+  code: string;
   feature: FeatureCollection<Polygon | MultiPolygon>["features"][number];
   bounds: { minLng: number; maxLng: number; minLat: number; maxLat: number };
 }
@@ -17,7 +19,7 @@ interface SpatialEntry {
 export function usePostalCodeLookup({ data }: UsePostalCodeLookupOptions) {
   // Spatial index for bounding-box pre-filter + point-in-polygon
   const spatialIndex = useMemo(() => {
-    const index = new Map<string, SpatialEntry>();
+    const index: SpatialEntry[] = [];
     for (const feature of data.features) {
       const geometry = feature.geometry;
       if (!geometry) {
@@ -65,12 +67,10 @@ export function usePostalCodeLookup({ data }: UsePostalCodeLookupOptions) {
       }
 
       if (minLng !== Infinity) {
-        const code =
-          feature.properties?.code ??
-          feature.properties?.PLZ ??
-          feature.properties?.plz;
+        const code = getFeatureStoredCode(feature);
         if (code) {
-          index.set(String(code), {
+          index.push({
+            code: String(code),
             feature,
             bounds: { minLng, maxLng, minLat, maxLat },
           });
@@ -82,7 +82,7 @@ export function usePostalCodeLookup({ data }: UsePostalCodeLookupOptions) {
 
   const findPostalCodeByCoords = useStableCallback(
     (lng: number, lat: number) => {
-      for (const [code, { feature, bounds }] of spatialIndex) {
+      for (const { code, feature, bounds } of spatialIndex) {
         if (
           lng < bounds.minLng ||
           lng > bounds.maxLng ||

@@ -497,6 +497,8 @@ export function useDeckLayers({
 
   // Web Worker lifecycle — created once, terminated on unmount
   const workerRef = useRef<Worker | null>(null);
+  const workerRequestIdRef = useRef(0);
+  const lastAppliedWorkerRequestIdRef = useRef(0);
   useEffect(() => {
     if (typeof Worker === "undefined") return; // SSR guard
     const worker = new Worker(
@@ -515,15 +517,31 @@ export function useDeckLayers({
       ? [...featureIndex.keys()]
       : ([] as string[]);
 
+    // Apply a synchronous style pass first so add/remove interactions paint instantly.
+    const syncResult = buildResolvedStyleMap(
+      layers,
+      activeLayerId,
+      country,
+      featureIndex
+    );
+    resolvedStylesRef.current = syncResult.map;
+    const syncStable = stabilizeSets(syncResult);
+    setResolvedStylesState((prev) => {
+      if (
+        prev.version === syncStable.version &&
+        prev.multiLayerCodes === syncStable.multiLayerCodes &&
+        prev.sameColorCodes === syncStable.sameColorCodes
+      ) {
+        return prev;
+      }
+      return {
+        version: syncStable.version,
+        multiLayerCodes: syncStable.multiLayerCodes,
+        sameColorCodes: syncStable.sameColorCodes,
+      };
+    });
+
     if (!workerRef.current) {
-      const result = buildResolvedStyleMap(layers, activeLayerId, country, featureIndex);
-      resolvedStylesRef.current = result.map;
-      const stable = stabilizeSets(result);
-      setResolvedStylesState({
-        version: stable.version,
-        multiLayerCodes: stable.multiLayerCodes,
-        sameColorCodes: stable.sameColorCodes,
-      });
       return;
     }
 
@@ -531,11 +549,16 @@ export function useDeckLayers({
     worker.onmessage = ({
       data,
     }: MessageEvent<{
+      requestId: number;
       styleEntries: [string, ResolvedStyle][];
       multiLayerCodes: string[];
       sameColorCodes: string[];
       version: string;
     }>) => {
+      if (data.requestId < lastAppliedWorkerRequestIdRef.current) {
+        return;
+      }
+      lastAppliedWorkerRequestIdRef.current = data.requestId;
       resolvedStylesRef.current = new Map(data.styleEntries);
       const workerResult = {
         map: resolvedStylesRef.current,
@@ -551,7 +574,14 @@ export function useDeckLayers({
       });
     };
 
-    worker.postMessage({ layers, activeLayerId, country, featureIndexKeys });
+    const requestId = ++workerRequestIdRef.current;
+    worker.postMessage({
+      requestId,
+      layers,
+      activeLayerId,
+      country,
+      featureIndexKeys,
+    });
   }, [layers, activeLayerId, country, featureIndex, stabilizeSets]);
 
   const resolvedStylesVersion = resolvedStylesState.version;

@@ -355,13 +355,15 @@ function buildResolvedStyleMap(
 
 self.onmessage = (
   e: MessageEvent<{
+    requestId: number;
     layers: WorkerLayer[] | undefined;
     activeLayerId: number | null;
     country: string | undefined;
     featureIndexKeys: string[];
   }>
 ) => {
-  const { layers, activeLayerId, country, featureIndexKeys } = e.data;
+  const { requestId, layers, activeLayerId, country, featureIndexKeys } =
+    e.data;
 
   // Reconstruct a Set<string> from the serialized keys array for .has() lookups
   const featureIndexKeysSet: Set<string> | undefined =
@@ -375,6 +377,7 @@ self.onmessage = (
   );
 
   self.postMessage({
+    requestId,
     styleEntries: [...result.map.entries()],
     multiLayerCodes: [...result.multiLayerCodes],
     sameColorCodes: [...result.sameColorCodes],

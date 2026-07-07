@@ -387,7 +387,8 @@ function usePostalCodesLayerActions({
 
   const handleAddressSelect = useStableCallback(
     async (coords: [number, number], _label: string, postalCode?: string) => {
-      const code = postalCode || findPostalCodeByCoords(coords[0], coords[1]);
+      // Prefer map-derived code (includes country prefix on multi-country datasets).
+      const code = findPostalCodeByCoords(coords[0], coords[1]) ?? postalCode;
       if (!code) {
         toast.error("Keine PLZ für Adresse gefunden");
         return;
