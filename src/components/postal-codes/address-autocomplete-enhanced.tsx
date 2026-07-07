@@ -226,6 +226,7 @@ function useAddressAutocomplete({
     initialAutocompleteState
   );
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const geocodeRequestIdRef = useRef(0);
 
   const syncInputWithRadius = useStableCallback((newRadius: number) => {
     dispatch({ type: "SET_RADIUS", radius: newRadius });
@@ -287,6 +288,7 @@ function useAddressAutocomplete({
   );
 
   const handleInputChange = useStableCallback((value: string) => {
+    const requestId = ++geocodeRequestIdRef.current;
     dispatch({ type: "SET_QUERY", query: value });
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -294,46 +296,69 @@ function useAddressAutocomplete({
 
     if (value.length < 2) {
       dispatch({ type: "SET_RESULTS", results: [] });
+      dispatch({ type: "SET_LOADING", isLoading: false });
       return;
     }
 
     dispatch({ type: "SET_LOADING", isLoading: true });
     timeoutRef.current = setTimeout(async () => {
       const geocodePromise = async () => {
-        const looksLikeAddress = /\d/.test(value.trim());
+        try {
+          const looksLikeAddress = /\d/.test(value.trim());
 
-        const geocodeResult = await geocodeSearchAction({
-          query: value,
-          includePostalCode: looksLikeAddress,
-          limit: 8,
-          enhancedSearch: true,
-        });
+          const geocodeResult = await geocodeSearchAction({
+            query: value,
+            includePostalCode: looksLikeAddress,
+            limit: 8,
+            enhancedSearch: true,
+          });
 
-        dispatch({ type: "SET_LOADING", isLoading: false });
+          if (requestId !== geocodeRequestIdRef.current) {
+            return null;
+          }
 
-        if (!geocodeResult.success || !geocodeResult.data) {
-          throw new Error(geocodeResult.error ?? "Geocoding failed");
+          if (!geocodeResult.success || !geocodeResult.data) {
+            throw new Error(geocodeResult.error ?? "Geocoding failed");
+          }
+
+          const fetchedResults = geocodeResult.data.results ?? [];
+
+          if (requestId !== geocodeRequestIdRef.current) {
+            return null;
+          }
+          dispatch({ type: "SET_RESULTS", results: fetchedResults });
+
+          if (fetchedResults.length === 0) {
+            return "Keine Ergebnisse gefunden";
+          }
+
+          return `${fetchedResults.length} Adressen gefunden`;
+        } finally {
+          if (requestId === geocodeRequestIdRef.current) {
+            dispatch({ type: "SET_LOADING", isLoading: false });
+          }
         }
-
-        const fetchedResults = geocodeResult.data.results ?? [];
-
-        dispatch({ type: "SET_RESULTS", results: fetchedResults });
-
-        if (fetchedResults.length === 0) {
-          return "Keine Ergebnisse gefunden";
-        }
-
-        return `${fetchedResults.length} Adressen gefunden`;
       };
 
       executeAction(geocodePromise(), {
         loading: `Suche nach "${value}"... (DE/EN unterstützt)`,
-        success: (message) => message as string,
+        success: (message) => (message as string) ?? "",
         error: (error) =>
           error instanceof Error ? error.message : "Adresssuche fehlgeschlagen",
-      }).catch(() => {});
+      }).catch((error) => {
+        console.error("Geocoding executeAction failed:", error);
+      });
     }, 300);
   });
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    },
+    []
+  );
 
   const handleDirectSelect = useStableCallback((result: GeocodeResult) => {
     dispatch({ type: "SET_OPEN", open: false });
@@ -366,7 +391,9 @@ function useAddressAutocomplete({
         success: (message: string) => message,
         error: (error: unknown) =>
           error instanceof Error ? error.message : "Ein Fehler ist aufgetreten",
-      }).catch(() => {});
+      }).catch((error) => {
+        console.error("Boundary search executeAction failed:", error);
+      });
 
       return;
     }
@@ -769,8 +796,9 @@ export const AddressAutocompleteEnhanced = memo(
       if (!open) return;
 
       // Delay adding the listener to prevent the opening click from immediately closing
+      let handleClickOutside: ((event: MouseEvent) => void) | null = null;
       const timeoutId = setTimeout(() => {
-        const handleClickOutside = (event: MouseEvent) => {
+        handleClickOutside = (event: MouseEvent) => {
           if (
             wrapperRef.current &&
             !wrapperRef.current.contains(event.target as Node)
@@ -780,12 +808,14 @@ export const AddressAutocompleteEnhanced = memo(
         };
 
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-          document.removeEventListener("mousedown", handleClickOutside);
-        };
       }, 0);
 
-      return () => clearTimeout(timeoutId);
+      return () => {
+        clearTimeout(timeoutId);
+        if (handleClickOutside) {
+          document.removeEventListener("mousedown", handleClickOutside);
+        }
+      };
     }, [open]);
 
     return (

@@ -489,8 +489,11 @@ async function fillRegions(
             : "eine Ebene";
 
       return `${count} Region${count === 1 ? "" : "en"} gefüllt (${modeText})`;
-    } catch {}
-    setIsFilling(false);
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsFilling(false);
+    }
   };
 
   executeAction(fillPromise(), {
@@ -716,10 +719,10 @@ function useDrawingToolsActions({
         `${pendingPostalCodes.length} Region${suffix} zu Gebiet hinzugefügt`,
         { duration: 2000 }
       );
+      onAddPending?.();
     } catch {
       toast.error("Fehler beim Hinzufügen der Regionen", { duration: 2000 });
     }
-    onAddPending?.();
   };
 
   const handleRemovePendingFromLayer = async () => {
@@ -747,10 +750,10 @@ function useDrawingToolsActions({
         `${pendingPostalCodes.length} Region${removeSuffix} aus Gebiet entfernt`,
         { duration: 2000 }
       );
+      onRemovePending?.();
     } catch {
       toast.error("Fehler beim Entfernen der Regionen", { duration: 2000 });
     }
-    onRemovePending?.();
   };
 
   const handleExportExcel = async () => {

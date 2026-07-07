@@ -114,6 +114,7 @@ import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { Layer } from "@/lib/types/area-types";
+import { extractRawCode, storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
 import {
   COLOR_THEMES,
   hashGroupColor,
@@ -608,18 +609,24 @@ export const LayerManagementSection = memo(function LayerManagementSection({
     const q = layerSearch.trim();
     if (!/^(D|A|CH|DE|AT)?-?\d{1,5}$/.test(q)) return null;
 
-    // Normalize the search query for comparison
-    const normalizeCode = (code: string): string => {
-      return code.replace(/[^0-9]/g, "").toUpperCase();
+    const arePostalCodesEquivalent = (leftCode: string, rightCode: string) => {
+      const leftComposite = storedCodeToCompositeKey(leftCode);
+      const rightComposite = storedCodeToCompositeKey(rightCode);
+      if (leftComposite && rightComposite) {
+        return leftComposite === rightComposite;
+      }
+      if (!leftComposite && !rightComposite) {
+        return extractRawCode(leftCode) === extractRawCode(rightCode);
+      }
+      return extractRawCode(leftCode) === extractRawCode(rightCode);
     };
-    const normalizedQ = normalizeCode(q);
+    const normalizedQ = extractRawCode(q);
     if (normalizedQ.length < 1) return null;
 
     return optimisticLayers
       .filter((l) =>
         l.postalCodes?.some(
-          (pc) =>
-            normalizeCode(pc.postalCode) === normalizedQ || pc.postalCode === q
+          (pc) => arePostalCodesEquivalent(pc.postalCode, q)
         )
       )
       .map((l) => ({ id: l.id, name: l.name, color: l.color ?? "#6366f1" }));

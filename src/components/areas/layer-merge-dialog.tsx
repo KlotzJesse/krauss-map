@@ -80,7 +80,7 @@ function computeMergePreviewStats(
   } else if (strategy === "keep-target") {
     resultCount = targetCodes.size;
   } else {
-    resultCount = targetCodes.size + sourceCodes.size;
+    resultCount = sourceCodes.size;
   }
 
   return {

@@ -637,8 +637,12 @@ const MapInner = memo(function MapInner({
   const { setActiveLayer, isLayerPending } = useActiveLayerState();
 
   // Load only countries that are actually referenced by area layers (usually one country).
-  const statesData = useStatesData(countries ?? country);
-  const countryShapesData = useCountryShapesData(countries ?? country);
+  const { data: statesData, error: statesDataError } = useStatesData(
+    countries ?? country
+  );
+  const { data: countryShapesData, error: countryShapesError } =
+    useCountryShapesData(countries ?? country);
+  const mapDataError = statesDataError ?? countryShapesError;
 
   // Performance optimizations with memoized computations
   const optimizations = useMapOptimizations({ data, statesData });
@@ -1142,6 +1146,12 @@ const MapInner = memo(function MapInner({
         featureIndex={optimizations.featureIndex}
         country={country}
       />
+
+      {mapDataError && (
+        <div className="absolute top-12 right-4 z-30 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive max-w-sm">
+          Karten-Overlay konnte nicht vollständig geladen werden: {mapDataError}
+        </div>
+      )}
 
       {/* Conflict resolution panel — right side, next to the map */}
       <Activity mode={showConflicts ? "visible" : "hidden"}>

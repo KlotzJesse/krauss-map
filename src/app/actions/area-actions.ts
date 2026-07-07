@@ -950,6 +950,78 @@ export async function deleteLayerAction(
   }
 }
 
+export async function mergeLayersAction(
+  areaId: number,
+  targetLayerId: number,
+  sourceLayerIds: number[],
+  mergedPostalCodes: string[]
+): ServerActionResponse<{ mergedCount: number; deletedCount: number }> {
+  try {
+    const uniqueSourceIds = [...new Set(sourceLayerIds)].filter(
+      (id) => id !== targetLayerId
+    );
+    if (uniqueSourceIds.length === 0) {
+      return { success: false, error: "No source layers provided" };
+    }
+
+    const layersInArea = await db.query.areaLayers.findMany({
+      where: and(
+        eq(areaLayers.areaId, areaId),
+        inArray(areaLayers.id, [targetLayerId, ...uniqueSourceIds])
+      ),
+      columns: { id: true },
+    });
+    const existingLayerIds = new Set(layersInArea.map((layer) => layer.id));
+    if (!existingLayerIds.has(targetLayerId)) {
+      return { success: false, error: "Target layer not found" };
+    }
+    for (const sourceId of uniqueSourceIds) {
+      if (!existingLayerIds.has(sourceId)) {
+        return { success: false, error: `Source layer ${sourceId} not found` };
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(areaLayerPostalCodes)
+        .where(eq(areaLayerPostalCodes.layerId, targetLayerId));
+
+      const normalizedCodes = [...new Set(mergedPostalCodes.map(String))].filter(
+        (code) => code.trim().length > 0
+      );
+      if (normalizedCodes.length > 0) {
+        await tx.insert(areaLayerPostalCodes).values(
+          normalizedCodes.map((postalCode) => ({
+            layerId: targetLayerId,
+            postalCode,
+          }))
+        );
+      }
+
+      await tx
+        .delete(areaLayerPostalCodes)
+        .where(inArray(areaLayerPostalCodes.layerId, uniqueSourceIds));
+
+      await tx.delete(areaLayers).where(inArray(areaLayers.id, uniqueSourceIds));
+    });
+
+    updateTag(`area-${areaId}-layers`);
+    updateTag(`area-${areaId}`);
+    updateTag(`area-${areaId}-undo-redo`);
+
+    return {
+      success: true,
+      data: {
+        mergedCount: mergedPostalCodes.length,
+        deletedCount: uniqueSourceIds.length,
+      },
+    };
+  } catch (error) {
+    console.error("Error merging layers:", error);
+    return { success: false, error: "Failed to merge layers" };
+  }
+}
+
 export async function duplicateLayerAction(
   areaId: number,
   layerId: number,
@@ -1668,6 +1740,13 @@ export async function geoprocessAction(data: {
   try {
     const { mode, granularity, selectedCodes, country } = data;
     const countryFilter = country ? sql` AND country = ${country}` : sql``;
+    const normalizedSelectedCodes = selectedCodes
+      .map((code) => String(code).trim())
+      .filter((code) => code.length > 0);
+    const selectedCodeList = sql.join(
+      normalizedSelectedCodes.map((code) => sql`${code}`),
+      sql`, `
+    );
 
     if (!mode || !granularity || !Array.isArray(selectedCodes)) {
       return { success: false, error: "Missing required parameters" };
@@ -1682,13 +1761,20 @@ export async function geoprocessAction(data: {
 
       let expandRows = [];
 
-      if (selectedCodes.length > 0) {
+      if (normalizedSelectedCodes.length > 0) {
         const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter} AND code NOT IN (${sql.raw(
-            selectedCodes.map(String).join(",")
-          )}) AND ST_Touches(geometry, (SELECT ST_Union(geometry) AS geom FROM postal_codes WHERE granularity = ${granularity}${countryFilter} AND code IN (${sql.raw(
-            selectedCodes.map(String).join(",")
-          )})))`
+          sql`SELECT code FROM postal_codes
+              WHERE granularity = ${granularity}${countryFilter}
+                AND code NOT IN (${selectedCodeList})
+                AND ST_Touches(
+                  geometry,
+                  (
+                    SELECT ST_Union(geometry) AS geom
+                    FROM postal_codes
+                    WHERE granularity = ${granularity}${countryFilter}
+                      AND code IN (${selectedCodeList})
+                  )
+                )`
         );
 
         expandRows = rows;
@@ -1706,26 +1792,17 @@ export async function geoprocessAction(data: {
     } else if (mode === "holes") {
       // Use a CTE for the convex hull to avoid recomputation and maximize performance
 
-      if (selectedCodes.length > 0) {
-        // Always treat codes as strings for SQL
-
-        const codeList = selectedCodes
-
-          .map((code) => `'${String(code)}'`)
-
-          .join(",");
-
+      if (normalizedSelectedCodes.length > 0) {
         const { rows } = await db.execute(
           sql`WITH hull AS (
             SELECT ST_ConvexHull(ST_Collect(geometry)) AS geom
             FROM postal_codes
-            WHERE granularity = ${granularity}${countryFilter} AND code IN (${sql.raw(
-              codeList
-            )})
+            WHERE granularity = ${granularity}${countryFilter}
+              AND code IN (${selectedCodeList})
             )
             SELECT code FROM postal_codes, hull
             WHERE granularity = ${granularity}${countryFilter}
-              AND code NOT IN (${sql.raw(codeList)})
+              AND code NOT IN (${selectedCodeList})
               AND ST_Within(geometry, hull.geom)`
         );
 
@@ -1738,13 +1815,20 @@ export async function geoprocessAction(data: {
 
       let gapRows = [];
 
-      if (selectedCodes.length > 0) {
+      if (normalizedSelectedCodes.length > 0) {
         const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter} AND code NOT IN (${sql.raw(
-            selectedCodes.map(String).join(",")
-          )}) AND ST_Intersects(geometry, (SELECT ST_Union(geometry) AS geom FROM postal_codes WHERE granularity = ${granularity}${countryFilter} AND code IN (${sql.raw(
-            selectedCodes.map(String).join(",")
-          )})))`
+          sql`SELECT code FROM postal_codes
+              WHERE granularity = ${granularity}${countryFilter}
+                AND code NOT IN (${selectedCodeList})
+                AND ST_Intersects(
+                  geometry,
+                  (
+                    SELECT ST_Union(geometry) AS geom
+                    FROM postal_codes
+                    WHERE granularity = ${granularity}${countryFilter}
+                      AND code IN (${selectedCodeList})
+                  )
+                )`
         );
 
         gapRows = rows;

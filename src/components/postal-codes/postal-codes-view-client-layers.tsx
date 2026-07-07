@@ -279,7 +279,7 @@ function usePostalCodesLayerActions({
     async (layerId: number, postalCodes: string[]) => {
       if (!areaId) {
         toast.error("Kein Gebiet ausgewählt");
-        return;
+        throw new Error("Kein Gebiet ausgewählt");
       }
       const searchBeforeAction = window.location.search;
       const update: LayerMutationUpdate = { type: "add", layerId, postalCodes };
@@ -297,47 +297,53 @@ function usePostalCodesLayerActions({
           pendingMutationsRef.current.length
         )
       );
-      // NON-URGENT: persist to server in background
-      startTransition(async () => {
-        try {
-          const result = await addPostalCodesToLayerAction(
-            areaId,
-            layerId,
-            postalCodes,
-            undefined,
-            { skipInvalidate: true }
-          );
-          if (!result.success) {
+      // NON-URGENT: persist to server in background; resolve only on confirmed completion
+      await new Promise<void>((resolve, reject) => {
+        startTransition(async () => {
+          try {
+            const result = await addPostalCodesToLayerAction(
+              areaId,
+              layerId,
+              postalCodes,
+              undefined,
+              { skipInvalidate: true }
+            );
+            if (!result.success) {
+              pendingMutationsRef.current = pendingMutationsRef.current.filter(
+                (mutation) => mutation.id !== mutationId
+              );
+              recomputeOptimisticState();
+              const message = result.error ?? "Fehler beim Hinzufügen der PLZ";
+              toast.error(message);
+              reject(new Error(message));
+              return;
+            }
+            committedLayersRef.current = applyLayerUpdate(
+              committedLayersRef.current,
+              update
+            );
+            committedUndoRedoRef.current = incrementUndoRedo(
+              committedUndoRedoRef.current
+            );
             pendingMutationsRef.current = pendingMutationsRef.current.filter(
               (mutation) => mutation.id !== mutationId
             );
             recomputeOptimisticState();
-            toast.error(result.error);
-            return;
+            restoreDroppedQueryParams(searchBeforeAction);
+            resolve();
+          } catch (error) {
+            pendingMutationsRef.current = pendingMutationsRef.current.filter(
+              (mutation) => mutation.id !== mutationId
+            );
+            recomputeOptimisticState();
+            let message = "Fehler beim Hinzufügen der PLZ";
+            if (error instanceof Error) {
+              message = error.message;
+            }
+            toast.error(message);
+            reject(new Error(message));
           }
-          committedLayersRef.current = applyLayerUpdate(
-            committedLayersRef.current,
-            update
-          );
-          committedUndoRedoRef.current = incrementUndoRedo(
-            committedUndoRedoRef.current
-          );
-          pendingMutationsRef.current = pendingMutationsRef.current.filter(
-            (mutation) => mutation.id !== mutationId
-          );
-          recomputeOptimisticState();
-          restoreDroppedQueryParams(searchBeforeAction);
-        } catch (error) {
-          pendingMutationsRef.current = pendingMutationsRef.current.filter(
-            (mutation) => mutation.id !== mutationId
-          );
-          recomputeOptimisticState();
-          let message = "Fehler beim Hinzufügen der PLZ";
-          if (error instanceof Error) {
-            message = error.message;
-          }
-          toast.error(message);
-        }
+        });
       });
     }
   );
@@ -346,7 +352,7 @@ function usePostalCodesLayerActions({
     async (layerId: number, postalCodes: string[]) => {
       if (!areaId) {
         toast.error("Kein Gebiet ausgewählt");
-        return;
+        throw new Error("Kein Gebiet ausgewählt");
       }
       const searchBeforeAction = window.location.search;
       const update: LayerMutationUpdate = {
@@ -367,47 +373,53 @@ function usePostalCodesLayerActions({
           pendingMutationsRef.current.length
         )
       );
-      // NON-URGENT: persist to server in background
-      startTransition(async () => {
-        try {
-          const result = await removePostalCodesFromLayerAction(
-            areaId,
-            layerId,
-            postalCodes,
-            undefined,
-            { skipInvalidate: true }
-          );
-          if (!result.success) {
+      // NON-URGENT: persist to server in background; resolve only on confirmed completion
+      await new Promise<void>((resolve, reject) => {
+        startTransition(async () => {
+          try {
+            const result = await removePostalCodesFromLayerAction(
+              areaId,
+              layerId,
+              postalCodes,
+              undefined,
+              { skipInvalidate: true }
+            );
+            if (!result.success) {
+              pendingMutationsRef.current = pendingMutationsRef.current.filter(
+                (mutation) => mutation.id !== mutationId
+              );
+              recomputeOptimisticState();
+              const message = result.error ?? "Fehler beim Entfernen der PLZ";
+              toast.error(message);
+              reject(new Error(message));
+              return;
+            }
+            committedLayersRef.current = applyLayerUpdate(
+              committedLayersRef.current,
+              update
+            );
+            committedUndoRedoRef.current = incrementUndoRedo(
+              committedUndoRedoRef.current
+            );
             pendingMutationsRef.current = pendingMutationsRef.current.filter(
               (mutation) => mutation.id !== mutationId
             );
             recomputeOptimisticState();
-            toast.error(result.error);
-            return;
+            restoreDroppedQueryParams(searchBeforeAction);
+            resolve();
+          } catch (error) {
+            pendingMutationsRef.current = pendingMutationsRef.current.filter(
+              (mutation) => mutation.id !== mutationId
+            );
+            recomputeOptimisticState();
+            let message = "Fehler beim Entfernen der PLZ";
+            if (error instanceof Error) {
+              message = error.message;
+            }
+            toast.error(message);
+            reject(new Error(message));
           }
-          committedLayersRef.current = applyLayerUpdate(
-            committedLayersRef.current,
-            update
-          );
-          committedUndoRedoRef.current = incrementUndoRedo(
-            committedUndoRedoRef.current
-          );
-          pendingMutationsRef.current = pendingMutationsRef.current.filter(
-            (mutation) => mutation.id !== mutationId
-          );
-          recomputeOptimisticState();
-          restoreDroppedQueryParams(searchBeforeAction);
-        } catch (error) {
-          pendingMutationsRef.current = pendingMutationsRef.current.filter(
-            (mutation) => mutation.id !== mutationId
-          );
-          recomputeOptimisticState();
-          let message = "Fehler beim Entfernen der PLZ";
-          if (error instanceof Error) {
-            message = error.message;
-          }
-          toast.error(message);
-        }
+        });
       });
     }
   );
@@ -441,7 +453,7 @@ function usePostalCodesLayerActions({
       if (result?.success && result.data) {
         const postalCodes = result.data.postalCodes;
         if (activeLayerId && areaId) {
-          addPostalCodesToLayer(activeLayerId, postalCodes);
+          await addPostalCodesToLayer(activeLayerId, postalCodes);
         } else {
           toast.error("Bitte aktives Gebiet wählen");
         }
@@ -483,7 +495,7 @@ function usePostalCodesLayerActions({
       if (result?.success && result.data) {
         const postalCodes = result.data.postalCodes;
         if (activeLayerId && areaId) {
-          addPostalCodesToLayer(activeLayerId, postalCodes);
+          await addPostalCodesToLayer(activeLayerId, postalCodes);
         } else {
           toast.error("Bitte aktives Gebiet wählen");
         }
@@ -592,7 +604,7 @@ export const PostalCodesViewClientWithLayers = memo(
       return [...countrySet];
     }, [areaCountriesFromServer, country, initialLayers]);
 
-    const { data, isLoading: isGeodataLoading } = useGeodata(
+    const { data, isLoading: isGeodataLoading, error: geodataError } = useGeodata(
       defaultGranularity,
       areaCountries
     );
@@ -852,6 +864,11 @@ export const PostalCodesViewClientWithLayers = memo(
               <div className="bg-background/80 rounded-lg px-4 py-2 text-sm text-muted-foreground shadow-sm">
                 Geodaten werden geladen…
               </div>
+            </div>
+          )}
+          {geodataError && !isGeodataLoading && (
+            <div className="absolute top-4 left-4 z-30 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive max-w-md">
+              Geodaten konnten nicht geladen werden: {geodataError}
             </div>
           )}
         </div>

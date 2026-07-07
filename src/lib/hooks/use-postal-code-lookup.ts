@@ -47,20 +47,21 @@ export function usePostalCodeLookup({ data }: UsePostalCodeLookupOptions) {
           }
         }
       } else if (geometry.type === "MultiPolygon") {
-        const coords = geometry.coordinates[0]?.[0];
-        if (coords) {
-          for (const [lng, lat] of coords) {
-            if (lng < minLng) {
-              minLng = lng;
-            }
-            if (lng > maxLng) {
-              maxLng = lng;
-            }
-            if (lat < minLat) {
-              minLat = lat;
-            }
-            if (lat > maxLat) {
-              maxLat = lat;
+        for (const polygon of geometry.coordinates) {
+          for (const ring of polygon) {
+            for (const [lng, lat] of ring) {
+              if (lng < minLng) {
+                minLng = lng;
+              }
+              if (lng > maxLng) {
+                maxLng = lng;
+              }
+              if (lat < minLat) {
+                minLat = lat;
+              }
+              if (lat > maxLat) {
+                maxLat = lat;
+              }
             }
           }
         }

@@ -58,6 +58,7 @@ export function useGeodata(
 ): {
   data: FeatureCollection<Polygon | MultiPolygon>;
   isLoading: boolean;
+  error: string | null;
 } {
   const countries = useMemo(() => normalizeCountries(country), [country]);
   const cacheCountry = countries.length > 0 ? countries.join(",") : "ALL";
@@ -68,17 +69,20 @@ export function useGeodata(
     () => geodataCache.get(cacheKey) ?? EMPTY_FC
   );
   const [isLoading, setIsLoading] = useState(() => !geodataCache.has(cacheKey));
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const cached = geodataCache.get(cacheKey);
     if (cached) {
       setData(cached);
       setIsLoading(false);
+      setError(null);
       return;
     }
 
     let cancelled = false;
     setIsLoading(true);
+    setError(null);
 
     const existing = inflightRequests.get(cacheKey);
     const promise =
@@ -111,13 +115,16 @@ export function useGeodata(
                   idbSet(idbKey, { version: freshVersion, data: fresh });
                 }
               })
-              .catch(() => {});
+              .catch((error) => {
+                console.error("Background geodata refresh failed:", error);
+              });
           }
           return stored.data;
         }
 
         // 2. No IDB entry — fetch normally
         const [primaryUrl, ...secondaryUrls] = urls;
+        const secondaryFetches = secondaryUrls.map((url) => fetch(url));
         const primaryRes = await fetch(primaryUrl);
         if (!primaryRes.ok) {
           throw new Error(`Failed to fetch geodata: ${primaryRes.status}`);
@@ -138,9 +145,7 @@ export function useGeodata(
           }
         }
 
-        const secondaryResponses = await Promise.all(
-          secondaryUrls.map(async (url) => fetch(url))
-        );
+        const secondaryResponses = await Promise.all(secondaryFetches);
         for (const res of secondaryResponses) {
           if (!res.ok) {
             throw new Error(`Failed to fetch geodata: ${res.status}`);
@@ -181,11 +186,18 @@ export function useGeodata(
         if (!cancelled) {
           setData(result);
           setIsLoading(false);
+          setError(null);
         }
       })
-      .catch(() => {
+      .catch((error) => {
         inflightRequests.delete(cacheKey);
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          console.error("Geodata fetch failed:", error);
+          setIsLoading(false);
+          setError(
+            error instanceof Error ? error.message : "Geodaten konnten nicht geladen werden"
+          );
+        }
       });
 
     return () => {
@@ -193,5 +205,5 @@ export function useGeodata(
     };
   }, [cacheKey, countries, granularity, idbKey]);
 
-  return { data, isLoading };
+  return { data, isLoading, error };
 }

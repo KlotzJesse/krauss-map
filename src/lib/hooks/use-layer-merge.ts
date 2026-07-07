@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 
 import {
-  deleteLayerAction,
+  mergeLayersAction,
   updateLayerAction,
 } from "@/app/actions/area-actions";
 
@@ -17,7 +17,7 @@ interface LayerMergeProps {
 export function useLayerMerge({
   areaId,
   layers,
-  onLayerUpdate: _onLayerUpdate,
+  onLayerUpdate,
 }: LayerMergeProps) {
   const mergeLayers = useCallback(
     async (
@@ -68,19 +68,20 @@ export function useLayerMerge({
           }
         }
 
-        // Update target layer with merged postal codes
-        await updateLayerAction(areaId, targetLayerId, {
-          postalCodes: mergedPostalCodes,
-        });
-
-        // Delete source layers after successful merge
-        await Promise.all(
-          sourceLayerIds.map((id) => deleteLayerAction(areaId, id))
+        const mergeResult = await mergeLayersAction(
+          areaId,
+          targetLayerId,
+          sourceLayerIds,
+          mergedPostalCodes
         );
+        if (!mergeResult.success) {
+          throw new Error(mergeResult.error ?? "Layer merge failed");
+        }
 
         toast.success(
           `${sourceLayers.length} Layer in "${targetLayer.name}" zusammengeführt`
         );
+        onLayerUpdate?.();
 
         return mergedPostalCodes;
       } catch (error) {
@@ -90,7 +91,7 @@ export function useLayerMerge({
         throw error;
       }
     },
-    [layers, areaId]
+    [layers, areaId, onLayerUpdate]
   );
 
   const splitLayer = useCallback(

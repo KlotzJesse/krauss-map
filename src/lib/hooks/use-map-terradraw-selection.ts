@@ -51,6 +51,7 @@ export function useMapTerraDrawSelection({
   const handleTerraDrawSelection = useStableCallback(
     (featureIds: (string | number)[]) => {
       if (!featureIds || featureIds.length === 0) {
+        setPendingPostalCodes([]);
         return;
       }
 
@@ -173,9 +174,9 @@ export function useMapTerraDrawSelection({
 
       // Remove duplicates and store as pending selection
       const uniqueSelectedFeatures = [...new Set(allSelectedFeatures)];
-      if (uniqueSelectedFeatures.length > 0) {
-        setPendingPostalCodes(uniqueSelectedFeatures);
+      setPendingPostalCodes(uniqueSelectedFeatures);
 
+      if (uniqueSelectedFeatures.length > 0) {
         // Provide toast feedback for drawing completion
         const count = uniqueSelectedFeatures.length;
         toast.info(`${count} Region${count === 1 ? "" : "en"} gefunden`, {

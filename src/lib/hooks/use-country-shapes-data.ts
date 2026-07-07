@@ -32,17 +32,19 @@ const mergeFeatureCollections = (
  */
 export function useCountryShapesData(
   country?: CountryCode | readonly CountryCode[]
-): CountryShapesData | null {
+): { data: CountryShapesData | null; error: string | null } {
   const countries = useMemo(() => normalizeCountries(country), [country]);
   const cacheKey = countries.length > 0 ? countries.join(",") : "ALL";
   const [data, setData] = useState<CountryShapesData | null>(
     countryShapesCache.get(cacheKey) ?? null
   );
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const cached = countryShapesCache.get(cacheKey);
     if (cached) {
       setData(cached);
+      setError(null);
       return;
     }
 
@@ -57,6 +59,7 @@ export function useCountryShapesData(
       existing ??
       (async () => {
         const [primaryUrl, ...secondaryUrls] = urls;
+        const secondaryFetches = secondaryUrls.map((url) => fetch(url));
         const primaryRes = await fetch(primaryUrl);
         if (!primaryRes.ok) {
           throw new Error(
@@ -72,9 +75,7 @@ export function useCountryShapesData(
           }
         }
 
-        const secondaryResponses = await Promise.all(
-          secondaryUrls.map(async (url) => fetch(url))
-        );
+        const secondaryResponses = await Promise.all(secondaryFetches);
         for (const res of secondaryResponses) {
           if (!res.ok) {
             throw new Error(
@@ -102,14 +103,26 @@ export function useCountryShapesData(
 
     promise
       .then((json) => {
-        if (!cancelled) setData(json);
+        if (!cancelled) {
+          setData(json);
+          setError(null);
+        }
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("Country shapes fetch failed:", error);
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Ländergrenzen konnten nicht geladen werden"
+          );
+        }
+      });
 
     return () => {
       cancelled = true;
     };
   }, [cacheKey, countries]);
 
-  return data;
+  return { data, error };
 }
