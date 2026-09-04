@@ -46,7 +46,12 @@ interface PostalCodeImportDialogProps {
   onOpenChange: (open: boolean) => void;
   data: FeatureCollection<Polygon | MultiPolygon>;
   granularity: string;
-  onImport: (postalCodes: string[]) => void;
+  /**
+   * Performs the import. Resolves to `false` when nothing was imported
+   * (e.g. no active layer selected) so the dialog can stay open and stay
+   * silent instead of claiming success.
+   */
+  onImport: (postalCodes: string[]) => void | Promise<boolean | void>;
   areaId?: number; // Optional for bulk import
 }
 
@@ -117,7 +122,7 @@ export function PostalCodeImportDialog({
   }, [parsedCodes, matches]);
 
   // Handle import
-  const handleImport = useStableCallback(() => {
+  const handleImport = useStableCallback(async () => {
     if (stats.uniqueMatches === 0) {
       toast.error("Keine gültigen PLZ gefunden");
       return;
@@ -126,9 +131,14 @@ export function PostalCodeImportDialog({
     const allMatchedCodes = matches.flatMap((match) => match.matched);
     const uniqueCodes = [...new Set(allMatchedCodes)];
 
-    onImport(uniqueCodes);
-
-    toast.success(`${uniqueCodes.length} PLZ importiert`);
+    // The caller owns the outcome toast — it is the only side that knows
+    // whether the codes actually landed in a layer. Reporting success here
+    // too produced a duplicate toast, and a false one when no layer was
+    // active: "N PLZ importiert" alongside "Bitte aktives Gebiet wählen".
+    const imported = await onImport(uniqueCodes);
+    if (imported === false) {
+      return;
+    }
 
     // Clear and close
     setTextInput("");

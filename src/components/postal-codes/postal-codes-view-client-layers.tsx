@@ -532,14 +532,15 @@ function usePostalCodesLayerActions({
   );
 
   const handleImport = useStableCallback(async (postalCodes: string[]) => {
-    if (activeLayerId && areaId) {
-      await addPostalCodesToLayer(activeLayerId, postalCodes);
-      toast.success(`${postalCodes.length} PLZ hinzugefügt`);
-    } else {
+    if (!(activeLayerId && areaId)) {
       toast.warning("Bitte aktives Gebiet wählen", {
         duration: 3000,
       });
+      return false;
     }
+    await addPostalCodesToLayer(activeLayerId, postalCodes);
+    toast.success(`${postalCodes.length} PLZ hinzugefügt`);
+    return true;
   });
 
   return {
