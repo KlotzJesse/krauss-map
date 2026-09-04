@@ -10,7 +10,6 @@ import {
   IconFileText,
   IconLayoutList,
   IconPlus,
-  IconSearch,
   IconTags,
   IconTrash,
   IconX,
@@ -75,7 +74,7 @@ import { exportAllAreasXLSX } from "@/lib/utils/export-utils";
 
 import { AreaListItem } from "./area-list-item";
 import { CreateAreaDialog } from "./create-area-dialog";
-import { PlzSearch } from "./plz-search";
+import { AreaCommandPalette } from "./area-command-palette";
 import { TagBadge } from "./tag-badge";
 
 interface NavAreasState {
@@ -271,8 +270,6 @@ export const NavAreas = memo(function NavAreas({
   }, [areas]);
 
   const [showArchived, setShowArchived] = useReducer((v: boolean) => !v, false);
-  const [areaSearch, setAreaSearch] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const [activeTagId, setActiveTagId] = useState<number | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [groupByTag, setGroupByTag] = useReducer((v: boolean) => !v, false);
@@ -317,10 +314,9 @@ export const NavAreas = memo(function NavAreas({
   );
 
   const visibleAreas = useMemo(() => {
-    const q = areaSearch.trim().toLowerCase();
-    let filtered = q
-      ? baseVisibleAreas.filter((a) => a.name.toLowerCase().includes(q))
-      : baseVisibleAreas;
+    // Name search now lives in the command palette; the sidebar list only
+    // applies the tag filter and sort.
+    let filtered = baseVisibleAreas;
     if (activeTagId !== null) {
       filtered = filtered.filter((a) =>
         a.tags?.some((t) => t.id === activeTagId)
@@ -339,7 +335,7 @@ export const NavAreas = memo(function NavAreas({
       return 0; // default: server order
     });
     return sorted;
-  }, [baseVisibleAreas, areaSearch, activeTagId, pinnedIds, sortBy]);
+  }, [baseVisibleAreas, activeTagId, pinnedIds, sortBy]);
 
   const { archivedCount, activeAreaCount, totalPlzCount } = useMemo(() => {
     let archived = 0;
@@ -429,25 +425,6 @@ export const NavAreas = memo(function NavAreas({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [visibleAreas, currentAreaIdFromRoute, router]);
-
-  // "/" key to focus search input
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== "/") return;
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      )
-        return;
-      e.preventDefault();
-      searchInputRef.current?.focus();
-      searchInputRef.current?.select();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, []);
 
   const handleStartRename = useCallback(
     (area: AreaSummary, e: React.MouseEvent) => {
@@ -710,8 +687,11 @@ export const NavAreas = memo(function NavAreas({
 
   return (
     <>
-      <div className="group-data-[collapsible=icon]:hidden">
-        <PlzSearch />
+      <div className="px-2 pb-1 group-data-[collapsible=icon]:hidden">
+        <AreaCommandPalette
+          areas={optimisticAreas}
+          onCreateArea={() => dispatch({ type: "OPEN_CREATE" })}
+        />
       </div>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>
@@ -792,27 +772,6 @@ export const NavAreas = memo(function NavAreas({
         </SidebarGroupLabel>
         {optimisticAreas.length >= 5 && (
           <div className="px-2 pb-1">
-            <div className="relative flex items-center">
-              <IconSearch className="absolute left-2 h-3 w-3 text-muted-foreground pointer-events-none" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={areaSearch}
-                onChange={(e) => setAreaSearch(e.target.value)}
-                placeholder="Gebiete filtern... (/)"
-                className="w-full h-6 pl-6 pr-5 text-xs bg-muted/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-colors"
-              />
-              {areaSearch && (
-                <button
-                  type="button"
-                  onClick={() => setAreaSearch("")}
-                  className="absolute right-1.5 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
-                >
-                  <IconX className="h-3 w-3" />
-                </button>
-              )}
-            </div>
             {allTags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {allTags.map((tag) => (
@@ -930,7 +889,7 @@ export const NavAreas = memo(function NavAreas({
               )}
             {!isLoading &&
               visibleAreas.length === 0 &&
-              (areaSearch || activeTagId !== null) && (
+              activeTagId !== null && (
                 <SidebarMenuItem>
                   <span className="px-2 text-xs text-muted-foreground">
                     Keine Treffer

@@ -74,12 +74,20 @@ export async function getAreas() {
           INNER JOIN area_layers al ON al.id = alpc.layer_id
           INNER JOIN areas a ON a.id = al.area_id AND a.is_archived = 'false'
         ),
+        -- A code is "in conflict" when it appears in more than one area.
+        -- Counting areas per code once is O(n); the previous self-join of
+        -- cross_codes against itself was O(n^2) per code and measured 4.5s.
+        code_area_counts AS (
+          SELECT postal_code, COUNT(*)::int AS area_cnt
+          FROM cross_codes
+          GROUP BY postal_code
+        ),
         conflict_counts AS (
-          SELECT c1.area_id, COUNT(DISTINCT c1.postal_code)::int AS cnt
-          FROM cross_codes c1
-          INNER JOIN cross_codes c2
-            ON c1.postal_code = c2.postal_code AND c1.area_id != c2.area_id
-          GROUP BY c1.area_id
+          SELECT cc.area_id, COUNT(*)::int AS cnt
+          FROM cross_codes cc
+          INNER JOIN code_area_counts cac
+            ON cac.postal_code = cc.postal_code AND cac.area_cnt > 1
+          GROUP BY cc.area_id
         ),
         granularity_counts AS (
           SELECT granularity, country, COUNT(*)::int AS cnt
@@ -600,21 +608,31 @@ export async function getCrossAreaDuplicates(
   cacheLife("minutes");
   cacheTag(`area-${areaId}-duplicates`, "areas");
   try {
-    // Single self-join: find codes from this area that also exist in other areas
+    // Deduplicate each side before joining. Joining the raw rows first and
+    // relying on a trailing DISTINCT made Postgres materialize every
+    // (layer, layer) pair for a shared code.
     const result = await db.execute(sql`
-      SELECT DISTINCT
-        own.postal_code AS "postalCode",
-        a.id            AS "otherAreaId",
-        a.name          AS "otherAreaName"
-      FROM area_layer_postal_codes own
-      INNER JOIN area_layers       ol  ON ol.id      = own.layer_id
-                                      AND ol.area_id  = ${areaId}
-      INNER JOIN area_layer_postal_codes other ON other.postal_code = own.postal_code
-      INNER JOIN area_layers       tl  ON tl.id      = other.layer_id
-                                      AND tl.area_id != ${areaId}
-      INNER JOIN areas             a   ON a.id        = tl.area_id
-                                      AND a.is_archived = 'false'
-      ORDER BY own.postal_code
+      WITH own_codes AS (
+        SELECT DISTINCT alpc.postal_code
+        FROM area_layer_postal_codes alpc
+        INNER JOIN area_layers al ON al.id = alpc.layer_id
+                                 AND al.area_id = ${areaId}
+      ),
+      other_codes AS (
+        SELECT DISTINCT alpc.postal_code, a.id AS other_id, a.name AS other_name
+        FROM area_layer_postal_codes alpc
+        INNER JOIN area_layers al ON al.id = alpc.layer_id
+                                 AND al.area_id != ${areaId}
+        INNER JOIN areas a ON a.id = al.area_id
+                          AND a.is_archived = 'false'
+      )
+      SELECT
+        o.postal_code AS "postalCode",
+        t.other_id    AS "otherAreaId",
+        t.other_name  AS "otherAreaName"
+      FROM own_codes o
+      INNER JOIN other_codes t ON t.postal_code = o.postal_code
+      ORDER BY o.postal_code
     `);
 
     return result.rows as CrossAreaDuplicate[];
