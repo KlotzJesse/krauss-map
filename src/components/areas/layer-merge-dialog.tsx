@@ -1,7 +1,7 @@
 "use client";
 
 import { IconGitMerge } from "@tabler/icons-react";
-import { useState, useOptimistic, useTransition, useEffect } from "react";
+import { useState, useOptimistic, useTransition } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,10 +133,14 @@ export function LayerMergeDialog({
     ) => state.filter((layer) => !sourceIds.includes(layer.id))
   );
 
-  // Sync base state when layers prop changes
-  useEffect(() => {
+  // Adjust during render instead of in an Effect: an Effect commits the
+  // stale list first, then re-renders, so every server refresh cost an
+  // extra commit of the whole list.
+  const [prevLayers, setPrevLayers] = useState(layers);
+  if (layers !== prevLayers) {
+    setPrevLayers(layers);
     setBaseLayers(layers);
-  }, [layers]);
+  }
 
   const toggleLayer = (layerId: number) => {
     const newSet = new Set(selectedLayers);

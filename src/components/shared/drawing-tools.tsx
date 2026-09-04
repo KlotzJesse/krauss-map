@@ -8,6 +8,8 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
+import type { Route } from "next";
+import { useRouter } from "next/navigation";
 import {
   restrictToParentElement,
   restrictToVerticalAxis,
@@ -568,10 +570,14 @@ function useDrawingToolsActions({
     }
   );
 
-  // Sync base state when layers prop changes (e.g., on refetch)
-  useEffect(() => {
+  // Adjust during render instead of in an Effect: an Effect commits the
+  // stale list first, then re-renders, so every server refresh cost an
+  // extra commit of the whole list.
+  const [prevLayers, setPrevLayers] = useState(layers);
+  if (layers !== prevLayers) {
+    setPrevLayers(layers);
     setBaseLayers(layers);
-  }, [layers]);
+  }
 
   // Stable ref so callbacks that iterate all layers don't include optimisticLayers
   // in their dep array (which would recreate them on every layer change,
@@ -1721,6 +1727,7 @@ function DrawingToolsImpl({
   onZoomToLayer,
   onHighlightCodes,
 }: DrawingToolsProps) {
+  const router = useRouter();
   const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
 
   const [copyLayerDialog, setCopyLayerDialog] = useState<{
@@ -2389,11 +2396,18 @@ function DrawingToolsImpl({
       const toastId = toast.loading("Importiere Gebiet...");
       const result = await importAreaFromDataAction(text);
       toast.dismiss(toastId);
-      if (!result?.success) {
-        toast.error(result?.error ?? "Import fehlgeschlagen");
+      if (result?.success) {
+        toast.success("Gebiet importiert");
+        // Navigate here rather than redirect()ing from the action, so this
+        // toast is not held open by the destination page's render.
+        if (result.data?.areaId) {
+          router.push(`/postal-codes/${result.data.areaId}` as Route);
+        }
+        return;
       }
+      toast.error(result?.error ?? "Import fehlgeschlagen");
     },
-    []
+    [router]
   );
 
   const importDataFileRef = useRef<HTMLInputElement>(null);

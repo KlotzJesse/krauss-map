@@ -1,9 +1,7 @@
 "use server";
 
 import { eq, and, inArray, sql, like } from "drizzle-orm";
-import type { Route } from "next";
 import { updateTag } from "next/cache";
-import { redirect } from "next/navigation";
 
 import {
   type CountryCode,
@@ -190,7 +188,6 @@ export async function updateAreaAction(
 }
 
 export async function deleteAreaAction(id: number) {
-  let redirectPath: string | null = null;
 
   try {
     // Delete in correct order due to foreign key constraints
@@ -227,17 +224,14 @@ export async function deleteAreaAction(id: number) {
 
     updateTag("areas");
 
-    // Set redirect path for finally block
-    redirectPath = "/postal-codes";
+    // No redirect() here — see createAreaAction. Redirecting from the action
+    // makes its response carry the destination page render, so the caller's
+    // loading toast stays pending until that page is rendered and applied.
+    return { success: true as const, redirectTo: "/postal-codes" };
   } catch (error) {
     console.error("Error deleting area:", error);
 
     return { success: false, error: "Failed to delete area" };
-  } finally {
-    // Redirect in finally block for cleaner resource management
-    if (redirectPath) {
-      redirect(redirectPath as Route);
-    }
   }
 }
 
@@ -388,7 +382,6 @@ export async function importAreaFromDataAction(
   jsonData: string,
   createdBy?: string
 ): ServerActionResponse<{ areaId: number }> {
-  let redirectPath: string | null = null;
 
   try {
     const raw = JSON.parse(jsonData) as AreaExportData;
@@ -497,24 +490,18 @@ export async function importAreaFromDataAction(
     updateTag(`area-${newAreaId}`);
     updateTag("version-info");
 
-    redirectPath = `/postal-codes/${newAreaId}`;
+    return { success: true as const, data: { areaId: newAreaId } };
   } catch (error) {
-    if ((error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) {
-      throw error;
-    }
     console.error("Error importing area data:", error);
     return { success: false, error: "Import fehlgeschlagen" };
   }
-
-  if (redirectPath) redirect(redirectPath as Route);
-  return { success: false, error: "Unbekannter Fehler" };
 }
 
 export async function duplicateAreaAction(
   sourceAreaId: number,
   customName?: string
 ) {
-  let redirectPath: string | null = null;
+  let duplicatedAreaId = 0;
 
   try {
     await db.transaction(async (tx) => {
@@ -597,15 +584,12 @@ export async function duplicateAreaAction(
 
       updateTag("areas");
       updateTag(`area-${newArea.id}`);
-      redirectPath = `/postal-codes/${newArea.id}`;
+      duplicatedAreaId = newArea.id;
     });
+    return { success: true as const, areaId: duplicatedAreaId };
   } catch (error) {
     console.error("Error duplicating area:", error);
     return { success: false, error: "Failed to duplicate area" };
-  } finally {
-    if (redirectPath) {
-      redirect(redirectPath as Route);
-    }
   }
 }
 

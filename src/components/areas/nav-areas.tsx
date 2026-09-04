@@ -14,6 +14,7 @@ import {
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
   memo,
@@ -264,10 +265,14 @@ export const NavAreas = memo(function NavAreas({
     }
   );
 
-  // Sync base state when areas prop changes
-  useEffect(() => {
+  // Adjust during render instead of in an Effect: an Effect commits the
+  // stale list first, then re-renders, so every server refresh cost an
+  // extra commit of the whole list.
+  const [prevAreas, setPrevAreas] = useState(areas);
+  if (areas !== prevAreas) {
+    setPrevAreas(areas);
     setBaseAreas(areas);
-  }, [areas]);
+  }
 
   const [showArchived, setShowArchived] = useReducer((v: boolean) => !v, false);
   const [activeTagId, setActiveTagId] = useState<number | null>(null);
@@ -504,13 +509,17 @@ export const NavAreas = memo(function NavAreas({
     const name = duplicateName;
     dispatch({ type: "CLOSE_DUPLICATE" });
     startTransition(async () => {
-      await executeAction(duplicateAreaAction(area.id, name), {
+      const result = await executeAction(duplicateAreaAction(area.id, name), {
         loading: `Dupliziere "${area.name}"...`,
         success: `"${name || `${area.name} (Kopie)`}" erstellt`,
         error: "Duplizieren fehlgeschlagen",
       });
+      // Navigate after the toast resolves — the action no longer redirects.
+      if (result?.success && result.areaId) {
+        router.push(`/postal-codes/${result.areaId}` as Route);
+      }
     });
-  }, [areaToDuplicate, duplicateName, startTransition]);
+  }, [areaToDuplicate, duplicateName, startTransition, router]);
 
   const handleArchive = useCallback(
     (area: AreaSummary, archive: boolean) => {
@@ -649,6 +658,9 @@ export const NavAreas = memo(function NavAreas({
       if (result && "success" in result && result.success) {
         // Update base state to persist optimistic change
         setBaseAreas((prev) => prev.filter((a) => a.id !== areaToDelete.id));
+        if ("redirectTo" in result && result.redirectTo) {
+          router.push(result.redirectTo as Route);
+        }
       }
 
       dispatch({ type: "FINISH_DELETING" });
