@@ -33,7 +33,7 @@ import { useGeodata } from "@/lib/hooks/use-geodata";
 import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
-import type { Layer } from "@/lib/types/area-types";
+import type { Layer, LayerWire } from "@/lib/types/area-types";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import { extractRawCode, storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
@@ -118,7 +118,7 @@ interface PostalCodesViewClientWithLayersProps {
     description: string | null;
   }>;
   areaTagsPromise?: Promise<{ id: number; name: string; color: string }[]>;
-  layersPromise: Promise<Layer[]>;
+  layersPromise: Promise<LayerWire[]>;
   undoRedoStatusPromise: Promise<{
     canUndo: boolean;
     canRedo: boolean;
@@ -571,7 +571,17 @@ export const PostalCodesViewClientWithLayers = memo(
     versionId,
   }: PostalCodesViewClientWithLayersProps) {
     // Client Component: use() to consume server-provided promises
-    const initialLayers = use(layersPromise);
+    const layersWire = use(layersPromise);
+    // Rehydrate the compact wire format (see LayerWire) back into the
+    // `{ postalCode }[]` shape the rest of the tree expects.
+    const initialLayers = useMemo<Layer[]>(
+      () =>
+        layersWire.map(({ codes, ...layer }) => ({
+          ...layer,
+          postalCodes: codes.map((postalCode) => ({ postalCode })),
+        })),
+      [layersWire]
+    );
     const initialUndoRedoStatus = use(undoRedoStatusPromise);
     const versions = use(versionsPromise);
     const changes = use(changesPromise);

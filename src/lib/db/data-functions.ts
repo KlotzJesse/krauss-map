@@ -321,7 +321,13 @@ export async function getLayers(areaId: number) {
       orderBy: (layers, { asc }) => [asc(layers.orderIndex)],
     });
 
-    return result;
+    // Flatten postal codes to bare strings for the RSC payload. Keeping the
+    // `{ postalCode }` wrapper objects serializes ~26k objects for a large
+    // area (~530KB of pure overhead); the client rehydrates them.
+    return result.map(({ postalCodes, ...layer }) => ({
+      ...layer,
+      codes: postalCodes.map((entry) => entry.postalCode),
+    }));
   } catch (error) {
     console.error("Error fetching layers:", error);
     throw new Error("Failed to fetch layers", { cause: error });

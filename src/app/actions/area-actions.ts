@@ -76,8 +76,6 @@ export async function createAreaAction(data: {
 
   createdBy?: string;
 }) {
-  let redirectPath: string | null = null;
-
   try {
     const [area] = await db
 
@@ -119,15 +117,15 @@ export async function createAreaAction(data: {
 
     updateTag(`area-${area.id}-version-info`);
 
-    redirectPath = `/postal-codes/${area.id}`;
+    // Deliberately no redirect() here. Redirecting from the action makes the
+    // action response carry the whole destination page render, so the caller's
+    // promise (and its loading toast) stays pending until that page is fully
+    // rendered and applied on the client. The caller navigates instead.
+    return { success: true as const, areaId: area.id };
   } catch (error) {
     console.error("Error creating area:", error);
 
     return { success: false, error: "Failed to create area" };
-  } finally {
-    if (redirectPath) {
-      redirect(redirectPath as Route);
-    }
   }
 }
 

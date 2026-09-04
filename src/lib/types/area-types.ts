@@ -29,6 +29,16 @@ export type Layer = InferSelectModel<typeof areaLayers> & {
   postalCodes?: { postalCode: string }[];
 };
 
+/**
+ * Wire format for layers crossing the server -> client RSC boundary.
+ * Postal codes travel as a flat string array instead of `{ postalCode }[]`
+ * objects; the wrapper objects cost ~20 bytes each and an area can carry
+ * tens of thousands of them. The client rehydrates this back into `Layer`.
+ */
+export type LayerWire = Omit<Layer, "postalCodes"> & {
+  codes: string[];
+};
+
 export type AreaWithLayers = Area & {
   layers: Layer[];
 };

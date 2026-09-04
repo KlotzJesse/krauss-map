@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverComponentsHmrCache: true,
     typedEnv: true,
-    inlineCss: true,
+    inlineCss: false,
     webpackMemoryOptimizations: true,
     globalNotFound: true,
     authInterrupts: true,

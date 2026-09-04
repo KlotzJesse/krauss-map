@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition, useOptimistic } from "react";
 
 import { createAreaAction } from "@/app/actions/area-actions";
@@ -34,6 +35,7 @@ export function CreateAreaDialog({
   open,
   onOpenChange,
 }: CreateAreaDialogProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -51,8 +53,7 @@ export function CreateAreaDialog({
     startTransition(async () => {
       updateOptimisticCreating(true);
 
-      // Server action handles redirect on success.
-      await executeAction(
+      const result = await executeAction(
         createAreaAction({
           name,
           description,
@@ -66,11 +67,16 @@ export function CreateAreaDialog({
         }
       );
 
-      // Only reached if action didn't redirect (i.e. error path)
       setName("");
       setDescription("");
       setGranularity("5digit");
       onOpenChange(false);
+
+      // Navigate only after the toast has resolved and the dialog is closed,
+      // so rendering the (large) area page never keeps the toast spinning.
+      if (result?.success && result.areaId) {
+        router.push(`/postal-codes/${result.areaId}`);
+      }
     });
   };
 
