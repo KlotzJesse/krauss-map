@@ -24,6 +24,7 @@ import {
   type AreaPlzMatch,
 } from "@/app/actions/area-actions";
 import { TagBadge } from "@/components/areas/tag-badge";
+import { Kbd } from "@/components/ui/kbd";
 import {
   CommandDialog,
   CommandEmpty,
@@ -39,9 +40,25 @@ import type { AreaSummary } from "@/lib/types/area-types";
 interface CommandPaletteProps {
   areas: AreaSummary[];
   onCreateArea?: () => void;
+  /**
+   * Render the sidebar search button that opens the palette. This is the only
+   * search affordance in the sidebar — it replaced the separate "PLZ suchen"
+   * and "Gebiete filtern" inputs, which sat at different nesting depths and so
+   * rendered at different widths.
+   */
+  showTrigger?: boolean;
 }
 
-export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
+const isMac =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
+const SHORTCUT_LABEL = isMac ? "⌘K" : "Strg K";
+
+export function CommandPalette({
+  areas,
+  onCreateArea,
+  showTrigger = false,
+}: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<number | null>(null);
@@ -51,9 +68,24 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen((prev) => !prev);
+        return;
+      }
+      // "/" opens the palette too, unless the user is typing in a field.
+      if (e.key === "/" && !(e.metaKey || e.ctrlKey || e.altKey)) {
+        const t = e.target as HTMLElement | null;
+        const editing =
+          !!t &&
+          (t.tagName === "INPUT" ||
+            t.tagName === "TEXTAREA" ||
+            t.tagName === "SELECT" ||
+            t.isContentEditable);
+        if (!editing) {
+          e.preventDefault();
+          setOpen(true);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -124,8 +156,21 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
   const archivedAreas = areas.filter((a) => a.isArchived === "true");
 
   return (
-    <CommandDialog
-      open={open}
+    <>
+      {showTrigger && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center gap-2 rounded-md border border-border/50 bg-sidebar-accent px-2.5 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Gebiet oder PLZ suchen"
+        >
+          <IconSearch className="h-4 w-4 shrink-0" />
+          <span className="truncate">Gebiet oder PLZ suchen…</span>
+          <Kbd className="ml-auto hidden sm:inline-flex">{SHORTCUT_LABEL}</Kbd>
+        </button>
+      )}
+      <CommandDialog
+        open={open}
       onOpenChange={(v) => {
         if (!v) handleClose();
         else setOpen(true);
@@ -311,6 +356,7 @@ export function CommandPalette({ areas, onCreateArea }: CommandPaletteProps) {
           <kbd className="rounded border border-border px-1">⌘K</kbd>
         </span>
       </div>
-    </CommandDialog>
+      </CommandDialog>
+    </>
   );
 }

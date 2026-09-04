@@ -74,7 +74,7 @@ import { exportAllAreasXLSX } from "@/lib/utils/export-utils";
 
 import { AreaListItem } from "./area-list-item";
 import { CreateAreaDialog } from "./create-area-dialog";
-import { AreaCommandPalette } from "./area-command-palette";
+import { CommandPalette } from "@/components/shared/command-palette";
 import { TagBadge } from "./tag-badge";
 
 interface NavAreasState {
@@ -688,7 +688,8 @@ export const NavAreas = memo(function NavAreas({
   return (
     <>
       <div className="px-2 pb-1 group-data-[collapsible=icon]:hidden">
-        <AreaCommandPalette
+        <CommandPalette
+          showTrigger
           areas={optimisticAreas}
           onCreateArea={() => dispatch({ type: "OPEN_CREATE" })}
         />

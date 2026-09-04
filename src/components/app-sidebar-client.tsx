@@ -33,14 +33,6 @@ const RecentActivityFeed = dynamic(() =>
   }))
 );
 
-const CommandPalette = dynamic(
-  () =>
-    import("@/components/shared/command-palette").then((m) => ({
-      default: m.CommandPalette,
-    })),
-  { ssr: false }
-);
-
 const data = {
   navMain: [
     {
@@ -83,7 +75,23 @@ export function AppSidebarClient({
   React.useEffect(() => {
     if (!isPostalCodesRoute) {
       setIsSidebarDataMounted(true);
+      return;
     }
+    // On a map route the area list used to stay behind a manual "Gebiete
+    // laden" button because getAreas() cost ~4.5s. That query is now ~0.3s,
+    // so mount it once the browser is idle — the map still gets the main
+    // thread first, but the list and Cmd+K work without a click.
+    const w = window as typeof window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const mount = () => setIsSidebarDataMounted(true);
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(mount, { timeout: 3000 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(mount, 1500);
+    return () => window.clearTimeout(id);
   }, [isPostalCodesRoute]);
 
   const handleCreateArea = React.useCallback(() => {
@@ -143,9 +151,6 @@ export function AppSidebarClient({
           open={createAreaDialogOpen}
           onOpenChange={setCreateAreaDialogOpen}
         />
-      )}
-      {isSidebarDataMounted && (
-        <CommandPalette areas={areas} onCreateArea={handleCreateArea} />
       )}
     </>
   );
