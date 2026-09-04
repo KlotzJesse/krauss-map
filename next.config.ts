@@ -20,11 +20,9 @@ const nextConfig: NextConfig = {
     typedEnv: true,
     inlineCss: true,
     webpackMemoryOptimizations: true,
-    useCache: true, // Enable "use cache" directive
     globalNotFound: true,
     authInterrupts: true,
     turbopackFileSystemCacheForDev: true,
-    viewTransition: true,
     // dynamic:30 = Router Cache serves recently-visited area pages from client cache for 30s,
     // eliminating the server round-trip on back/forward and quick area switches.
     // static:30 = prefetched static shells reused for 30s.

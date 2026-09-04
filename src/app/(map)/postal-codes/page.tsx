@@ -4,7 +4,6 @@ import { PostalCodesOverview } from "@/components/postal-codes/postal-codes-over
 import { SiteHeader } from "@/components/site-header";
 
 export const instant = true;
-export const prefetch = "allow-runtime";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {

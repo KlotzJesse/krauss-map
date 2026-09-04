@@ -16,7 +16,6 @@ import {
 import { getAreaCountries, getAreaMeta, getVersion } from "@/lib/db/data-functions";
 
 export const instant = true;
-export const prefetch = "allow-runtime";
 
 const VersionIndicator = dynamic(() =>
   import("@/components/shared/version-indicator").then((m) => ({

@@ -16,7 +16,7 @@ import {
   MoveRight,
   Copy,
 } from "lucide-react";
-import maplibregl from "maplibre-gl";
+import { type Map as MapLibreMap, NavigationControl } from "maplibre-gl";
 import dynamic from "next/dynamic";
 import {
   Component,
@@ -464,7 +464,7 @@ const MapInner = memo(function MapInner({
   onSnapshotReady?: (blob: Blob) => void;
 }) {
   const { current: mapRef } = useMap();
-  const rawMapRef = useRef<maplibregl.Map | null>(null);
+  const rawMapRef = useRef<MapLibreMap | null>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightPanActiveRef = useRef(false);
   const rightPanLastPointRef = useRef<[number, number] | null>(null);
@@ -545,7 +545,7 @@ const MapInner = memo(function MapInner({
     if (!mapRef) {
       return;
     }
-    let raw: maplibregl.Map;
+    let raw: MapLibreMap;
     try {
       raw = mapRef.getMap();
     } catch {
@@ -555,7 +555,7 @@ const MapInner = memo(function MapInner({
     rawMapRef.current = raw;
     mapCanvasRef.current = raw.getCanvas();
 
-    const navControl = new maplibregl.NavigationControl({
+    const navControl = new NavigationControl({
       visualizePitch: false,
     });
     raw.addControl(navControl, "bottom-right");
