@@ -13,7 +13,7 @@ import {
   isValidCountryCode,
   resolveGranularityForCountry,
 } from "@/lib/config/countries";
-import { getAreaCountries, getAreaMeta, getVersion } from "@/lib/db/data-functions";
+import { getAreaCountries, getAreaMeta } from "@/lib/db/data-functions";
 
 export const instant = true;
 
@@ -28,49 +28,24 @@ interface PostalCodesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: PostalCodesPageProps): Promise<Metadata> {
-  const [{ areaId: areaIdParam }, search] = await Promise.all([
-    params,
-    searchParams,
-  ]);
-  const areaId = parseInt(areaIdParam, 10);
-  let granularity = "1digit";
-
-  if (!isNaN(areaId)) {
-    try {
-      const versionIdRaw = Array.isArray(search.versionId)
-        ? search.versionId[0]
-        : search.versionId;
-      const versionId = versionIdRaw ? parseInt(versionIdRaw, 10) : null;
-      const isValidVersion = versionId !== null && versionId > 0;
-      const [meta, version] = await Promise.all([
-        getAreaMeta(areaId),
-        isValidVersion ? getVersion(areaId, versionId!) : Promise.resolve(null),
-      ]);
-      if (isValidVersion && version?.snapshot) {
-        const snap = version.snapshot as { granularity?: string };
-        granularity = snap.granularity ?? "1digit";
-      } else {
-        granularity = meta.granularity ?? "1digit";
-      }
-    } catch (error) {
-      console.error("Failed to fetch area metadata:", error);
-    }
-  }
-
-  return {
-    title: `KRAUSS Gebietsmanagement - ${granularity.toUpperCase()} PLZ`,
-    description: `Interaktives Gebietsmanagement für deutsche Postleitzahlen mit ${granularity} Granularität`,
-    openGraph: {
-      title: `KRAUSS Gebietsmanagement - ${granularity.toUpperCase()} PLZ`,
-      description: `Interaktives Gebietsmanagement für deutsche Postleitzahlen mit ${granularity} Granularität`,
-      type: "website",
-    },
-  };
-}
+/**
+ * Static metadata. Reading `params`/`searchParams` in `generateMetadata()`
+ * makes the route's metadata blocking, which stops the whole route from being
+ * prefetched — the `instant = true` contract above fails on it. The visible
+ * title (area name) is rendered by <SiteHeader> inside the page, so the only
+ * thing this gave up was a granularity string in the document title.
+ */
+export const metadata: Metadata = {
+  title: "KRAUSS Gebietsmanagement - PLZ",
+  description:
+    "Interaktives Gebietsmanagement für Postleitzahlengebiete",
+  openGraph: {
+    title: "KRAUSS Gebietsmanagement - PLZ",
+    description:
+      "Interaktives Gebietsmanagement für Postleitzahlengebiete",
+    type: "website",
+  },
+};
 
 export default async function PostalCodesPage({
   params,

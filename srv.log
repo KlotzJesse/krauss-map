@@ -1,0 +1,7 @@
+$ next start
+▲ Next.js 16.3.4
+- Local:         http://localhost:3111
+- Network:       http://192.168.17.161:3111
+✓ Ready in 253ms
+✓ Running next.config.ts took 77ms
+error: script "start" exited with code 1
