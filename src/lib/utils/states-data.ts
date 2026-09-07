@@ -34,8 +34,8 @@ export async function getStatesData(
   cacheTag("states-geodata", tag);
   try {
     const query = country
-      ? sql`SELECT id, name, code, ST_AsGeoJSON(ST_Simplify(geometry, 0.005)) as geometry, properties, bbox, "created_at", "updated_at" FROM states WHERE country = ${country}`
-      : sql`SELECT id, name, code, ST_AsGeoJSON(ST_Simplify(geometry, 0.005)) as geometry, properties, bbox, "created_at", "updated_at" FROM states`;
+      ? sql`SELECT id, name, code, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, 0.005), 4) as geometry, properties, bbox, "created_at", "updated_at" FROM states WHERE country = ${country}`
+      : sql`SELECT id, name, code, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, 0.005), 4) as geometry, properties, bbox, "created_at", "updated_at" FROM states`;
     const { rows } = await db.execute(query);
     const features = rows.map((row) => {
       const typedRow = row as unknown as StateRow;

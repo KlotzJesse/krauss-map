@@ -51,8 +51,8 @@ export async function getPostalCodesDataForGranularity(
   cacheTag("postal-codes-geodata", tag);
   try {
     const query = country
-      ? sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 4) as geometry FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
-      : sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_Simplify(geometry, 0.002), 4) as geometry FROM postal_codes WHERE granularity = ${granularity} AND is_active = 'true'`;
+      ? sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, 0.002), 4) as geometry FROM postal_codes WHERE granularity = ${granularity} AND country = ${country} AND is_active = 'true'`
+      : sql`SELECT code, country, granularity, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, 0.002), 4) as geometry FROM postal_codes WHERE granularity = ${granularity} AND is_active = 'true'`;
     const { rows } = await db.execute(query);
     return {
       type: "FeatureCollection",
@@ -87,7 +87,7 @@ export async function getNativePostalCodesData(): Promise<PostalFeatureCollectio
       const maxDigits = COUNTRY_CONFIGS[code].maxDigits;
       const tolerance = SIMPLIFY_TOLERANCE[code];
       return sql`SELECT code, country, granularity,
-             ST_AsGeoJSON(ST_Simplify(geometry, ${tolerance}), 4) as geometry
+             ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, ${tolerance}), 4) as geometry
       FROM postal_codes
       WHERE country = ${code} AND granularity = ${`${maxDigits}digit`} AND is_active = 'true'`;
     });

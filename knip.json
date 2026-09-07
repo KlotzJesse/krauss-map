@@ -1,4 +1,15 @@
 {
-  "entry": ["index.{js,ts}", "src/index.{js,ts}"],
-  "project": ["**/*.{js,ts}"]
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,route,error,loading,not-found,global-error,global-not-found,template,default,forbidden,unauthorized}.{ts,tsx}",
+    "src/app/**/{sitemap,robots,manifest,opengraph-image,twitter-image,icon,apple-icon,favicon}.{ts,tsx}",
+    "next.config.ts",
+    "drizzle.config.ts",
+    "postcss.config.mjs",
+    "src/lib/workers/*.worker.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["src/scripts/**", "scripts/**", "fix-cache.js", "fix-map-data.cjs"],
+  "ignoreBinaries": ["email", "ts-node"],
+  "ignoreDependencies": ["tailwindcss-animate", "tw-animate-css", "tailwindcss-corner-shape", "babel-plugin-react-compiler", "server-only", "postcss"]
 }

@@ -45,8 +45,8 @@ export async function getCountryShapesData(
 ): Promise<CountryFeatureCollection> {
   try {
     const query = country
-      ? sql`SELECT id, country, name, iso3, ST_AsGeoJSON(ST_Simplify(geometry, 0.01)) as geometry, properties FROM country_shapes WHERE country = ${country} AND is_active = 'true'`
-      : sql`SELECT id, country, name, iso3, ST_AsGeoJSON(ST_Simplify(geometry, 0.01)) as geometry, properties FROM country_shapes WHERE is_active = 'true'`;
+      ? sql`SELECT id, country, name, iso3, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, 0.01), 4) as geometry, properties FROM country_shapes WHERE country = ${country} AND is_active = 'true'`
+      : sql`SELECT id, country, name, iso3, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, 0.01), 4) as geometry, properties FROM country_shapes WHERE is_active = 'true'`;
     const { rows } = await db.execute(query);
 
     return {
