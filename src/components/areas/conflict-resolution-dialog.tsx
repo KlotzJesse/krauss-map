@@ -479,6 +479,7 @@ export function ConflictResolutionPanel({
               <TooltipTrigger
                 render={
                   <Button
+                    aria-label="Alle Konflikte automatisch auflösen — PLZ im größten Gebiet behalten"
                     variant="secondary"
                     size="sm"
                     className="h-6 text-xs"
@@ -502,6 +503,7 @@ export function ConflictResolutionPanel({
                 <TooltipTrigger
                   render={
                     <Button
+                      aria-label="Alle Konflikte auflösen — PLZ im aktiven Gebiet behalten"
                       variant="secondary"
                       size="sm"
                       className="h-6 text-xs"

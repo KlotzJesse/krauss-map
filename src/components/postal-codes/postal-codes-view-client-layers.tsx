@@ -29,6 +29,10 @@ import {
   AddressAutocompleteSkeleton,
   MapSkeleton,
 } from "@/components/ui/loading-skeletons";
+import {
+  detectCountryFromCode,
+  type CountryCode,
+} from "@/lib/config/countries";
 import { useGeodata } from "@/lib/hooks/use-geodata";
 import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
@@ -36,13 +40,12 @@ import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
 import type { Layer, LayerWire } from "@/lib/types/area-types";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
-import { extractRawCode, storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
+import {
+  extractRawCode,
+  storedCodeToCompositeKey,
+} from "@/lib/utils/deck-gl-utils";
 import { isLightColor } from "@/lib/utils/layer-colors";
 import { getLargestPolygonCentroid } from "@/lib/utils/map-data";
-import {
-  detectCountryFromCode,
-  type CountryCode,
-} from "@/lib/config/countries";
 
 const AddressAutocompleteEnhanced = dynamic(
   () =>
@@ -94,7 +97,10 @@ function toCompositePostalCode(
   return country ? `${country}:${rawCode}` : rawCode;
 }
 
-function arePostalCodesEquivalent(leftCode: string, rightCode: string): boolean {
+function arePostalCodesEquivalent(
+  leftCode: string,
+  rightCode: string
+): boolean {
   const leftComposite = storedCodeToCompositeKey(leftCode);
   const rightComposite = storedCodeToCompositeKey(rightCode);
   if (leftComposite && rightComposite) {
@@ -606,7 +612,9 @@ export const PostalCodesViewClientWithLayers = memo(
       }
       for (const layer of initialLayers) {
         for (const postalCodeEntry of layer.postalCodes ?? []) {
-          const detected = detectCountryFromCode(postalCodeEntry.postalCode).country;
+          const detected = detectCountryFromCode(
+            postalCodeEntry.postalCode
+          ).country;
           if (detected) {
             countrySet.add(detected);
           }
@@ -615,10 +623,11 @@ export const PostalCodesViewClientWithLayers = memo(
       return [...countrySet];
     }, [areaCountriesFromServer, country, initialLayers]);
 
-    const { data, isLoading: isGeodataLoading, error: geodataError } = useGeodata(
-      defaultGranularity,
-      areaCountries
-    );
+    const {
+      data,
+      isLoading: isGeodataLoading,
+      error: geodataError,
+    } = useGeodata(defaultGranularity, areaCountries);
 
     // Read activeLayerId directly from URL state for instant switching
     const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
@@ -677,17 +686,15 @@ export const PostalCodesViewClientWithLayers = memo(
         setPreviewPostalCode(postalCode);
         if (postalCode && data) {
           const targetCode = toCompositePostalCode(postalCode, country);
-          const feature = data.features.find(
-            (f) => {
-              const rawCode = String(f.properties?.code ?? "");
-              if (!rawCode) return false;
-              const featureCountry = String(f.properties?.country ?? "");
-              const featureCode = featureCountry
-                ? `${featureCountry}:${rawCode}`
-                : rawCode;
-              return featureCode === targetCode;
-            }
-          );
+          const feature = data.features.find((f) => {
+            const rawCode = String(f.properties?.code ?? "");
+            if (!rawCode) return false;
+            const featureCountry = String(f.properties?.country ?? "");
+            const featureCode = featureCountry
+              ? `${featureCountry}:${rawCode}`
+              : rawCode;
+            return featureCode === targetCode;
+          });
           if (feature) {
             const [lng, lat] = getLargestPolygonCentroid(
               feature as import("geojson").Feature<Polygon | MultiPolygon>
@@ -825,6 +832,7 @@ export const PostalCodesViewClientWithLayers = memo(
               <TooltipTrigger
                 render={
                   <Button
+                    aria-label="PLZ importieren"
                     variant="outline"
                     onClick={openImportDialog}
                     size="icon"

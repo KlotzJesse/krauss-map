@@ -186,6 +186,7 @@ export function UndoRedoToolbar({
           <TooltipTrigger
             render={
               <Button
+                aria-label="Letzte Änderung rückgängig machen (Strg+Z)"
                 variant="outline"
                 onClick={undo}
                 disabled={!optimisticStatus.canUndo || isLoading}
@@ -210,6 +211,7 @@ export function UndoRedoToolbar({
           <TooltipTrigger
             render={
               <Button
+                aria-label="Letzte rückgängig gemachte Änderung wiederholen (Strg+Umschalt+Z oder Strg+Y)"
                 variant="outline"
                 onClick={redo}
                 disabled={!optimisticStatus.canRedo || isLoading}

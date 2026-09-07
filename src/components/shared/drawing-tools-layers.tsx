@@ -45,13 +45,7 @@ import {
 } from "lucide-react";
 import { memo } from "react";
 import type { Dispatch, RefObject } from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -59,8 +53,8 @@ import {
   fixDuplicateWithLayerAction,
   addPostalCodesByPrefixAction,
 } from "@/app/actions/area-actions";
-import { LayerListItem } from "@/components/shared/layer-list-item";
 import { LayerTemplatesDialog } from "@/components/areas/layer-templates-dialog";
+import { LayerListItem } from "@/components/shared/layer-list-item";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,14 +108,21 @@ import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { Layer } from "@/lib/types/area-types";
-import { extractRawCode, storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
+import {
+  extractRawCode,
+  storedCodeToCompositeKey,
+} from "@/lib/utils/deck-gl-utils";
 import {
   COLOR_THEMES,
   hashGroupColor,
   reassignAllColors,
 } from "@/lib/utils/layer-colors";
+
 import type { DrawingToolsProps } from "./drawing-tools";
-import type { DrawingToolsUIState, DrawingToolsUIAction } from "./drawing-tools";
+import type {
+  DrawingToolsUIState,
+  DrawingToolsUIAction,
+} from "./drawing-tools";
 
 // Stable DnD config — defined outside components to avoid re-renders on each render cycle
 const DND_MODIFIERS = [restrictToVerticalAxis, restrictToParentElement];
@@ -625,9 +626,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
 
     return optimisticLayers
       .filter((l) =>
-        l.postalCodes?.some(
-          (pc) => arePostalCodesEquivalent(pc.postalCode, q)
-        )
+        l.postalCodes?.some((pc) => arePostalCodesEquivalent(pc.postalCode, q))
       )
       .map((l) => ({ id: l.id, name: l.name, color: l.color ?? "#6366f1" }));
   }, [layerSearch, optimisticLayers]);
@@ -1168,6 +1167,9 @@ export const LayerManagementSection = memo(function LayerManagementSection({
               <TooltipTrigger
                 render={
                   <Button
+                    aria-label={
+                      hasHiddenLayers ? "Alle einblenden" : "Alle ausblenden"
+                    }
                     onClick={() =>
                       hasHiddenLayers
                         ? handleShowAllLayers()
@@ -1199,6 +1201,9 @@ export const LayerManagementSection = memo(function LayerManagementSection({
               <TooltipTrigger
                 render={
                   <Button
+                    aria-label={
+                      selectMode ? "Auswahl beenden" : "Mehrfachauswahl"
+                    }
                     onClick={toggleSelectMode}
                     variant="ghost"
                     size="sm"
@@ -1221,6 +1226,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
             <TooltipTrigger
               render={
                 <Button
+                  aria-label="Neues Gebiet erstellen"
                   onClick={() => {
                     setShowNewLayerInput((v) => !v);
                     if (!showNewLayerInput) {
@@ -1365,6 +1371,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
                     <TooltipTrigger
                       render={
                         <button
+                          aria-label="Einblenden"
                           type="button"
                           onClick={handleBulkShowSelected}
                           className="p-0.5 rounded hover:bg-muted"
@@ -1381,6 +1388,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
                     <TooltipTrigger
                       render={
                         <button
+                          aria-label="Ausblenden"
                           type="button"
                           onClick={handleBulkHideSelected}
                           className="p-0.5 rounded hover:bg-muted"
@@ -1397,6 +1405,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
                     <TooltipTrigger
                       render={
                         <button
+                          aria-label={`${selectedIds.size} Gebiete löschen`}
                           type="button"
                           onClick={handleBulkDeleteSelected}
                           className="p-0.5 rounded hover:bg-muted text-destructive"
@@ -1414,6 +1423,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
                       <TooltipTrigger
                         render={
                           <button
+                            aria-label="Ausgewählte Gebiete zusammenführen"
                             type="button"
                             onClick={handleOpenMerge}
                             className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -1438,6 +1448,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
                           <TooltipTrigger
                             render={
                               <button
+                                aria-label="Gruppe zuweisen"
                                 type="button"
                                 className="p-0.5 rounded hover:bg-muted text-muted-foreground"
                               />

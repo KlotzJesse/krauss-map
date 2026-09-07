@@ -100,6 +100,7 @@ const ToolbarButton = memo(function ToolbarButton({
       <TooltipTrigger
         render={
           <Button
+            aria-label={description}
             variant={isActive ? "default" : "outline"}
             size="sm"
             className="h-10 w-10 p-0 flex flex-col items-center gap-0.5"
@@ -191,6 +192,7 @@ const UndoRedoButtons = memo(function UndoRedoButtons({
         <TooltipTrigger
           render={
             <Button
+              aria-label="Rückgängig (Strg+Z)"
               variant="outline"
               size="sm"
               className="h-10 w-10 p-0"
@@ -209,6 +211,7 @@ const UndoRedoButtons = memo(function UndoRedoButtons({
         <TooltipTrigger
           render={
             <Button
+              aria-label="Wiederholen (Strg+Umschalt+Z)"
               variant="outline"
               size="sm"
               className="h-10 w-10 p-0"

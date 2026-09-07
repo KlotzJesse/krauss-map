@@ -913,6 +913,7 @@ export const AddressAutocompleteEnhanced = memo(
                                   <TooltipTrigger
                                     render={
                                       <Button
+                                        aria-label="Vorschau auf Karte anzeigen"
                                         size="sm"
                                         variant={
                                           previewPostalCode ===
@@ -955,6 +956,7 @@ export const AddressAutocompleteEnhanced = memo(
                                 <TooltipTrigger
                                   render={
                                     <Button
+                                      aria-label="Position auf Karte auswählen"
                                       size="sm"
                                       variant="outline"
                                       onClick={(e) => {
@@ -988,6 +990,7 @@ export const AddressAutocompleteEnhanced = memo(
                                 <TooltipTrigger
                                   render={
                                     <Button
+                                      aria-label="Umkreis um Position auswählen"
                                       size="sm"
                                       variant="outline"
                                       onClick={(e) => {

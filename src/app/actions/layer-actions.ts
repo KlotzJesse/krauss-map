@@ -369,9 +369,10 @@ export async function addPostalCodesToLayerAction(
         postalCodes: codesToAddStored,
         layerId,
       },
-      previousData: {
-        postalCodes: [...existingCodesSet],
-      },
+      // No previousData. Undoing an add deletes exactly the codes in
+      // changeData, and nothing else reads previousData for this change type,
+      // so storing the layer's entire prior list wrote ~85KB of JSONB per add
+      // on a large layer for no reader.
       createdBy,
     });
 
