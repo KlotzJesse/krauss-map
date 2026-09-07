@@ -170,6 +170,7 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
 
       <Popover open={popoverOpen} onOpenChange={handleOpen}>
         <PopoverTrigger
+          aria-label="Tags verwalten"
           className={`h-5 gap-0.5 px-1 text-xs text-muted-foreground hover:text-foreground inline-flex items-center rounded transition-opacity${isPending ? " opacity-50 pointer-events-none" : tags.length === 0 ? " opacity-0 group-hover/tags:opacity-100" : ""}`}
           disabled={isPending}
         >

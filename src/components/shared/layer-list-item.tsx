@@ -813,6 +813,7 @@ export const LayerListItem = memo(function LayerListItem({
                   <DropdownMenuTrigger
                     render={
                       <button
+                        aria-label={`Aktionen für "${layer.name}"`}
                         type="button"
                         className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                         onClick={(e) => e.stopPropagation()}
