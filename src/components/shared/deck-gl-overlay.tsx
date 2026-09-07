@@ -1,13 +1,13 @@
 "use client";
 
-import { MapboxOverlay } from "@deck.gl/mapbox";
-import type { MapboxOverlayProps } from "@deck.gl/mapbox";
+import { MapLibreOverlay } from "@deck.gl/maplibre";
+import type { MapLibreOverlayProps } from "@deck.gl/maplibre";
 import type { MutableRefObject } from "react";
 import { useControl } from "react-map-gl/maplibre";
 
 /**
  * DeckGL overlay component that integrates deck.gl layers into a react-map-gl Map
- * via MapboxOverlay + useControl in interleaved mode.
+ * via MapLibreOverlay + useControl in interleaved mode.
  *
  * Interleaved mode renders deck.gl layers directly into MapLibre's WebGL context,
  * preserving z-ordering with basemap layers.
@@ -16,18 +16,18 @@ import { useControl } from "react-map-gl/maplibre";
  * which reference the first basemap symbol layer (e.g., "poi-amenity") —
  * a layer that's part of the style definition and survives all style transitions.
  *
- * `overlayRef` — optional ref that receives the `MapboxOverlay` instance.
+ * `overlayRef` — optional ref that receives the `MapLibreOverlay` instance.
  * Use it to call `overlay.setProps({ layers })` directly from event handlers
  * (e.g., hover callbacks) without triggering React re-renders.
  */
 export function DeckGLOverlay(
-  props: MapboxOverlayProps & {
-    overlayRef?: MutableRefObject<MapboxOverlay | null>;
+  props: MapLibreOverlayProps & {
+    overlayRef?: MutableRefObject<MapLibreOverlay | null>;
   }
 ) {
   const { overlayRef, ...overlayProps } = props;
-  const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({ ...overlayProps, interleaved: true })
+  const overlay = useControl<MapLibreOverlay>(
+    () => new MapLibreOverlay({ ...overlayProps, interleaved: true })
   );
   // Guard: _map must exist AND have a loaded style — a destroyed map object is
   // still truthy after map.remove(), but getStyle() returns null/undefined.

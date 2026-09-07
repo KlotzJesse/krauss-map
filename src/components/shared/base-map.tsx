@@ -1,4 +1,4 @@
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import { MapLibreOverlay } from "@deck.gl/maplibre";
 import {
   Camera,
   ChevronDown,
@@ -668,7 +668,7 @@ const MapInner = memo(function MapInner({
 
   // deck.gl layers (polygons, fills, preview) — hover pushed directly to overlay, no React re-render
   const hoverTooltipRef = useRef<HTMLDivElement | null>(null);
-  const overlayRef = useRef<MapboxOverlay | null>(null);
+  const overlayRef = useRef<MapLibreOverlay | null>(null);
   const { deckLayers, onHover, clearHover, unassignedCount } = useDeckLayers({
     data,
     statesData,

@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
       "@deck.gl/core",
       "@deck.gl/layers",
       "@deck.gl/extensions",
-      "@deck.gl/mapbox",
+      "@deck.gl/maplibre",
       "nuqs",
       "next-themes",
       "clsx",

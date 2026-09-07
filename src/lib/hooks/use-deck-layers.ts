@@ -1,7 +1,7 @@
 import type { PickingInfo } from "@deck.gl/core";
 import { FillStyleExtension } from "@deck.gl/extensions";
 import { GeoJsonLayer } from "@deck.gl/layers";
-import type { MapboxOverlay } from "@deck.gl/mapbox";
+import type { MapLibreOverlay } from "@deck.gl/maplibre";
 import type {
   Feature,
   FeatureCollection,
@@ -401,11 +401,11 @@ interface UseDeckLayersProps {
   /** Ref to the tooltip DOM element — updated directly to avoid React re-renders on hover. */
   hoverTooltipRef?: RefObject<HTMLDivElement | null>;
   /**
-   * Ref to the MapboxOverlay instance (from DeckGLOverlay).
+   * Ref to the MapLibreOverlay instance (from DeckGLOverlay).
    * Hover outline is applied via overlay.setProps() directly — no React state change,
    * so MapInner does not re-render on every hover boundary crossing.
    */
-  overlayRef?: MutableRefObject<MapboxOverlay | null>;
+  overlayRef?: MutableRefObject<MapLibreOverlay | null>;
   /** Ref that is true while the map is being panned/zoomed — hover picking is skipped. */
   isMapInteractingRef?: RefObject<boolean>;
 }
