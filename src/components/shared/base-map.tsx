@@ -15,7 +15,11 @@ import {
   MoveRight,
   Copy,
 } from "lucide-react";
-import { type Map as MapLibreMap, NavigationControl } from "maplibre-gl";
+import {
+  type Map as MapLibreMap,
+  NavigationControl,
+  setWorkerUrl,
+} from "maplibre-gl";
 import dynamic from "next/dynamic";
 import {
   Component,
@@ -31,6 +35,15 @@ import type { ErrorInfo, ReactNode } from "react";
 import { Map, useMap, type MapRef } from "react-map-gl/maplibre";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+
+// maplibre-gl v6 builds its worker URL from `import.meta.url` and bails to an
+// empty string when that is not an http(s) URL — which is what Turbopack gives
+// it. `new Worker("")` then loads the current page as a module script, the
+// worker dies, and no vector tile is ever decoded: the basemap renders blank
+// while deck.gl keeps drawing on top of it. Point it at the copy that
+// scripts/copy-maplibre-worker.ts writes into public/ from node_modules, so the
+// worker always matches the installed version.
+setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 import { Activity } from "@/components/ui/activity";
 import {
   DrawingToolsErrorBoundary,

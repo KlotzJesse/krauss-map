@@ -34,6 +34,7 @@ backups/
 nb-*.js
 next-env.d.ts
 npm-debug.log*
+public/maplibre/
 server.log
 yarn-debug.log*
 yarn-error.log*

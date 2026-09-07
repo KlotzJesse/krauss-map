@@ -51,6 +51,21 @@ const nextConfig: NextConfig = {
       "fflate",
     ],
   },
+  async headers() {
+    return [
+      {
+        // Written by scripts/copy-maplibre-worker.ts straight from
+        // node_modules, so the contents change only when maplibre-gl does.
+        // Revalidation is still cheap (ETag), but a day of freshness keeps the
+        // 480KB shared chunk off the wire on repeat visits.
+        source: "/maplibre/:file*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, must-revalidate" },
+        ],
+      },
+    ];
+  },
+
   logging: {
     browserToTerminal: true,
     // 'error' — errors only (default)
