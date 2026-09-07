@@ -823,8 +823,25 @@ export const AddressAutocompleteEnhanced = memo(
         <div className="relative w-full min-h-8" ref={wrapperRef}>
           {open && (
             <div className="absolute left-0 top-0 w-full z-50 pointer-events-auto">
-              <div className="bg-background border rounded-md shadow-lg">
-                <Command>
+              {/* Matches the collapsed trigger exactly — same radius, border,
+                  shadow and background — and the nested padding of Command and
+                  the input wrapper is removed so the input row is h-8 flush at
+                  the top. Otherwise opening the box nudged the field ~8px down
+                  and changed its shape. */}
+              <div className="overflow-hidden rounded-md border bg-background shadow-sm">
+                <Command
+                  className={
+                    "rounded-none bg-transparent p-0 " +
+                    "[&_[data-slot=command-input-wrapper]]:p-0 " +
+                    "[&_[data-slot=input-group]]:rounded-none " +
+                    "[&_[data-slot=input-group]]:border-0 " +
+                    "[&_[data-slot=input-group]]:bg-transparent " +
+                    // The wrapper contributes 1px of border top and bottom, so
+                    // the input row is 2px shorter to keep the whole box at the
+                    // trigger's 32px.
+                    "[&_[data-slot=input-group]]:h-[30px]!"
+                  }
+                >
                   <CommandInput
                     ref={inputRef}
                     placeholder="PLZ, Adresse, Stadt oder Region suchen... (München, Munich, Berlin, Bayern, etc.)"
@@ -842,9 +859,13 @@ export const AddressAutocompleteEnhanced = memo(
                       }
                     }}
                   />
+                  {/* cmdk always renders an inner sizer, so an "empty" list
+                      still adds ~11px and made the open box taller than the
+                      trigger. Render it only when it has something to show. */}
+                  {(isLoading || results.length > 0 || query.length >= 2) && (
                   <CommandList
                     id="address-search-listbox"
-                    className="max-h-64 overflow-auto"
+                    className="max-h-64 overflow-auto border-t p-1"
                   >
                     {isLoading && (
                       <div className="p-3 text-sm text-muted-foreground">
@@ -1013,6 +1034,7 @@ export const AddressAutocompleteEnhanced = memo(
                       </CommandItem>
                     ))}
                   </CommandList>
+                  )}
                 </Command>
               </div>
             </div>

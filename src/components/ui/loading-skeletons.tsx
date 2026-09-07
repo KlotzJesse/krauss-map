@@ -265,7 +265,7 @@ export function PostalCodesViewSkeleton() {
   return (
     <div className="h-full relative overflow-hidden bg-muted">
       {/* Search bar + active layer badge + import button — top right */}
-      <div className="absolute top-4 right-16 z-30 flex items-center gap-2">
+      <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
         <Skeleton className="h-8 w-72 rounded-md" />
         <Skeleton className="h-6 w-24 rounded-full" />
         <Skeleton className="h-8 w-8 rounded" />
