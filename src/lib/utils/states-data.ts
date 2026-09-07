@@ -59,7 +59,7 @@ export async function getStatesData(
       features,
     };
   } catch (error) {
-    console.error("Error fetching states from Neon:", error);
+    console.error("Error fetching states:", error);
     throw error;
   }
 }

@@ -85,7 +85,7 @@ export async function getPostalCodesDataForGranularity(
       features: rows.map(rowToFeature),
     };
   } catch (error) {
-    console.error("Error fetching postal codes from Neon:", error);
+    console.error("Error fetching postal codes:", error);
     throw error;
   }
 }

@@ -591,57 +591,6 @@ export async function getUndoRedoStatus(areaId: number) {
   }
 }
 
-export type CrossAreaDuplicate = {
-  postalCode: string;
-  otherAreaId: number;
-  otherAreaName: string;
-};
-
-/**
- * Find PLZ codes in the given area that also appear in other non-archived areas.
- * Returns deduplicated list of (postalCode, otherAreaId, otherAreaName).
- */
-export async function getCrossAreaDuplicates(
-  areaId: number
-): Promise<CrossAreaDuplicate[]> {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag(`area-${areaId}-duplicates`, "areas");
-  try {
-    // Deduplicate each side before joining. Joining the raw rows first and
-    // relying on a trailing DISTINCT made Postgres materialize every
-    // (layer, layer) pair for a shared code.
-    const result = await db.execute(sql`
-      WITH own_codes AS (
-        SELECT DISTINCT alpc.postal_code
-        FROM area_layer_postal_codes alpc
-        INNER JOIN area_layers al ON al.id = alpc.layer_id
-                                 AND al.area_id = ${areaId}
-      ),
-      other_codes AS (
-        SELECT DISTINCT alpc.postal_code, a.id AS other_id, a.name AS other_name
-        FROM area_layer_postal_codes alpc
-        INNER JOIN area_layers al ON al.id = alpc.layer_id
-                                 AND al.area_id != ${areaId}
-        INNER JOIN areas a ON a.id = al.area_id
-                          AND a.is_archived = 'false'
-      )
-      SELECT
-        o.postal_code AS "postalCode",
-        t.other_id    AS "otherAreaId",
-        t.other_name  AS "otherAreaName"
-      FROM own_codes o
-      INNER JOIN other_codes t ON t.postal_code = o.postal_code
-      ORDER BY o.postal_code
-    `);
-
-    return result.rows as CrossAreaDuplicate[];
-  } catch (error) {
-    console.error("Error fetching cross-area duplicates:", error);
-    return [];
-  }
-}
-
 export interface RecentActivityItem {
   areaId: number;
   areaName: string;

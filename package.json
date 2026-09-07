@@ -36,7 +36,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hugeicons/core-free-icons": "^4.3.0",
     "@hugeicons/react": "^1.1.10",
-    "@neondatabase/serverless": "^1.1.0",
     "@tabler/icons-react": "^3.46.0",
     "@turf/area": "^7.4.0",
     "@turf/boolean-point-in-polygon": "^7.4.0",

@@ -54,7 +54,7 @@ export async function getCountryShapesData(
       features: rows.map(rowToFeature),
     };
   } catch (error) {
-    console.error("Error fetching country shapes from Neon:", error);
+    console.error("Error fetching country shapes:", error);
     return {
       type: "FeatureCollection",
       features: [],
