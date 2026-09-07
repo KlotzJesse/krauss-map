@@ -1,5 +1,6 @@
+import { SearchIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ChevronsUpDownIcon,
   MapPinIcon,
   RadiusIcon,
   EyeIcon,
@@ -844,7 +845,10 @@ export const AddressAutocompleteEnhanced = memo(
                 >
                   <CommandInput
                     ref={inputRef}
-                    placeholder="PLZ, Adresse, Stadt oder Region suchen... (München, Munich, Berlin, Bayern, etc.)"
+                    // Same string as the collapsed trigger. The longer variant with
+                    // examples truncated at this width anyway, and swapping it in
+                    // on click read as the label changing under the cursor.
+                    placeholder="PLZ, Adresse, Stadt oder Region suchen..."
                     value={query}
                     onValueChange={handleInputChange}
                     autoComplete="off"
@@ -1045,15 +1049,22 @@ export const AddressAutocompleteEnhanced = memo(
               role="combobox"
               aria-expanded={false}
               aria-controls="address-search-listbox"
-              className={`w-full justify-start shadow-sm bg-background h-8 ${triggerClassName}`}
+              // Mirrors the expanded CommandInput exactly: same icon at the
+              // same offset, same 6px gap to the text, same weight. Anything
+              // different here shows up as the field twitching on click.
+              className={`h-8 w-full justify-start gap-0 bg-background font-normal shadow-sm ${triggerClassName}`}
               onClick={(e) => {
                 e.stopPropagation();
                 dispatch({ type: "SET_OPEN", open: true });
                 setTimeout(() => inputRef.current?.focus(), 0);
               }}
             >
-              <ChevronsUpDownIcon className="h-4 w-4 shrink-0 opacity-50" />
-              <span className="ml-2 text-muted-foreground">
+              <HugeiconsIcon
+                icon={SearchIcon}
+                strokeWidth={2}
+                className="size-3.5 shrink-0 opacity-50"
+              />
+              <span className="ml-[6px] text-muted-foreground">
                 PLZ, Adresse, Stadt oder Region suchen...
               </span>
             </Button>
