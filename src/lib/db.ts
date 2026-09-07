@@ -12,12 +12,14 @@ declare global {
 
 const connectionString = process.env.DATABASE_URL!;
 
-// DATABASE_URL points at Supabase's transaction-mode pooler (port 6543),
-// which multiplexes: every connection this pool opens holds a pooler slot for
-// the lifetime of a transaction. On Vercel each concurrent lambda gets its own
-// pool, so `max` is a per-instance figure — 20 x N instances is a lot of slots
-// for a request that issues at most a handful of parallel queries. `min: 0`
-// because a frozen lambda holding an idle connection helps nobody.
+// DATABASE_URL points at Supabase's transaction-mode pooler (port 6543).
+//
+// `max: 20` is per lambda instance, not global. Lowering it to 5 to be
+// gentler on pooler slots was tried and reverted: page latency through
+// Vercel varies more between repeated runs of the same configuration than
+// between configurations, so it could not be shown to help or hurt. Judge
+// it on Supabase's pooler slot usage under real traffic, not on request
+// timings. `min: 0` keeps a frozen lambda from pinning an idle connection.
 //
 // In dev, Next.js HMR recreates modules on every change, which would build a
 // new Pool each time; persisting it on `global` keeps the connection alive
@@ -27,7 +29,7 @@ const pool =
   new Pool({
     connectionString,
     min: 0,
-    max: 5,
+    max: 20,
     idleTimeoutMillis: 30_000,
   });
 
