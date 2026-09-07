@@ -1,4 +1,5 @@
 import {
+  check,
   foreignKey,
   index,
   integer,
@@ -10,6 +11,8 @@ import {
   unique,
   varchar,
 } from "drizzle-orm/pg-core";
+
+import { sql } from "drizzle-orm";
 
 import { multiPolygon } from "../../db/geoTypes";
 
@@ -556,6 +559,15 @@ export const areaLayerPostalCodes = pgTable(
       table.layerId,
 
       table.postalCode
+    ),
+
+    // Codes are stored in composite form ("D-86899", "A-1010", "CH-8001") so
+    // Austrian and Swiss 4-digit codes cannot collide with German ones. Two
+    // write paths once inserted the raw user input instead, which left 7,003
+    // bare codes invisible to postal-code search. This makes that fail loudly.
+    check(
+      "area_layer_postal_codes_prefixed_check",
+      sql`${table.postalCode} ~ '^[A-Z]{1,3}-'`
     ),
 
     foreignKey({

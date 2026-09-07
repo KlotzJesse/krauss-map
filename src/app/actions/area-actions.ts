@@ -22,6 +22,7 @@ import {
   type SelectLayerTemplates,
 } from "../../lib/schema/schema";
 import { generateNextColor } from "../../lib/utils/layer-colors";
+import { normalizePostalCodes } from "../../lib/utils/normalize-postal-codes";
 import {
   recordChangeAction,
   recordChangeWithTx,
@@ -472,11 +473,17 @@ export async function importAreaFromDataAction(
           })
           .returning();
 
-        if (layerData.postalCodes.length > 0) {
+        // An exported file may carry bare codes, including files exported
+        // before codes were stored prefixed. Normalize on the way back in.
+        const importedCodes = normalizePostalCodes(
+          layerData.postalCodes,
+          (raw.country ?? "DE") as CountryCode
+        );
+        if (importedCodes.length > 0) {
           await tx
             .insert(areaLayerPostalCodes)
             .values(
-              layerData.postalCodes.map((code) => ({
+              importedCodes.map((code) => ({
                 layerId: newLayer.id,
                 postalCode: code,
               }))
@@ -1206,10 +1213,26 @@ export async function addPostalCodesToLayerAction(
         return null;
       }
 
+      // Codes arrive here straight from the map, the import dialog and radius
+      // search, so they may be bare ("86899") or prefixed ("D-86899"). Storing
+      // them unnormalized is what put 7,003 bare codes into two areas and made
+      // them invisible to postal-code search.
+      const area = await tx.query.areas.findFirst({
+        where: eq(areas.id, areaId),
+        columns: { country: true },
+      });
+      const normalized = normalizePostalCodes(
+        postalCodes,
+        (area?.country ?? "DE") as CountryCode
+      );
+      if (normalized.length === 0) {
+        return [];
+      }
+
       // Unique constraint handles dedup; RETURNING gives only what was inserted
       const insertedRows = await tx
         .insert(areaLayerPostalCodes)
-        .values(postalCodes.map((code) => ({ layerId, postalCode: code })))
+        .values(normalized.map((code) => ({ layerId, postalCode: code })))
         .onConflictDoNothing()
         .returning({ postalCode: areaLayerPostalCodes.postalCode });
 
