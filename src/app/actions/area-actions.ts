@@ -1,12 +1,14 @@
 "use server";
 
-import { eq, and, inArray, sql, like } from "drizzle-orm";
+import { eq, and, inArray, or, sql, like } from "drizzle-orm";
 import { updateTag } from "next/cache";
 
 import {
   type CountryCode,
+  COUNTRY_CODES,
   formatWithPrefix,
   detectCountryFromCode,
+  getCountryConfig,
 } from "../../lib/config/countries";
 import { db } from "../../lib/db";
 import {
@@ -2896,10 +2898,21 @@ export async function searchAreasByPostalCodeAction(
     return { success: false, error: "Ungültige PLZ" };
   }
   try {
+    // Codes are stored in composite form ("D-86899", "A-1010", "CH-8001"),
+    // with some legacy rows still bare. Matching the raw input only ever hit
+    // the bare rows: 86899 returned 1 of its 23 area/layer matches.
+    const candidates = [
+      trimmed,
+      ...COUNTRY_CODES.map((c) => `${getCountryConfig(c).prefix}-${trimmed}`),
+    ];
     const isExact = trimmed.length === 5;
     const whereCondition = isExact
-      ? eq(areaLayerPostalCodes.postalCode, trimmed)
-      : sql`${areaLayerPostalCodes.postalCode} LIKE ${trimmed + "%"}`;
+      ? inArray(areaLayerPostalCodes.postalCode, candidates)
+      : or(
+          ...candidates.map((candidate) =>
+            like(areaLayerPostalCodes.postalCode, `${candidate}%`)
+          )
+        );
 
     const rows = await db
       .select({
@@ -2916,7 +2929,9 @@ export async function searchAreasByPostalCodeAction(
       .where(whereCondition)
       .groupBy(areas.id, areaLayers.id)
       .orderBy(areas.name, areaLayers.name)
-      .limit(20);
+      // A single popular postal code can legitimately appear in dozens of
+      // areas; 20 silently truncated them.
+      .limit(200);
 
     return { success: true, data: rows };
   } catch (err) {

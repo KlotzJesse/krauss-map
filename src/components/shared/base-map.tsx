@@ -11,7 +11,6 @@ import {
   PanelLeftOpen,
   Eye,
   EyeOff,
-  Search,
   X,
   MoveRight,
   Copy,
@@ -309,125 +308,8 @@ function MapLegend({
   );
 }
 
-import type {
-  FeatureCollection,
-  Polygon,
-  MultiPolygon,
-  Feature,
-} from "geojson";
+import type { FeatureCollection, Polygon, MultiPolygon } from "geojson";
 
-function PlzSearch({
-  data,
-  featureIndex,
-  country,
-}: {
-  data: FeatureCollection<Polygon | MultiPolygon>;
-  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
-  country?: string;
-}) {
-  const { current: mapRef } = useMap();
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleSearch = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      const code = query.trim();
-      if (!code || !mapRef) return;
-      const key = resolveFeatureKey(code, country, featureIndex);
-      const features = featureIndex?.get(key) ?? featureIndex?.get(code);
-      if (!features || features.length === 0) return;
-      let minLng = Infinity,
-        maxLng = -Infinity,
-        minLat = Infinity,
-        maxLat = -Infinity;
-      let found = false;
-      for (const ft of features) {
-        const geom = ft.geometry;
-        const rings: number[][][] =
-          geom.type === "Polygon"
-            ? geom.coordinates
-            : geom.type === "MultiPolygon"
-              ? geom.coordinates.flat()
-              : [];
-        for (const ring of rings) {
-          for (const c of ring) {
-            found = true;
-            if (c[0] < minLng) minLng = c[0];
-            if (c[0] > maxLng) maxLng = c[0];
-            if (c[1] < minLat) minLat = c[1];
-            if (c[1] > maxLat) maxLat = c[1];
-          }
-        }
-      }
-      if (!found) return;
-      mapRef.fitBounds(
-        [
-          [minLng, minLat],
-          [maxLng, maxLat],
-        ],
-        { padding: 80, duration: 800 }
-      );
-      setOpen(false);
-      setQuery("");
-    },
-    [query, mapRef, featureIndex, country]
-  );
-
-  return (
-    <div className="absolute top-4 right-4 z-40 print:hidden">
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(true);
-            setTimeout(() => inputRef.current?.focus(), 50);
-          }}
-          title="PLZ suchen und anspringen"
-          aria-label="PLZ suchen"
-          className="flex items-center justify-center w-8 h-8 rounded-md bg-background/90 border border-border shadow-sm hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
-        >
-          <Search className="h-4 w-4" />
-        </button>
-      ) : (
-        <form
-          onSubmit={handleSearch}
-          className="flex items-center gap-1 bg-background/95 border border-border rounded-lg shadow-md px-2 h-6"
-        >
-          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="PLZ eingeben…"
-            className="text-xs outline-none bg-transparent w-28 placeholder:text-muted-foreground"
-            onKeyDown={(e) =>
-              e.key === "Escape" && (setOpen(false), setQuery(""))
-            }
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              setQuery("");
-            }}
-            aria-label="Suche schließen"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </form>
-      )}
-    </div>
-  );
-}
-
-/**
- * Inner map component — must be a child of <Map> to use useMap() hook.
- * Manages TerraDraw integration via raw MapLibre instance and labels via hybrid approach.
- */
 const MapInner = memo(function MapInner({
   data,
   layerId,
@@ -1139,13 +1021,6 @@ const MapInner = memo(function MapInner({
         />
       </div>
       </div>
-
-      {/* PLZ search overlay — top right */}
-      <PlzSearch
-        data={data}
-        featureIndex={optimizations.featureIndex}
-        country={country}
-      />
 
       {mapDataError && (
         <div className="absolute top-12 right-4 z-30 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive max-w-sm">
