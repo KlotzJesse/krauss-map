@@ -1,5 +1,7 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { useEffect, useMemo, useState } from "react";
+import { feature as topoFeature } from "topojson-client";
+import type { Topology } from "topojson-specification";
 
 import {
   resolveGranularityForCountry,
@@ -44,6 +46,25 @@ const mergeFeatureCollections = (
   features: collections.flatMap((collection) => collection.features),
 });
 
+/**
+ * The API serves TopoJSON (shared border arcs, ~half the bytes of GeoJSON).
+ * Decode it back into the FeatureCollection the rest of the app expects.
+ * Older responses were plain GeoJSON, so accept both.
+ */
+const decodeGeodata = (
+  payload: unknown
+): FeatureCollection<Polygon | MultiPolygon> => {
+  const maybeTopology = payload as Topology | null;
+  if (maybeTopology?.type === "Topology") {
+    const objectName = Object.keys(maybeTopology.objects)[0];
+    return topoFeature(
+      maybeTopology,
+      maybeTopology.objects[objectName]
+    ) as unknown as FeatureCollection<Polygon | MultiPolygon>;
+  }
+  return payload as FeatureCollection<Polygon | MultiPolygon>;
+};
+
 const buildGeodataUrl = (granularity: string, countryCode: CountryCode): string =>
   `/api/geodata/${resolveGranularityForCountry(granularity, countryCode)}?country=${countryCode}`;
 
@@ -63,7 +84,7 @@ export function useGeodata(
   const countries = useMemo(() => normalizeCountries(country), [country]);
   const cacheCountry = countries.length > 0 ? countries.join(",") : "ALL";
   const cacheKey = `postal-${granularity}:${cacheCountry}`;
-  const idbKey = `geo:${granularity}:${cacheCountry}`;
+  const idbKey = `geo2:${granularity}:${cacheCountry}`;
 
   const [data, setData] = useState<FeatureCollection<Polygon | MultiPolygon>>(
     () => geodataCache.get(cacheKey) ?? EMPTY_FC
@@ -107,9 +128,7 @@ export function useGeodata(
                   res.headers.get("x-geodata-version") ??
                   "1";
                 if (freshVersion !== stored.version) {
-                  const fresh = (await res.json()) as FeatureCollection<
-                    Polygon | MultiPolygon
-                  >;
+                  const fresh = decodeGeodata(await res.json());
                   geodataCache.set(cacheKey, fresh);
                   setData(fresh);
                   idbSet(idbKey, { version: freshVersion, data: fresh });
@@ -129,9 +148,7 @@ export function useGeodata(
         if (!primaryRes.ok) {
           throw new Error(`Failed to fetch geodata: ${primaryRes.status}`);
         }
-        const primaryCollection = (await primaryRes.json()) as FeatureCollection<
-          Polygon | MultiPolygon
-        >;
+        const primaryCollection = decodeGeodata(await primaryRes.json());
         const primaryVersion =
           primaryRes.headers.get("X-Geodata-Version") ??
           primaryRes.headers.get("x-geodata-version") ??
@@ -151,12 +168,9 @@ export function useGeodata(
             throw new Error(`Failed to fetch geodata: ${res.status}`);
           }
         }
-        const secondaryCollections = (await Promise.all(
-          secondaryResponses.map(
-            async (res) =>
-              (await res.json()) as FeatureCollection<Polygon | MultiPolygon>
-          )
-        )) as FeatureCollection<Polygon | MultiPolygon>[];
+        const secondaryCollections = await Promise.all(
+          secondaryResponses.map(async (res) => decodeGeodata(await res.json()))
+        );
         const collections = [primaryCollection, ...secondaryCollections];
         const result =
           collections.length === 1

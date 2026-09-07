@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { type CountryCode, isValidCountryCode } from "@/lib/config/countries";
 import {
-  getPostalCodesDataForGranularity,
-  getNativePostalCodesData,
+  getPostalCodesTopoForGranularity,
+  getNativePostalCodesTopo,
 } from "@/lib/utils/postal-codes-data";
 
 const VALID_GRANULARITIES = new Set([
@@ -30,10 +30,12 @@ export async function GET(
   }
 
   // "native" = each country at its full resolution (DE@5digit + AT@4digit + CH@4digit)
+  // Served as TopoJSON: neighbouring postal codes share borders, so encoding
+  // each border once roughly halves the payload versus GeoJSON.
   const data =
     granularity === "native"
-      ? await getNativePostalCodesData()
-      : await getPostalCodesDataForGranularity(granularity, country);
+      ? await getNativePostalCodesTopo()
+      : await getPostalCodesTopoForGranularity(granularity, country);
 
   const json = JSON.stringify(data);
   const stream = new Blob([json])
@@ -44,9 +46,11 @@ export async function GET(
     headers: {
       "Content-Type": "application/json",
       "Content-Encoding": "gzip",
+      // Lets the client tell a TopoJSON body from the older GeoJSON one.
+      "X-Geodata-Format": "topojson",
       "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
       // Version used by client IndexedDB cache for staleness check
-      "X-Geodata-Version": process.env.GEODATA_VERSION ?? "1",
+      "X-Geodata-Version": process.env.GEODATA_VERSION ?? "2",
     },
   });
 }
