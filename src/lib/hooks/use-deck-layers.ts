@@ -392,6 +392,8 @@ interface UseDeckLayersProps {
   mapCanvasRef: RefObject<HTMLCanvasElement | null>;
   /** Country code for the area — used to prefix raw postal codes for DACH matching. */
   country?: string;
+  /** Granularity of the loaded dataset — selects the matching hover metadata. */
+  granularity?: string;
   /** ID of basemap symbol layer to insert deck.gl layers before (for z-ordering). */
   beforeId?: string;
   /** Set of composite postal codes (e.g. "DE:12345") to highlight on the map. */
@@ -414,8 +416,62 @@ interface UseDeckLayersProps {
  * Hook that returns all deck.gl layer instances for the map.
  * Only polygon/fill/interaction layers — labels stay in MapLibre (hybrid approach).
  */
+/**
+ * Hover-card metadata (place, Bundesland, population, area), fetched the first
+ * time someone hovers a polygon rather than with the map, and cached for the
+ * page's lifetime. Kept out of the geometry payload because the geometry loads
+ * on every visit while this is only needed on hover.
+ */
+type PostalMetaEntry = [
+  string | null,
+  number | null,
+  number | null,
+  number | null,
+];
+interface PostalMeta {
+  states: string[];
+  entries: Record<string, PostalMetaEntry>;
+}
+
+const metaCache = new Map<string, PostalMeta>();
+const metaInflight = new Map<string, Promise<PostalMeta | null>>();
+/** Called once the dataset arrives, so a card already on screen fills in
+ *  instead of waiting for the pointer to move to another polygon. */
+const metaListeners = new Set<() => void>();
+
+function loadPostalMeta(
+  granularity: string,
+  country: string
+): PostalMeta | null {
+  const key = `${country}:${granularity}`;
+  const cached = metaCache.get(key);
+  if (cached) {
+    return cached;
+  }
+  if (!metaInflight.has(key)) {
+    metaInflight.set(
+      key,
+      fetch(`/api/postal-codes/meta/${granularity}?country=${country}`)
+        .then((r) => (r.ok ? (r.json() as Promise<PostalMeta>) : null))
+        .then((d) => {
+          if (d) {
+            metaCache.set(key, d);
+            for (const listener of metaListeners) {
+              listener();
+            }
+          }
+          return d;
+        })
+        .catch(() => null)
+    );
+  }
+  // First hover renders without metadata; the next one has it.
+  return null;
+}
+
 export function useDeckLayers({
   data,
+  granularity,
   statesData,
   countryShapesData,
   layers,
@@ -774,6 +830,10 @@ export function useDeckLayers({
     return memberships;
   }, [layers]);
 
+  const lastTooltipArgsRef = useRef<
+    [number, number, string, Array<{ name: string; color: string }>] | null
+  >(null);
+
   const showTooltip = useCallback(
     (
       x: number,
@@ -783,18 +843,57 @@ export function useDeckLayers({
     ) => {
       const tooltipEl = effectiveTooltipRef.current;
       if (!tooltipEl) return;
+      lastTooltipArgsRef.current = [x, y, code, matchingLayers];
       tooltipEl.style.left = `${x + 12}px`;
       tooltipEl.style.top = `${y - 10}px`;
       tooltipEl.style.display = "block";
-      const layersKey = matchingLayers
-        .map((layer) => `${layer.name}:${layer.color}`)
-        .join("|");
+      const meta = granularity
+        ? loadPostalMeta(granularity, country ?? "DE")
+        : null;
+      const layersKey =
+        matchingLayers.map((layer) => `${layer.name}:${layer.color}`).join("|") +
+        // Metadata arrives after the first hover; without it in the key the
+        // early return below would keep showing the un-enriched card.
+        (meta ? "|meta" : "");
       if (
         lastTooltipCodeRef.current === code &&
         lastTooltipLayersKeyRef.current === layersKey
       ) {
         return;
       }
+      // Place, Bundesland, population and area come from a dataset fetched on
+      // first hover; until it lands these rows simply stay hidden.
+      const entry = meta?.entries[code];
+      const placeEl = tooltipEl.querySelector<HTMLElement>(
+        "[data-tooltip-place]"
+      );
+      const stateEl = tooltipEl.querySelector<HTMLElement>(
+        "[data-tooltip-state]"
+      );
+      const statsEl = tooltipEl.querySelector<HTMLElement>(
+        "[data-tooltip-stats]"
+      );
+      if (placeEl) {
+        placeEl.textContent = entry?.[0] ?? "";
+      }
+      if (stateEl) {
+        const stateName =
+          entry?.[3] != null ? (meta?.states[entry[3]] ?? null) : null;
+        stateEl.textContent = stateName ?? "";
+        stateEl.style.display = stateName ? "block" : "none";
+      }
+      if (statsEl) {
+        const bits: string[] = [];
+        if (entry?.[1] != null) {
+          bits.push(`${entry[1].toLocaleString("de-DE")} Einw.`);
+        }
+        if (entry?.[2] != null) {
+          bits.push(`${entry[2].toLocaleString("de-DE")} km²`);
+        }
+        statsEl.textContent = bits.join(" · ");
+        statsEl.style.display = bits.length > 0 ? "block" : "none";
+      }
+
       const codeEl = tooltipEl.querySelector<HTMLElement>(
         "[data-tooltip-code]"
       );
@@ -823,7 +922,7 @@ export function useDeckLayers({
     },
     // effectiveTooltipRef is a stable ref object — intentionally excluded from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [granularity, country]
   );
 
   const hideTooltip = useCallback(() => {
@@ -834,6 +933,42 @@ export function useDeckLayers({
     // effectiveTooltipRef is a stable ref object — intentionally excluded from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Warm the hover metadata once the map knows its dataset, so the first card
+  // is already complete. Deferred to idle so it never competes with the
+  // geometry fetch or the initial render.
+  useEffect(() => {
+    if (!granularity) {
+      return;
+    }
+    const w = window as typeof window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const warm = () => loadPostalMeta(granularity, country ?? "DE");
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(warm, { timeout: 4000 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(warm, 1200);
+    return () => window.clearTimeout(id);
+  }, [granularity, country]);
+
+  // The first hover renders before the metadata request resolves. Redraw that
+  // card when it lands rather than making the user move the pointer again.
+  useEffect(() => {
+    const redraw = () => {
+      const args = lastTooltipArgsRef.current;
+      const el = effectiveTooltipRef.current;
+      if (args && el && el.style.display !== "none") {
+        showTooltip(...args);
+      }
+    };
+    metaListeners.add(redraw);
+    return () => {
+      metaListeners.delete(redraw);
+    };
+  }, [showTooltip, effectiveTooltipRef]);
 
   const onHover = useCallback(
     (info: PickingInfo) => {

@@ -156,6 +156,10 @@ export const postalCodes = pgTable(
 
     isActive: varchar("is_active", { length: 5 }).notNull().default("true"),
 
+    /** Bundesland / Kanton the code sits in, precomputed from a spatial join
+     * against `states` because doing it per request took ~19s. */
+    stateName: varchar("state_name", { length: 100 }),
+
     sourceRelease: varchar("source_release", { length: 50 }),
 
     geometry: multiPolygon("geometry").notNull(),

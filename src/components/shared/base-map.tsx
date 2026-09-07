@@ -575,6 +575,7 @@ const MapInner = memo(function MapInner({
     isCursorMode: interactions.isCursorMode,
     mapCanvasRef,
     country,
+    granularity,
     beforeId: firstSymbolLayerId,
     highlightedCodes: highlightedConflictCodes,
     showUnassigned,
@@ -1071,11 +1072,26 @@ const MapInner = memo(function MapInner({
         className="absolute z-20 pointer-events-none"
         style={{ display: "none", left: 0, top: 0 }}
       >
-        <div className="bg-popover/95 border border-border rounded shadow-md px-2 py-1.5 text-xs min-w-[80px]">
+        <div className="bg-popover/95 border border-border rounded shadow-md px-2 py-1.5 text-xs min-w-[80px] max-w-[240px]">
+          <div className="flex items-baseline gap-1.5">
+            <span
+              data-tooltip-code
+              className="font-mono font-semibold text-foreground"
+            />
+            <span
+              data-tooltip-place
+              className="truncate text-foreground/80"
+            />
+          </div>
+          {/* Filled from the lazily fetched metadata; each row hides itself
+              when the dataset has no value for this code. */}
           <div
-            data-tooltip-code
-            className="font-mono font-semibold text-foreground"
-          />
+            data-tooltip-meta
+            className="mt-0.5 space-y-0.5 text-[10px] text-muted-foreground"
+          >
+            <div data-tooltip-state style={{ display: "none" }} />
+            <div data-tooltip-stats style={{ display: "none" }} />
+          </div>
           <div data-tooltip-layers className="mt-1 space-y-0.5" />
         </div>
       </div>
