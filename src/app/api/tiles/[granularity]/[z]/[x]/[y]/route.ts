@@ -136,9 +136,14 @@ export async function GET(
   const mvt = rows[0]?.mvt;
   const body = mvt ? new Uint8Array(mvt as Uint8Array) : new Uint8Array(0);
 
-  // Vercel does not compress application/vnd.mapbox-vector-tile itself, and
-  // MVT is protobuf rather than entropy-coded: gzip takes a z5 screenful of
-  // these tiles from 899KB to 185KB. Compress here as the geodata route does.
+  // MVT is protobuf rather than entropy-coded, and gzip takes a z5 screenful of
+  // these tiles from 899KB to 185KB — but Vercel neither compresses
+  // application/vnd.mapbox-vector-tile itself nor forwards a body we compressed
+  // under that type: it decompresses it at the edge and drops the header, which
+  // put 257KB on the wire for a tile that was 101KB leaving the function. It
+  // does forward gzip for application/octet-stream, and deck.gl picks the MVT
+  // parser from the layer rather than from the response type (MVTLayer sets
+  // loadOptions.core.mimeType itself), so the tiles go out as octet-stream.
   const stream = new Blob([body as BlobPart])
     .stream()
     .pipeThrough(new CompressionStream("gzip"));
@@ -146,7 +151,7 @@ export async function GET(
   return new Response(stream, {
     status: 200,
     headers: {
-      "Content-Type": "application/vnd.mapbox-vector-tile",
+      "Content-Type": "application/octet-stream",
       "Content-Encoding": "gzip",
       // Tiles change only when the postal-code dataset is reimported.
       "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
