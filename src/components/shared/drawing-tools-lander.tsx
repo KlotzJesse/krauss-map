@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { Layer } from "@/lib/types/area-types";
-import { storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
+import { storedCodeToCompositeKey } from "@/lib/utils/postal-code-keys";
 
 const COUNTRY_META: Record<string, { flag: string; name: string }> = {
   DE: { flag: "🇩🇪", name: "Deutschland" },

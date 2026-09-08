@@ -8,11 +8,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { Layer } from "@/lib/types/area-types";
-import { resolveFeatureKey } from "@/lib/utils/deck-gl-utils";
+import { resolveFeatureKey } from "@/lib/utils/postal-code-keys";
 
 /**
  * Returns the ID of the first label/symbol layer AFTER basemap boundary lines.
- * Used as `beforeId` for deck.gl layers to ensure proper z-ordering:
+ * Used as `beforeId` for the postal-code layers to ensure proper z-ordering:
  * our polygon/line layers render above basemap boundary lines but below labels.
  */
 export function getFirstSymbolLayerId(map: MapLibreMap): string | undefined {
@@ -132,7 +132,7 @@ interface UseMapLabelsProps {
 /**
  * Hook for managing MapLibre native symbol layers (labels).
  * This is the hybrid escape hatch — labels stay in MapLibre for superior SDF text rendering.
- * All polygon/fill/interaction layers are managed by deck.gl via useDeckLayers.
+ * The polygon, fill and interaction layers live in useMapPostalLayers.
  */
 export function useMapLabels({
   mapInstance,
@@ -173,7 +173,7 @@ export function useMapLabels({
 
   // Label layer creation — runs once when map loads.
   // Label layers are added at the top of the style stack (above basemap symbols
-  // and deck.gl layers) to ensure they're always visible.
+  // and the postal-code layers) to ensure they're always visible.
   useLayoutEffect(() => {
     if (!mapInstance || !isMapLoaded) {
       return;

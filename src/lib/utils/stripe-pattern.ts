@@ -1,23 +1,9 @@
 /**
- * Stripe pattern texture atlas for deck.gl FillStyleExtension.
- * Creates a canvas-based texture with diagonal stripe + crosshatch patterns.
- * Browser-only — guard all calls with typeof document !== 'undefined'.
+ * Diagonal stripe and crosshatch fill patterns, used for postal codes that
+ * belong to more than one layer.
+ *
+ * Browser-only — guard all calls with typeof document !== "undefined".
  */
-
-export interface PatternMapping {
-  [key: string]: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    mask: boolean;
-  };
-}
-
-export interface StripePatternAtlas {
-  canvas: HTMLCanvasElement;
-  mapping: PatternMapping;
-}
 
 /** Size of each individual pattern tile in the atlas (pixels). */
 const TILE = 128;
@@ -56,40 +42,6 @@ function drawDiagonalStripes(
 }
 
 /**
- * Creates a WebGL-ready canvas texture atlas with:
- * - `stripe`: 45° diagonal stripes (for codes shared across different-color layers)
- * - `cross`: crosshatch (for codes shared across same/similar-color layers)
- */
-export function createStripePatternAtlas(): StripePatternAtlas | null {
-  if (typeof document === "undefined") return null;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = TILE * 2;
-  canvas.height = TILE;
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-
-  // Transparent base
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Pattern 1 (x=0): forward diagonal stripes (45°)
-  drawDiagonalStripes(ctx, 0, "fwd");
-
-  // Pattern 2 (x=TILE): crosshatch (both diagonals)
-  drawDiagonalStripes(ctx, TILE, "fwd");
-  drawDiagonalStripes(ctx, TILE, "back");
-
-  return {
-    canvas,
-    mapping: {
-      stripe: { x: 0, y: 0, width: TILE, height: TILE, mask: true },
-      cross: { x: TILE, y: 0, width: TILE, height: TILE, mask: true },
-    },
-  };
-}
-
-/**
  * Returns true when two hex colors are perceptually very similar
  * (Euclidean RGB distance < threshold).
  */
@@ -116,4 +68,49 @@ export function hexColorsAreSimilar(
   return (
     Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2) < threshold
   );
+}
+
+/**
+ * A single stripe or crosshatch tile in one colour, ready for
+ * `map.addImage()`.
+ *
+ * MapLibre paints `fill-pattern` as-is and has nothing to tint it with, so the
+ * colour is baked into the image and one is registered per colour — at most two
+ * per visible layer, a handful in practice.
+ */
+export function createColoredPatternImage(
+  shape: "stripe" | "cross",
+  color: [number, number, number, number]
+): ImageData | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = TILE;
+  canvas.height = TILE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return null;
+  }
+  ctx.clearRect(0, 0, TILE, TILE);
+  drawDiagonalStripes(ctx, 0, "fwd");
+  if (shape === "cross") {
+    drawDiagonalStripes(ctx, 0, "back");
+  }
+
+  // The strokes above are white; recolour them, keeping the coverage the
+  // rasterizer produced so the diagonals stay antialiased.
+  const image = ctx.getImageData(0, 0, TILE, TILE);
+  const data = image.data;
+  const alpha = color[3] / 255;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] === 0) {
+      continue;
+    }
+    data[i] = color[0];
+    data[i + 1] = color[1];
+    data[i + 2] = color[2];
+    data[i + 3] = Math.round(data[i + 3] * alpha);
+  }
+  return image;
 }

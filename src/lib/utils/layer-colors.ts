@@ -77,7 +77,7 @@ function colorDistance(
 /**
  * Country border + national colors reserved to avoid layer-color clashes.
  * These are always factored into color distance calculations.
- * Must match COUNTRY_BORDER_COLORS in use-deck-layers.ts.
+ * Must match COUNTRY_BORDER_COLORS in use-postal-style-state.ts.
  */
 const RESERVED_BASE_COLORS = [
   "#1d4ed8", // DE country border — deep royal blue

@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
-import { extractRawCode, storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
+import { extractRawCode, storedCodeToCompositeKey } from "@/lib/utils/postal-code-keys";
 
 const EMPTY_ARRAY: never[] = [];
 

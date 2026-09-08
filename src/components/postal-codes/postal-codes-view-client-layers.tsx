@@ -47,7 +47,7 @@ import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks
 import {
   extractRawCode,
   storedCodeToCompositeKey,
-} from "@/lib/utils/deck-gl-utils";
+} from "@/lib/utils/postal-code-keys";
 import { isLightColor } from "@/lib/utils/layer-colors";
 
 const AddressAutocompleteEnhanced = dynamic(

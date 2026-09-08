@@ -1,3 +1,9 @@
+/**
+ * Postal codes travel in three shapes: the stored form "D-12345", the composite
+ * key "DE:12345" that identifies a code across the DACH countries, and the raw
+ * "12345". These convert between them and pull them out of map features.
+ */
+
 import type { Feature, MultiPolygon, Polygon } from "geojson";
 
 /** Maps ISO country code → stored postal code prefix (e.g. DE → "D"). */
@@ -17,7 +23,7 @@ const PREFIX_TO_COUNTRY: Record<string, string> = {
 
 /**
  * Convert a stored postal code ("D-12345" / "A-1010" / "CH-3800") to a
- * featureIndex composite key ("DE:12345" / "AT:1010" / "CH:3800").
+ * composite key ("DE:12345" / "AT:1010" / "CH:3800").
  * Returns null if the input has no recognised prefix (raw numeric code).
  */
 export function storedCodeToCompositeKey(stored: string): string | null {
@@ -31,7 +37,7 @@ export function storedCodeToCompositeKey(stored: string): string | null {
 }
 
 /**
- * Convert a featureIndex composite key ("DE:12345") to stored format ("D-12345").
+ * Convert a composite key ("DE:12345") to stored format ("D-12345").
  * Returns the input unchanged if no ":" separator is present.
  */
 export function compositeKeyToStoredCode(compositeKey: string): string {
@@ -66,6 +72,11 @@ export function getFeatureStoredCode(
   feature: Feature<Polygon | MultiPolygon>
 ): string | null {
   const props = feature.properties ?? {};
+  // Vector tiles carry one composite "DE:01067" property; other sources still
+  // carry separate code and country fields.
+  if (typeof props.key === "string") {
+    return compositeKeyToStoredCode(props.key);
+  }
   const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
   if (!code) return null;
   const rawCode = String(code);
@@ -76,7 +87,7 @@ export function getFeatureStoredCode(
 }
 
 /**
- * Convert a hex color string to an RGBA array for deck.gl.
+ * Convert a hex color string to an RGBA array.
  * Accepts #RGB, #RRGGBB, or #RRGGBBAA formats.
  */
 export function hexToRgba(
@@ -110,7 +121,7 @@ export function hexToRgba(
 }
 
 /**
- * Extract a unique feature identifier from a GeoJSON feature's properties.
+ * Extract a unique identifier from a feature's properties.
  * Returns composite `country:code` when country is available (for DACH deduplication),
  * falls back to raw code string for legacy data.
  */
@@ -118,6 +129,9 @@ export function getFeatureCode(
   feature: Feature<Polygon | MultiPolygon>
 ): string | null {
   const props = feature.properties ?? {};
+  if (typeof props.key === "string") {
+    return props.key;
+  }
   const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
   if (!code) {
     return null;
@@ -134,6 +148,9 @@ export function getFeatureRawCode(
   feature: Feature<Polygon | MultiPolygon>
 ): string | null {
   const props = feature.properties ?? {};
+  if (typeof props.key === "string") {
+    return rawCodeFromComposite(props.key);
+  }
   const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
   return code ? String(code) : null;
 }
@@ -148,14 +165,14 @@ export function rawCodeFromComposite(compositeKey: string): string {
 }
 
 /**
- * Resolve the composite featureIndex key ("country:code") for a stored or raw postal code.
+ * Resolve the composite key ("country:code") for a stored or raw postal code.
  *
  * For stored-format codes ("D-12345" / "A-1010" / "CH-3800") the country is known
  * unambiguously — returns the composite key directly without any fallback search.
  *
  * For legacy raw numeric codes, tries the preferred country first, then all other
  * DACH countries, then a raw/legacy key. Falls back to `${preferredCountry}:${rawCode}`
- * when no match is found in the featureIndex.
+ * when no match is found in the index.
  */
 export function resolveFeatureKey(
   storedOrRawCode: string,

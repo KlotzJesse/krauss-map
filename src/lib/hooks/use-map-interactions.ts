@@ -1,4 +1,3 @@
-import type { PickingInfo } from "@deck.gl/core";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import type { RefObject } from "react";
 import { useCallback, useRef } from "react";
@@ -14,7 +13,7 @@ import {
   extractRawCode,
   getFeatureStoredCode,
   storedCodeToCompositeKey,
-} from "@/lib/utils/deck-gl-utils";
+} from "@/lib/utils/postal-code-keys";
 
 type LayerWithPostalCodes = SelectAreaLayers & {
   postalCodes?: { postalCode: string }[];
@@ -46,7 +45,8 @@ interface UseMapInteractionsProps {
 /**
  * Comprehensive hook for managing all map interactions.
  * Combines drawing tools and TerraDraw functionality.
- * Hover and click are now handled by deck.gl picking (via useDeckLayers onHover + onClick callback).
+ * Hover and click are handled by MapLibre's own layer-scoped events, in
+ * useMapPostalLayers.
  */
 export function useMapInteractions({
   mapRef,
@@ -102,7 +102,7 @@ export function useMapInteractions({
   });
 
   // Synchronous flag: set when TerraDraw fires select/deselect on the same
-  // click that deck.gl's onClick would also fire. Shape interactions always
+  // click that the map's own click handler would also fire. Shape interactions always
   // take priority over postal-code toggling.
   const terraEventFiredRef = useRef(false);
 
@@ -163,19 +163,17 @@ export function useMapInteractions({
   const layersRef = useRef(layers);
   layersRef.current = layers;
 
-  // deck.gl click handler — replaces useMapClickInteraction
-  const handleDeckClick = useCallback(
-    async (info: PickingInfo) => {
+  /**
+   * Toggle a postal code on the active layer. Takes the code and the click
+   * position rather than a renderer's hit-test result.
+   */
+  const handleCodeClick = useCallback(
+    async (storedCode: string, clickX: number, clickY: number) => {
       if (terraEventFiredRef.current || editingFeatureId) {
         return;
       }
 
-      if (!isCursorMode || !info.object) {
-        return;
-      }
-
-      const storedCode = getFeatureStoredCode(info.object);
-      if (!storedCode) {
+      if (!isCursorMode || !storedCode) {
         return;
       }
 
@@ -228,8 +226,8 @@ export function useMapInteractions({
           });
         } else if (otherLayersWithCode.length > 0 && onNeedsReassign) {
           onNeedsReassign({
-            x: info.x ?? 0,
-            y: info.y ?? 0,
+            x: clickX,
+            y: clickY,
             code: storedCode,
             containingLayers: otherLayersWithCode.map((l) => ({
               id: l.id,
@@ -262,6 +260,7 @@ export function useMapInteractions({
   );
 
   return {
+    handleCodeClick,
     // Drawing tools state
     currentDrawingMode,
     isDrawingToolsVisible,
@@ -275,8 +274,6 @@ export function useMapInteractions({
     editingFeatureId,
     deleteEditingFeature,
     deselectEditingFeature,
-    // deck.gl click handler
-    handleDeckClick,
     // Pending postal codes from drawing
     pendingPostalCodes,
     addPendingToSelection,

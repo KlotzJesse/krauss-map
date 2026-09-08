@@ -111,7 +111,7 @@ import type { Layer } from "@/lib/types/area-types";
 import {
   extractRawCode,
   storedCodeToCompositeKey,
-} from "@/lib/utils/deck-gl-utils";
+} from "@/lib/utils/postal-code-keys";
 import {
   COLOR_THEMES,
   hashGroupColor,

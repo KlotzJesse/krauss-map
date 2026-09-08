@@ -1,6 +1,6 @@
 import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import { compositeKeyToStoredCode } from "@/lib/utils/deck-gl-utils";
+import { compositeKeyToStoredCode } from "@/lib/utils/postal-code-keys";
 import { isPointInPolygon } from "@/lib/utils/map-data";
 import type { MapLibreMap } from "@/types/map";
 

@@ -92,8 +92,12 @@ export async function GET(
       SELECT ST_TileEnvelope(${zoom}, ${tileX}, ${tileY}) AS env
     ),
     src AS (
-      SELECT pc.code,
-             pc.country,
+      SELECT
+             -- One composite property rather than separate code and country
+             -- columns: MapLibre promotes it to the feature id, which is how
+             -- per-code colours are applied through feature-state, and it
+             -- costs the same on the wire as the two columns did.
+             (pc.country || ':' || pc.code) AS key,
              -- A small postal code is sub-unit at country zoom and quantizes
              -- away to nothing, which would make a city-only layer render as
              -- an empty map. Fall back to a marker square around the code's
@@ -141,9 +145,9 @@ export async function GET(
   // application/vnd.mapbox-vector-tile itself nor forwards a body we compressed
   // under that type: it decompresses it at the edge and drops the header, which
   // put 257KB on the wire for a tile that was 101KB leaving the function. It
-  // does forward gzip for application/octet-stream, and deck.gl picks the MVT
-  // parser from the layer rather than from the response type (MVTLayer sets
-  // loadOptions.core.mimeType itself), so the tiles go out as octet-stream.
+  // does forward gzip for application/octet-stream, and MapLibre picks its MVT
+  // parser from the source type rather than from the response content type, so
+  // the tiles go out as octet-stream.
   const stream = new Blob([body as BlobPart])
     .stream()
     .pipeThrough(new CompressionStream("gzip"));

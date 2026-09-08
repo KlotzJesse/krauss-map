@@ -1,4 +1,3 @@
-import { MapLibreOverlay } from "@deck.gl/maplibre";
 import {
   Camera,
   ChevronDown,
@@ -28,6 +27,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -40,7 +40,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // empty string when that is not an http(s) URL — which is what Turbopack gives
 // it. `new Worker("")` then loads the current page as a module script, the
 // worker dies, and no vector tile is ever decoded: the basemap renders blank
-// while deck.gl keeps drawing on top of it. Point it at the copy that
+// while the postal-code layers keep drawing on top of it. Point it at the copy that
 // scripts/copy-maplibre-worker.ts writes into public/ from node_modules, so the
 // worker always matches the installed version.
 setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
@@ -58,7 +58,6 @@ import {
   detectCountryFromCode,
 } from "@/lib/config/countries";
 import { useCountryShapesData } from "@/lib/hooks/use-country-shapes-data";
-import { useDeckLayers } from "@/lib/hooks/use-deck-layers";
 import {
   useMapInteractions,
   type PlzReassignInfo,
@@ -67,7 +66,9 @@ import {
   getFirstSymbolLayerId,
   useMapLabels,
 } from "@/lib/hooks/use-map-labels";
+import { TILES_VERSION } from "@/lib/config/tiles";
 import { useMapOptimizations } from "@/lib/hooks/use-map-optimizations";
+import { useMapPostalLayers } from "@/lib/hooks/use-map-postal-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useStatesData } from "@/lib/hooks/use-states-data";
 import {
@@ -76,7 +77,7 @@ import {
   useSetMapCenterZoom,
 } from "@/lib/url-state/map-state";
 import { cn } from "@/lib/utils";
-import { resolveFeatureKey } from "@/lib/utils/deck-gl-utils";
+import { resolveFeatureKey } from "@/lib/utils/postal-code-keys";
 import type {
   BaseMapProps,
   MapErrorMessageProps,
@@ -91,7 +92,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { DeckGLOverlay } from "./deck-gl-overlay";
 import { MapBookmarks } from "./map-bookmarks";
 
 // Lazy-loaded conflict resolution panel (side panel, not modal)
@@ -555,37 +555,45 @@ const MapInner = memo(function MapInner({
     onNeedsReassign: handleNeedsReassign,
   });
 
-  // Resolve basemap symbol layer for deck.gl beforeId (survives style transitions)
+  // Resolve the basemap symbol layer to insert our layers below, so labels
+  // stay on top (survives style transitions)
   const firstSymbolLayerId =
     isMapLoaded && rawMapRef.current
       ? getFirstSymbolLayerId(rawMapRef.current)
       : undefined;
 
-  // deck.gl layers (polygons, fills, preview) — hover pushed directly to overlay, no React re-render
+  // Postal-code layers (fills, outlines, striping, preview) — hover is written
+  // straight to the tooltip element, so hovering never re-renders MapInner
   const hoverTooltipRef = useRef<HTMLDivElement | null>(null);
-  const overlayRef = useRef<MapLibreOverlay | null>(null);
-  const { deckLayers, onHover, clearHover, unassignedCount } = useDeckLayers({
+  const tileUrl = useMemo(() => {
+    const list = countries && countries.length > 0 ? countries : [country ?? "DE"];
+    return `/api/tiles/${granularity ?? "5digit"}/{z}/{x}/{y}?country=${list.join(",")}&v=${TILES_VERSION}`;
+  }, [countries, country, granularity]);
+
+  const { unassignedCount, clearHover } = useMapPostalLayers({
+    map: rawMapRef.current,
+    isMapLoaded,
+    beforeId: firstSymbolLayerId,
+    tileUrl,
     index,
-    countries: countries ?? (country ? [country] : undefined),
-    statesData,
-    countryShapesData,
     layers,
     activeLayerId,
     previewPostalCode,
-    isCursorMode: interactions.isCursorMode,
-    mapCanvasRef,
     country,
     granularity,
-    beforeId: firstSymbolLayerId,
     highlightedCodes: highlightedConflictCodes,
     showUnassigned,
+    isCursorMode: interactions.isCursorMode,
+    statesData,
+    countryShapesData,
     hoverTooltipRef,
-    overlayRef,
+    mapCanvasRef,
     isMapInteractingRef,
+    onCodeClick: interactions.handleCodeClick,
   });
 
   // Track map interaction state for hover suppression during pan/zoom.
-  // Placed after useDeckLayers so clearHover is available.
+  // Placed after useMapPostalLayers so clearHover is available.
   const clearHoverRef = useRef(clearHover);
   clearHoverRef.current = clearHover;
   useEffect(() => {
@@ -781,29 +789,8 @@ const MapInner = memo(function MapInner({
     startTransition(() => interactions.deselectEditingFeature())
   );
 
-  // When a drawing tool is active, let TerraDraw own the cursor.
-  // deck.gl's default getCursor forces "grab"/"grabbing" on the container,
-  // overriding the canvas cursor TerraDraw sets.
-  const isCursorModeRef = useRef(interactions.isCursorMode);
-  isCursorModeRef.current = interactions.isCursorMode;
-  const getDeckCursor = useCallback(
-    ({ isDragging }: { isDragging: boolean }) => {
-      if (!isCursorModeRef.current) return "unset";
-      return isDragging ? "grabbing" : "grab";
-    },
-    []
-  );
-
   return (
     <>
-      <DeckGLOverlay
-        layers={deckLayers}
-        onHover={onHover}
-        onClick={interactions.handleDeckClick}
-        overlayRef={overlayRef}
-        getCursor={getDeckCursor}
-      />
-
       {/* Floating Drawing Toolbar - Center bottom */}
       <FloatingDrawingToolbar
         currentMode={interactions.currentDrawingMode}
@@ -1225,7 +1212,7 @@ const MapInner = memo(function MapInner({
 });
 MapInner.displayName = "MapInner";
 
-// Main BaseMap component with react-map-gl + deck.gl
+// Main BaseMap component with react-map-gl
 const BaseMapComponent = ({
   index,
   layerId,

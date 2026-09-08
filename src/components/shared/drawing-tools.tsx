@@ -173,7 +173,7 @@ import {
   extractRawCode,
   rawCodeFromComposite,
   storedCodeToCompositeKey,
-} from "@/lib/utils/deck-gl-utils";
+} from "@/lib/utils/postal-code-keys";
 import {
   copyPostalCodesCSV,
   downloadLayerCSV,

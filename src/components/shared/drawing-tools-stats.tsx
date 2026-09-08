@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import type { Layer } from "@/lib/types/area-types";
-import { storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
+import { storedCodeToCompositeKey } from "@/lib/utils/postal-code-keys";
 
 export interface StatsSectionProps {
   layers: Layer[];

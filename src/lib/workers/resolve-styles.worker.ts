@@ -67,7 +67,7 @@ function storedCodeToCompositeKey(stored: string): string | null {
 
 /**
  * featureIndex is passed as a Set<string> of keys (just for .has() lookups).
- * Mirrors the logic in deck-gl-utils.ts resolveFeatureKey.
+ * Mirrors the logic in postal-code-keys.ts resolveFeatureKey.
  */
 function resolveFeatureKey(
   storedOrRawCode: string,
@@ -122,7 +122,7 @@ function hexColorsAreSimilar(
 }
 
 // ---------------------------------------------------------------------------
-// Types (kept in sync with use-deck-layers.ts)
+// Types (kept in sync with use-postal-style-state.ts)
 // ---------------------------------------------------------------------------
 
 interface ResolvedStyle {
@@ -156,7 +156,7 @@ interface WorkerLayer {
 }
 
 // ---------------------------------------------------------------------------
-// Core logic (copied verbatim from use-deck-layers.ts)
+// Core logic (copied verbatim from use-postal-style-state.ts)
 // ---------------------------------------------------------------------------
 
 function toAccumulator(): StyleAccumulator {

@@ -84,7 +84,7 @@ import {
 } from "@/components/ui/tooltip";
 import { detectCountryFromCode } from "@/lib/config/countries";
 import { cn } from "@/lib/utils";
-import { extractRawCode } from "@/lib/utils/deck-gl-utils";
+import { extractRawCode } from "@/lib/utils/postal-code-keys";
 import { copyPostalCodesCSV } from "@/lib/utils/export-utils";
 import { generatePalette } from "@/lib/utils/layer-colors";
 
