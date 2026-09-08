@@ -1,19 +1,10 @@
 import type { Map as MapLibre } from "maplibre-gl";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { RefObject } from "react";
-import {
-  TerraDraw,
-  TerraDrawAngledRectangleMode,
-  TerraDrawCircleMode,
-  TerraDrawFreehandMode,
-  TerraDrawLineStringMode,
-  TerraDrawPointMode,
-  TerraDrawPolygonMode,
-  TerraDrawRectangleMode,
-  TerraDrawSectorMode,
-  TerraDrawSelectMode,
-} from "terra-draw";
-import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
+// Types only — the drawing engine itself is imported on first use. It is about
+// 90KB gzipped and nothing needs it until someone picks a drawing tool, so
+// loading it with the map put it on the critical path for every visit.
+import type { TerraDraw } from "terra-draw";
 
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 
@@ -56,6 +47,10 @@ export function useTerraDraw({
 }: UseTerraDrawProps) {
   const drawRef = useRef<TerraDraw | null>(null);
   const isInitializedRef = useRef(false);
+  /** Latched once a drawing tool is picked; nothing loads before that. */
+  const [isRequested, setIsRequested] = useState(false);
+  /** Flipped after the engine has loaded and started, to re-run the mode effect. */
+  const [isReady, setIsReady] = useState(false);
 
   // useEffectEvent: read latest prop callbacks without being effect deps
   const onSelectionChangeEvent = useEffectEvent(
@@ -80,13 +75,46 @@ export function useTerraDraw({
     onFeatureDeselect?.();
   });
 
+  // Load on the first request for a real drawing mode, and never unload.
+  useEffect(() => {
+    if (isEnabled && mode && mode !== "cursor") {
+      setIsRequested(true);
+    }
+  }, [isEnabled, mode]);
+
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !isMapLoaded || isInitializedRef.current) {
+    if (!map || !isMapLoaded || !isRequested || isInitializedRef.current) {
       return;
     }
+    // Claim the slot before awaiting, so a second mode change during the import
+    // cannot start a second engine on the same map.
+    isInitializedRef.current = true;
 
-    try {
+    let cancelled = false;
+    const init = async () => {
+      const [
+        {
+          TerraDraw,
+          TerraDrawAngledRectangleMode,
+          TerraDrawCircleMode,
+          TerraDrawFreehandMode,
+          TerraDrawLineStringMode,
+          TerraDrawPointMode,
+          TerraDrawPolygonMode,
+          TerraDrawRectangleMode,
+          TerraDrawSectorMode,
+          TerraDrawSelectMode,
+        },
+        { TerraDrawMapLibreGLAdapter },
+      ] = await Promise.all([
+        import("terra-draw"),
+        import("terra-draw-maplibre-gl-adapter"),
+      ]);
+      if (cancelled) {
+        return;
+      }
+
       // Create adapter with explicit configuration
       const adapter = new TerraDrawMapLibreGLAdapter({
         map,
@@ -185,12 +213,18 @@ export function useTerraDraw({
       draw.setMode("select");
 
       drawRef.current = draw;
-      isInitializedRef.current = true;
-    } catch (error) {
+      setIsReady(true);
+    };
+
+    init().catch((error) => {
       console.error("[TerraDraw] Failed to initialize TerraDraw:", error);
       isInitializedRef.current = false;
-    }
-  }, [mapRef, isMapLoaded]); // onSelectionChangeEvent is useEffectEvent — not a dep
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mapRef, isMapLoaded, isRequested]); // *Event callbacks are useEffectEvent — not deps
 
   const clearAll = useStableCallback(() => {
     if (!drawRef.current) {
@@ -281,7 +315,9 @@ export function useTerraDraw({
     } catch (error) {
       console.error("[TerraDraw] Error in mode change:", error);
     }
-  }, [isEnabled, mode, mapRef]); // onStartEvent/onStopEvent are useEffectEvent — not deps
+    // isReady re-runs this once the engine has loaded, so the mode the user
+    // picked is applied even though it was requested before the import landed.
+  }, [isEnabled, mode, mapRef, isReady]); // onStartEvent/onStopEvent are useEffectEvent — not deps
 
   // Cleanup on unmount
   useEffect(() => {

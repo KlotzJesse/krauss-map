@@ -163,6 +163,7 @@ import {
   formatWithPrefix,
 } from "@/lib/config/countries";
 import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
+import { useMountOnce } from "@/lib/hooks/use-mount-once";
 import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
@@ -212,13 +213,6 @@ const LayerMergeDialog = dynamic(
   () =>
     import("@/components/areas/layer-merge-dialog").then(
       (m) => m.LayerMergeDialog
-    ),
-  { ssr: false }
-);
-const LayerTemplatesDialog = dynamic(
-  () =>
-    import("@/components/areas/layer-templates-dialog").then(
-      (m) => m.LayerTemplatesDialog
     ),
   { ssr: false }
 );
@@ -1529,8 +1523,15 @@ const LayerDialogs = memo(function LayerDialogs({
     [dispatchForm]
   );
 
+  // These dialogs are code-split; keep them unmounted until first opened so the
+  // split actually defers their chunks.
+  const mountVersionHistory = useMountOnce(ui.showVersionHistory);
+  const mountCreateVersion = useMountOnce(ui.showCreateVersion);
+  const mountLayerMerge = useMountOnce(ui.showLayerMerge);
+
   return (
     <>
+      {mountVersionHistory && (
       <EnhancedVersionHistoryDialog
         open={ui.showVersionHistory}
         onOpenChange={handleHistoryOpenChange}
@@ -1538,12 +1539,16 @@ const LayerDialogs = memo(function LayerDialogs({
         versions={versions}
         changes={changes}
       />
+      )}
+      {mountCreateVersion && (
       <CreateVersionDialog
         open={ui.showCreateVersion}
         onOpenChange={handleVersionOpenChange}
         areaId={areaId}
         onVersionCreated={handleVersionCreated}
       />
+      )}
+      {mountLayerMerge && (
       <LayerMergeDialog
         open={ui.showLayerMerge}
         onOpenChange={handleMergeOpenChange}
@@ -1551,6 +1556,7 @@ const LayerDialogs = memo(function LayerDialogs({
         layers={layers}
         onMergeComplete={handleMergeComplete}
       />
+      )}
 
       {/* Keyboard shortcuts help dialog */}
       <Dialog
@@ -1745,6 +1751,11 @@ function DrawingToolsImpl({
     layerId: number | null;
     layerName: string;
   }>({ open: false, layerId: null, layerName: "" });
+
+  // Code-split dialogs: unmounted until first opened, so their chunks stay off
+  // the initial load.
+  const mountCopyLayer = useMountOnce(copyLayerDialog.open);
+  const mountMergeLayers = useMountOnce(mergeLayersDialog.open);
 
   // Area description inline editing
   const [descDraft, setDescDraft] = useState(areaDescription ?? "");
@@ -2802,6 +2813,7 @@ function DrawingToolsImpl({
         )}
 
         {/* Copy Layer to Area Dialog */}
+        {mountCopyLayer && (
         <CopyLayerToAreaDialog
           open={copyLayerDialog.open}
           onOpenChange={handleCopyDialogOpenChange}
@@ -2810,8 +2822,10 @@ function DrawingToolsImpl({
           onConfirm={handleConfirmCopyToArea}
           isPending={isCopyingLayer}
         />
+        )}
 
         {/* Merge Layers Dialog */}
+        {mountMergeLayers && (
         <MergeLayersDialog
           open={mergeLayersDialog.open}
           onOpenChange={handleMergeDialogOpenChange}
@@ -2821,6 +2835,7 @@ function DrawingToolsImpl({
           otherLayers={mergeDialogOtherLayers}
           onSuccess={handleMergeSuccess}
         />
+        )}
       </CardContent>
     </Card>
   );
