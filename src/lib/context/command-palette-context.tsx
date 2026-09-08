@@ -48,6 +48,21 @@ export interface MapCommandHandlers {
   onBoundarySelect: (postalCodes: string[]) => void | Promise<void>;
   onOpenRadiusSearch: (coords?: [number, number]) => void;
 
+  /**
+   * Acting on a postal code the user typed, rather than on a geocoder result.
+   * The area owns these because it has the postal-code index, so a code
+   * resolves to its exact centroid without a geocoding round-trip.
+   */
+  onAddPostalCode: (code: string) => void | Promise<void>;
+  onRemovePostalCode: (code: string) => void | Promise<void>;
+  onPreviewPostalCode: (code: string) => void;
+  onZoomToPostalCode: (code: string) => void;
+  onRadiusAroundPostalCode: (code: string) => void;
+  /** Which of the area's layers already contain this code. */
+  findPostalCode: (
+    code: string
+  ) => { known: boolean; layers: { id: number; name: string; color: string }[] };
+
   onFitAllLayers: () => void;
   onZoomToLayer: (layerId: number) => void;
   onZoomToCountry: () => void;

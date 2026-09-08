@@ -808,7 +808,76 @@ export const PostalCodesViewClientWithLayers = memo(
       )
     );
 
+    /**
+     * A postal code typed into the palette resolves through the index, so the
+     * centroid is exact and no geocoding round-trip is needed.
+     */
+    const centroidFor = useCallback(
+      (code: string) =>
+        indexCentroid(index, toCompositePostalCode(code, country)),
+      [index, country]
+    );
+
+    const findPostalCode = useCallback(
+      (code: string) => {
+        const composite = toCompositePostalCode(code, country);
+        const known = index.pos.has(composite);
+        const containing = optimisticLayers.filter((layer) =>
+          layer.postalCodes?.some(
+            (pc) => toCompositePostalCode(pc.postalCode, country) === composite
+          )
+        );
+        return {
+          known,
+          layers: containing.map((l) => ({
+            id: l.id,
+            name: l.name,
+            color: l.color,
+          })),
+        };
+      },
+      [index, country, optimisticLayers]
+    );
+
     useRegisterMapCommands({
+      onAddPostalCode: async (code: string) => {
+        if (!activeLayerId) {
+          toast.error("Kein aktiver Layer ausgewählt");
+          return;
+        }
+        await addPostalCodesToLayer(activeLayerId, [code]);
+        toast.success(`PLZ ${code} hinzugefügt`);
+      },
+      onRemovePostalCode: async (code: string) => {
+        if (!activeLayerId) {
+          toast.error("Kein aktiver Layer ausgewählt");
+          return;
+        }
+        await removePostalCodesFromLayer(activeLayerId, [code]);
+        toast.success(`PLZ ${code} entfernt`);
+      },
+      onPreviewPostalCode: (code: string) => {
+        setPreviewPostalCode((prev) => (prev === code ? null : code));
+        const centroid = centroidFor(code);
+        if (centroid) {
+          setMapCenterZoom(centroid, 11);
+        }
+      },
+      onZoomToPostalCode: (code: string) => {
+        const centroid = centroidFor(code);
+        if (centroid) {
+          setMapCenterZoom(centroid, 11);
+        }
+      },
+      onRadiusAroundPostalCode: (code: string) => {
+        const centroid = centroidFor(code);
+        if (!centroid) {
+          toast.error(`PLZ ${code} nicht gefunden`);
+          return;
+        }
+        setRadiusDialog({ open: true, coords: centroid });
+      },
+      findPostalCode,
       onAddressSelect: handleAddressSelect,
       onPreviewSelect: handlePreviewSelect,
       onBoundarySelect: async (postalCodes: string[]) => {

@@ -102,6 +102,8 @@ export function CommandPalette({
     Boolean(mapMeta) && !isPlzLike
   );
   const resolveBoundary = useBoundaryPostalCodes();
+  /** The query read as a postal code, when it is one. */
+  const plzQuery = /^\d{1,5}$/.test(query.trim()) ? query.trim() : null;
   const metaRef = useRef(mapMeta);
   metaRef.current = mapMeta;
 
@@ -213,6 +215,13 @@ export function CommandPalette({
 
   const isPlzQuery = /^\d{2,5}$/.test(query.trim());
 
+  // Looked up on every render rather than memoised: it reads a ref, and the
+  // result must follow layer edits made while the palette is open.
+  const plzInArea =
+    plzQuery && handlersRef.current.findPostalCode
+      ? handlersRef.current.findPostalCode(plzQuery)
+      : { known: false, layers: [] as { id: number; name: string; color: string }[] };
+
   const activeAreas = useMemo(() => {
     let result = areas.filter((a) => a.isArchived !== "true");
     if (activeTagFilter !== null) {
@@ -292,6 +301,115 @@ export function CommandPalette({
             Keine Ergebnisse
           </span>
         </CommandEmpty>
+
+        {mapMeta && plzQuery && (
+          <>
+            <CommandGroup heading={`PLZ ${plzQuery}`}>
+              {/* Every value repeats the code, because cmdk filters items by
+                  their value — without it a numeric query hides exactly the
+                  actions that query is about. */}
+              {plzInArea.known ? null : (
+                <CommandItem
+                  value={`plz ${plzQuery} unbekannt`}
+                  disabled
+                  onSelect={() => undefined}
+                >
+                  <IconMapPin className="h-3.5 w-3.5 text-muted-foreground/50" />
+                  <span className="text-muted-foreground">
+                    PLZ {plzQuery} gibt es in diesem Datensatz nicht
+                  </span>
+                </CommandItem>
+              )}
+              {plzInArea.known && (
+                <>
+                  {plzInArea.layers.length === 0 ? (
+                    available.has("onAddPostalCode") && (
+                      <CommandItem
+                        value={`plz ${plzQuery} hinzufügen aktive ebene`}
+                        onSelect={() =>
+                          runMapAction(() =>
+                            handlersRef.current.onAddPostalCode?.(plzQuery)
+                          )
+                        }
+                      >
+                        <IconPlus className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>PLZ {plzQuery} zur aktiven Ebene hinzufügen</span>
+                      </CommandItem>
+                    )
+                  ) : (
+                    available.has("onRemovePostalCode") && (
+                      <CommandItem
+                        value={`plz ${plzQuery} entfernen`}
+                        onSelect={() =>
+                          runMapAction(() =>
+                            handlersRef.current.onRemovePostalCode?.(plzQuery)
+                          )
+                        }
+                      >
+                        <IconTrash className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="flex-1">
+                          PLZ {plzQuery} aus der aktiven Ebene entfernen
+                        </span>
+                        <span className="flex gap-0.5 shrink-0">
+                          {plzInArea.layers.slice(0, 3).map((layer) => (
+                            <span
+                              key={layer.id}
+                              className="w-2 h-2 rounded-full border border-white/20"
+                              style={{ backgroundColor: layer.color }}
+                              title={layer.name}
+                            />
+                          ))}
+                        </span>
+                      </CommandItem>
+                    )
+                  )}
+                  {available.has("onPreviewPostalCode") && (
+                    <CommandItem
+                      value={`plz ${plzQuery} vorschau zeigen karte`}
+                      onSelect={() =>
+                        runMapAction(() =>
+                          handlersRef.current.onPreviewPostalCode?.(plzQuery)
+                        )
+                      }
+                    >
+                      <IconEye className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>PLZ {plzQuery} auf der Karte zeigen</span>
+                    </CommandItem>
+                  )}
+                  {available.has("onZoomToPostalCode") && (
+                    <CommandItem
+                      value={`plz ${plzQuery} zoomen springen`}
+                      onSelect={() =>
+                        runMapAction(() =>
+                          handlersRef.current.onZoomToPostalCode?.(plzQuery)
+                        )
+                      }
+                    >
+                      <IconZoomScan className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Zu PLZ {plzQuery} zoomen</span>
+                    </CommandItem>
+                  )}
+                  {available.has("onRadiusAroundPostalCode") && (
+                    <CommandItem
+                      value={`plz ${plzQuery} umkreis radius`}
+                      onSelect={() =>
+                        runMapAction(() =>
+                          handlersRef.current.onRadiusAroundPostalCode?.(
+                            plzQuery
+                          )
+                        )
+                      }
+                    >
+                      <IconCircleDashed className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Umkreis um PLZ {plzQuery}</span>
+                    </CommandItem>
+                  )}
+                </>
+              )}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
 
         {mapMeta && geocodeResults.length > 0 && (
           <>
