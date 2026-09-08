@@ -1,10 +1,4 @@
-import type {
-  Feature,
-  FeatureCollection,
-  GeoJsonProperties,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
+import type { Feature, GeoJsonProperties } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -16,11 +10,12 @@ import {
   useFindFeaturesInPolygon,
 } from "@/components/shared/hooks/use-feature-selection";
 
+import type { PostalCodeIndex } from "./use-postal-code-index";
 import { useStableCallback } from "./use-stable-callback";
 
 interface UseMapTerraDrawSelectionProps {
   mapRef: RefObject<MapLibreMap | null>;
-  data: FeatureCollection<Polygon | MultiPolygon>;
+  index: PostalCodeIndex;
 }
 
 /**
@@ -31,7 +26,7 @@ interface UseMapTerraDrawSelectionProps {
  */
 export function useMapTerraDrawSelection({
   mapRef,
-  data,
+  index,
 }: UseMapTerraDrawSelectionProps) {
   // Ref to store TerraDraw API
   const terraDrawRef = useRef<{
@@ -43,8 +38,8 @@ export function useMapTerraDrawSelection({
   const [pendingPostalCodes, setPendingPostalCodes] = useState<string[]>([]);
 
   // Feature selection hooks
-  const findFeaturesInPolygon = useFindFeaturesInPolygon(data);
-  const findFeaturesInCircle = useFindFeaturesInCircle(data);
+  const findFeaturesInPolygon = useFindFeaturesInPolygon(index);
+  const findFeaturesInCircle = useFindFeaturesInCircle(index);
   const convertRadiusToGeographic = useConvertRadiusToGeographic(mapRef);
 
   // Handle TerraDraw selection changes

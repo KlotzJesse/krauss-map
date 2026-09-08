@@ -1,11 +1,14 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import type { CountryCode } from "@/lib/config/countries";
+import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { VersionSummary, ChangeSummary } from "@/lib/schema/schema";
 import type { Layer } from "@/lib/types/area-types";
 
 export interface BaseMapProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
+  /** Codes, representative points, areas and bounds — everything but outlines. */
+  index: PostalCodeIndex;
   layerId: string;
   center?: [number, number];
   zoom?: number;

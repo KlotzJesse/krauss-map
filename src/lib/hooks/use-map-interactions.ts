@@ -1,11 +1,11 @@
 import type { PickingInfo } from "@deck.gl/core";
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import type { RefObject } from "react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 import { useMapDrawingTools } from "@/lib/hooks/use-map-drawing-tools";
+import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import { useMapTerraDrawSelection } from "@/lib/hooks/use-map-terradraw-selection";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import { useTerraDraw } from "@/lib/hooks/use-terradraw";
@@ -29,7 +29,7 @@ export interface PlzReassignInfo {
 
 interface UseMapInteractionsProps {
   mapRef: RefObject<MapLibreMap | null>;
-  data: FeatureCollection<Polygon | MultiPolygon>;
+  index: PostalCodeIndex;
   isMapLoaded: boolean;
   areaId?: number | null;
   activeLayerId?: number | null;
@@ -50,7 +50,7 @@ interface UseMapInteractionsProps {
  */
 export function useMapInteractions({
   mapRef,
-  data,
+  index,
   isMapLoaded,
   areaId,
   activeLayerId,
@@ -98,7 +98,7 @@ export function useMapInteractions({
     removePendingFromSelection,
   } = useMapTerraDrawSelection({
     mapRef,
-    data,
+    index,
   });
 
   // Synchronous flag: set when TerraDraw fires select/deselect on the same

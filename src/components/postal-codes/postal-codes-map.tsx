@@ -3,6 +3,7 @@ import { memo } from "react";
 
 import { BaseMap } from "@/components/shared/base-map";
 import type { CountryCode } from "@/lib/config/countries";
+import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
 import type { Layer } from "@/lib/types/area-types";
 
@@ -10,6 +11,7 @@ const EMPTY_ARRAY: never[] = [];
 
 interface PostalCodesMapProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
+  index: PostalCodeIndex;
   granularity?: string;
   country?: CountryCode;
   countries?: CountryCode[];
@@ -42,6 +44,7 @@ interface PostalCodesMapProps {
 
 export const PostalCodesMap = memo(function PostalCodesMap({
   data,
+  index,
   granularity,
   country,
   countries,
@@ -66,6 +69,7 @@ export const PostalCodesMap = memo(function PostalCodesMap({
   return (
     <BaseMap
       data={data}
+      index={index}
       layerId="postal-codes"
       country={country}
       countries={countries}

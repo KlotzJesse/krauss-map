@@ -1,6 +1,5 @@
 "use client";
 
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import {
   AlertCircle,
   CheckCircle2,
@@ -44,7 +43,8 @@ const BulkImportDialog = lazy(() =>
 interface PostalCodeImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  data: FeatureCollection<Polygon | MultiPolygon>;
+  /** Composite keys of every code in the loaded countries, from the index. */
+  availableCodes: readonly string[];
   granularity: string;
   /**
    * Performs the import. Resolves to `false` when nothing was imported
@@ -58,7 +58,7 @@ interface PostalCodeImportDialogProps {
 export function PostalCodeImportDialog({
   open,
   onOpenChange,
-  data,
+  availableCodes,
   granularity,
   onImport,
   areaId,
@@ -92,11 +92,11 @@ export function PostalCodeImportDialog({
     }
     return findPostalCodeMatches(
       parsedCodes,
-      data,
+      availableCodes,
       granularity,
       defaultCountry
     );
-  }, [parsedCodes, data, granularity, defaultCountry]);
+  }, [parsedCodes, availableCodes, granularity, defaultCountry]);
 
   const groupedMatches = useMemo(
     () => groupMatchesByPattern(matches),

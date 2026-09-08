@@ -1,111 +1,51 @@
-import type {
-  Feature,
-  FeatureCollection,
-  MultiPolygon,
-  Polygon,
-} from "geojson";
-
+import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
-import { getFeatureStoredCode } from "@/lib/utils/deck-gl-utils";
-import {
-  getLargestPolygonCentroid,
-  isPointInPolygon,
-} from "@/lib/utils/map-data";
+import { compositeKeyToStoredCode } from "@/lib/utils/deck-gl-utils";
+import { isPointInPolygon } from "@/lib/utils/map-data";
 import type { MapLibreMap } from "@/types/map";
 
-// Find features whose centroid is inside a polygon
-export function useFindFeaturesInPolygon(
-  data: FeatureCollection<Polygon | MultiPolygon>
-) {
+/**
+ * Lasso and radius selection both decide membership by a code's representative
+ * point, never by its outline — so they run off the postal-code index rather
+ * than the polygons. The point is `ST_PointOnSurface`, which is guaranteed to
+ * lie inside the code's own area; the centre of mass this used to compute from
+ * the geometry is not, and could fall outside a concave code.
+ */
+
+/** Codes whose representative point lies inside the drawn polygon. */
+export function useFindFeaturesInPolygon(index: PostalCodeIndex) {
   return useStableCallback((polygon: number[][]): string[] => {
-    if (!data || polygon.length < 3) {
+    if (polygon.length < 3) {
       return [];
     }
-    const selectedFeatures: string[] = [];
-    for (const feature of data.features) {
-      if (!feature?.geometry) {
-        continue;
-      }
+    const selected: string[] = [];
+    for (let i = 0; i < index.keys.length; i++) {
+      const lng = index.cen[i * 2];
+      const lat = index.cen[i * 2 + 1];
       if (
-        feature.geometry.type !== "Polygon" &&
-        feature.geometry.type !== "MultiPolygon"
+        isPointInPolygon([lng, lat], polygon as [number, number][])
       ) {
-        continue;
-      }
-      const featureCode = getFeatureStoredCode(
-        feature as Feature<Polygon | MultiPolygon>
-      );
-      if (!featureCode) {
-        continue;
-      }
-      const centroid = getLargestPolygonCentroid(
-        feature as Feature<Polygon | MultiPolygon>
-      );
-      if (
-        !centroid ||
-        !Array.isArray(centroid) ||
-        centroid.length !== 2 ||
-        typeof centroid[0] !== "number" ||
-        typeof centroid[1] !== "number"
-      ) {
-        continue;
-      }
-      if (
-        isPointInPolygon(
-          centroid as [number, number],
-          polygon as [number, number][]
-        )
-      ) {
-        selectedFeatures.push(featureCode);
+        selected.push(compositeKeyToStoredCode(index.keys[i]));
       }
     }
-    return selectedFeatures;
+    return selected;
   });
 }
 
-// Find features whose centroid is within a circle
-export function useFindFeaturesInCircle(
-  data: FeatureCollection<Polygon | MultiPolygon>
-) {
+/** Codes whose representative point lies within the circle. */
+export function useFindFeaturesInCircle(index: PostalCodeIndex) {
   return useStableCallback(
     (center: [number, number], radiusDegrees: number): string[] => {
-      if (!data) {
-        return [];
-      }
-      const selectedFeatures: string[] = [];
-      for (const feature of data.features) {
-        if (!feature?.geometry) {
-          continue;
-        }
-        if (
-          feature.geometry.type !== "Polygon" &&
-          feature.geometry.type !== "MultiPolygon"
-        ) {
-          continue;
-        }
-        const featureCode = getFeatureStoredCode(
-          feature as Feature<Polygon | MultiPolygon>
-        );
-        if (!featureCode) {
-          continue;
-        }
-        const centroid = getLargestPolygonCentroid(
-          feature as Feature<Polygon | MultiPolygon>
-        );
-        if (!centroid) {
-          continue;
-        }
-        const [lng1, lat1] = center;
-        const [lng2, lat2] = centroid;
-        const distance = Math.hypot(
-          Math.abs(lat2 - lat1),
-          Math.abs(lng2 - lng1)
-        );
-        if (distance <= radiusDegrees) {
-          selectedFeatures.push(featureCode);
+      const [lng1, lat1] = center;
+      const selected: string[] = [];
+      for (let i = 0; i < index.keys.length; i++) {
+        const lng2 = index.cen[i * 2];
+        const lat2 = index.cen[i * 2 + 1];
+        if (Math.hypot(lat2 - lat1, lng2 - lng1) <= radiusDegrees) {
+          selected.push(compositeKeyToStoredCode(index.keys[i]));
         }
       }
-      return selectedFeatures;
+      return selected;
     }
   );
 }

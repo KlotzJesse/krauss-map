@@ -1,4 +1,3 @@
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import { detectCountryFromCode } from "@/lib/config/countries";
 
@@ -76,7 +75,7 @@ export function parsePostalCodeInput(input: string): ParsedPostalCode[] {
  */
 export function findPostalCodeMatches(
   parsedCodes: ParsedPostalCode[],
-  availableData: FeatureCollection<Polygon | MultiPolygon>,
+  availableCodes: readonly string[],
   targetGranularity: string,
   defaultCountry?: string | null
 ): PostalCodeMatch[] {
@@ -86,19 +85,19 @@ export function findPostalCodeMatches(
   const codesByCountry = new Map<string, Set<string>>();
   const allCodesSet = new Set<string>();
 
-  for (const f of availableData.features) {
-    const raw = f.properties?.code || f.properties?.PLZ || f.properties?.plz;
-    const country = (
-      f.properties?.country as string | undefined
-    )?.toUpperCase();
-    if (raw) {
-      const code = normalizePostalCode(raw);
-      allCodesSet.add(code);
-      if (country) {
-        if (!codesByCountry.has(country))
-          codesByCountry.set(country, new Set());
-        codesByCountry.get(country)!.add(code);
+  // availableCodes are composite index keys ("DE:01067").
+  for (const key of availableCodes) {
+    const colon = key.indexOf(":");
+    const country = colon >= 0 ? key.slice(0, colon).toUpperCase() : "";
+    const code = normalizePostalCode(colon >= 0 ? key.slice(colon + 1) : key);
+    allCodesSet.add(code);
+    if (country) {
+      let set = codesByCountry.get(country);
+      if (!set) {
+        set = new Set();
+        codesByCountry.set(country, set);
       }
+      set.add(code);
     }
   }
 

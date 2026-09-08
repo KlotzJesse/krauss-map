@@ -160,7 +160,7 @@ export function rawCodeFromComposite(compositeKey: string): string {
 export function resolveFeatureKey(
   storedOrRawCode: string,
   preferredCountry: string | undefined,
-  featureIndex: Map<string, unknown> | undefined
+  featureIndex: ReadonlyMap<string, unknown> | undefined
 ): string {
   // Fast-path: stored format encodes the country — no ambiguity, no fallback needed
   const compositeFromStored = storedCodeToCompositeKey(storedOrRawCode);

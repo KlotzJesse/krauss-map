@@ -34,6 +34,11 @@ import {
   type CountryCode,
 } from "@/lib/config/countries";
 import { useGeodata } from "@/lib/hooks/use-geodata";
+import {
+  indexBounds,
+  indexCentroid,
+  usePostalCodeIndex,
+} from "@/lib/hooks/use-postal-code-index";
 import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
@@ -45,7 +50,6 @@ import {
   storedCodeToCompositeKey,
 } from "@/lib/utils/deck-gl-utils";
 import { isLightColor } from "@/lib/utils/layer-colors";
-import { getLargestPolygonCentroid } from "@/lib/utils/map-data";
 
 const AddressAutocompleteEnhanced = dynamic(
   () =>
@@ -140,7 +144,8 @@ interface PostalCodesViewClientWithLayersProps {
 interface PostalCodesLayerActionsOptions {
   areaId: number;
   activeLayerId: number | null;
-  data: FeatureCollection<Polygon | MultiPolygon>;
+  granularity: string;
+  countries: CountryCode[];
   initialLayers: Layer[];
   initialUndoRedoStatus: {
     canUndo: boolean;
@@ -153,7 +158,8 @@ interface PostalCodesLayerActionsOptions {
 function usePostalCodesLayerActions({
   areaId,
   activeLayerId,
-  data,
+  granularity,
+  countries,
   initialLayers,
   initialUndoRedoStatus,
 }: PostalCodesLayerActionsOptions) {
@@ -276,10 +282,10 @@ function usePostalCodesLayerActions({
   // don't recreate on every render and break React.memo on children.
   const optimisticLayersRef = useRef(optimisticLayers);
   optimisticLayersRef.current = optimisticLayers;
-  const dataRef = useRef(data);
-  dataRef.current = data;
-
-  const { findPostalCodeByCoords } = usePostalCodeLookup({ data });
+  const { findPostalCodeByCoords } = usePostalCodeLookup({
+    granularity,
+    countries,
+  });
 
   const addPostalCodesToLayer = useStableCallback(
     async (layerId: number, postalCodes: string[]) => {
@@ -512,7 +518,8 @@ function usePostalCodesLayerActions({
   const handleAddressSelect = useStableCallback(
     async (coords: [number, number], _label: string, postalCode?: string) => {
       // Prefer map-derived code (includes country prefix on multi-country datasets).
-      const code = findPostalCodeByCoords(coords[0], coords[1]) ?? postalCode;
+      const code =
+        (await findPostalCodeByCoords(coords[0], coords[1])) ?? postalCode;
       if (!code) {
         toast.error("Keine PLZ für Adresse gefunden");
         return;
@@ -629,6 +636,13 @@ export const PostalCodesViewClientWithLayers = memo(
       error: geodataError,
     } = useGeodata(defaultGranularity, areaCountries);
 
+    // Codes, representative points, areas and bounds. Everything that isn't
+    // drawing a polygon reads this instead of the geometry.
+    const { index, error: indexError } = usePostalCodeIndex(
+      defaultGranularity,
+      areaCountries
+    );
+
     // Read activeLayerId directly from URL state for instant switching
     const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
     const setMapCenterZoom = useSetMapCenterZoom();
@@ -653,14 +667,11 @@ export const PostalCodesViewClientWithLayers = memo(
     } = usePostalCodesLayerActions({
       areaId,
       activeLayerId,
-      data,
+      granularity: defaultGranularity,
+      countries: areaCountries,
       initialLayers,
       initialUndoRedoStatus,
     });
-
-    // Stable ref for geodata so handleZoomToLayer doesn't recreate on every data change
-    const dataRef = useRef(data);
-    dataRef.current = data;
 
     const handlePreviewSelect = useCallback(
       (
@@ -684,69 +695,45 @@ export const PostalCodesViewClientWithLayers = memo(
     const handleBadgePreviewPostalCode = useStableCallback(
       (postalCode: string | null) => {
         setPreviewPostalCode(postalCode);
-        if (postalCode && data) {
-          const targetCode = toCompositePostalCode(postalCode, country);
-          const feature = data.features.find((f) => {
-            const rawCode = String(f.properties?.code ?? "");
-            if (!rawCode) return false;
-            const featureCountry = String(f.properties?.country ?? "");
-            const featureCode = featureCountry
-              ? `${featureCountry}:${rawCode}`
-              : rawCode;
-            return featureCode === targetCode;
-          });
-          if (feature) {
-            const [lng, lat] = getLargestPolygonCentroid(
-              feature as import("geojson").Feature<Polygon | MultiPolygon>
-            );
-            setMapCenterZoom([lng, lat], 11);
+        if (postalCode) {
+          const centroid = indexCentroid(
+            index,
+            toCompositePostalCode(postalCode, country)
+          );
+          if (centroid) {
+            setMapCenterZoom(centroid, 11);
           }
         }
       }
     );
 
+    /**
+     * Fit the viewport to one layer. Bounds come from the postal-code index —
+     * a lookup per assigned code, rather than a pass over every vertex of the
+     * country to find the few that belong to this layer.
+     */
     const handleZoomToLayer = useCallback(
       (layerId: number) => {
-        const data = dataRef.current;
-        if (!data) return;
         const layer = optimisticLayersRef.current.find((l) => l.id === layerId);
         if (!layer?.postalCodes?.length) return;
 
-        const codeSet = new Set(
-          layer.postalCodes.map((pc) =>
-            toCompositePostalCode(pc.postalCode, country)
-          )
-        );
         let minLng = Infinity,
           maxLng = -Infinity,
           minLat = Infinity,
           maxLat = -Infinity;
         let found = false;
 
-        for (const feature of data.features) {
-          const rawCode = String(feature.properties?.code ?? "");
-          if (!rawCode) continue;
-          const featureCountry = String(feature.properties?.country ?? "");
-          const featureCode = featureCountry
-            ? `${featureCountry}:${rawCode}`
-            : rawCode;
-          if (!codeSet.has(featureCode)) continue;
+        for (const pc of layer.postalCodes) {
+          const bounds = indexBounds(
+            index,
+            toCompositePostalCode(pc.postalCode, country)
+          );
+          if (!bounds) continue;
           found = true;
-          const coords: number[][] = [];
-          const geom = feature.geometry;
-          if (geom.type === "Polygon") {
-            for (const ring of geom.coordinates)
-              for (const c of ring) coords.push(c);
-          } else if (geom.type === "MultiPolygon") {
-            for (const poly of geom.coordinates)
-              for (const ring of poly) for (const c of ring) coords.push(c);
-          }
-          for (const [lng, lat] of coords) {
-            if (lng < minLng) minLng = lng;
-            if (lng > maxLng) maxLng = lng;
-            if (lat < minLat) minLat = lat;
-            if (lat > maxLat) maxLat = lat;
-          }
+          if (bounds[0] < minLng) minLng = bounds[0];
+          if (bounds[1] < minLat) minLat = bounds[1];
+          if (bounds[2] > maxLng) maxLng = bounds[2];
+          if (bounds[3] > maxLat) maxLat = bounds[3];
         }
 
         if (!found) return;
@@ -754,9 +741,7 @@ export const PostalCodesViewClientWithLayers = memo(
         const centerLng = (minLng + maxLng) / 2;
         const centerLat = (minLat + maxLat) / 2;
         // Approximate zoom: wider bbox → lower zoom
-        const lngSpan = maxLng - minLng;
-        const latSpan = maxLat - minLat;
-        const span = Math.max(lngSpan, latSpan);
+        const span = Math.max(maxLng - minLng, maxLat - minLat);
         const zoom = Math.max(
           5,
           Math.min(13, Math.round(Math.log2(360 / span)) - 1)
@@ -764,7 +749,7 @@ export const PostalCodesViewClientWithLayers = memo(
 
         setMapCenterZoom([centerLng, centerLat], zoom);
       },
-      [country, setMapCenterZoom]
+      [country, index, setMapCenterZoom]
     );
 
     const handleGranularityChange = useCallback(
@@ -856,6 +841,7 @@ export const PostalCodesViewClientWithLayers = memo(
           <MapErrorBoundary>
             <PostalCodesMap
               data={data}
+              index={index}
               granularity={defaultGranularity}
               country={country}
               countries={areaCountries}
@@ -885,9 +871,9 @@ export const PostalCodesViewClientWithLayers = memo(
               </div>
             </div>
           )}
-          {geodataError && !isGeodataLoading && (
+          {(geodataError ?? indexError) && !isGeodataLoading && (
             <div className="absolute top-4 left-4 z-30 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive max-w-md">
-              Geodaten konnten nicht geladen werden: {geodataError}
+              Geodaten konnten nicht geladen werden: {geodataError ?? indexError}
             </div>
           )}
         </div>
@@ -896,7 +882,7 @@ export const PostalCodesViewClientWithLayers = memo(
         <PostalCodeImportDialog
           open={importDialogOpen}
           onOpenChange={setImportDialogOpen}
-          data={data}
+          availableCodes={index.keys}
           granularity={defaultGranularity}
           onImport={handleImport}
           areaId={areaId}

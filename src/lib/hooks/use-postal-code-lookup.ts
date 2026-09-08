@@ -1,122 +1,43 @@
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { useMemo } from "react";
-
-import { getFeatureStoredCode } from "@/lib/utils/deck-gl-utils";
-import { isPointInPolygon } from "@/lib/utils/map-data";
+import type { CountryCode } from "@/lib/config/countries";
 
 import { useStableCallback } from "./use-stable-callback";
 
 interface UsePostalCodeLookupOptions {
-  data: FeatureCollection<Polygon | MultiPolygon>;
+  granularity: string;
+  countries: readonly CountryCode[];
 }
 
-interface SpatialEntry {
-  code: string;
-  feature: FeatureCollection<Polygon | MultiPolygon>["features"][number];
-  bounds: { minLng: number; maxLng: number; minLat: number; maxLat: number };
-}
-
-export function usePostalCodeLookup({ data }: UsePostalCodeLookupOptions) {
-  // Spatial index for bounding-box pre-filter + point-in-polygon
-  const spatialIndex = useMemo(() => {
-    const index: SpatialEntry[] = [];
-    for (const feature of data.features) {
-      const geometry = feature.geometry;
-      if (!geometry) {
-        continue;
-      }
-
-      let maxLat = -Infinity;
-      let maxLng = -Infinity;
-      let minLat = Infinity;
-      let minLng = Infinity;
-
-      if (geometry.type === "Polygon") {
-        for (const [lng, lat] of geometry.coordinates[0]) {
-          if (lng < minLng) {
-            minLng = lng;
-          }
-          if (lng > maxLng) {
-            maxLng = lng;
-          }
-          if (lat < minLat) {
-            minLat = lat;
-          }
-          if (lat > maxLat) {
-            maxLat = lat;
-          }
-        }
-      } else if (geometry.type === "MultiPolygon") {
-        for (const polygon of geometry.coordinates) {
-          for (const ring of polygon) {
-            for (const [lng, lat] of ring) {
-              if (lng < minLng) {
-                minLng = lng;
-              }
-              if (lng > maxLng) {
-                maxLng = lng;
-              }
-              if (lat < minLat) {
-                minLat = lat;
-              }
-              if (lat > maxLat) {
-                maxLat = lat;
-              }
-            }
-          }
-        }
-      }
-
-      if (minLng !== Infinity) {
-        const code = getFeatureStoredCode(feature);
-        if (code) {
-          index.push({
-            code: String(code),
-            feature,
-            bounds: { minLng, maxLng, minLat, maxLat },
-          });
-        }
-      }
-    }
-    return index;
-  }, [data.features]);
-
+/**
+ * Resolve a coordinate to the postal code that contains it.
+ *
+ * Answered by PostGIS rather than on the client. The client version needed
+ * every polygon in the country in memory to run point-in-polygon over a
+ * bounding-box shortlist; this is a single indexed `ST_Contains` and is exact
+ * for a case — a point on a boundary, an enclave — where the shortlist could
+ * return the wrong neighbour.
+ */
+export function usePostalCodeLookup({
+  granularity,
+  countries,
+}: UsePostalCodeLookupOptions) {
   const findPostalCodeByCoords = useStableCallback(
-    (lng: number, lat: number) => {
-      for (const { code, feature, bounds } of spatialIndex) {
-        if (
-          lng < bounds.minLng ||
-          lng > bounds.maxLng ||
-          lat < bounds.minLat ||
-          lat > bounds.maxLat
-        ) {
-          continue;
+    async (lng: number, lat: number): Promise<string | null> => {
+      const country = (countries.length > 0 ? countries : ["DE"]).join(",");
+      try {
+        const res = await fetch(
+          `/api/postal-codes/at?lng=${lng}&lat=${lat}&granularity=${granularity}&country=${country}`
+        );
+        if (!res.ok) {
+          return null;
         }
-        if (feature.geometry.type === "Polygon") {
-          if (
-            isPointInPolygon(
-              [lng, lat],
-              feature.geometry.coordinates[0] as number[][]
-            )
-          ) {
-            return code;
-          }
-        } else if (feature.geometry.type === "MultiPolygon") {
-          for (const poly of feature.geometry.coordinates) {
-            if (
-              Array.isArray(poly?.[0]) &&
-              isPointInPolygon([lng, lat], poly[0] as number[][])
-            ) {
-              return code;
-            }
-          }
-        }
+        const body = (await res.json()) as { code: string | null };
+        return body.code;
+      } catch (error) {
+        console.error("Postal code lookup failed:", error);
+        return null;
       }
-      return null;
     }
   );
 
-  return {
-    findPostalCodeByCoords,
-  };
+  return { findPostalCodeByCoords };
 }

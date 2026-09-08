@@ -323,8 +323,11 @@ function MapLegend({
 
 import type { FeatureCollection, Polygon, MultiPolygon } from "geojson";
 
+import { indexBounds } from "@/lib/hooks/use-postal-code-index";
+
 const MapInner = memo(function MapInner({
   data,
+  index,
   layerId,
   granularity,
   country,
@@ -540,12 +543,12 @@ const MapInner = memo(function MapInner({
   const mapDataError = statesDataError ?? countryShapesError;
 
   // Performance optimizations with memoized computations
-  const optimizations = useMapOptimizations({ data, statesData });
+  const optimizations = useMapOptimizations({ data, index, statesData });
 
   // Map interactions (drawing tools, TerraDraw, click handler)
   const interactions = useMapInteractions({
     mapRef: rawMapRef,
-    data,
+    index,
     isMapLoaded,
     areaId,
     activeLayerId,
@@ -611,11 +614,10 @@ const MapInner = memo(function MapInner({
     mapInstance: rawMapRef.current,
     isMapLoaded,
     layerId,
-    data,
+    index,
     labelPoints: optimizations.labelPoints,
     statesLabelPoints: optimizations.statesLabelPoints,
     layers,
-    featureIndex: optimizations.featureIndex,
     country,
   });
 
@@ -639,8 +641,14 @@ const MapInner = memo(function MapInner({
     window.print();
   }, []);
 
+  /**
+   * Fit the viewport to every code assigned to any layer. Reads bounds from the
+   * postal-code index instead of walking each polygon's rings — the index
+   * already carries a bounding box per code, so this is a lookup per code
+   * rather than a pass over the whole country's vertices.
+   */
   const handleFitAllLayers = useCallback(() => {
-    if (!data?.features || !layers?.length) return;
+    if (!layers?.length) return;
     const allCodes = new Set(
       layers.flatMap((l) =>
         (l.postalCodes ?? []).map((pc) =>
@@ -656,31 +664,14 @@ const MapInner = memo(function MapInner({
       maxLat = -Infinity;
     let found = false;
 
-    for (const feature of data.features) {
-      const rawCode = String(feature.properties?.code ?? "");
-      if (!rawCode) continue;
-      const featureCountry = String(feature.properties?.country ?? "");
-      const featureCode = featureCountry
-        ? `${featureCountry}:${rawCode}`
-        : rawCode;
-      if (!allCodes.has(featureCode)) continue;
-      if (!feature.geometry || !feature.geometry.type) continue;
+    for (const code of allCodes) {
+      const bounds = indexBounds(index, code);
+      if (!bounds) continue;
       found = true;
-      const geom = feature.geometry;
-      const rings: number[][][] =
-        geom.type === "Polygon"
-          ? geom.coordinates
-          : geom.type === "MultiPolygon"
-            ? geom.coordinates.flat()
-            : [];
-      for (const ring of rings) {
-        for (const [lng, lat] of ring) {
-          if (lng < minLng) minLng = lng;
-          if (lng > maxLng) maxLng = lng;
-          if (lat < minLat) minLat = lat;
-          if (lat > maxLat) maxLat = lat;
-        }
-      }
+      if (bounds[0] < minLng) minLng = bounds[0];
+      if (bounds[1] < minLat) minLat = bounds[1];
+      if (bounds[2] > maxLng) maxLng = bounds[2];
+      if (bounds[3] > maxLat) maxLat = bounds[3];
     }
 
     if (!found) return;
@@ -694,7 +685,7 @@ const MapInner = memo(function MapInner({
     const center: [number, number] = [centerLng, centerLat];
     setMapCenterZoom(center, zoom);
     rawMapRef.current?.flyTo({ center, zoom });
-  }, [data, layers, country, setMapCenterZoom]);
+  }, [index, layers, country, setMapCenterZoom]);
 
   // G key: zoom to fit all layers
   useEffect(() => {
@@ -852,7 +843,7 @@ const MapInner = memo(function MapInner({
                   onToggleVisibility={handleHideTools}
                   granularity={granularity}
                   onGranularityChange={onGranularityChange}
-                  postalCodesData={data}
+                  availableCodes={index.keys}
                   pendingPostalCodes={interactions.pendingPostalCodes}
                   onAddPending={interactions.addPendingToSelection}
                   onRemovePending={interactions.removePendingFromSelection}
@@ -1240,6 +1231,7 @@ MapInner.displayName = "MapInner";
 // Main BaseMap component with react-map-gl + deck.gl
 const BaseMapComponent = ({
   data,
+  index,
   layerId,
   center,
   zoom,
@@ -1393,6 +1385,7 @@ const BaseMapComponent = ({
           >
             <MapInner
               data={data}
+              index={index}
               layerId={layerId}
               country={country}
               granularity={granularity}

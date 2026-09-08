@@ -32,7 +32,6 @@ import {
   IconLayoutColumns,
   IconPlus,
 } from "@tabler/icons-react";
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import {
   ArrowDownUp,
   CheckSquare,
@@ -170,7 +169,11 @@ import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
 import type { Layer } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
-import { storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
+import {
+  extractRawCode,
+  rawCodeFromComposite,
+  storedCodeToCompositeKey,
+} from "@/lib/utils/deck-gl-utils";
 import {
   copyPostalCodesCSV,
   downloadLayerCSV,
@@ -273,7 +276,8 @@ export interface DrawingToolsProps {
 
   onGranularityChange?: (granularity: string) => void;
 
-  postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
+  /** Composite keys ("DE:01067") of every code in the loaded countries. */
+  availableCodes?: readonly string[];
 
   pendingPostalCodes?: string[];
 
@@ -521,7 +525,7 @@ interface UseDrawingToolsActionsProps {
   onRemovePending: DrawingToolsProps["onRemovePending"];
   granularity: DrawingToolsProps["granularity"];
   country: DrawingToolsProps["country"];
-  postalCodesData: DrawingToolsProps["postalCodesData"];
+  availableCodes: DrawingToolsProps["availableCodes"];
 }
 
 function useDrawingToolsActions({
@@ -538,7 +542,7 @@ function useDrawingToolsActions({
   onRemovePending,
   granularity,
   country,
-  postalCodesData,
+  availableCodes,
 }: UseDrawingToolsActionsProps) {
   const [baseLayers, setBaseLayers] = useState(layers);
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
@@ -1098,7 +1102,7 @@ function useDrawingToolsActions({
     const activeLayer = optimisticLayersRef.current.find(
       (l) => l.id === activeLayerId
     );
-    if (postalCodesData && activeLayer) {
+    if (availableCodes && activeLayer) {
       fillRegions(
         "holes",
         activeLayer,
@@ -1702,7 +1706,7 @@ function DrawingToolsImpl({
   onToggleVisibility,
   granularity,
   onGranularityChange,
-  postalCodesData,
+  availableCodes,
   pendingPostalCodes = EMPTY_ARRAY,
   onAddPending,
   onRemovePending,
@@ -1822,7 +1826,7 @@ function DrawingToolsImpl({
     onRemovePending,
     granularity,
     country,
-    postalCodesData,
+    availableCodes,
   });
 
   const handleSetRegionsOpen = useCallback(
@@ -1951,29 +1955,28 @@ function DrawingToolsImpl({
     [copyLayerDialog.layerId]
   );
 
+  /** Raw codes ("01067"), used for prefix matching in the layer panel. */
   const allCodesSet = useMemo<Set<string>>(() => {
-    if (!postalCodesData?.features) return new Set();
     const s = new Set<string>();
-    for (const f of postalCodesData.features) {
-      const code =
-        f.properties?.code ?? f.properties?.postal_code ?? f.properties?.PLZ;
-      if (typeof code === "string") s.add(code);
+    for (const key of availableCodes ?? []) {
+      s.add(rawCodeFromComposite(key));
     }
     return s;
-  }, [postalCodesData]);
+  }, [availableCodes]);
 
   // Active-country total: only count codes from countries that appear in at least one layer.
   // Used for per-layer coverage percentages so a DE-only area shows % of ~8k DE codes, not ~13k DACH.
   const activeTotalCodes = useMemo(() => {
-    if (!postalCodesData?.features || postalCodesData.features.length === 0)
-      return postalCodesData?.features.length ?? 0;
+    if (!availableCodes || availableCodes.length === 0) return 0;
     const countryTotals = new Map<string, number>();
     const codeCountryMap = new Map<string, string>();
-    for (const f of postalCodesData.features) {
-      const code = f.properties?.code as string | undefined;
-      const c = f.properties?.country as string | undefined;
-      if (c) countryTotals.set(c, (countryTotals.get(c) ?? 0) + 1);
-      if (code && c && !codeCountryMap.has(code)) codeCountryMap.set(code, c);
+    for (const key of availableCodes) {
+      const colon = key.indexOf(":");
+      if (colon < 0) continue;
+      const c = key.slice(0, colon);
+      const code = key.slice(colon + 1);
+      countryTotals.set(c, (countryTotals.get(c) ?? 0) + 1);
+      if (!codeCountryMap.has(code)) codeCountryMap.set(code, c);
     }
     const countriesInUse = new Set<string>();
     for (const layer of optimisticLayers) {
@@ -1991,7 +1994,7 @@ function DrawingToolsImpl({
       (sum, c) => sum + (countryTotals.get(c) ?? 0),
       0
     );
-  }, [postalCodesData, optimisticLayers]);
+  }, [availableCodes, optimisticLayers]);
 
   const layersRef = useRef(layers);
   layersRef.current = layers;
@@ -2237,9 +2240,11 @@ function DrawingToolsImpl({
         const currentLayers = layersRef.current;
         if (!layerId || !addFn || !allCodes || allCodes.size === 0) return;
         // Collect all assigned codes across all layers
+        // allCodes holds raw codes; assignments are stored as "D-01067".
         const assignedCodes = new Set(
           currentLayers.flatMap(
-            (l) => l.postalCodes?.map((pc) => pc.postalCode) ?? []
+            (l) =>
+              l.postalCodes?.map((pc) => extractRawCode(pc.postalCode)) ?? []
           )
         );
         const unassigned = [...allCodes].filter((c) => !assignedCodes.has(c));
@@ -2526,7 +2531,7 @@ function DrawingToolsImpl({
               </Tooltip>
             </>
           )}
-          {postalCodesData && !isViewingVersion && (
+          {availableCodes && !isViewingVersion && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
@@ -2741,7 +2746,6 @@ function DrawingToolsImpl({
         {/* Actions Section — drawing-mode-only actions (clear/fill) */}
         <DrawingActionsSection
           currentMode={currentMode}
-          postalCodesData={postalCodesData}
           activeLayerId={activeLayerId}
           areaId={areaId}
           isFilling={ui.isFilling}
@@ -2761,10 +2765,10 @@ function DrawingToolsImpl({
         />
 
         {/* Stats Section — hidden when no codes are assigned */}
-        {postalCodesData && activeTotalCodes > 0 && (
+        {availableCodes && activeTotalCodes > 0 && (
           <StatsSection
             layers={optimisticLayers}
-            postalCodesData={postalCodesData}
+            availableCodes={availableCodes}
             onLayerSelect={onLayerSelect}
             open={ui.statsOpen}
             onOpenChange={handleSetStatsOpen}
@@ -2772,10 +2776,10 @@ function DrawingToolsImpl({
         )}
 
         {/* Länder Section — per-country breakdown with remove-by-country action */}
-        {postalCodesData && activeTotalCodes > 0 && (
+        {availableCodes && activeTotalCodes > 0 && (
           <LänderSection
             layers={optimisticLayers}
-            postalCodesData={postalCodesData}
+            availableCodes={availableCodes}
             areaId={areaId}
             onLayerUpdate={onLayerUpdate}
           />

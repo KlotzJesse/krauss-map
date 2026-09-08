@@ -1,7 +1,6 @@
 "use client";
 
 import { IconChevronDown } from "@tabler/icons-react";
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { Download } from "lucide-react";
 
 import {
@@ -15,7 +14,8 @@ import { storedCodeToCompositeKey } from "@/lib/utils/deck-gl-utils";
 
 export interface StatsSectionProps {
   layers: Layer[];
-  postalCodesData?: FeatureCollection<Polygon | MultiPolygon>;
+  /** Composite keys ("DE:01067") of every code in the loaded countries. */
+  availableCodes?: readonly string[];
   onLayerSelect?: (layerId: number) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -23,7 +23,7 @@ export interface StatsSectionProps {
 
 export function StatsSection({
   layers,
-  postalCodesData,
+  availableCodes,
   onLayerSelect,
   open = true,
   onOpenChange,
@@ -35,11 +35,13 @@ export function StatsSection({
   // Build per-country stats to compute activeTotalFeatures
   const codeCountryMap = new Map<string, string>();
   const countryTotals = new Map<string, number>();
-  for (const f of postalCodesData?.features ?? []) {
-    const code = f.properties?.code as string | undefined;
-    const c = f.properties?.country as string | undefined;
-    if (c) countryTotals.set(c, (countryTotals.get(c) ?? 0) + 1);
-    if (code && c && !codeCountryMap.has(code)) codeCountryMap.set(code, c);
+  for (const key of availableCodes ?? []) {
+    const colon = key.indexOf(":");
+    if (colon < 0) continue;
+    const c = key.slice(0, colon);
+    const code = key.slice(colon + 1);
+    countryTotals.set(c, (countryTotals.get(c) ?? 0) + 1);
+    if (!codeCountryMap.has(code)) codeCountryMap.set(code, c);
   }
 
   const countryAssigned = new Map<string, number>();

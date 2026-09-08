@@ -1,13 +1,4 @@
-import turfArea from "@turf/area";
-import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
-import centerOfMass from "@turf/center-of-mass";
-import type {
-  Feature,
-  FeatureCollection,
-  MultiPolygon,
-  Point,
-  Polygon,
-} from "geojson";
+import type { Feature, FeatureCollection, Point } from "geojson";
 import type {
   GeoJSONSource,
   LayerSpecification,
@@ -15,6 +6,7 @@ import type {
 } from "maplibre-gl";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
+import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { Layer } from "@/lib/types/area-types";
 import { resolveFeatureKey } from "@/lib/utils/deck-gl-utils";
 
@@ -45,18 +37,6 @@ export function getFirstSymbolLayerId(map: MapLibreMap): string | undefined {
   return undefined;
 }
 
-// Module-level WeakMap cache for turfArea results
-const _turfAreaCache = new WeakMap<Feature, number>();
-
-function _turfAreaCached(f: Feature): number {
-  let a = _turfAreaCache.get(f);
-  if (a === undefined) {
-    a = turfArea(f);
-    _turfAreaCache.set(f, a);
-  }
-  return a;
-}
-
 // Minimum zoom level at which labels become visible, keyed by digit count (1–5)
 const LABEL_MIN_ZOOM: Record<number, number> = {
   1: 3,
@@ -81,89 +61,71 @@ function hashPostalCodes(codes: string[]): string {
 }
 
 /**
- * Computes the best label placement for a layer's postal codes.
- * Area-weighted centerOfMass, falling back to the largest polygon centroid.
+ * Best label placement for a layer's postal codes.
+ *
+ * Area-weighted mean of the member codes' representative points, then snapped
+ * to the member point nearest that mean. Snapping is what keeps the label on
+ * the layer: a weighted mean of a horseshoe- or island-shaped layer lands
+ * outside it, which is why this used to compute a centre of mass and then test
+ * it against every member polygon. Representative points come from
+ * ST_PointOnSurface, so the snapped result is always inside a member — a
+ * stronger guarantee than the old on-land test, without any geometry.
  */
-function getLayerLabelCenter(
-  data: FeatureCollection<Polygon | MultiPolygon>,
-  postalCodes: string[],
-  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>
+function getLayerLabelCenterFromIndex(
+  index: PostalCodeIndex,
+  postalCodes: string[]
 ): [number, number] | null {
-  if (!postalCodes.length) {
+  let sumLng = 0;
+  let sumLat = 0;
+  let sumWeight = 0;
+
+  for (const code of postalCodes) {
+    const i = index.pos.get(code);
+    if (i === undefined) {
+      continue;
+    }
+    // Codes with a rounded area of zero would drop out of the weighting.
+    const weight = index.area[i] || 0.1;
+    sumLng += index.cen[i * 2] * weight;
+    sumLat += index.cen[i * 2 + 1] * weight;
+    sumWeight += weight;
+  }
+
+  if (sumWeight === 0) {
     return null;
   }
 
-  const matched: Feature<Polygon | MultiPolygon>[] = [];
-  let largestFeature: Feature<Polygon | MultiPolygon> | null = null;
-  let largestArea = -1;
+  const meanLng = sumLng / sumWeight;
+  const meanLat = sumLat / sumWeight;
 
-  if (featureIndex) {
-    for (const code of postalCodes) {
-      const features = featureIndex.get(code);
-      if (!features) {
-        continue;
-      }
-      for (const f of features) {
-        matched.push(f);
-        const a = _turfAreaCached(f);
-        if (a > largestArea) {
-          largestArea = a;
-          largestFeature = f;
-        }
-      }
+  let best: [number, number] | null = null;
+  let bestDistance = Infinity;
+  for (const code of postalCodes) {
+    const i = index.pos.get(code);
+    if (i === undefined) {
+      continue;
     }
-  } else {
-    const codeSet = new Set(postalCodes);
-    for (const feature of data.features) {
-      if (!feature.geometry) {
-        continue;
-      }
-      const props = feature.properties ?? {};
-      const code = props.code ?? props.plz ?? props.PLZ ?? props.postalCode;
-      if (!code || !codeSet.has(String(code))) {
-        continue;
-      }
-      const f = feature as Feature<Polygon | MultiPolygon>;
-      matched.push(f);
-      const a = _turfAreaCached(f);
-      if (a > largestArea) {
-        largestArea = a;
-        largestFeature = f;
-      }
+    const lng = index.cen[i * 2];
+    const lat = index.cen[i * 2 + 1];
+    const distance = (lng - meanLng) ** 2 + (lat - meanLat) ** 2;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = [lng, lat];
     }
   }
 
-  if (!matched.length || !largestFeature) {
-    return null;
-  }
-
-  const collection: FeatureCollection<Polygon | MultiPolygon> = {
-    type: "FeatureCollection",
-    features: matched,
-  };
-  const collectionCenter = centerOfMass(collection);
-  const centerPoint = collectionCenter.geometry;
-
-  const isOnLand = matched.some((f) => booleanPointInPolygon(centerPoint, f));
-
-  if (isOnLand) {
-    return collectionCenter.geometry.coordinates as [number, number];
-  }
-
-  const fallback = centerOfMass(largestFeature);
-  return fallback.geometry.coordinates as [number, number];
+  return best;
 }
 
 interface UseMapLabelsProps {
   mapInstance: MapLibreMap | null;
   isMapLoaded: boolean;
   layerId: string;
-  data: FeatureCollection<Polygon | MultiPolygon>;
+  index: PostalCodeIndex;
   labelPoints: FeatureCollection;
   statesLabelPoints?: FeatureCollection | null;
   layers?: Layer[];
-  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
-  /** Country code for the area — used to prefix raw postal codes for featureIndex lookup. */
+  /** Country code for the area — used to prefix raw postal codes for index lookup. */
   country?: string;
 }
 
@@ -176,11 +138,10 @@ export function useMapLabels({
   mapInstance,
   isMapLoaded,
   layerId,
-  data,
+  index,
   labelPoints,
   statesLabelPoints,
   layers,
-  featureIndex,
   country,
 }: UseMapLabelsProps) {
   // Memoize IDs for stable references
@@ -420,9 +381,9 @@ export function useMapLabels({
     for (const layer of layers) {
       const rawPostalCodes =
         layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
-      // Resolve each raw code to its correct composite featureIndex key
+      // Resolve each raw code to its correct composite index key
       const postalCodes = rawPostalCodes.map((c) =>
-        resolveFeatureKey(c, country, featureIndex)
+        resolveFeatureKey(c, country, index.pos)
       );
       if (postalCodes.length === 0 || layer.isVisible !== "true") {
         continue;
@@ -430,7 +391,7 @@ export function useMapLabels({
 
       let center = labelCache.get(layer.id);
       if (center === undefined) {
-        center = getLayerLabelCenter(data, postalCodes, featureIndex) ?? null;
+        center = getLayerLabelCenterFromIndex(index, postalCodes) ?? null;
         labelCache.set(layer.id, center);
       }
 
@@ -496,7 +457,7 @@ export function useMapLabels({
     if (src && typeof src.setData === "function") {
       src.setData({ type: "FeatureCollection", features: labelFeatures });
     }
-  }, [mapInstance, isMapLoaded, layers, data, featureIndex, ids, country]);
+  }, [mapInstance, isMapLoaded, layers, index, ids, country]);
 
   // Cleanup on unmount
   useEffect(

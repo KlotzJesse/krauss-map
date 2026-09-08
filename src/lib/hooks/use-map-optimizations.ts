@@ -6,11 +6,16 @@ import type {
 } from "geojson";
 import { useMemo } from "react";
 
+import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import { getFeatureCode } from "@/lib/utils/deck-gl-utils";
-import { makeLabelPoints } from "@/lib/utils/map-data";
+import {
+  makeLabelPoints,
+  makeLabelPointsFromIndex,
+} from "@/lib/utils/map-data";
 
 interface UseMapOptimizationsProps {
   data: FeatureCollection<Polygon | MultiPolygon>;
+  index: PostalCodeIndex;
   statesData?: FeatureCollection<Polygon | MultiPolygon> | null;
 }
 
@@ -20,12 +25,14 @@ interface UseMapOptimizationsProps {
  */
 export function useMapOptimizations({
   data,
+  index,
   statesData,
 }: UseMapOptimizationsProps) {
-  // Memoize label points computation (expensive operation)
+  // Postal-code labels come from the index (codes, points and areas), not from
+  // the polygons — see makeLabelPointsFromIndex.
   const labelPoints = useMemo(
-    () => makeLabelPoints(data) as FeatureCollection,
-    [data]
+    () => makeLabelPointsFromIndex(index),
+    [index]
   );
 
   // Memoize states label points if available

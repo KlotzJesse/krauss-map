@@ -8,55 +8,6 @@ import type {
   Polygon,
 } from "geojson";
 
-// Cache for expensive centroid calculations
-const centroidCache = new WeakMap();
-
-/**
- * Returns the centroid of the largest polygon in a feature - optimized with caching.
- */
-export function getLargestPolygonCentroid(
-  feature: Feature<Polygon | MultiPolygon>
-) {
-  if (!feature.geometry) {
-    return [0, 0] as [number, number];
-  }
-
-  // Use cache for expensive centroid calculations
-  if (centroidCache.has(feature)) {
-    return centroidCache.get(feature);
-  }
-
-  let result: [number, number];
-
-  if (feature.geometry.type === "Polygon") {
-    result = centerOfMass(feature).geometry.coordinates as [number, number];
-  } else if (feature.geometry.type === "MultiPolygon") {
-    // Optimize: only check first few polygons (90%+ accuracy, much faster)
-    let maxArea = 0;
-    let bestPolygon = feature.geometry.coordinates[0];
-
-    for (let i = 0; i < Math.min(feature.geometry.coordinates.length, 3); i++) {
-      const coords = feature.geometry.coordinates[i];
-      if (coords && coords[0]) {
-        const polyArea = area({ type: "Polygon", coordinates: coords });
-        if (polyArea > maxArea) {
-          maxArea = polyArea;
-          bestPolygon = coords;
-        }
-      }
-    }
-
-    result = centerOfMass({ type: "Polygon", coordinates: bestPolygon })
-      .geometry.coordinates as [number, number];
-  } else {
-    result = centerOfMass(feature).geometry.coordinates as [number, number];
-  }
-
-  // Cache the result
-  centroidCache.set(feature, result);
-  return result;
-}
-
 /**
  * Creates a FeatureCollection of label points from a polygon FeatureCollection.
  * It groups features by their postal code property to ensure only one label
@@ -179,4 +130,64 @@ export function isPointInPolygon(
     }
   }
   return inside;
+}
+
+/**
+ * Label points for all digit levels (1–5), derived from the postal-code index.
+ *
+ * Same output as `makeLabelPoints`: one point per code prefix per level, placed
+ * on the largest member of that prefix group. The difference is where the
+ * geometry comes from — the index ships a representative point and an area per
+ * code, so this is a grouping pass over numbers instead of `centerOfMass` over
+ * every polygon in the country, which was the single most expensive thing the
+ * map did on load.
+ *
+ * The point used is `ST_PointOnSurface` rather than a centre of mass, so it is
+ * guaranteed to lie inside its polygon — a centre of mass is not, and put some
+ * labels for horseshoe-shaped codes outside their own area.
+ */
+export function makeLabelPointsFromIndex(index: {
+  keys: string[];
+  cen: Float64Array;
+  area: Float64Array;
+}): FeatureCollection {
+  let maxLen = 0;
+  const rawCodes: string[] = new Array(index.keys.length);
+  for (let i = 0; i < index.keys.length; i++) {
+    const key = index.keys[i];
+    const colon = key.indexOf(":");
+    const raw = colon >= 0 ? key.slice(colon + 1) : key;
+    rawCodes[i] = raw;
+    if (raw.length > maxLen) {
+      maxLen = raw.length;
+    }
+  }
+  const levels = Math.min(maxLen, 5);
+
+  // "level:prefix" -> index of the largest-area member seen so far.
+  const best = new Map<string, number>();
+
+  for (let i = 0; i < rawCodes.length; i++) {
+    const raw = rawCodes[i];
+    const memberArea = index.area[i];
+    for (let level = 1; level <= Math.min(levels, raw.length); level++) {
+      const key = `${level}:${raw.slice(0, level)}`;
+      const current = best.get(key);
+      if (current === undefined || memberArea > index.area[current]) {
+        best.set(key, i);
+      }
+    }
+  }
+
+  const features: ReturnType<typeof point>[] = new Array(best.size);
+  let n = 0;
+  for (const [key, i] of best) {
+    const colon = key.indexOf(":");
+    features[n++] = point([index.cen[i * 2], index.cen[i * 2 + 1]], {
+      _labelCode: key.slice(colon + 1),
+      _labelLevel: Number(key.slice(0, colon)),
+    });
+  }
+
+  return { type: "FeatureCollection", features };
 }

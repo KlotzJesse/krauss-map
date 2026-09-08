@@ -18,7 +18,6 @@ const DRAWING_MODES = [
 
 interface DrawingActionsSectionProps {
   currentMode: string | null;
-  postalCodesData: unknown;
   activeLayerId?: number | null;
   areaId?: number;
   isFilling: boolean;
@@ -28,7 +27,6 @@ interface DrawingActionsSectionProps {
 
 export function DrawingActionsSection({
   currentMode,
-  postalCodesData: _postalCodesData,
   activeLayerId,
   areaId,
   isFilling,
