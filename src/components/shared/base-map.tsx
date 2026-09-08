@@ -67,6 +67,7 @@ import {
   useMapLabels,
 } from "@/lib/hooks/use-map-labels";
 import { TILES_VERSION } from "@/lib/config/tiles";
+import { useRegisterMapCommands } from "@/lib/context/command-palette-context";
 import { useMapOptimizations } from "@/lib/hooks/use-map-optimizations";
 import { useMapPostalLayers } from "@/lib/hooks/use-map-postal-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
@@ -691,6 +692,14 @@ const MapInner = memo(function MapInner({
     setMapCenterZoom(center, zoom);
     rawMapRef.current?.flyTo({ center, zoom });
   }, [index, layers, country, setMapCenterZoom]);
+
+  // Map navigation lives here, so the palette gets these commands from here.
+  useRegisterMapCommands({
+    onFitAllLayers: handleFitAllLayers,
+    onZoomToCountry: handleRecenter,
+    onToggleUnassigned: () => setShowUnassigned((prev) => !prev),
+    onCycleMapStyle: () => onCycleMapStyle?.(),
+  });
 
   // G key: zoom to fit all layers
   useEffect(() => {

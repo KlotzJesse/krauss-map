@@ -600,8 +600,3 @@ export function DrawingToolsSkeleton() {
     </div>
   );
 }
-
-// Loading skeleton for address autocomplete — matches the combobox trigger input
-export function AddressAutocompleteSkeleton() {
-  return <Skeleton className="h-8 w-full rounded-md" />;
-}

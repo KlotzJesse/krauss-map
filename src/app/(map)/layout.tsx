@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { CommandPaletteProvider } from "@/lib/context/command-palette-context";
 import { ResizableSidebarLayout } from "@/components/shared/resizable-sidebar-layout";
 import { FeatureErrorBoundary } from "@/components/ui/error-boundaries";
 import { SidebarSkeleton } from "@/components/ui/loading-skeleton";
@@ -13,7 +14,10 @@ export default async function MapLayout({
 }) {
   return (
     <FeatureErrorBoundary fallbackMessage="Fehler beim Laden der Anwendung">
-      <ResizableSidebarLayout>
+      {/* Wraps both the sidebar, which renders the palette, and the page, which
+          publishes the open area's commands into it. */}
+      <CommandPaletteProvider>
+        <ResizableSidebarLayout>
         <Suspense fallback={<SidebarSkeleton />}>
           <AppSidebar variant="inset" />
         </Suspense>
@@ -26,7 +30,8 @@ export default async function MapLayout({
             </div>
           </div>
         </SidebarInset>
-      </ResizableSidebarLayout>
+        </ResizableSidebarLayout>
+      </CommandPaletteProvider>
     </FeatureErrorBoundary>
   );
 }

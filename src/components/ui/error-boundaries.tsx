@@ -100,31 +100,6 @@ export function DrawingToolsErrorBoundary({
   );
 }
 
-export function AddressAutocompleteErrorBoundary({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <ErrorBoundary
-      fallback={
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center space-y-2">
-              <AlertTriangle className="w-6 h-6 mx-auto text-destructive" />
-              <p className="text-sm text-muted-foreground">
-                Adresssuche nicht verfügbar
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      }
-    >
-      {children}
-    </ErrorBoundary>
-  );
-}
-
 export function FeatureErrorBoundary({
   children,
   fallbackMessage = "Ein Fehler ist aufgetreten",

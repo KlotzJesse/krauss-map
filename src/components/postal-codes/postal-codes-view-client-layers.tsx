@@ -1,5 +1,7 @@
 "use client";
 
+import { SearchIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { FileUpIcon } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -21,12 +23,8 @@ import {
   drivingRadiusSearchAction,
 } from "@/app/actions/area-actions";
 import { Button } from "@/components/ui/button";
+import { MapErrorBoundary } from "@/components/ui/error-boundaries";
 import {
-  AddressAutocompleteErrorBoundary,
-  MapErrorBoundary,
-} from "@/components/ui/error-boundaries";
-import {
-  AddressAutocompleteSkeleton,
   MapSkeleton,
 } from "@/components/ui/loading-skeletons";
 import {
@@ -49,18 +47,20 @@ import {
   storedCodeToCompositeKey,
 } from "@/lib/utils/postal-code-keys";
 import { isLightColor } from "@/lib/utils/layer-colors";
+import { Kbd } from "@/components/ui/kbd";
+import {
+  useCommandPalette,
+  usePublishMapMeta,
+  useRegisterMapCommands,
+} from "@/lib/context/command-palette-context";
+import { useMountOnce } from "@/lib/hooks/use-mount-once";
 
-const AddressAutocompleteEnhanced = dynamic(
+const RadiusSearchDialog = dynamic(
   () =>
-    import("./address-autocomplete-enhanced").then(
-      (m) => m.AddressAutocompleteEnhanced
-    ),
-
-  {
-    ssr: false,
-
-    loading: () => <AddressAutocompleteSkeleton />,
-  }
+    import("./radius-search-dialog").then((m) => ({
+      default: m.RadiusSearchDialog,
+    })),
+  { ssr: false }
 );
 
 const PostalCodesMap = dynamic(
@@ -769,24 +769,82 @@ export const PostalCodesViewClientWithLayers = memo(
       [optimisticLayers, activeLayerId]
     );
 
+    // ⌘K is the only search surface; the field in the header opens it.
+    const { setOpen: setPaletteOpen } = useCommandPalette();
+    const paletteShortcut =
+      typeof navigator !== "undefined" &&
+      /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
+        ? "⌘K"
+        : "Strg K";
+
+    const [radiusDialog, setRadiusDialog] = useState<{
+      open: boolean;
+      coords: [number, number] | null;
+    }>({ open: false, coords: null });
+    const mountRadiusDialog = useMountOnce(radiusDialog.open);
+
+    const openRadiusSearch = useCallback((coords?: [number, number]) => {
+      if (!coords) {
+        // Without a point there is nothing to search around; the palette's
+        // per-result "Umkreis um …" entries always pass one.
+        toast.info(
+          "Suchen Sie zuerst eine Adresse oder einen Ort, um den Umkreis zu setzen"
+        );
+        return;
+      }
+      setRadiusDialog({ open: true, coords });
+    }, []);
+
+    usePublishMapMeta(
+      useMemo(
+        () => ({
+          areaId,
+          areaName: areaName ?? "Gebiet",
+          granularity: defaultGranularity,
+          layers: optimisticLayers,
+          activeLayerId,
+        }),
+        [areaId, areaName, defaultGranularity, optimisticLayers, activeLayerId]
+      )
+    );
+
+    useRegisterMapCommands({
+      onAddressSelect: handleAddressSelect,
+      onPreviewSelect: handlePreviewSelect,
+      onBoundarySelect: async (postalCodes: string[]) => {
+        await handleImport(postalCodes);
+      },
+      onOpenRadiusSearch: openRadiusSearch,
+      onOpenImport: openImportDialog,
+      onZoomToLayer: handleZoomToLayer,
+    });
+
     return (
       <div className="h-full relative">
         {/* Address and Postal Code Tools - horizontal, top right */}
         <div className="absolute top-4 right-4 z-30 flex flex-row items-center gap-2 w-auto">
           <div className="w-80">
-            <AddressAutocompleteErrorBoundary>
-              <AddressAutocompleteEnhanced
-                onAddressSelect={handleAddressSelect}
-                onBoundarySelect={handleImport}
-                onRadiusSelect={handleRadiusSelect}
-                onPreviewSelect={handlePreviewSelect}
-                performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}
-                granularity={defaultGranularity}
-                triggerClassName="truncate"
-                previewPostalCode={previewPostalCode}
-                layers={optimisticLayers}
+            {/* The search itself lives in the command palette now — this is the
+                same control it always was, but it opens ⌘K rather than a second
+                search of its own. */}
+            <Button
+              variant="outline"
+              className="h-8 w-full justify-start gap-0 bg-background font-normal shadow-sm truncate"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="PLZ, Adresse, Stadt oder Region suchen"
+            >
+              <HugeiconsIcon
+                icon={SearchIcon}
+                strokeWidth={2}
+                className="size-3.5 shrink-0 opacity-50"
               />
-            </AddressAutocompleteErrorBoundary>
+              <span className="ml-[6px] text-muted-foreground truncate">
+                PLZ, Adresse, Stadt oder Region suchen...
+              </span>
+              <Kbd className="ml-auto hidden shrink-0 sm:inline-flex">
+                {paletteShortcut}
+              </Kbd>
+            </Button>
           </div>
 
           {/* Active layer indicator */}
@@ -870,6 +928,19 @@ export const PostalCodesViewClientWithLayers = memo(
             </div>
           )}
         </div>
+
+        {mountRadiusDialog && (
+          <RadiusSearchDialog
+            open={radiusDialog.open}
+            onOpenChange={(open) =>
+              setRadiusDialog((prev) => ({ ...prev, open }))
+            }
+            coords={radiusDialog.coords}
+            granularity={defaultGranularity}
+            onStraightRadius={handleRadiusSelect}
+            performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}
+          />
+        )}
 
         {/* Import Dialog */}
         <PostalCodeImportDialog

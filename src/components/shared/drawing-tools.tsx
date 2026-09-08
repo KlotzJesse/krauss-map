@@ -163,6 +163,7 @@ import {
   formatWithPrefix,
 } from "@/lib/config/countries";
 import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
+import { useRegisterMapCommands } from "@/lib/context/command-palette-context";
 import { useMountOnce } from "@/lib/hooks/use-mount-once";
 import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
@@ -2055,6 +2056,86 @@ function DrawingToolsImpl({
   const handleOpenConflicts = useCallback(() => {
     onOpenConflicts?.();
   }, [onOpenConflicts]);
+
+  /**
+   * Layers, postal codes and versions are owned here, so the command palette
+   * gets those commands from here. Registration is a plain call on every
+   * render — the palette reads the latest handler when a command is run.
+   */
+  const selectAllUnassigned = useCallback(() => {
+    const layerId = activeLayerIdRef.current;
+    const addFn = guardedAddRef.current;
+    const allCodes = allCodesSetRef.current;
+    const currentLayers = layersRef.current;
+    if (!layerId || !addFn || !allCodes || allCodes.size === 0) {
+      return;
+    }
+    const assignedCodes = new Set(
+      currentLayers.flatMap(
+        (l) => l.postalCodes?.map((pc) => extractRawCode(pc.postalCode)) ?? []
+      )
+    );
+    const unassigned = [...allCodes].filter((c) => !assignedCodes.has(c));
+    if (unassigned.length === 0) {
+      toast.info("Alle sichtbaren PLZ sind bereits zugewiesen");
+      return;
+    }
+    addFn(layerId, unassigned).then(() => {
+      toast.success(
+        `${unassigned.length} nicht zugewiesene PLZ zum aktiven Layer hinzugefügt`
+      );
+    });
+  }, []);
+
+  const copyActiveLayerCodes = useCallback(() => {
+    const layer = layersRef.current?.find(
+      (l) => l.id === activeLayerIdRef.current
+    );
+    const codes = layer?.postalCodes?.map((pc) => pc.postalCode) ?? [];
+    if (codes.length === 0) {
+      toast.info("Die aktive Ebene enthält keine PLZ");
+      return;
+    }
+    navigator.clipboard
+      .writeText(codes.join(", "))
+      .then(() => toast.success(`${codes.length} PLZ kopiert`))
+      .catch(() => toast.error("Kopieren fehlgeschlagen"));
+  }, []);
+
+  useRegisterMapCommands({
+    onCreateLayer: () => {
+      dispatchUIRef.current({ type: "SET_LAYERS_OPEN", open: true });
+      showNewLayerInputRef.current?.(true);
+      setTimeout(() => {
+        newLayerInputRef.current?.focus();
+        newLayerInputRef.current?.select();
+      }, 0);
+    },
+    onDuplicateActiveLayer: () => {
+      const id = activeLayerIdRef.current;
+      if (id) {
+        handleDuplicateLayerRef.current(id);
+      }
+    },
+    onDeleteActiveLayer: () => {
+      const id = activeLayerIdRef.current;
+      if (id) {
+        handleDeleteLayer(id);
+      }
+    },
+    onToggleLayerVisibility: (layerId: number) => {
+      const layer = layersRef.current?.find((l) => l.id === layerId);
+      handleToggleVisibility(layerId, layer?.isVisible !== "true");
+    },
+    onSetActiveLayer: (layerId: number) => onLayerSelect?.(layerId),
+    onSelectAllUnassigned: selectAllUnassigned,
+    onCopyActiveLayerCodes: copyActiveLayerCodes,
+    onClearDrawings: handleClearAllWithToast,
+    onOpenVersionHistory: () => dispatchUI({ type: "OPEN_HISTORY" }),
+    onCreateVersion: () => dispatchUI({ type: "OPEN_VERSION" }),
+    onExportExcel: handleExportExcel,
+    ...(onOpenConflicts ? { onOpenConflicts: handleOpenConflicts } : {}),
+  });
 
   const mergeDialogOtherLayers = useMemo(
     () =>

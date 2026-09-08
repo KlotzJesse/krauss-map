@@ -3,18 +3,34 @@
 import {
   IconArchive,
   IconChartBar,
+  IconClock,
+  IconCopy,
+  IconDeviceFloppy,
+  IconEye,
+  IconFileExport,
   IconFolder,
+  IconLayersSubtract,
   IconMapPin,
+  IconMapSearch,
+  IconPalette,
   IconPlus,
+  IconCircleDashed,
   IconSearch,
+  IconStack2,
   IconTag,
+  IconTrash,
+  IconUpload,
+  IconWorld,
+  IconZoomScan,
 } from "@tabler/icons-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -35,6 +51,15 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
+import { useCommandPalette } from "@/lib/context/command-palette-context";
+import {
+  formatGeocodeResult,
+  isAdministrativeAreaResult,
+  layersContaining,
+  toGranularity,
+  useBoundaryPostalCodes,
+  useGeocodeSearch,
+} from "@/lib/hooks/use-geocode-search";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 interface CommandPaletteProps {
@@ -59,18 +84,33 @@ export function CommandPalette({
   onCreateArea,
   showTrigger = false,
 }: CommandPaletteProps) {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, mapMeta, handlersRef, available } =
+    useCommandPalette();
   const [query, setQuery] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<number | null>(null);
   const [plzMatches, setPlzMatches] = useState<AreaPlzMatch[]>([]);
   const [_isPending, startTransition] = useTransition();
   const router = useRouter();
+  const openRef = useRef(open);
+  openRef.current = open;
+
+  // Address, city and region lookup — only while an area is open, since every
+  // result acts on that area's layers.
+  const isPlzLike = /^\d{1,5}$/.test(query.trim());
+  const { results: geocodeResults, isLoading: isGeocoding } = useGeocodeSearch(
+    query,
+    Boolean(mapMeta) && !isPlzLike
+  );
+  const resolveBoundary = useBoundaryPostalCodes();
+  const metaRef = useRef(mapMeta);
+  metaRef.current = mapMeta;
+
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        setOpen(!openRef.current);
         return;
       }
       // "/" opens the palette too, unless the user is typing in a field.
@@ -90,7 +130,7 @@ export function CommandPalette({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [setOpen]);
 
   // Debounced PLZ search
   useEffect(() => {
@@ -118,6 +158,36 @@ export function CommandPalette({
     setActiveTagFilter(null);
     setPlzMatches([]);
   }, []);
+
+  /** Run a map command and close the palette. */
+  const runMapAction = useCallback(
+    (action: () => void) => {
+      handleClose();
+      action();
+    },
+    [handleClose]
+  );
+
+  /** Add every postal code inside an administrative area. */
+  const runBoundarySelect = useCallback(
+    async (result: Parameters<typeof formatGeocodeResult>[0]) => {
+      const meta = metaRef.current;
+      const onBoundarySelect = handlersRef.current.onBoundarySelect;
+      if (!(meta && onBoundarySelect)) {
+        return;
+      }
+      const found = await resolveBoundary(result, meta.granularity);
+      if (!found) {
+        toast.error("Keine PLZ-Regionen in diesem Gebiet gefunden");
+        return;
+      }
+      await onBoundarySelect(found.postalCodes);
+      toast.success(
+        `${found.postalCodes.length} PLZ in ${found.areaName} ausgewählt`
+      );
+    },
+    [resolveBoundary, handlersRef]
+  );
 
   const handleSelect = useCallback(
     (areaId: number) => {
@@ -178,7 +248,11 @@ export function CommandPalette({
       title="Schnellnavigation"
     >
       <CommandInput
-        placeholder="Gebiet suchen, PLZ eingeben…"
+        placeholder={
+          mapMeta
+            ? "PLZ, Adresse, Stadt oder Region suchen — oder Aktion…"
+            : "Gebiet suchen, PLZ eingeben…"
+        }
         value={query}
         onValueChange={setQuery}
       />
@@ -218,6 +292,352 @@ export function CommandPalette({
             Keine Ergebnisse
           </span>
         </CommandEmpty>
+
+        {mapMeta && geocodeResults.length > 0 && (
+          <>
+            <CommandGroup heading="Adressen & Orte">
+              {geocodeResults.map((result) => {
+                const isArea = isAdministrativeAreaResult(result);
+                const code = result.postal_code
+                  ? toGranularity(result.postal_code, mapMeta.granularity)
+                  : undefined;
+                const containing = code
+                  ? layersContaining(code, mapMeta.layers)
+                  : [];
+                return (
+                  <CommandItem
+                    key={`geo-${result.id}`}
+                    value={`ort ${result.display_name}`}
+                    onSelect={() => {
+                      handleClose();
+                      if (isArea) {
+                        void runBoundarySelect(result);
+                        return;
+                      }
+                      void handlersRef.current.onAddressSelect?.(
+                        result.coordinates,
+                        result.display_name,
+                        code
+                      );
+                    }}
+                  >
+                    {isArea ? (
+                      <IconMapSearch className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    ) : (
+                      <IconMapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    )}
+                    <span className="flex-1 truncate">
+                      {formatGeocodeResult(result)}
+                    </span>
+                    {containing.length > 0 && (
+                      <span className="flex gap-0.5 shrink-0" title="Bereits zugewiesen">
+                        {containing.slice(0, 3).map((layer) => (
+                          <span
+                            key={layer.id}
+                            className="w-2 h-2 rounded-full border border-white/20"
+                            style={{ backgroundColor: layer.color }}
+                            title={layer.name}
+                          />
+                        ))}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                      {isArea ? "alle PLZ" : "hinzufügen"}
+                    </span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+
+            {/* Same results again, as the non-destructive actions. cmdk filters
+                on `value`, so each action needs its own item rather than
+                buttons inside one row, which the list would not reach by
+                keyboard. */}
+            <CommandGroup heading="Auf der Karte zeigen">
+              {geocodeResults.slice(0, 5).map((result) => (
+                <CommandItem
+                  key={`preview-${result.id}`}
+                  value={`vorschau zeigen ${result.display_name}`}
+                  onSelect={() => {
+                    handleClose();
+                    handlersRef.current.onPreviewSelect?.(
+                      result.coordinates,
+                      result.display_name,
+                      result.postal_code
+                        ? toGranularity(
+                            result.postal_code,
+                            mapMeta.granularity
+                          )
+                        : undefined
+                    );
+                  }}
+                >
+                  <IconEye className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="flex-1 truncate">
+                    {formatGeocodeResult(result)}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                    nur anzeigen
+                  </span>
+                </CommandItem>
+              ))}
+              {geocodeResults.slice(0, 5).map((result) => (
+                <CommandItem
+                  key={`radius-${result.id}`}
+                  value={`umkreis radius ${result.display_name}`}
+                  onSelect={() => {
+                    handleClose();
+                    handlersRef.current.onOpenRadiusSearch?.(result.coordinates);
+                  }}
+                >
+                  <IconCircleDashed className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="flex-1 truncate">
+                    Umkreis um {formatGeocodeResult(result)}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
+
+        {mapMeta && (
+          <>
+            <CommandGroup heading={`Karte — ${mapMeta.areaName}`}>
+              {available.has("onFitAllLayers") && (
+                <CommandItem
+                value="karte alle ebenen anzeigen fit"
+                onSelect={() => runMapAction(() => handlersRef.current.onFitAllLayers?.())}
+              >
+                <IconZoomScan className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Alle Ebenen anzeigen</span>
+                <CommandShortcut>G</CommandShortcut>
+              </CommandItem>
+              )}
+              {available.has("onZoomToCountry") && (
+                <CommandItem
+                value="karte länderübersicht zoomen"
+                onSelect={() => runMapAction(() => handlersRef.current.onZoomToCountry?.())}
+              >
+                <IconWorld className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Zur Länderübersicht zoomen</span>
+              </CommandItem>
+              )}
+              {available.has("onToggleUnassigned") && (
+                <CommandItem
+                value="karte nicht zugeordnete plz anzeigen"
+                onSelect={() => runMapAction(() => handlersRef.current.onToggleUnassigned?.())}
+              >
+                <IconEye className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Nicht zugeordnete PLZ ein-/ausblenden</span>
+              </CommandItem>
+              )}
+              {available.has("onCycleMapStyle") && (
+                <CommandItem
+                value="karte kartenstil wechseln"
+                onSelect={() => runMapAction(() => handlersRef.current.onCycleMapStyle?.())}
+              >
+                <IconPalette className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Kartenstil wechseln</span>
+                <CommandShortcut>M</CommandShortcut>
+              </CommandItem>
+              )}
+              {available.has("onZoomToLayer") &&
+                mapMeta.layers.map((layer) => (
+                <CommandItem
+                  key={`zoom-${layer.id}`}
+                  value={`ebene zoomen ${layer.name}`}
+                  onSelect={() =>
+                    runMapAction(() => handlersRef.current.onZoomToLayer?.(layer.id))
+                  }
+                >
+                  <IconZoomScan
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: layer.color }}
+                  />
+                  <span className="flex-1 truncate">
+                    Zu „{layer.name}" zoomen
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+
+            <CommandGroup heading="Ebenen">
+              {available.has("onCreateLayer") && (
+                <CommandItem
+                value="ebene neue erstellen"
+                onSelect={() => runMapAction(() => handlersRef.current.onCreateLayer?.())}
+              >
+                <IconPlus className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Neue Ebene anlegen</span>
+                <CommandShortcut>N</CommandShortcut>
+              </CommandItem>
+              )}
+              {available.has("onDuplicateActiveLayer") && (
+                <CommandItem
+                value="ebene aktive duplizieren"
+                onSelect={() => runMapAction(() => handlersRef.current.onDuplicateActiveLayer?.())}
+              >
+                <IconCopy className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Aktive Ebene duplizieren</span>
+                <CommandShortcut>D</CommandShortcut>
+              </CommandItem>
+              )}
+              {available.has("onDeleteActiveLayer") && (
+                <CommandItem
+                value="ebene aktive löschen"
+                onSelect={() => runMapAction(() => handlersRef.current.onDeleteActiveLayer?.())}
+              >
+                <IconTrash className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Aktive Ebene löschen</span>
+              </CommandItem>
+              )}
+              {available.has("onSetActiveLayer") &&
+                mapMeta.layers.map((layer) => (
+                <CommandItem
+                  key={`activate-${layer.id}`}
+                  value={`ebene aktivieren wechseln ${layer.name}`}
+                  onSelect={() =>
+                    runMapAction(() => handlersRef.current.onSetActiveLayer?.(layer.id))
+                  }
+                >
+                  <IconStack2
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: layer.color }}
+                  />
+                  <span className="flex-1 truncate">
+                    „{layer.name}" aktivieren
+                  </span>
+                  {layer.id === mapMeta.activeLayerId && (
+                    <span className="text-[10px] text-muted-foreground/60">
+                      aktiv
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+              {available.has("onToggleLayerVisibility") &&
+                mapMeta.layers.map((layer) => (
+                <CommandItem
+                  key={`visibility-${layer.id}`}
+                  value={`ebene sichtbarkeit ${layer.name}`}
+                  onSelect={() =>
+                    runMapAction(() =>
+                      handlersRef.current.onToggleLayerVisibility?.(layer.id)
+                    )
+                  }
+                >
+                  <IconEye
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: layer.color }}
+                  />
+                  <span className="flex-1 truncate">
+                    „{layer.name}" ein-/ausblenden
+                  </span>
+                  {layer.isVisible === "false" && (
+                    <span className="text-[10px] text-muted-foreground/60">
+                      ausgeblendet
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+
+            <CommandGroup heading="PLZ">
+              {available.has("onOpenImport") && (
+                <CommandItem
+                value="plz importieren"
+                onSelect={() => runMapAction(() => handlersRef.current.onOpenImport?.())}
+              >
+                <IconUpload className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>PLZ importieren</span>
+              </CommandItem>
+              )}
+              {available.has("onOpenRadiusSearch") && (
+                <CommandItem
+                value="plz umkreissuche radius"
+                onSelect={() =>
+                  runMapAction(() => handlersRef.current.onOpenRadiusSearch?.())
+                }
+              >
+                <IconCircleDashed className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Umkreissuche…</span>
+              </CommandItem>
+              )}
+              {available.has("onSelectAllUnassigned") && (
+                <CommandItem
+                value="plz nicht zugeordnete auswählen"
+                onSelect={() => runMapAction(() => handlersRef.current.onSelectAllUnassigned?.())}
+              >
+                <IconLayersSubtract className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Alle nicht zugeordneten PLZ hinzufügen</span>
+                <CommandShortcut>⌘A</CommandShortcut>
+              </CommandItem>
+              )}
+              {available.has("onCopyActiveLayerCodes") && (
+                <CommandItem
+                value="plz kopieren aktive ebene"
+                onSelect={() => runMapAction(() => handlersRef.current.onCopyActiveLayerCodes?.())}
+              >
+                <IconCopy className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>PLZ der aktiven Ebene kopieren</span>
+                <CommandShortcut>⌘C</CommandShortcut>
+              </CommandItem>
+              )}
+              {available.has("onClearDrawings") && (
+                <CommandItem
+                value="zeichnungen löschen leeren"
+                onSelect={() => runMapAction(() => handlersRef.current.onClearDrawings?.())}
+              >
+                <IconTrash className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Zeichnungen entfernen</span>
+              </CommandItem>
+              )}
+            </CommandGroup>
+            <CommandSeparator />
+
+            <CommandGroup heading="Gebiet & Versionen">
+              {available.has("onOpenVersionHistory") && (
+                <CommandItem
+                value="version verlauf historie"
+                onSelect={() => runMapAction(() => handlersRef.current.onOpenVersionHistory?.())}
+              >
+                <IconClock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Versionsverlauf</span>
+              </CommandItem>
+              )}
+              {available.has("onCreateVersion") && (
+                <CommandItem
+                value="version erstellen speichern"
+                onSelect={() => runMapAction(() => handlersRef.current.onCreateVersion?.())}
+              >
+                <IconDeviceFloppy className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Version erstellen</span>
+              </CommandItem>
+              )}
+              {available.has("onExportExcel") && (
+                <CommandItem
+                value="export excel csv"
+                onSelect={() => runMapAction(() => handlersRef.current.onExportExcel?.())}
+              >
+                <IconFileExport className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Als Excel exportieren</span>
+              </CommandItem>
+              )}
+              {available.has("onOpenConflicts") && (
+                <CommandItem
+                value="konflikte lösen überschneidungen"
+                onSelect={() => runMapAction(() => handlersRef.current.onOpenConflicts?.())}
+              >
+                <IconLayersSubtract className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Konflikte lösen</span>
+              </CommandItem>
+              )}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
 
         {isPlzQuery && plzMatches.length > 0 && (
           <>
