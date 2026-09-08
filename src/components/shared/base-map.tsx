@@ -321,12 +321,9 @@ function MapLegend({
   );
 }
 
-import type { FeatureCollection, Polygon, MultiPolygon } from "geojson";
-
 import { indexBounds } from "@/lib/hooks/use-postal-code-index";
 
 const MapInner = memo(function MapInner({
-  data,
   index,
   layerId,
   granularity,
@@ -543,7 +540,7 @@ const MapInner = memo(function MapInner({
   const mapDataError = statesDataError ?? countryShapesError;
 
   // Performance optimizations with memoized computations
-  const optimizations = useMapOptimizations({ data, index, statesData });
+  const optimizations = useMapOptimizations({ index, statesData });
 
   // Map interactions (drawing tools, TerraDraw, click handler)
   const interactions = useMapInteractions({
@@ -568,13 +565,13 @@ const MapInner = memo(function MapInner({
   const hoverTooltipRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<MapLibreOverlay | null>(null);
   const { deckLayers, onHover, clearHover, unassignedCount } = useDeckLayers({
-    data,
+    index,
+    countries: countries ?? (country ? [country] : undefined),
     statesData,
     countryShapesData,
     layers,
     activeLayerId,
     previewPostalCode,
-    featureIndex: optimizations.featureIndex,
     isCursorMode: interactions.isCursorMode,
     mapCanvasRef,
     country,
@@ -1230,7 +1227,6 @@ MapInner.displayName = "MapInner";
 
 // Main BaseMap component with react-map-gl + deck.gl
 const BaseMapComponent = ({
-  data,
   index,
   layerId,
   center,
@@ -1377,6 +1373,11 @@ const BaseMapComponent = ({
             onMove={handleMove}
             mapStyle={currentMapStyle}
             style={MAP_STYLE}
+            // The screenshot and layer-preview features read the map back with
+            // canvas.toDataURL(). WebGL discards the drawing buffer after each
+            // frame unless asked not to, so without this they produce a blank
+            // image.
+            canvasContextAttributes={{ preserveDrawingBuffer: true }}
             dragRotate={false}
             fadeDuration={0}
             onContextMenu={(event) => event.preventDefault()}
@@ -1384,7 +1385,6 @@ const BaseMapComponent = ({
             maxZoom={18}
           >
             <MapInner
-              data={data}
               index={index}
               layerId={layerId}
               country={country}

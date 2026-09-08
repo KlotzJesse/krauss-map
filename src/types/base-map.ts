@@ -6,8 +6,8 @@ import type { VersionSummary, ChangeSummary } from "@/lib/schema/schema";
 import type { Layer } from "@/lib/types/area-types";
 
 export interface BaseMapProps {
-  data: FeatureCollection<Polygon | MultiPolygon>;
-  /** Codes, representative points, areas and bounds — everything but outlines. */
+  /** Codes, representative points, areas and bounds. The outlines themselves
+   *  are streamed as vector tiles and never held in one payload. */
   index: PostalCodeIndex;
   layerId: string;
   center?: [number, number];

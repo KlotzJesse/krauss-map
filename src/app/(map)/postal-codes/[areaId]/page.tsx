@@ -113,9 +113,9 @@ export default async function PostalCodesPage({
       ))}
       {areaCountries.map((countryCode) => (
         <link
-          key={`geodata-${countryCode}`}
+          key={`postal-index-${countryCode}`}
           rel="preload"
-          href={`/api/geodata/${resolveGranularityForCountry(granularity, countryCode)}?country=${countryCode}`}
+          href={`/api/postal-codes/index/${resolveGranularityForCountry(granularity, countryCode)}?country=${countryCode}`}
           as="fetch"
           crossOrigin="anonymous"
         />

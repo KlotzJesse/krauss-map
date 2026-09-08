@@ -1,5 +1,10 @@
-import type { PickingInfo } from "@deck.gl/core";
+import type {
+  Layer as DeckLayer,
+  LayerExtension,
+  PickingInfo,
+} from "@deck.gl/core";
 import { FillStyleExtension } from "@deck.gl/extensions";
+import { MVTLayer } from "@deck.gl/geo-layers";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import type { MapLibreOverlay } from "@deck.gl/maplibre";
 import type {
@@ -11,9 +16,9 @@ import type {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject, RefObject } from "react";
 
+import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { Layer } from "@/lib/types/area-types";
 import {
-  EMPTY_FEATURE_COLLECTION,
   compositeKeyToStoredCode,
   extractRawCode,
   getFeatureCode,
@@ -258,7 +263,7 @@ function buildResolvedStyleMap(
   layers: Layer[] | undefined,
   activeLayerId: number | null | undefined,
   country?: string,
-  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>
+  featureIndex?: ReadonlyMap<string, unknown>
 ): {
   map: Map<string, ResolvedStyle>;
   version: string;
@@ -342,52 +347,16 @@ function buildResolvedStyleMap(
   };
 }
 
-/**
- * Pre-filter a FeatureCollection to only features present in the resolved style map.
- * Uses featureIndex for O(k) lookup when available.
- */
-function filterAreaFeatures(
-  data: FeatureCollection<Polygon | MultiPolygon>,
-  codeSet: Set<string>,
-  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>
-): FeatureCollection<Polygon | MultiPolygon> {
-  if (codeSet.size === 0) {
-    return EMPTY_FEATURE_COLLECTION as FeatureCollection<
-      Polygon | MultiPolygon
-    >;
-  }
-
-  const features: Feature<Polygon | MultiPolygon>[] = [];
-
-  if (featureIndex) {
-    for (const code of codeSet) {
-      const fts = featureIndex.get(code);
-      if (fts) {
-        for (const ft of fts) {
-          features.push(ft);
-        }
-      }
-    }
-  } else {
-    for (const feature of data.features) {
-      const code = getFeatureCode(feature);
-      if (code && codeSet.has(code)) {
-        features.push(feature);
-      }
-    }
-  }
-
-  return { type: "FeatureCollection", features };
-}
-
 interface UseDeckLayersProps {
-  data: FeatureCollection<Polygon | MultiPolygon>;
+  /** Codes, representative points and bounds. Replaces the country geometry. */
+  index: PostalCodeIndex;
+  /** Countries whose tiles should be fetched, in the order they were loaded. */
+  countries?: string[];
   statesData?: FeatureCollection<Polygon | MultiPolygon> | null;
   countryShapesData?: FeatureCollection<Polygon | MultiPolygon> | null;
   layers?: Layer[];
   activeLayerId?: number | null;
   previewPostalCode?: string | null;
-  featureIndex?: Map<string, Feature<Polygon | MultiPolygon>[]>;
   isCursorMode: boolean;
   mapCanvasRef: RefObject<HTMLCanvasElement | null>;
   /** Country code for the area — used to prefix raw postal codes for DACH matching. */
@@ -470,14 +439,14 @@ function loadPostalMeta(
 }
 
 export function useDeckLayers({
-  data,
+  index,
+  countries,
   granularity,
   statesData,
   countryShapesData,
   layers,
   activeLayerId,
   previewPostalCode,
-  featureIndex,
   isCursorMode,
   mapCanvasRef,
   country,
@@ -492,7 +461,7 @@ export function useDeckLayers({
   const hoveredCodeRef = useRef<string | null>(null);
   // Always-current deckLayers reference for direct overlay updates in onHover.
   // Initialized empty; updated each render after deckLayers useMemo runs.
-  const deckLayersRef = useRef<GeoJsonLayer[]>([]);
+  const deckLayersRef = useRef<DeckLayer[]>([]);
 
   // Stripe pattern texture atlas — created once per browser session (client-only)
   const stripeAtlas = useMemo(() => createStripePatternAtlas(), []);
@@ -535,7 +504,7 @@ export function useDeckLayers({
   // First-render sync seed — populates refs immediately so deck.gl has styles
   // before the worker responds. Also used as SSR/Worker-unavailable fallback.
   const initialResult = useMemo(() => {
-    const result = buildResolvedStyleMap(layers, activeLayerId, country, featureIndex);
+    const result = buildResolvedStyleMap(layers, activeLayerId, country, index.pos);
     resolvedStylesRef.current = result.map;
     return stabilizeSets(result);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -569,8 +538,8 @@ export function useDeckLayers({
 
   // Dispatch to worker on input changes; fall back to sync when worker unavailable
   useEffect(() => {
-    const featureIndexKeys = featureIndex
-      ? [...featureIndex.keys()]
+    const featureIndexKeys = index.keys.length > 0
+      ? index.keys
       : ([] as string[]);
 
     // Apply a synchronous style pass first so add/remove interactions paint instantly.
@@ -578,7 +547,7 @@ export function useDeckLayers({
       layers,
       activeLayerId,
       country,
-      featureIndex
+      index.pos
     );
     resolvedStylesRef.current = syncResult.map;
     const syncStable = stabilizeSets(syncResult);
@@ -638,7 +607,7 @@ export function useDeckLayers({
       country,
       featureIndexKeys,
     });
-  }, [layers, activeLayerId, country, featureIndex, stabilizeSets]);
+  }, [layers, activeLayerId, country, index, stabilizeSets]);
 
   const resolvedStylesVersion = resolvedStylesState.version;
   const multiLayerCodes = resolvedStylesState.multiLayerCodes;
@@ -654,7 +623,7 @@ export function useDeckLayers({
     for (const layer of layers) {
       if (layer.isVisible !== "true") continue;
       for (const pc of layer.postalCodes ?? []) {
-        codes.add(resolveFeatureKey(pc.postalCode, country, featureIndex));
+        codes.add(resolveFeatureKey(pc.postalCode, country, index.pos));
       }
     }
     const prev = prevResolvedCodeSetRef.current;
@@ -663,7 +632,7 @@ export function useDeckLayers({
     }
     prevResolvedCodeSetRef.current = codes;
     return codes;
-  }, [layers, country, featureIndex]);
+  }, [layers, country, index]);
 
   // All assigned codes (across all layers, regardless of visibility) — used for unassigned overlay.
   const prevAllAssignedRef = useRef<Set<string>>(new Set());
@@ -672,7 +641,7 @@ export function useDeckLayers({
     if (!layers) return codes;
     for (const layer of layers) {
       for (const pc of layer.postalCodes ?? []) {
-        codes.add(resolveFeatureKey(pc.postalCode, country, featureIndex));
+        codes.add(resolveFeatureKey(pc.postalCode, country, index.pos));
       }
     }
     const prev = prevAllAssignedRef.current;
@@ -681,7 +650,7 @@ export function useDeckLayers({
     }
     prevAllAssignedRef.current = codes;
     return codes;
-  }, [layers, country, featureIndex]);
+  }, [layers, country, index]);
 
   // Countries that have at least one assigned code (extracted from composite "CC:code" keys).
   const countriesInUse = useMemo(() => {
@@ -693,48 +662,27 @@ export function useDeckLayers({
     return used;
   }, [allAssignedCodeSet]);
 
-  // Composite keys of features whose country is not represented in any layer.
-  // Uses featureIndex keys (unique codes) instead of iterating all features — O(unique codes) vs O(features).
+  // Composite keys whose country is not represented in any layer.
   const inactiveCountryCodes = useMemo(() => {
-    if (countriesInUse.size === 0 || !featureIndex) return new Set<string>();
+    if (countriesInUse.size === 0) return new Set<string>();
     const inactive = new Set<string>();
-    for (const code of featureIndex.keys()) {
+    for (const code of index.keys) {
       const c = code.split(":")[0];
       if (c && !countriesInUse.has(c)) inactive.add(code);
     }
     return inactive;
-  }, [countriesInUse, featureIndex]);
+  }, [countriesInUse, index]);
 
-  const inactiveCountryFeaturesData = useMemo(
-    () =>
-      inactiveCountryCodes.size > 0
-        ? filterAreaFeatures(data, inactiveCountryCodes, featureIndex)
-        : (EMPTY_FEATURE_COLLECTION as FeatureCollection<
-            Polygon | MultiPolygon
-          >),
-    [inactiveCountryCodes, data, featureIndex]
-  );
-
-  // Unassigned feature data — postal codes not in any layer, excluding inactive-country codes.
-  // Uses featureIndex keys instead of iterating all features to collect unique codes.
-  const unassignedFeaturesData = useMemo(() => {
-    if (!showUnassigned || !featureIndex)
-      return EMPTY_FEATURE_COLLECTION as FeatureCollection<
-        Polygon | MultiPolygon
-      >;
-    const unassignedCodes = new Set<string>();
-    for (const code of featureIndex.keys()) {
+  // Codes not assigned to any layer, excluding codes from inactive countries.
+  const unassignedCodes = useMemo(() => {
+    if (!showUnassigned) return new Set<string>();
+    const codes = new Set<string>();
+    for (const code of index.keys) {
       if (!allAssignedCodeSet.has(code) && !inactiveCountryCodes.has(code))
-        unassignedCodes.add(code);
+        codes.add(code);
     }
-    return filterAreaFeatures(data, unassignedCodes, featureIndex);
-  }, [
-    showUnassigned,
-    data,
-    allAssignedCodeSet,
-    inactiveCountryCodes,
-    featureIndex,
-  ]);
+    return codes;
+  }, [showUnassigned, index, allAssignedCodeSet, inactiveCountryCodes]);
 
   // Single-layer code set (codes in exactly one visible layer)
   const singleLayerCodeSet = useMemo(() => {
@@ -747,18 +695,7 @@ export function useDeckLayers({
     return codes;
   }, [resolvedCodeSet, multiLayerCodes]);
 
-  // Pre-filtered area features split by single vs multi-layer membership
-  const singleLayerFeaturesData = useMemo(
-    () => filterAreaFeatures(data, singleLayerCodeSet, featureIndex),
-    [data, singleLayerCodeSet, featureIndex]
-  );
-
-  const multiLayerFeaturesData = useMemo(
-    () => filterAreaFeatures(data, multiLayerCodes, featureIndex),
-    [data, multiLayerCodes, featureIndex]
-  );
-
-  const hasMultiLayerCodes = multiLayerFeaturesData.features.length > 0;
+  const hasMultiLayerCodes = multiLayerCodes.size > 0;
   const hasThreePlusLayerCodes = useMemo(() => {
     if (!hasMultiLayerCodes) {
       return false;
@@ -772,36 +709,25 @@ export function useDeckLayers({
     return false;
   }, [hasMultiLayerCodes, multiLayerCodes, resolvedStylesVersion]);
 
-  // Preview feature data — try composite key lookup (country:code) for DACH dedup
-  const previewData = useMemo(() => {
-    if (!previewPostalCode || !featureIndex) {
-      return EMPTY_FEATURE_COLLECTION as FeatureCollection<
-        Polygon | MultiPolygon
-      >;
+  // Preview code — resolved to the canonical composite key so the tile filter
+  // can match it. Falls back to searching the DACH prefixes for a raw code.
+  const previewCodes = useMemo(() => {
+    if (!previewPostalCode) {
+      return null;
     }
-    // Resolve stored/raw preview code to canonical composite key first.
-    const previewKey = resolveFeatureKey(previewPostalCode, country, featureIndex);
-    let features = featureIndex.get(previewKey);
-    if (!features) {
-      const rawCode = extractRawCode(previewPostalCode);
-      // Fallback: search all country prefixes for the raw code
-      for (const cc of ["DE", "AT", "CH"]) {
-        features = featureIndex.get(`${cc}:${rawCode}`);
-        if (features) {
-          break;
-        }
+    const previewKey = resolveFeatureKey(previewPostalCode, country, index.pos);
+    if (index.pos.has(previewKey)) {
+      return new Set([previewKey]);
+    }
+    const rawCode = extractRawCode(previewPostalCode);
+    for (const cc of ["DE", "AT", "CH"]) {
+      const key = `${cc}:${rawCode}`;
+      if (index.pos.has(key)) {
+        return new Set([key]);
       }
     }
-    if (!features || features.length === 0) {
-      return EMPTY_FEATURE_COLLECTION as FeatureCollection<
-        Polygon | MultiPolygon
-      >;
-    }
-    return {
-      type: "FeatureCollection" as const,
-      features,
-    };
-  }, [previewPostalCode, featureIndex, country]);
+    return null;
+  }, [previewPostalCode, index, country]);
 
   // Handle hover from deck.gl picking — cursor set via direct DOM mutation (no React re-render)
   // hoverTooltip is managed via DOM ref to avoid MapInner re-renders on every mouse move
@@ -1148,291 +1074,138 @@ export function useDeckLayers({
     }
     const normalized = new Set<string>();
     for (const code of highlightedCodes) {
-      normalized.add(resolveFeatureKey(code, country, featureIndex));
+      normalized.add(resolveFeatureKey(code, country, index.pos));
     }
     return normalized;
-  }, [highlightedCodes, country, featureIndex]);
+  }, [highlightedCodes, country, index]);
 
-  const highlightData = useMemo(
-    () =>
-      normalizedHighlightedCodes && normalizedHighlightedCodes.size > 0
-        ? filterAreaFeatures(data, normalizedHighlightedCodes, featureIndex)
-        : (EMPTY_FEATURE_COLLECTION as FeatureCollection<
-            Polygon | MultiPolygon
-          >),
-    [normalizedHighlightedCodes, data, featureIndex]
-  );
+  /**
+   * URL template for the postal-code vector tiles. One request per visible
+   * tile instead of one request for the whole country: a country-wide view
+   * costs 185KB against 867KB for the equivalent TopoJSON, and the tiles that
+   * are on screen paint as they arrive rather than all at once at the end.
+   */
+  const tileUrl = useMemo(() => {
+    const list = countries && countries.length > 0 ? countries : ["DE"];
+    return `/api/tiles/${granularity ?? "5digit"}/{z}/{x}/{y}?country=${list.join(",")}`;
+  }, [countries, granularity]);
 
-  // Build all deck.gl layers
-  const deckLayers = useMemo(() => {
-    const result: GeoJsonLayer[] = [];
+  /**
+   * Build the postal-code layer stack for a single tile.
+   *
+   * Identical to the stack this used to build over the whole country, except
+   * that the six code sets are applied to the tile's features here rather than
+   * being used to pre-split the country into six FeatureCollections. Features
+   * arriving from MVT are ordinary GeoJSON Features carrying `code` and
+   * `country`, so every accessor — including the FillStyleExtension pattern
+   * accessor that draws the two-colour striping — works unchanged.
+   */
+  const renderTileLayers = useCallback(
+    (props: {
+      id: string;
+      data: unknown;
+      modelMatrix?: unknown;
+      coordinateOrigin?: unknown;
+      coordinateSystem?: unknown;
+      extensions?: LayerExtension[];
+    }) => {
+      const features = (props.data ?? []) as Feature<Polygon | MultiPolygon>[];
+      if (features.length === 0) {
+        return null;
+      }
 
-    if (stateBoundariesLayer) {
-      result.push(stateBoundariesLayer);
-    }
+      // MVT tiles carry tile-local coordinates, so MVTLayer hands the sublayers
+      // the transform that places them on the map, plus a ClipExtension that
+      // trims the tile's overlap buffer. Both have to be passed through: without
+      // the transform nothing lands in the right place, and without the clip the
+      // overlap is drawn twice, which shows up as darker seams along the tile
+      // edges wherever fills are semi-transparent.
+      const tileProps = {
+        modelMatrix: props.modelMatrix,
+        coordinateOrigin: props.coordinateOrigin,
+        coordinateSystem: props.coordinateSystem,
+        extensions: props.extensions,
+      } as Record<string, unknown>;
 
-    if (countryBordersLayer) {
-      result.push(countryBordersLayer);
-    }
+      const pick = (codes: Set<string>) => {
+        if (codes.size === 0) {
+          return [];
+        }
+        const out: Feature<Polygon | MultiPolygon>[] = [];
+        for (const feature of features) {
+          const code = getFeatureCode(feature);
+          if (code && codes.has(code)) {
+            out.push(feature);
+          }
+        }
+        return out;
+      };
 
-    // Base postal code layer — THE ONLY pickable layer
-    result.push(
-      new GeoJsonLayer({
-        id: "postal-codes",
-        data,
-        beforeId,
-        filled: true,
-        stroked: true,
-        getFillColor: [98, 125, 152, 25],
-        getLineColor: [37, 99, 235, 13],
-        getLineWidth: 1,
-        lineWidthUnits: "pixels" as const,
-        lineJointRounded: true,
-        lineCapRounded: true,
-        pickable: isCursorMode,
-        autoHighlight: false,
-      })
-    );
+      const singleLayerFeatures = pick(singleLayerCodeSet);
+      const multiLayerFeatures = pick(multiLayerCodes);
+      const result: DeckLayer[] = [];
 
-    // Inactive country overlay — codes from countries not used in any layer (shown grey)
-    if (inactiveCountryCodes.size > 0) {
+      // Base postal code layer — THE ONLY pickable layer
       result.push(
         new GeoJsonLayer({
-          id: "inactive-country-overlay",
-          data: inactiveCountryFeaturesData,
-          beforeId,
+          ...tileProps,
+          id: `${props.id}-base`,
+          data: features,
           filled: true,
           stroked: true,
-          getFillColor: [160, 160, 160, 25],
-          getLineColor: [140, 140, 140, 60],
-          getLineWidth: 0.5,
+          getFillColor: [98, 125, 152, 25],
+          getLineColor: [37, 99, 235, 13],
+          getLineWidth: 1,
           lineWidthUnits: "pixels" as const,
-          pickable: false,
-        })
-      );
-    }
-
-    // Unassigned PLZ overlay — postal codes not assigned to any layer
-    if (showUnassigned) {
-      result.push(
-        new GeoJsonLayer({
-          id: "unassigned-overlay",
-          data: unassignedFeaturesData,
-          beforeId,
-          filled: true,
-          stroked: true,
-          getFillColor: [239, 68, 68, 55],
-          getLineColor: [220, 38, 38, 160],
-          getLineWidth: 1.5,
-          lineWidthUnits: "pixels" as const,
-          pickable: false,
-        })
-      );
-    }
-
-    // Solid area overlay — postal codes in exactly one visible layer
-    result.push(
-      new GeoJsonLayer({
-        id: "area-layers-solid",
-        data: singleLayerFeaturesData,
-        beforeId,
-        filled: true,
-        stroked: true,
-        getFillColor: (f) => {
-          const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-          return code
-            ? (resolvedStylesRef.current.get(code)?.fillColor ?? [0, 0, 0, 0])
-            : [0, 0, 0, 0];
-        },
-        getLineColor: (f) => {
-          const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-          return code
-            ? (resolvedStylesRef.current.get(code)?.lineColor ?? [0, 0, 0, 0])
-            : [0, 0, 0, 0];
-        },
-        getLineWidth: (f) => {
-          const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-          return code ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5) : 1.5;
-        },
-        lineWidthUnits: "pixels" as const,
-        pickable: false,
-        updateTriggers: {
-          getFillColor: [resolvedStylesVersion],
-          getLineColor: [resolvedStylesVersion],
-          getLineWidth: [resolvedStylesVersion],
-        },
-      })
-    );
-
-    // Stripe area overlay — postal codes shared by 2+ visible layers.
-    // Rendered as two passes:
-    //   base: solid primary color fill (active/first layer's color)
-    //   top:  secondary color through a stripe/crosshatch pattern on top
-    // Together these produce true alternating two-color stripes.
-    if (stripeAtlas) {
-      // Base pass — solid fill with primary (active/first) layer color
-      result.push(
-        new GeoJsonLayer({
-          id: "area-layers-stripe-base",
-          data: multiLayerFeaturesData,
-          beforeId,
-          filled: true,
-          stroked: true,
-          getFillColor: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code
-              ? (resolvedStylesRef.current.get(code)?.primaryFillColor ?? [0, 0, 0, 0])
-              : [0, 0, 0, 0];
-          },
-          getLineColor: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code
-              ? (resolvedStylesRef.current.get(code)?.lineColor ?? [0, 0, 0, 0])
-              : [0, 0, 0, 0];
-          },
-          getLineWidth: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5) : 1.5;
-          },
-          lineWidthUnits: "pixels" as const,
-          pickable: false,
-          updateTriggers: {
-            getFillColor: [resolvedStylesVersion],
-            getLineColor: [resolvedStylesVersion],
-            getLineWidth: [resolvedStylesVersion],
-          },
-        })
-      );
-      // Top pass — secondary color masked through stripe/crosshatch pattern, no stroke (base handles it)
-      result.push(
-        new GeoJsonLayer({
-          id: "area-layers-stripe-top",
-          data: multiLayerFeaturesData,
-          beforeId,
-          filled: true,
-          stroked: false,
-          getFillColor: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code
-              ? (resolvedStylesRef.current.get(code)?.secondaryFillColor ?? [0, 0, 0, 0])
-              : [0, 0, 0, 0];
-          },
-          lineWidthUnits: "pixels" as const,
-          pickable: false,
-          extensions: [new FillStyleExtension({ pattern: true })],
-          fillPatternAtlas: stripeAtlas.canvas,
-          fillPatternMapping: stripeAtlas.mapping,
-          getFillPattern: (f: unknown) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code && sameColorCodes.has(code) ? "cross" : "stripe";
-          },
-          getFillPatternScale: 2500,
-          getFillPatternOffset: [0, 0],
-          updateTriggers: {
-            getFillColor: [resolvedStylesVersion],
-            getFillPattern: [resolvedStylesVersion],
-          },
+          lineJointRounded: true,
+          lineCapRounded: true,
+          pickable: isCursorMode,
+          autoHighlight: false,
         })
       );
 
-      // Duplicate outline — multi-color outline for postal codes in 2+ layers
-      // Creates alternating color dashes by rendering multiple thin strokes with offset opacity
-      // First color with full opacity
-      result.push(
-        new GeoJsonLayer({
-          id: "duplicate-outline-primary",
-          data: multiLayerFeaturesData,
-          beforeId,
-          filled: false,
-          stroked: true,
-          getLineColor: (f) => {
-            const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            if (!code) return [0, 0, 0, 0];
-            const style = resolvedStylesRef.current.get(code);
-            if (!style || style.layerLineColors.length === 0) {
-              return [0, 0, 0, 0];
-            }
-            const [r, g, b] = style.layerLineColors[0];
-            return [r, g, b, 200] as [number, number, number, number];
-          },
-          getLineWidth: 2.5,
-          lineWidthUnits: "pixels" as const,
-          lineCap: "round" as const,
-          lineJoint: "round" as const,
-          pickable: false,
-          updateTriggers: {
-            getLineColor: [resolvedStylesVersion],
-          },
-        })
-      );
-
-      // Secondary color with semi-transparency for dashed effect
-      if (hasMultiLayerCodes) {
+      // Inactive country overlay — codes from countries not used in any layer (shown grey)
+      if (inactiveCountryCodes.size > 0) {
         result.push(
           new GeoJsonLayer({
-            id: "duplicate-outline-secondary",
-            data: multiLayerFeaturesData,
-            beforeId,
-            filled: false,
+            ...tileProps,
+            id: `${props.id}-inactive-country`,
+            data: pick(inactiveCountryCodes),
+            filled: true,
             stroked: true,
-            getLineColor: (f) => {
-              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-              if (!code) return [0, 0, 0, 0];
-              const style = resolvedStylesRef.current.get(code);
-              if (!style || style.layerLineColors.length < 2) {
-                return [0, 0, 0, 0];
-              }
-              const [r, g, b] = style.layerLineColors[1];
-              return [r, g, b, 110] as [number, number, number, number];
-            },
+            getFillColor: [160, 160, 160, 25],
+            getLineColor: [140, 140, 140, 60],
+            getLineWidth: 0.5,
+            lineWidthUnits: "pixels" as const,
+            pickable: false,
+          })
+        );
+      }
+
+      // Unassigned PLZ overlay — postal codes not assigned to any layer
+      if (showUnassigned) {
+        result.push(
+          new GeoJsonLayer({
+            ...tileProps,
+            id: `${props.id}-unassigned`,
+            data: pick(unassignedCodes),
+            filled: true,
+            stroked: true,
+            getFillColor: [239, 68, 68, 55],
+            getLineColor: [220, 38, 38, 160],
             getLineWidth: 1.5,
             lineWidthUnits: "pixels" as const,
-            lineCap: "round" as const,
-            lineJoint: "round" as const,
             pickable: false,
-            updateTriggers: {
-              getLineColor: [resolvedStylesVersion],
-            },
           })
         );
       }
 
-      // Tertiary outline only when there are actual 3+ layer overlaps
-      if (hasThreePlusLayerCodes) {
-        result.push(
-          new GeoJsonLayer({
-            id: "duplicate-outline-tertiary",
-            data: multiLayerFeaturesData,
-            beforeId,
-            filled: false,
-            stroked: true,
-            getLineColor: (f) => {
-              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-              if (!code) return [0, 0, 0, 0];
-              const style = resolvedStylesRef.current.get(code);
-              if (!style || style.layerLineColors.length < 3) {
-                return [0, 0, 0, 0];
-              }
-              return [120, 120, 120, 90] as [number, number, number, number];
-            },
-            getLineWidth: 0.8,
-            lineWidthUnits: "pixels" as const,
-            lineCap: "butt" as const,
-            lineJoint: "bevel" as const,
-            pickable: false,
-            updateTriggers: {
-              getLineColor: [resolvedStylesVersion],
-            },
-          })
-        );
-      }
-    } else {
-      // Fallback when canvas is unavailable (SSR): solid blended fill with stroke
+      // Solid area overlay — postal codes in exactly one visible layer
       result.push(
         new GeoJsonLayer({
-          id: "area-layers-stripe-base",
-          data: multiLayerFeaturesData,
-          beforeId,
+          ...tileProps,
+          id: `${props.id}-solid`,
+          data: singleLayerFeatures,
           filled: true,
           stroked: true,
           getFillColor: (f) => {
@@ -1449,84 +1222,319 @@ export function useDeckLayers({
           },
           getLineWidth: (f) => {
             const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
-            return code ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5) : 1.5;
+            return code
+              ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5)
+              : 1.5;
           },
           lineWidthUnits: "pixels" as const,
           pickable: false,
-          updateTriggers: {
-            getFillColor: [resolvedStylesVersion],
-            getLineColor: [resolvedStylesVersion],
-            getLineWidth: [resolvedStylesVersion],
-          },
         })
       );
+
+      // Stripe area overlay — postal codes shared by 2+ visible layers.
+      // Rendered as two passes:
+      //   base: solid primary color fill (active/first layer's color)
+      //   top:  secondary color through a stripe/crosshatch pattern on top
+      // Together these produce true alternating two-color stripes.
+      if (stripeAtlas) {
+        // Base pass — solid fill with primary (active/first) layer color
+        result.push(
+          new GeoJsonLayer({
+            ...tileProps,
+            id: `${props.id}-stripe-base`,
+            data: multiLayerFeatures,
+            filled: true,
+            stroked: true,
+            getFillColor: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              return code
+                ? (resolvedStylesRef.current.get(code)?.primaryFillColor ?? [
+                    0, 0, 0, 0,
+                  ])
+                : [0, 0, 0, 0];
+            },
+            getLineColor: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              return code
+                ? (resolvedStylesRef.current.get(code)?.lineColor ?? [
+                    0, 0, 0, 0,
+                  ])
+                : [0, 0, 0, 0];
+            },
+            getLineWidth: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              return code
+                ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5)
+                : 1.5;
+            },
+            lineWidthUnits: "pixels" as const,
+            pickable: false,
+          })
+        );
+        // Top pass — secondary color masked through stripe/crosshatch pattern, no stroke (base handles it)
+        result.push(
+          new GeoJsonLayer({
+            ...tileProps,
+            id: `${props.id}-stripe-top`,
+            data: multiLayerFeatures,
+            filled: true,
+            stroked: false,
+            getFillColor: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              return code
+                ? (resolvedStylesRef.current.get(code)?.secondaryFillColor ?? [
+                    0, 0, 0, 0,
+                  ])
+                : [0, 0, 0, 0];
+            },
+            lineWidthUnits: "pixels" as const,
+            pickable: false,
+            extensions: [
+              ...(props.extensions ?? []),
+              new FillStyleExtension({ pattern: true }),
+            ],
+            fillPatternAtlas: stripeAtlas.canvas,
+            fillPatternMapping: stripeAtlas.mapping,
+            getFillPattern: (f: unknown) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              return code && sameColorCodes.has(code) ? "cross" : "stripe";
+            },
+            getFillPatternScale: 2500,
+            getFillPatternOffset: [0, 0],
+          })
+        );
+
+        // Duplicate outline — multi-color outline for postal codes in 2+ layers
+        // Creates alternating color dashes by rendering multiple thin strokes with offset opacity
+        // First color with full opacity
+        result.push(
+          new GeoJsonLayer({
+            ...tileProps,
+            id: `${props.id}-duplicate-primary`,
+            data: multiLayerFeatures,
+            filled: false,
+            stroked: true,
+            getLineColor: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              if (!code) return [0, 0, 0, 0];
+              const style = resolvedStylesRef.current.get(code);
+              if (!style || style.layerLineColors.length === 0) {
+                return [0, 0, 0, 0];
+              }
+              const [r, g, b] = style.layerLineColors[0];
+              return [r, g, b, 200] as [number, number, number, number];
+            },
+            getLineWidth: 2.5,
+            lineWidthUnits: "pixels" as const,
+            lineCap: "round" as const,
+            lineJoint: "round" as const,
+            pickable: false,
+          })
+        );
+
+        // Secondary color with semi-transparency for dashed effect
+        if (hasMultiLayerCodes) {
+          result.push(
+            new GeoJsonLayer({
+              ...tileProps,
+              id: `${props.id}-duplicate-secondary`,
+              data: multiLayerFeatures,
+              filled: false,
+              stroked: true,
+              getLineColor: (f) => {
+                const code = getFeatureCode(
+                  f as Feature<Polygon | MultiPolygon>
+                );
+                if (!code) return [0, 0, 0, 0];
+                const style = resolvedStylesRef.current.get(code);
+                if (!style || style.layerLineColors.length < 2) {
+                  return [0, 0, 0, 0];
+                }
+                const [r, g, b] = style.layerLineColors[1];
+                return [r, g, b, 110] as [number, number, number, number];
+              },
+              getLineWidth: 1.5,
+              lineWidthUnits: "pixels" as const,
+              lineCap: "round" as const,
+              lineJoint: "round" as const,
+              pickable: false,
+            })
+          );
+        }
+
+        // Tertiary outline only when there are actual 3+ layer overlaps
+        if (hasThreePlusLayerCodes) {
+          result.push(
+            new GeoJsonLayer({
+              ...tileProps,
+              id: `${props.id}-duplicate-tertiary`,
+              data: multiLayerFeatures,
+              filled: false,
+              stroked: true,
+              getLineColor: (f) => {
+                const code = getFeatureCode(
+                  f as Feature<Polygon | MultiPolygon>
+                );
+                if (!code) return [0, 0, 0, 0];
+                const style = resolvedStylesRef.current.get(code);
+                if (!style || style.layerLineColors.length < 3) {
+                  return [0, 0, 0, 0];
+                }
+                return [120, 120, 120, 90] as [number, number, number, number];
+              },
+              getLineWidth: 0.8,
+              lineWidthUnits: "pixels" as const,
+              lineCap: "butt" as const,
+              lineJoint: "bevel" as const,
+              pickable: false,
+            })
+          );
+        }
+      } else {
+        // Fallback when canvas is unavailable (SSR): solid blended fill with stroke
+        result.push(
+          new GeoJsonLayer({
+            ...tileProps,
+            id: `${props.id}-stripe-base`,
+            data: multiLayerFeatures,
+            filled: true,
+            stroked: true,
+            getFillColor: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              return code
+                ? (resolvedStylesRef.current.get(code)?.fillColor ?? [
+                    0, 0, 0, 0,
+                  ])
+                : [0, 0, 0, 0];
+            },
+            getLineColor: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              return code
+                ? (resolvedStylesRef.current.get(code)?.lineColor ?? [
+                    0, 0, 0, 0,
+                  ])
+                : [0, 0, 0, 0];
+            },
+            getLineWidth: (f) => {
+              const code = getFeatureCode(f as Feature<Polygon | MultiPolygon>);
+              return code
+                ? (resolvedStylesRef.current.get(code)?.lineWidth ?? 1.5)
+                : 1.5;
+            },
+            lineWidthUnits: "pixels" as const,
+            pickable: false,
+          })
+        );
+      }
+
+      // Preview outline for a single postal code
+      if (previewCodes) {
+        result.push(
+          new GeoJsonLayer({
+            ...tileProps,
+            id: `${props.id}-preview`,
+            data: pick(previewCodes),
+            filled: true,
+            stroked: true,
+            getFillColor: [37, 99, 235, 80],
+            getLineColor: [37, 99, 235, 200],
+            getLineWidth: 2,
+            lineWidthUnits: "pixels" as const,
+            pickable: false,
+          })
+        );
+      }
+
+      // Conflict-highlight outline layer
+      if (normalizedHighlightedCodes && normalizedHighlightedCodes.size > 0) {
+        result.push(
+          new GeoJsonLayer({
+            ...tileProps,
+            id: `${props.id}-conflict`,
+            data: pick(normalizedHighlightedCodes),
+            filled: true,
+            stroked: true,
+            getFillColor: [255, 165, 0, 50],
+            getLineColor: [255, 165, 0, 255],
+            getLineWidth: 3,
+            lineWidthUnits: "pixels" as const,
+            pickable: false,
+          })
+        );
+      }
+
+      return result;
+    },
+    [
+      isCursorMode,
+      inactiveCountryCodes,
+      showUnassigned,
+      unassignedCodes,
+      singleLayerCodeSet,
+      multiLayerCodes,
+      sameColorCodes,
+      stripeAtlas,
+      hasMultiLayerCodes,
+      hasThreePlusLayerCodes,
+      previewCodes,
+      normalizedHighlightedCodes,
+      // Styles live in a ref so that a colour change does not rebuild the tile
+      // cache, but the accessors still have to be re-evaluated when they change.
+      resolvedStylesVersion,
+    ]
+  );
+
+  const deckLayers = useMemo(() => {
+    const result: DeckLayer[] = [];
+
+    if (stateBoundariesLayer) {
+      result.push(stateBoundariesLayer);
     }
 
-    // Preview layer — always present to avoid MapLibre add/remove churn
+    if (countryBordersLayer) {
+      result.push(countryBordersLayer);
+    }
+
     result.push(
-      new GeoJsonLayer({
-        id: "preview-layer",
-        data: previewData,
+      new MVTLayer({
+        id: "postal-codes",
+        data: tileUrl,
         beforeId,
-        filled: true,
-        stroked: true,
-        getFillColor: [37, 99, 235, 80],
-        getLineColor: [37, 99, 235, 200],
-        getLineWidth: 2,
-        lineWidthUnits: "pixels" as const,
-        pickable: false,
+        // Keep GeoJSON Features rather than deck.gl's packed binary form: every
+        // fill, line and pattern accessor above reads feature properties, and
+        // picking hands the hovered feature straight to the tooltip.
+        binary: false,
+        // The tile route stops at z12; past that deck.gl scales the deepest
+        // tile it has instead of asking for one that does not exist.
+        maxZoom: 12,
+        pickable: isCursorMode,
+        renderSubLayers: renderTileLayers,
+        updateTriggers: {
+          renderSubLayers: [renderTileLayers],
+        },
       })
     );
-
-    // Conflict-highlight outline layer
-    if (highlightData.features.length > 0) {
-      result.push(
-        new GeoJsonLayer({
-          id: "conflict-highlight",
-          data: highlightData,
-          beforeId,
-          filled: true,
-          stroked: true,
-          getFillColor: [255, 165, 0, 50],
-          getLineColor: [255, 165, 0, 255],
-          getLineWidth: 3,
-          lineWidthUnits: "pixels" as const,
-          pickable: false,
-        })
-      );
-    }
 
     return result;
   }, [
     stateBoundariesLayer,
     countryBordersLayer,
-    data,
-    singleLayerFeaturesData,
-    multiLayerFeaturesData,
-    resolvedStylesVersion,
-    sameColorCodes,
-    stripeAtlas,
-    previewData,
-    highlightData,
-    isCursorMode,
+    tileUrl,
     beforeId,
-    hasMultiLayerCodes,
-    hasThreePlusLayerCodes,
-    showUnassigned,
-    unassignedFeaturesData,
+    isCursorMode,
+    renderTileLayers,
   ]);
 
-  /** Count of unique postal codes not assigned to any layer, excluding inactive-country codes.
-   *  Uses featureIndex keys (unique codes) — O(unique codes) instead of O(all features). */
+  /** Count of unique postal codes not assigned to any layer, excluding inactive-country codes. */
   const unassignedCount = useMemo(() => {
-    if (countriesInUse.size === 0 || !featureIndex) return 0;
+    if (countriesInUse.size === 0) return 0;
     let count = 0;
-    for (const code of featureIndex.keys()) {
+    for (const code of index.keys) {
       if (!allAssignedCodeSet.has(code) && !inactiveCountryCodes.has(code))
         count++;
     }
     return count;
-  }, [featureIndex, allAssignedCodeSet, inactiveCountryCodes, countriesInUse]);
+  }, [index, allAssignedCodeSet, inactiveCountryCodes, countriesInUse]);
 
   // Keep deckLayersRef current after every render so onHover always reads the latest layers.
   deckLayersRef.current = deckLayers;

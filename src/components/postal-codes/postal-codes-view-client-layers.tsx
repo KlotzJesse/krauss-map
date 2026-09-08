@@ -33,7 +33,6 @@ import {
   detectCountryFromCode,
   type CountryCode,
 } from "@/lib/config/countries";
-import { useGeodata } from "@/lib/hooks/use-geodata";
 import {
   indexBounds,
   indexCentroid,
@@ -630,18 +629,13 @@ export const PostalCodesViewClientWithLayers = memo(
       return [...countrySet];
     }, [areaCountriesFromServer, country, initialLayers]);
 
+    // Codes, representative points, areas and bounds. The outlines arrive
+    // separately as vector tiles, per visible tile rather than all at once.
     const {
-      data,
+      index,
       isLoading: isGeodataLoading,
-      error: geodataError,
-    } = useGeodata(defaultGranularity, areaCountries);
-
-    // Codes, representative points, areas and bounds. Everything that isn't
-    // drawing a polygon reads this instead of the geometry.
-    const { index, error: indexError } = usePostalCodeIndex(
-      defaultGranularity,
-      areaCountries
-    );
+      error: indexError,
+    } = usePostalCodeIndex(defaultGranularity, areaCountries);
 
     // Read activeLayerId directly from URL state for instant switching
     const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
@@ -840,7 +834,6 @@ export const PostalCodesViewClientWithLayers = memo(
         <div className="relative h-full overflow-hidden">
           <MapErrorBoundary>
             <PostalCodesMap
-              data={data}
               index={index}
               granularity={defaultGranularity}
               country={country}
@@ -871,9 +864,9 @@ export const PostalCodesViewClientWithLayers = memo(
               </div>
             </div>
           )}
-          {(geodataError ?? indexError) && !isGeodataLoading && (
+          {indexError && !isGeodataLoading && (
             <div className="absolute top-4 left-4 z-30 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive max-w-md">
-              Geodaten konnten nicht geladen werden: {geodataError ?? indexError}
+              Geodaten konnten nicht geladen werden: {indexError}
             </div>
           )}
         </div>

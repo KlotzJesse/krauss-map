@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import { type CountryCode, isValidCountryCode } from "@/lib/config/countries";
+import { isValidCountryCode } from "@/lib/config/countries";
 import { db } from "@/lib/db";
 
 const VALID_GRANULARITIES = new Set([
@@ -11,14 +11,17 @@ const VALID_GRANULARITIES = new Set([
   "5digit",
 ]);
 
-/** Beyond this the client should already have the detail it needs. */
+/** Beyond this the client over-zooms the deepest tile it already has. */
 const MAX_ZOOM = 12;
+
+/** Web Mercator circumference in metres — one tile at z0. */
+const WORLD_METRES = 40_075_016.685_578_5;
 
 /**
  * Tile extent by zoom. The whole country sits in four z5 tiles, where 4096
  * units of precision per tile is far more than a screen can show — measured on
  * the German 5-digit set, dropping to 512 at country view takes a z5 screenful
- * from 497KB to 181KB with no visible difference.
+ * from 497KB to 185KB with no visible difference.
  */
 function extentForZoom(z: number): number {
   if (z <= 5) {
@@ -69,10 +72,20 @@ export async function GET(
     return Response.json({ error: "Tile out of range" }, { status: 400 });
   }
 
-  const countryParam = new URL(request.url).searchParams.get("country");
-  const country: CountryCode =
-    countryParam && isValidCountryCode(countryParam) ? countryParam : "DE";
+  const countries = (
+    new URL(request.url).searchParams.get("country") ?? "DE"
+  )
+    .split(",")
+    .map((c) => c.trim().toUpperCase())
+    .filter((c) => isValidCountryCode(c));
+  if (countries.length === 0) {
+    return Response.json({ error: "Invalid country" }, { status: 400 });
+  }
+
   const extent = extentForZoom(zoom);
+  // Side of the square substituted for an outline that collapses at this zoom,
+  // in metres: one and a half tile units, so it survives quantization.
+  const minSize = (WORLD_METRES / 2 ** zoom / extent) * 1.5;
 
   const { rows } = await db.execute<{ mvt: Buffer | Uint8Array | null }>(sql`
     WITH bounds AS (
@@ -80,15 +93,37 @@ export async function GET(
     ),
     src AS (
       SELECT pc.code,
-             ST_AsMVTGeom(
-               ST_Transform(pc.geometry, 3857),
-               bounds.env,
-               ${extent},
-               8,
-               true
+             pc.country,
+             -- A small postal code is sub-unit at country zoom and quantizes
+             -- away to nothing, which would make a city-only layer render as
+             -- an empty map. Fall back to a marker square around the code's
+             -- representative point so every code is always drawn.
+             COALESCE(
+               ST_AsMVTGeom(
+                 ST_Transform(pc.geometry, 3857),
+                 bounds.env,
+                 ${extent},
+                 8,
+                 true
+               ),
+               ST_AsMVTGeom(
+                 ST_Envelope(
+                   ST_Buffer(
+                     ST_Transform(ST_PointOnSurface(pc.geometry), 3857),
+                     ${minSize}
+                   )
+                 ),
+                 bounds.env,
+                 ${extent},
+                 8,
+                 true
+               )
              ) AS geom
       FROM postal_codes pc, bounds
-      WHERE pc.country = ${country}
+      WHERE pc.country IN (${sql.join(
+        countries.map((c) => sql`${c}`),
+        sql`, `
+      )})
         AND pc.granularity = ${granularity}
         AND pc.is_active = 'true'
         AND ST_Transform(pc.geometry, 3857) && bounds.env
@@ -103,7 +138,7 @@ export async function GET(
 
   // Vercel does not compress application/vnd.mapbox-vector-tile itself, and
   // MVT is protobuf rather than entropy-coded: gzip takes a z5 screenful of
-  // these tiles from 899KB to 507KB. Compress here as the geodata route does.
+  // these tiles from 899KB to 185KB. Compress here as the geodata route does.
   const stream = new Blob([body as BlobPart])
     .stream()
     .pipeThrough(new CompressionStream("gzip"));
