@@ -101,10 +101,18 @@ export async function GET(
   const mvt = rows[0]?.mvt;
   const body = mvt ? new Uint8Array(mvt as Uint8Array) : new Uint8Array(0);
 
-  return new Response(body as BodyInit, {
+  // Vercel does not compress application/vnd.mapbox-vector-tile itself, and
+  // MVT is protobuf rather than entropy-coded: gzip takes a z5 screenful of
+  // these tiles from 899KB to 507KB. Compress here as the geodata route does.
+  const stream = new Blob([body as BlobPart])
+    .stream()
+    .pipeThrough(new CompressionStream("gzip"));
+
+  return new Response(stream, {
     status: 200,
     headers: {
       "Content-Type": "application/vnd.mapbox-vector-tile",
+      "Content-Encoding": "gzip",
       // Tiles change only when the postal-code dataset is reimported.
       "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
     },
