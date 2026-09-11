@@ -442,25 +442,35 @@ export function useMapPostalLayers({
     }
   });
 
-  // Install once the map is ready, and again after a basemap switch — setStyle
-  // drops every source, layer, image and feature-state we added.
+  // Install once the map is ready, and again whenever the style underneath us is
+  // replaced — setStyle drops every source, layer, image and feature-state we
+  // added. That happens on a basemap switch, and also when react-map-gl reuses
+  // a recycled map, which re-applies the style with diffing off.
   useEffect(() => {
     if (!(map && isMapLoaded)) {
       return;
     }
-    installStyle();
-    const onStyleData = () => {
-      if (!map.getSource(SOURCE_ID)) {
-        patternsRef.current.clear();
-        appliedRef.current.clear();
-        hoveredIdRef.current = null;
-        installStyle();
-        setStyleEpoch((epoch) => epoch + 1);
+    const ensureInstalled = () => {
+      if (map.getSource(SOURCE_ID)) {
+        return;
       }
+      patternsRef.current.clear();
+      appliedRef.current.clear();
+      hoveredIdRef.current = null;
+      installStyle();
+      setStyleEpoch((epoch) => epoch + 1);
     };
-    map.on("styledata", onStyleData);
+
+    installStyle();
+    // `styledata` alone is not enough: the style can be swapped between this
+    // effect being scheduled and it running, in which case the event has
+    // already gone by. `idle` fires once the map has settled, so checking there
+    // too means a missed event self-heals instead of leaving a bare basemap.
+    map.on("styledata", ensureInstalled);
+    map.on("idle", ensureInstalled);
     return () => {
-      map.off("styledata", onStyleData);
+      map.off("styledata", ensureInstalled);
+      map.off("idle", ensureInstalled);
     };
   }, [
     map,

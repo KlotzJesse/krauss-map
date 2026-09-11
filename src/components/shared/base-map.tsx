@@ -1367,6 +1367,12 @@ const BaseMapComponent = ({
               zoom: effectiveZoom,
             }}
             onMove={handleMove}
+            // Next re-renders this route after every Server Action, and that
+            // remounts the view — adding a layer used to destroy the map and
+            // reload the basemap style, sprites and glyphs, which is most of
+            // the delay before the map came back. Recycling the instance
+            // instead of destroying it makes the remount cost nothing.
+            reuseMaps
             mapStyle={currentMapStyle}
             style={MAP_STYLE}
             // The screenshot and layer-preview features read the map back with
