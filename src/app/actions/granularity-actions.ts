@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, and, like, or } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 import { getGranularityLevel } from "@/lib/utils/granularity-utils";
 
@@ -158,8 +158,8 @@ export async function changeAreaGranularityAction(
         .where(eq(areas.id, areaId));
     });
 
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-layers`);
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "minutes");
 
     return {
       success: true,

@@ -317,9 +317,11 @@ export async function getAreaCountries(areaId: number): Promise<CountryCode[]> {
 }
 
 export async function getLayers(areaId: number) {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag(`area-${areaId}-layers`);
+  // Read fresh rather than cached. Actions now invalidate with revalidateTag,
+  // which is stale-while-revalidate and does not re-render the route — that is
+  // what stops every mutation from remounting the map. The trade is that a
+  // cached read could serve the pre-mutation value to a reload, so the handful
+  // of reads that change on every edit are not cached at all.
   try {
     const result = await db.query.areaLayers.findMany({
       where: eq(areaLayers.areaId, areaId),
@@ -344,9 +346,11 @@ export async function getLayers(areaId: number) {
 
 /** Lightweight version list — excludes the heavy snapshot JSONB, adds computed layerCount */
 export async function getVersionSummaries(areaId: number) {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("versions", `area-${areaId}-versions`);
+  // Read fresh rather than cached. Actions now invalidate with revalidateTag,
+  // which is stale-while-revalidate and does not re-render the route — that is
+  // what stops every mutation from remounting the map. The trade is that a
+  // cached read could serve the pre-mutation value to a reload, so the handful
+  // of reads that change on every edit are not cached at all.
   try {
     const versions = await db
       .select({
@@ -464,9 +468,11 @@ export async function getChangeSummaries(
     includeUndone?: boolean;
   }
 ) {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag(`area-${areaId}-change-history`);
+  // Read fresh rather than cached. Actions now invalidate with revalidateTag,
+  // which is stale-while-revalidate and does not re-render the route — that is
+  // what stops every mutation from remounting the map. The trade is that a
+  // cached read could serve the pre-mutation value to a reload, so the handful
+  // of reads that change on every edit are not cached at all.
   try {
     const conditions = [eq(areaChanges.areaId, areaId)];
 
@@ -561,9 +567,11 @@ export async function getLayerRecentChanges(layerId: number, limit = 10) {
 }
 
 export async function getUndoRedoStatus(areaId: number) {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag(`area-${areaId}-undo-redo`);
+  // Read fresh rather than cached. Actions now invalidate with revalidateTag,
+  // which is stale-while-revalidate and does not re-render the route — that is
+  // what stops every mutation from remounting the map. The trade is that a
+  // cached read could serve the pre-mutation value to a reload, so the handful
+  // of reads that change on every edit are not cached at all.
   try {
     const result = await db
       .select({

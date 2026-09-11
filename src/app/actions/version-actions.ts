@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 import { db } from "../../lib/db";
 import {
@@ -78,10 +78,10 @@ export async function createVersionAction(
 
     await clearUndoRedoStacksAction(areaId);
 
-    updateTag(`area-${areaId}-versions`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-version-info`);
+    revalidateTag(`area-${areaId}-versions`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-version-info`, "minutes");
 
     return { success: true, data: result };
   } catch (error) {
@@ -363,13 +363,13 @@ export async function restoreVersionAction(
 
     await clearUndoRedoStacksAction(areaId);
 
-    updateTag("versions");
-    updateTag(`area-${areaId}-versions`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag("version-info");
-    updateTag(`area-${areaId}-version-info`);
+    revalidateTag("versions", "minutes");
+    revalidateTag(`area-${areaId}-versions`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag("version-info", "minutes");
+    revalidateTag(`area-${areaId}-version-info`, "minutes");
 
     return { success: true, data: result };
   } catch (error) {

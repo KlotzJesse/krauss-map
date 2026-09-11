@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, and, inArray, or, sql, like } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 import {
   type CountryCode,
@@ -108,15 +108,15 @@ export async function createAreaAction(data: {
       throw new Error("Erstversion konnte nicht erstellt werden");
     }
 
-    updateTag("areas");
+    revalidateTag("areas", "minutes");
 
-    updateTag(`area-${area.id}`);
+    revalidateTag(`area-${area.id}`, "minutes");
 
-    updateTag(`area-${area.id}-undo-redo`);
+    revalidateTag(`area-${area.id}-undo-redo`, "minutes");
 
-    updateTag("version-info");
+    revalidateTag("version-info", "minutes");
 
-    updateTag(`area-${area.id}-version-info`);
+    revalidateTag(`area-${area.id}-version-info`, "minutes");
 
     // Deliberately no redirect() here. Redirecting from the action makes the
     // action response carry the whole destination page render, so the caller's
@@ -176,11 +176,11 @@ export async function updateAreaAction(
       createdBy,
     });
 
-    updateTag("areas");
+    revalidateTag("areas", "minutes");
 
-    updateTag(`area-${id}`);
+    revalidateTag(`area-${id}`, "minutes");
 
-    updateTag(`area-${id}-undo-redo`);
+    revalidateTag(`area-${id}-undo-redo`, "minutes");
 
     return { success: true };
   } catch (error) {
@@ -225,7 +225,7 @@ export async function deleteAreaAction(id: number) {
       await tx.delete(areas).where(eq(areas.id, id));
     });
 
-    updateTag("areas");
+    revalidateTag("areas", "minutes");
 
     // No redirect() here — see createAreaAction. Redirecting from the action
     // makes its response carry the destination page render, so the caller's
@@ -251,8 +251,8 @@ export async function archiveAreaAction(
       })
       .where(eq(areas.id, id));
 
-    updateTag("areas");
-    updateTag(`area-${id}`);
+    revalidateTag("areas", "minutes");
+    revalidateTag(`area-${id}`, "minutes");
     return { success: true };
   } catch (error) {
     console.error("Error archiving area:", error);
@@ -495,9 +495,9 @@ export async function importAreaFromDataAction(
 
     if (!newAreaId) throw new Error("Area creation failed");
 
-    updateTag("areas");
-    updateTag(`area-${newAreaId}`);
-    updateTag("version-info");
+    revalidateTag("areas", "minutes");
+    revalidateTag(`area-${newAreaId}`, "minutes");
+    revalidateTag("version-info", "minutes");
 
     return { success: true as const, data: { areaId: newAreaId } };
   } catch (error) {
@@ -591,8 +591,8 @@ export async function duplicateAreaAction(
         description: `Dupliziert von "${sourceArea.name}"`,
       });
 
-      updateTag("areas");
-      updateTag(`area-${newArea.id}`);
+      revalidateTag("areas", "minutes");
+      revalidateTag(`area-${newArea.id}`, "minutes");
       duplicatedAreaId = newArea.id;
     });
     return { success: true as const, areaId: duplicatedAreaId };
@@ -674,11 +674,11 @@ export async function createLayerAction(
       createdBy,
     });
 
-    updateTag(`area-${areaId}-layers`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
 
-    updateTag(`area-${areaId}`);
+    revalidateTag(`area-${areaId}`, "minutes");
 
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
 
     return { success: true, data: { id: layer.id } };
   } catch (error) {
@@ -843,11 +843,11 @@ export async function updateLayerAction(
       createdBy,
     });
 
-    updateTag(`area-${areaId}-layers`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
 
-    updateTag(`area-${areaId}`);
+    revalidateTag(`area-${areaId}`, "minutes");
 
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
 
     return { success: true };
   } catch (error) {
@@ -927,11 +927,11 @@ export async function deleteLayerAction(
       createdBy,
     });
 
-    updateTag(`area-${areaId}-layers`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
 
-    updateTag(`area-${areaId}`);
+    revalidateTag(`area-${areaId}`, "minutes");
 
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
 
     return { success: true };
   } catch (error) {
@@ -996,9 +996,9 @@ export async function mergeLayersAction(
       await tx.delete(areaLayers).where(inArray(areaLayers.id, uniqueSourceIds));
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
 
     return {
       success: true,
@@ -1086,9 +1086,9 @@ export async function duplicateLayerAction(
       return newLayer.id;
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
 
     return { success: true, data: { id: newLayerId } };
   } catch (error) {
@@ -1180,9 +1180,9 @@ export async function copyLayerToAreaAction(
       return newLayer.id;
     });
 
-    updateTag(`area-${targetAreaId}-layers`);
-    updateTag(`area-${targetAreaId}`);
-    updateTag(`area-${targetAreaId}-undo-redo`);
+    revalidateTag(`area-${targetAreaId}-layers`, "minutes");
+    revalidateTag(`area-${targetAreaId}`, "minutes");
+    revalidateTag(`area-${targetAreaId}-undo-redo`, "minutes");
 
     return { success: true, data: { id: newLayerId } };
   } catch (error) {
@@ -1269,9 +1269,9 @@ export async function addPostalCodesToLayerAction(
     }
 
     if (!options?.skipInvalidate) {
-      updateTag(`area-${areaId}-layers`);
-      updateTag(`area-${areaId}-undo-redo`);
-      updateTag(`area-${areaId}-change-history`);
+      revalidateTag(`area-${areaId}-layers`, "minutes");
+      revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+      revalidateTag(`area-${areaId}-change-history`, "minutes");
     }
 
     return { success: true };
@@ -1351,9 +1351,9 @@ export async function removePostalCodesFromLayerAction(
     }
 
     if (!options?.skipInvalidate) {
-      updateTag(`area-${areaId}-layers`);
-      updateTag(`area-${areaId}-undo-redo`);
-      updateTag(`area-${areaId}-change-history`);
+      revalidateTag(`area-${areaId}-layers`, "minutes");
+      revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+      revalidateTag(`area-${areaId}-change-history`, "minutes");
     }
 
     return { success: true };
@@ -1531,9 +1531,9 @@ export async function balanceLayersAction(
       return moves;
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-change-history`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
 
     return { success: true, data: result };
   } catch (error) {
@@ -1598,8 +1598,8 @@ export async function fixDuplicateCodeAction(
       return { keptLayerId: keptLayer.id };
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}-change-history`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
 
     return { success: true, data: result };
   } catch (error) {
@@ -1645,8 +1645,8 @@ export async function fixDuplicateWithLayerAction(
       }
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}-change-history`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
 
     return { success: true, data: { keptLayerId: keepLayerId } };
   } catch (error) {
@@ -1725,8 +1725,8 @@ export async function addPostalCodesByPrefixAction(
       return { count: inserted.length };
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}-change-history`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
 
     return { success: true, data: result };
   } catch (error) {
@@ -2517,7 +2517,7 @@ export async function applyLayerTemplateAction(
       }
     });
 
-    updateTag(`area-${areaId}-layers`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
     return { success: true };
   } catch (error) {
     console.error("Error applying layer template:", error);
@@ -2778,7 +2778,7 @@ export async function createTagAction(
         color: areaTags.color,
       });
 
-    updateTag("tags");
+    revalidateTag("tags", "minutes");
     return { success: true, data: tag };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2790,7 +2790,7 @@ export async function deleteTagAction(
 ): ServerActionResponse<void> {
   try {
     await db.delete(areaTags).where(eq(areaTags.id, tagId));
-    updateTag("tags");
+    revalidateTag("tags", "minutes");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2807,8 +2807,8 @@ export async function assignTagToAreaAction(
       .values({ areaId, tagId })
       .onConflictDoNothing();
 
-    updateTag(`area-${areaId}-tags`);
-    updateTag("tags");
+    revalidateTag(`area-${areaId}-tags`, "minutes");
+    revalidateTag("tags", "minutes");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2829,8 +2829,8 @@ export async function removeTagFromAreaAction(
         )
       );
 
-    updateTag(`area-${areaId}-tags`);
-    updateTag("tags");
+    revalidateTag(`area-${areaId}-tags`, "minutes");
+    revalidateTag("tags", "minutes");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2849,10 +2849,10 @@ export async function bulkAssignTagToAreasAction(
       .onConflictDoNothing();
 
     for (const areaId of areaIds) {
-      updateTag(`area-${areaId}-tags`);
+      revalidateTag(`area-${areaId}-tags`, "minutes");
     }
-    updateTag("tags");
-    updateTag("areas");
+    revalidateTag("tags", "minutes");
+    revalidateTag("areas", "minutes");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2875,10 +2875,10 @@ export async function bulkRemoveTagFromAreasAction(
       );
 
     for (const areaId of areaIds) {
-      updateTag(`area-${areaId}-tags`);
+      revalidateTag(`area-${areaId}-tags`, "minutes");
     }
-    updateTag("tags");
-    updateTag("areas");
+    revalidateTag("tags", "minutes");
+    revalidateTag("areas", "minutes");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2896,8 +2896,8 @@ export async function updateTagAction(
       .set({ name: name.trim().slice(0, 50), color })
       .where(eq(areaTags.id, tagId));
 
-    updateTag("tags");
-    updateTag("areas");
+    revalidateTag("tags", "minutes");
+    revalidateTag("areas", "minutes");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -3174,9 +3174,9 @@ export async function splitLayerAction(
       return createdLayerIds;
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-change-history`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
 
     return { success: true, data: { createdLayerIds: result } };
   } catch (error) {

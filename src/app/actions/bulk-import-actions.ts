@@ -1,7 +1,7 @@
 "use server";
 
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 import {
   type CountryCode,
@@ -228,11 +228,11 @@ export async function bulkImportPostalCodesAndLayers(
     }
 
     // Update cache tags and refresh
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-change-history`);
-    updateTag("recent-activity");
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag("recent-activity", "minutes");
 
     return {
       success: errors.length === 0,

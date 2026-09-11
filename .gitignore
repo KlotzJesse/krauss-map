@@ -38,3 +38,6 @@ public/maplibre/
 server.log
 yarn-debug.log*
 yarn-error.log*
+
+# screenshots the action suite writes when a check fails
+.action-shots/

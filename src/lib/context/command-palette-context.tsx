@@ -58,10 +58,12 @@ export interface MapCommandHandlers {
   onPreviewPostalCode: (code: string) => void;
   onZoomToPostalCode: (code: string) => void;
   onRadiusAroundPostalCode: (code: string) => void;
-  /** Which of the area's layers already contain this code. */
-  findPostalCode: (
-    code: string
-  ) => { known: boolean; layers: { id: number; name: string; color: string }[] };
+  /**
+   * Whether a code exists in the loaded dataset at all. Layer membership is not
+   * asked for here — that changes on every edit, and a handler captured in a ref
+   * lags a render behind, so the palette reads membership from mapMeta instead.
+   */
+  isPostalCodeKnown: (code: string) => boolean;
 
   onFitAllLayers: () => void;
   onZoomToLayer: (layerId: number) => void;
@@ -99,6 +101,12 @@ interface CommandPaletteContextValue {
    * palette or loops.
    */
   registerCommands: (handlers: Partial<MapCommandHandlers>) => void;
+  /**
+   * Record which command keys have an owner. Separate from `registerCommands`
+   * because this one drives state: it must only be called when the set of keys
+   * genuinely changed, never once per commit.
+   */
+  markAvailable: (keys: string[]) => void;
   handlersRef: React.MutableRefObject<Partial<MapCommandHandlers>>;
   /** Which commands currently have an owner, so the palette can hide the rest. */
   available: ReadonlySet<keyof MapCommandHandlers>;
@@ -116,30 +124,31 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     () => new Set()
   );
 
+  const markAvailable = useCallback((keys: string[]) => {
+    setAvailable((previous) => {
+      const missing = keys.filter(
+        (key) => !previous.has(key as keyof MapCommandHandlers)
+      );
+      // Returning `previous` unchanged is what keeps this from looping: the
+      // provider re-renders its consumers, they re-run their effects, and if the
+      // key set is the same no new state lands.
+      if (missing.length === 0) {
+        return previous;
+      }
+      const next = new Set(previous);
+      for (const key of missing) {
+        next.add(key as keyof MapCommandHandlers);
+      }
+      return next;
+    });
+  }, []);
+
   const registerCommands = useCallback(
     (handlers: Partial<MapCommandHandlers>) => {
       Object.assign(handlersRef.current, handlers);
-      // Components re-register the same keys on every render, so only a genuine
-      // change to the set costs a render.
-      setAvailable((previous) => {
-        let changed = false;
-        for (const key of Object.keys(handlers)) {
-          if (!previous.has(key as keyof MapCommandHandlers)) {
-            changed = true;
-            break;
-          }
-        }
-        if (!changed) {
-          return previous;
-        }
-        const next = new Set(previous);
-        for (const key of Object.keys(handlers)) {
-          next.add(key as keyof MapCommandHandlers);
-        }
-        return next;
-      });
+      markAvailable(Object.keys(handlers));
     },
-    []
+    [markAvailable]
   );
 
   const value = useMemo(
@@ -149,10 +158,11 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       mapMeta,
       setMapMeta,
       registerCommands,
+      markAvailable,
       handlersRef,
       available,
     }),
-    [open, mapMeta, registerCommands, available]
+    [open, mapMeta, registerCommands, markAvailable, available]
   );
 
   return (
@@ -168,6 +178,7 @@ const NOOP_VALUE: CommandPaletteContextValue = {
   mapMeta: null,
   setMapMeta: () => undefined,
   registerCommands: () => undefined,
+  markAvailable: () => undefined,
   handlersRef: { current: {} },
   available: new Set(),
 };
@@ -183,14 +194,35 @@ export function useCommandPalette(): CommandPaletteContextValue {
 /**
  * Publish the commands a component owns for as long as it is mounted.
  *
- * Handlers are re-registered on every render, which is what makes inline
- * closures safe here — the palette always calls the latest one.
+ * Two effects on purpose. The first has no dependency array so the palette
+ * always holds the latest closures — writing to a ref costs nothing and cannot
+ * re-render, so running it after every commit is safe. Doing this during render
+ * instead looks simpler but is a render-phase side effect: the React Compiler
+ * memoises it away and the palette keeps calling whichever closure it captured
+ * first, which showed up as a postal code you had just added still offering
+ * "hinzufügen".
+ *
+ * The second effect is the one that touches state, so it is keyed on the sorted
+ * command names. Owners pass a fresh object of inline closures on every render;
+ * running a state setter that often is exactly the "setState inside useEffect
+ * without a dependency array" shape React aborts with "Maximum update depth
+ * exceeded", and it did, intermittently.
  */
 export function useRegisterMapCommands(
   handlers: Partial<MapCommandHandlers>
 ): void {
-  const { registerCommands } = useCommandPalette();
-  registerCommands(handlers);
+  const { handlersRef, markAvailable } = useCommandPalette();
+
+  useEffect(() => {
+    Object.assign(handlersRef.current, handlers);
+  });
+
+  const keys = Object.keys(handlers).sort().join(",");
+  useEffect(() => {
+    if (keys) {
+      markAvailable(keys.split(","));
+    }
+  }, [keys, markAvailable]);
 }
 
 /** Publish the area the palette should offer commands for. */
@@ -207,9 +239,13 @@ export function usePublishMapMeta(meta: MapCommandMeta | null): void {
 
   useEffect(() => {
     setMapMeta(meta);
-    return () => setMapMeta(null);
     // `serialized` stands in for the parts of `meta` the palette renders, so a
     // new array identity with identical contents does not churn state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serialized, setMapMeta]);
+
+  // Clearing belongs on unmount only. Returning the cleanup from the effect
+  // above ran it on every change too, so each edit blanked the area's commands
+  // for a moment and anything reading the meta right then saw null.
+  useEffect(() => () => setMapMeta(null), [setMapMeta]);
 }

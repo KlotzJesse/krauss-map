@@ -818,25 +818,9 @@ export const PostalCodesViewClientWithLayers = memo(
       [index, country]
     );
 
-    const findPostalCode = useCallback(
-      (code: string) => {
-        const composite = toCompositePostalCode(code, country);
-        const known = index.pos.has(composite);
-        const containing = optimisticLayers.filter((layer) =>
-          layer.postalCodes?.some(
-            (pc) => toCompositePostalCode(pc.postalCode, country) === composite
-          )
-        );
-        return {
-          known,
-          layers: containing.map((l) => ({
-            id: l.id,
-            name: l.name,
-            color: l.color,
-          })),
-        };
-      },
-      [index, country, optimisticLayers]
+    const isPostalCodeKnown = useCallback(
+      (code: string) => index.pos.has(toCompositePostalCode(code, country)),
+      [index, country]
     );
 
     useRegisterMapCommands({
@@ -877,7 +861,7 @@ export const PostalCodesViewClientWithLayers = memo(
         }
         setRadiusDialog({ open: true, coords: centroid });
       },
-      findPostalCode,
+      isPostalCodeKnown,
       onAddressSelect: handleAddressSelect,
       onPreviewSelect: handlePreviewSelect,
       onBoundarySelect: async (postalCodes: string[]) => {

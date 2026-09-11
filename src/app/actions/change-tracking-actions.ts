@@ -15,7 +15,7 @@ import type { SelectAreaChanges } from "../../lib/schema/schema";
 
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
@@ -172,11 +172,11 @@ export async function recordChangeAction(
       return { success: false, error: "Area not found" };
     }
 
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
 
     if (options?.invalidateHistory !== false) {
-      updateTag(`area-${areaId}-change-history`);
-      updateTag("recent-activity");
+      revalidateTag(`area-${areaId}-change-history`, "minutes");
+      revalidateTag("recent-activity", "minutes");
     }
 
     return { success: true, data: result };
@@ -288,8 +288,8 @@ export async function undoChangeAction(
       return changeKey;
     });
 
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-change-history`);
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
 
     return { success: true, data: result };
   } catch (error) {
@@ -398,8 +398,8 @@ export async function redoChangeAction(
       return changeKey;
     });
 
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-change-history`);
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
 
     return { success: true, data: result };
   } catch (error) {
@@ -705,8 +705,8 @@ export async function clearUndoRedoStacksAction(
         .where(eq(areaUndoStacks.id, stack.id));
     }
 
-    updateTag(`area-${areaId}-undo-redo`);
-    updateTag(`area-${areaId}-change-history`);
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-change-history`, "minutes");
 
     return { success: true };
   } catch (error) {

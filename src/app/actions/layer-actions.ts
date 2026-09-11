@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq, inArray, like, or } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 import {
   type CountryCode,
@@ -62,9 +62,9 @@ export async function createLayerAction(
       createdBy,
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
 
     return { success: true, data: { id: layer.id } };
   } catch (error) {
@@ -177,9 +177,9 @@ export async function updateLayerAction(
       createdBy,
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
     return { success: true };
   } catch (error) {
     console.error("Error updating layer:", error);
@@ -202,8 +202,8 @@ export async function batchUpdateVisibilityAction(
       }
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
     return { success: true };
   } catch (error) {
     console.error("Error batch-updating visibility:", error);
@@ -260,9 +260,9 @@ export async function deleteLayerAction(
       createdBy,
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
     return { success: true };
   } catch (error) {
     console.error("Error deleting layer:", error);
@@ -376,9 +376,9 @@ export async function addPostalCodesToLayerAction(
       createdBy,
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
     return { success: true };
   } catch (error) {
     console.error("Error adding postal codes to layer:", error);
@@ -441,9 +441,9 @@ export async function removePostalCodesFromLayerAction(
       createdBy,
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
     return { success: true };
   } catch (error) {
     console.error("Error removing postal codes from layer:", error);
@@ -527,9 +527,9 @@ export async function mergeLayersAction(
       },
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
     return { success: true };
   } catch (error) {
     console.error("Error merging layers:", error);
@@ -598,9 +598,9 @@ export async function removePostalCodesByCountryAction(
       previousData: { postalCodes: codeList },
     });
 
-    updateTag(`area-${areaId}-layers`);
-    updateTag(`area-${areaId}`);
-    updateTag(`area-${areaId}-undo-redo`);
+    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
 
     return { success: true, data: { removed: codeList.length } };
   } catch (error) {

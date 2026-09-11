@@ -215,12 +215,29 @@ export function CommandPalette({
 
   const isPlzQuery = /^\d{2,5}$/.test(query.trim());
 
-  // Looked up on every render rather than memoised: it reads a ref, and the
-  // result must follow layer edits made while the palette is open.
-  const plzInArea =
-    plzQuery && handlersRef.current.findPostalCode
-      ? handlersRef.current.findPostalCode(plzQuery)
-      : { known: false, layers: [] as { id: number; name: string; color: string }[] };
+  /**
+   * Which layers already hold the typed code.
+   *
+   * Read from mapMeta rather than through a registered handler: handlers are
+   * captured closures in a ref, and the sidebar renders before the map view
+   * re-registers them, so the palette saw the membership from one render ago —
+   * a code you had just added still offered "hinzufügen". mapMeta is state, so
+   * it is correct at the time the palette renders.
+   */
+  const plzInArea = useMemo(() => {
+    if (!(plzQuery && mapMeta)) {
+      return { known: false, layers: [] as { id: number; name: string; color: string }[] };
+    }
+    const known = handlersRef.current.isPostalCodeKnown?.(plzQuery) ?? true;
+    return {
+      known,
+      layers: layersContaining(plzQuery, mapMeta.layers).map((layer) => ({
+        id: layer.id,
+        name: layer.name,
+        color: layer.color,
+      })),
+    };
+  }, [plzQuery, mapMeta, handlersRef]);
 
   const activeAreas = useMemo(() => {
     let result = areas.filter((a) => a.isArchived !== "true");
