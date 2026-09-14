@@ -14,8 +14,10 @@ import {
   useRef,
   memo,
 } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { getAreaLayerStateAction } from "@/app/actions/layer-actions";
 import {
   addPostalCodesToLayerAction,
   removePostalCodesFromLayerAction,
@@ -39,7 +41,12 @@ import {
 import { usePostalCodeLookup } from "@/lib/hooks/use-postal-code-lookup";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
-import type { Layer, LayerWire } from "@/lib/types/area-types";
+import {
+  reduceLayerChange,
+  type Layer,
+  type LayerChange,
+  type LayerWire,
+} from "@/lib/types/area-types";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import {
@@ -252,6 +259,12 @@ function usePostalCodesLayerActions({
       committed: typeof initialUndoRedoStatus,
       pendingMutationsCount: number
     ) => {
+      // With nothing in flight the server's numbers are the truth. Overriding
+      // them here left the redo button greyed out after an undo, because a new
+      // mutation clears the redo stack and this assumed every update was one.
+      if (pendingMutationsCount === 0) {
+        return committed;
+      }
       const undoCount = committed.undoCount + pendingMutationsCount;
       return {
         ...committed,
@@ -555,6 +568,50 @@ function usePostalCodesLayerActions({
     return true;
   });
 
+  /**
+   * Apply a layer change the caller already knows the outcome of.
+   *
+   * Panels call this after the server confirms a create/update/delete instead
+   * of keeping their own list. It lands in the committed list, so it survives
+   * the next postal-code edit — a second copy did not, which is how a freshly
+   * created layer used to vanish from the panel on the very next action.
+   */
+  const applyLayerChange = useStableCallback((change: LayerChange) => {
+    committedLayersRef.current = reduceLayerChange(
+      committedLayersRef.current,
+      change
+    );
+    recomputeOptimisticState();
+  });
+
+  /**
+   * Re-read layers and undo/redo counters from the server.
+   *
+   * For the mutations whose result the client cannot work out for itself: undo,
+   * redo, version restore, bulk import, merge, split, granularity change. One
+   * round trip, and no route re-render, so the map is never torn down.
+   */
+  const resyncLayers = useStableCallback(async () => {
+    if (!areaId) {
+      return;
+    }
+    const result = await getAreaLayerStateAction(areaId);
+    if (!result.success) {
+      return;
+    }
+    committedLayersRef.current = result.data.layers.map(
+      ({ codes, ...layer }) => ({
+        ...layer,
+        postalCodes: codes.map((postalCode) => ({ postalCode })),
+      })
+    );
+    committedUndoRedoRef.current = result.data.undoRedo;
+    // A resync is the authoritative answer, so anything still queued locally is
+    // either already reflected in it or was rolled back on the server.
+    pendingMutationsRef.current = [];
+    recomputeOptimisticState();
+  });
+
   return {
     optimisticLayers,
     optimisticLayersRef,
@@ -565,6 +622,8 @@ function usePostalCodesLayerActions({
     handleRadiusSelect,
     handleImport,
     performDrivingRadiusSearchWrapper,
+    applyLayerChange,
+    resyncLayers,
   };
 }
 
@@ -642,6 +701,7 @@ export const PostalCodesViewClientWithLayers = memo(
     const setMapCenterZoom = useSetMapCenterZoom();
     const activeLayerId = urlActiveLayerId || initialLayers[0]?.id || null;
 
+    const router = useRouter();
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const openImportDialog = useCallback(() => setImportDialogOpen(true), []);
     const [previewPostalCode, setPreviewPostalCode] = useState<string | null>(
@@ -658,6 +718,8 @@ export const PostalCodesViewClientWithLayers = memo(
       handleRadiusSelect,
       handleImport,
       performDrivingRadiusSearchWrapper,
+      applyLayerChange,
+      resyncLayers,
     } = usePostalCodesLayerActions({
       areaId,
       activeLayerId,
@@ -752,16 +814,19 @@ export const PostalCodesViewClientWithLayers = memo(
           return;
         }
 
-        // Granularity changes are now handled through the GranularitySelector component
-        // which updates the area's granularity via server action and triggers a refresh
-
+        // The one action that does re-render the route, deliberately. Changing
+        // granularity swaps the vector-tile source, the postal-code index and
+        // every layer's codes at once; the granularity itself arrives as a
+        // server prop. There is nothing here for the client to patch, so it
+        // asks the server for the page again. Every other mutation updates in
+        // place — see applyLayerChange / resyncLayers above.
         toast.info("Granularität wird aktualisiert", {
-          description: "Änderung wird gespeichert",
-
+          description: "Die Karte wird neu aufgebaut",
           duration: 3000,
         });
+        router.refresh();
       },
-      [defaultGranularity]
+      [defaultGranularity, router]
     );
 
     const activeLayer = useMemo(
@@ -833,12 +898,27 @@ export const PostalCodesViewClientWithLayers = memo(
         toast.success(`PLZ ${code} hinzugefügt`);
       },
       onRemovePostalCode: async (code: string) => {
-        if (!activeLayerId) {
-          toast.error("Kein aktiver Layer ausgewählt");
+        // Remove it from whichever layers hold it, not from the active one.
+        // The palette offers "entfernen" when the code is anywhere in the area,
+        // so targeting the active layer reported success and removed nothing
+        // whenever the code lived somewhere else.
+        const holders = optimisticLayersRef.current.filter((layer) =>
+          layer.postalCodes?.some((entry) =>
+            arePostalCodesEquivalent(entry.postalCode, code)
+          )
+        );
+        if (holders.length === 0) {
+          toast.error(`PLZ ${code} ist keinem Gebiet zugeordnet`);
           return;
         }
-        await removePostalCodesFromLayer(activeLayerId, [code]);
-        toast.success(`PLZ ${code} entfernt`);
+        for (const layer of holders) {
+          await removePostalCodesFromLayer(layer.id, [code]);
+        }
+        const where =
+          holders.length === 1
+            ? `aus ${holders[0].name}`
+            : `aus ${holders.length} Gebieten`;
+        toast.success(`PLZ ${code} ${where} entfernt`);
       },
       onPreviewPostalCode: (code: string) => {
         setPreviewPostalCode((prev) => (prev === code ? null : code));
@@ -961,6 +1041,8 @@ export const PostalCodesViewClientWithLayers = memo(
               onZoomToLayer={handleZoomToLayer}
               addPostalCodesToLayer={addPostalCodesToLayer}
               removePostalCodesFromLayer={removePostalCodesFromLayer}
+              onLayerChange={applyLayerChange}
+              onResyncLayers={resyncLayers}
               isViewingVersion={isViewingVersion}
               versionId={versionId!}
               versions={versions}
@@ -1002,6 +1084,7 @@ export const PostalCodesViewClientWithLayers = memo(
           availableCodes={index.keys}
           granularity={defaultGranularity}
           onImport={handleImport}
+          onLayersChanged={resyncLayers}
           areaId={areaId}
         />
       </div>

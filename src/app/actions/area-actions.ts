@@ -29,6 +29,8 @@ import {
 } from "./change-tracking-actions";
 import { createVersionAction, createVersionWithTx } from "./version-actions";
 
+import type { LayerWire } from "../../lib/types/area-types";
+
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
 
@@ -108,15 +110,15 @@ export async function createAreaAction(data: {
       throw new Error("Erstversion konnte nicht erstellt werden");
     }
 
-    revalidateTag("areas", "minutes");
+    revalidateTag("areas", "max");
 
-    revalidateTag(`area-${area.id}`, "minutes");
+    revalidateTag(`area-${area.id}`, "max");
 
-    revalidateTag(`area-${area.id}-undo-redo`, "minutes");
+    revalidateTag(`area-${area.id}-undo-redo`, "max");
 
-    revalidateTag("version-info", "minutes");
+    revalidateTag("version-info", "max");
 
-    revalidateTag(`area-${area.id}-version-info`, "minutes");
+    revalidateTag(`area-${area.id}-version-info`, "max");
 
     // Deliberately no redirect() here. Redirecting from the action makes the
     // action response carry the whole destination page render, so the caller's
@@ -176,11 +178,11 @@ export async function updateAreaAction(
       createdBy,
     });
 
-    revalidateTag("areas", "minutes");
+    revalidateTag("areas", "max");
 
-    revalidateTag(`area-${id}`, "minutes");
+    revalidateTag(`area-${id}`, "max");
 
-    revalidateTag(`area-${id}-undo-redo`, "minutes");
+    revalidateTag(`area-${id}-undo-redo`, "max");
 
     return { success: true };
   } catch (error) {
@@ -225,7 +227,7 @@ export async function deleteAreaAction(id: number) {
       await tx.delete(areas).where(eq(areas.id, id));
     });
 
-    revalidateTag("areas", "minutes");
+    revalidateTag("areas", "max");
 
     // No redirect() here — see createAreaAction. Redirecting from the action
     // makes its response carry the destination page render, so the caller's
@@ -251,8 +253,8 @@ export async function archiveAreaAction(
       })
       .where(eq(areas.id, id));
 
-    revalidateTag("areas", "minutes");
-    revalidateTag(`area-${id}`, "minutes");
+    revalidateTag("areas", "max");
+    revalidateTag(`area-${id}`, "max");
     return { success: true };
   } catch (error) {
     console.error("Error archiving area:", error);
@@ -495,9 +497,9 @@ export async function importAreaFromDataAction(
 
     if (!newAreaId) throw new Error("Area creation failed");
 
-    revalidateTag("areas", "minutes");
-    revalidateTag(`area-${newAreaId}`, "minutes");
-    revalidateTag("version-info", "minutes");
+    revalidateTag("areas", "max");
+    revalidateTag(`area-${newAreaId}`, "max");
+    revalidateTag("version-info", "max");
 
     return { success: true as const, data: { areaId: newAreaId } };
   } catch (error) {
@@ -591,8 +593,8 @@ export async function duplicateAreaAction(
         description: `Dupliziert von "${sourceArea.name}"`,
       });
 
-      revalidateTag("areas", "minutes");
-      revalidateTag(`area-${newArea.id}`, "minutes");
+      revalidateTag("areas", "max");
+      revalidateTag(`area-${newArea.id}`, "max");
       duplicatedAreaId = newArea.id;
     });
     return { success: true as const, areaId: duplicatedAreaId };
@@ -624,7 +626,7 @@ export async function createLayerAction(
   },
 
   createdBy?: string
-): ServerActionResponse<{ id: number }> {
+): ServerActionResponse<LayerWire> {
   try {
     const [layer] = await db
 
@@ -674,13 +676,17 @@ export async function createLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
 
-    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}`, "max");
 
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
 
-    return { success: true, data: { id: layer.id } };
+    // Return the whole row, not just the id. The client puts this straight into
+    // its layer list; a partial object rendered a layer with no name and no
+    // colour, and overwriting the id with a timestamp — as the caller used to —
+    // meant every later action on it addressed a layer that does not exist.
+    return { success: true, data: { ...layer, codes: [] } };
   } catch (error) {
     console.error("Error creating layer:", error);
 
@@ -843,11 +849,11 @@ export async function updateLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
 
-    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}`, "max");
 
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
 
     return { success: true };
   } catch (error) {
@@ -927,11 +933,11 @@ export async function deleteLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
 
-    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}`, "max");
 
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
 
     return { success: true };
   } catch (error) {
@@ -996,9 +1002,9 @@ export async function mergeLayersAction(
       await tx.delete(areaLayers).where(inArray(areaLayers.id, uniqueSourceIds));
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
 
     return {
       success: true,
@@ -1086,9 +1092,9 @@ export async function duplicateLayerAction(
       return newLayer.id;
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
 
     return { success: true, data: { id: newLayerId } };
   } catch (error) {
@@ -1180,9 +1186,9 @@ export async function copyLayerToAreaAction(
       return newLayer.id;
     });
 
-    revalidateTag(`area-${targetAreaId}-layers`, "minutes");
-    revalidateTag(`area-${targetAreaId}`, "minutes");
-    revalidateTag(`area-${targetAreaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${targetAreaId}-layers`, "max");
+    revalidateTag(`area-${targetAreaId}`, "max");
+    revalidateTag(`area-${targetAreaId}-undo-redo`, "max");
 
     return { success: true, data: { id: newLayerId } };
   } catch (error) {
@@ -1269,9 +1275,9 @@ export async function addPostalCodesToLayerAction(
     }
 
     if (!options?.skipInvalidate) {
-      revalidateTag(`area-${areaId}-layers`, "minutes");
-      revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-      revalidateTag(`area-${areaId}-change-history`, "minutes");
+      revalidateTag(`area-${areaId}-layers`, "max");
+      revalidateTag(`area-${areaId}-undo-redo`, "max");
+      revalidateTag(`area-${areaId}-change-history`, "max");
     }
 
     return { success: true };
@@ -1307,13 +1313,33 @@ export async function removePostalCodesFromLayerAction(
         return null;
       }
 
+      // Codes are stored in composite form ("D-86899"), and callers pass
+      // whatever the map or the palette gave them, which is usually bare.
+      // Matching the raw string deleted nothing and still reported success, so
+      // removing a code the app had just added quietly did nothing. Match both
+      // the normalized form and the raw one, the latter for rows that predate
+      // normalization.
+      const area = await tx.query.areas.findFirst({
+        where: eq(areas.id, areaId),
+        columns: { country: true },
+      });
+      const wanted = [
+        ...new Set([
+          ...normalizePostalCodes(
+            postalCodes,
+            (area?.country ?? "DE") as CountryCode
+          ),
+          ...postalCodes,
+        ]),
+      ];
+
       // RETURNING gives only what was actually deleted
       const deletedRows = await tx
         .delete(areaLayerPostalCodes)
         .where(
           and(
             eq(areaLayerPostalCodes.layerId, layerId),
-            inArray(areaLayerPostalCodes.postalCode, postalCodes)
+            inArray(areaLayerPostalCodes.postalCode, wanted)
           )
         )
         .returning({ postalCode: areaLayerPostalCodes.postalCode });
@@ -1351,9 +1377,9 @@ export async function removePostalCodesFromLayerAction(
     }
 
     if (!options?.skipInvalidate) {
-      revalidateTag(`area-${areaId}-layers`, "minutes");
-      revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-      revalidateTag(`area-${areaId}-change-history`, "minutes");
+      revalidateTag(`area-${areaId}-layers`, "max");
+      revalidateTag(`area-${areaId}-undo-redo`, "max");
+      revalidateTag(`area-${areaId}-change-history`, "max");
     }
 
     return { success: true };
@@ -1531,9 +1557,9 @@ export async function balanceLayersAction(
       return moves;
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
 
     return { success: true, data: result };
   } catch (error) {
@@ -1598,8 +1624,8 @@ export async function fixDuplicateCodeAction(
       return { keptLayerId: keptLayer.id };
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
 
     return { success: true, data: result };
   } catch (error) {
@@ -1645,8 +1671,8 @@ export async function fixDuplicateWithLayerAction(
       }
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
 
     return { success: true, data: { keptLayerId: keepLayerId } };
   } catch (error) {
@@ -1725,8 +1751,8 @@ export async function addPostalCodesByPrefixAction(
       return { count: inserted.length };
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
 
     return { success: true, data: result };
   } catch (error) {
@@ -2517,7 +2543,7 @@ export async function applyLayerTemplateAction(
       }
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
     return { success: true };
   } catch (error) {
     console.error("Error applying layer template:", error);
@@ -2778,7 +2804,7 @@ export async function createTagAction(
         color: areaTags.color,
       });
 
-    revalidateTag("tags", "minutes");
+    revalidateTag("tags", "max");
     return { success: true, data: tag };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2790,7 +2816,7 @@ export async function deleteTagAction(
 ): ServerActionResponse<void> {
   try {
     await db.delete(areaTags).where(eq(areaTags.id, tagId));
-    revalidateTag("tags", "minutes");
+    revalidateTag("tags", "max");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2807,8 +2833,8 @@ export async function assignTagToAreaAction(
       .values({ areaId, tagId })
       .onConflictDoNothing();
 
-    revalidateTag(`area-${areaId}-tags`, "minutes");
-    revalidateTag("tags", "minutes");
+    revalidateTag(`area-${areaId}-tags`, "max");
+    revalidateTag("tags", "max");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2829,8 +2855,8 @@ export async function removeTagFromAreaAction(
         )
       );
 
-    revalidateTag(`area-${areaId}-tags`, "minutes");
-    revalidateTag("tags", "minutes");
+    revalidateTag(`area-${areaId}-tags`, "max");
+    revalidateTag("tags", "max");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2849,10 +2875,10 @@ export async function bulkAssignTagToAreasAction(
       .onConflictDoNothing();
 
     for (const areaId of areaIds) {
-      revalidateTag(`area-${areaId}-tags`, "minutes");
+      revalidateTag(`area-${areaId}-tags`, "max");
     }
-    revalidateTag("tags", "minutes");
-    revalidateTag("areas", "minutes");
+    revalidateTag("tags", "max");
+    revalidateTag("areas", "max");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2875,10 +2901,10 @@ export async function bulkRemoveTagFromAreasAction(
       );
 
     for (const areaId of areaIds) {
-      revalidateTag(`area-${areaId}-tags`, "minutes");
+      revalidateTag(`area-${areaId}-tags`, "max");
     }
-    revalidateTag("tags", "minutes");
-    revalidateTag("areas", "minutes");
+    revalidateTag("tags", "max");
+    revalidateTag("areas", "max");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2896,8 +2922,8 @@ export async function updateTagAction(
       .set({ name: name.trim().slice(0, 50), color })
       .where(eq(areaTags.id, tagId));
 
-    revalidateTag("tags", "minutes");
-    revalidateTag("areas", "minutes");
+    revalidateTag("tags", "max");
+    revalidateTag("areas", "max");
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -3174,9 +3200,9 @@ export async function splitLayerAction(
       return createdLayerIds;
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
 
     return { success: true, data: { createdLayerIds: result } };
   } catch (error) {

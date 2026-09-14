@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition } from "react";
 
 import {
   undoChangeAction,
@@ -95,27 +95,10 @@ export function useUndoRedo(
     });
   }, [areaId, initialStatus?.canRedo, isLoading, onStatusUpdate, options]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Z or Cmd+Z for undo
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-      // Ctrl+Shift+Z or Cmd+Shift+Z or Ctrl+Y or Cmd+Y for redo
-      if (
-        ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) ||
-        ((e.ctrlKey || e.metaKey) && e.key === "y")
-      ) {
-        e.preventDefault();
-        redo();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo]);
+  // No keyboard shortcuts here on purpose. The toolbar that owns these buttons
+  // binds Ctrl+Z itself and skips the shortcut while a text field has focus;
+  // binding it here too meant one press ran undo twice, because both handlers
+  // fire in the same tick and the `isLoading` guard has not committed yet.
 
   return {
     canUndo: initialStatus?.canUndo,

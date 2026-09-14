@@ -62,6 +62,13 @@ interface EnhancedVersionHistoryDialogProps {
   versions: VersionSummary[];
 
   changes: ChangeSummary[];
+
+  /**
+   * Called after a successful restore. Restoring rewrites every layer, so the
+   * caller re-reads them; this used to be a full `window.location.reload()`,
+   * which threw away the map and rebuilt it from nothing.
+   */
+  onRestored?: () => void | Promise<void>;
 }
 
 export function EnhancedVersionHistoryDialog({
@@ -74,6 +81,8 @@ export function EnhancedVersionHistoryDialog({
   versions,
 
   changes,
+
+  onRestored,
 }: EnhancedVersionHistoryDialogProps) {
   const [selectedVersion, setSelectedVersion] = useState<VersionSummary | null>(
     null
@@ -128,9 +137,9 @@ export function EnhancedVersionHistoryDialog({
 
       if (result?.success) {
         onOpenChange(false);
-        window.location.reload();
         setShowRestoreDialog(false);
         setVersionToRestore(null);
+        await onRestored?.();
       }
       updateOptimisticRestoring(false);
     });

@@ -1,8 +1,13 @@
 export {};
 
 /**
- * Exercises every mutating action on a test area and asserts that none of them
- * remount the view or blank the map.
+ * Exercises every mutating action on a test area and asserts three things about
+ * each one:
+ *
+ *  - the view never remounts and the map never blanks;
+ *  - the change is visible immediately, without a reload — a mutation the user
+ *    cannot see happened is as bad as one that did not happen;
+ *  - what the screen shows still matches the database afterwards.
  *
  * Reuses a long-lived Chrome (see scripts/lib/browser.ts) so runs are fast and
  * start warm.
@@ -21,6 +26,22 @@ mkdirSync(SHOT_DIR, { recursive: true });
 
 const cdp = await Cdp.attach(URL_TO_OPEN);
 
+// One run at a time. Two runs share the long-lived browser and would drive the
+// same tab, which produces failures that look like real bugs and are not.
+const RUN_ID = `${process.pid}-${Date.now()}`;
+const claimed = await cdp.evaluate<string>(`(() => {
+  const held = window.__actionRun;
+  if (held && Date.now() - held.at < 10 * 60 * 1000) return held.id;
+  window.__actionRun = { id: ${JSON.stringify(RUN_ID)}, at: Date.now() };
+  return ${JSON.stringify(RUN_ID)};
+})()`);
+if (claimed !== RUN_ID) {
+  console.log(`another run (${claimed}) is already driving this tab — aborting`);
+  // Leave the lock alone: it belongs to the other run.
+  cdp.detach();
+  process.exit(1);
+}
+
 const ready = await cdp.waitFor(
   "Boolean(document.querySelector('canvas') && document.querySelector('[aria-label=\"Kartentools-Panel\"]'))",
   120000
@@ -28,6 +49,7 @@ const ready = await cdp.waitFor(
 console.log("attached, map ready:", ready);
 if (!ready) {
   console.log("map/panel never appeared — is the server running?");
+  await cdp.evaluate("delete window.__actionRun");
   cdp.detach();
   process.exit(1);
 }
@@ -86,6 +108,7 @@ await cdp.evaluate(`(() => {
   };
   window.__probe = probe;
 
+
   const of = window.fetch;
   window.fetch = function (...a) {
     const u = String(typeof a[0] === 'string' ? a[0] : (a[0] && a[0].url) || a[0]);
@@ -126,9 +149,44 @@ interface ActionResult {
 const results: ActionResult[] = [];
 
 /** Run one action and watch for a blank or a map rebuild while it settles. */
+interface LayerRow {
+  id: number;
+  name: string;
+  color: string;
+  opacity: number;
+  active: boolean;
+  visible: boolean;
+  codes: number;
+}
+
+/** Returns a complaint, or null when the UI reflected the action. */
+type Expectation = (
+  before: LayerRow[],
+  after: LayerRow[],
+  outcome: Record<string, unknown>
+) => string | null;
+
+/**
+ * The panel's own view of the layers, read from data- attributes.
+ *
+ * Deliberately self-contained rather than calling an injected helper: it has to
+ * keep working after a reload, which wipes anything the probe put on `window`.
+ */
+const READ_LAYERS = `[...document.querySelectorAll('[data-layer-row]')].map((r) => ({
+  id: Number(r.getAttribute('data-layer-row')),
+  name: r.getAttribute('data-layer-name') || '',
+  color: r.getAttribute('data-layer-color') || '',
+  opacity: Number(r.getAttribute('data-layer-opacity')),
+  active: r.getAttribute('data-layer-active') === 'true',
+  visible: r.getAttribute('data-layer-visible') === 'true',
+  codes: Number(r.getAttribute('data-layer-codes')),
+}))`;
+const readLayers = () => cdp.evaluate<LayerRow[]>(READ_LAYERS);
+
 async function runAction(
   name: string,
   script: string,
+  expect?: Expectation,
   settleMs = 3000
 ): Promise<void> {
   process.stdout.write(`  running ${name} ... `);
@@ -137,6 +195,7 @@ async function runAction(
     process.stdout.write(`${label}=${Date.now() - tStart}ms `);
   await cdp.evaluate("window.__probe.reset(); window.__t = performance.now();");
   const baseline = await cdp.evaluate<number>("window.__probe.baselineColors");
+  const layersBefore = await readLayers();
 
   let outcome: Record<string, unknown>;
   try {
@@ -192,15 +251,20 @@ async function runAction(
     Number(verdict.styleLoads) === 0;
   const driven = (outcome as { ok?: boolean }).ok !== false;
 
+  const layersAfter = await readLayers();
+  const complaint = expect ? expect(layersBefore, layersAfter, outcome) : null;
+
   results.push({
     name,
-    ok: stable && driven,
+    ok: stable && driven && complaint === null,
     detail:
       `${stable ? "stable" : "UNSTABLE"} ${driven ? "driven" : "NOT-DRIVEN"} ` +
+      `${complaint === null ? "updated" : "STALE-UI"} ` +
       `remount=${verdict.remounted} canvasGone=${verdict.blankCanvas} panelGone=${verdict.blankPanel} ` +
       `mapBlank=${verdict.blankMap} styleReloads=${verdict.styleLoads} ` +
-      `colors ${verdict.baseline}->${verdict.endColors} ` +
-      `${JSON.stringify(outcome).slice(0, 110)}`,
+      `layers ${layersBefore.length}->${layersAfter.length} ` +
+      (complaint === null ? "" : `— ${complaint} `) +
+      `${JSON.stringify(outcome).slice(0, 90)}`,
   });
 
   mark("verdict");
@@ -210,6 +274,13 @@ async function runAction(
 
 const byLabel = (t: string) =>
   `[...document.querySelectorAll('button')].find((b) => ((b.getAttribute('aria-label')||b.title||'')).indexOf(${JSON.stringify(t)}) === 0)`;
+
+const dismissDialogs = `
+  for (let i = 0; i < 3 && document.querySelector('[role="dialog"],[role="alertdialog"]'); i++) {
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await sleep(400);
+  }
+`;
 
 const openPalette = `
   // Ctrl+K toggles, so close anything open first or we shut it again.
@@ -233,6 +304,17 @@ const paletteRun = (label: string) => `
 `;
 
 // ---- the actions ----
+//
+// Each action carries an expectation about the panel afterwards. The point is
+// not that the server accepted the call — it is that the person looking at the
+// screen can see the result without reloading.
+
+let createdLayerId = 0;
+
+const activeOf = (rows: LayerRow[]) => rows.find((r) => r.active);
+/** +1 or -1: what the change just before undo/redo did to the code count. */
+let undoDirection = 1;
+const byId = (rows: LayerRow[], id: number) => rows.find((r) => r.id === id);
 
 await runAction(
   "create-layer",
@@ -244,18 +326,67 @@ await runAction(
     ? document.activeElement
     : [...document.querySelectorAll('input')].find((i) => /Neues Gebiet/i.test(i.placeholder || ''));
   if (!input) return { ok: false, reason: 'no new-layer input' };
+  const name = 'ACT ' + Date.now().toString().slice(-5);
   const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-  setter.call(input, 'ACT ' + Date.now().toString().slice(-5));
+  setter.call(input, name);
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await sleep(250);
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   const form = input.closest('form');
   if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  return { ok: true };
-`
+  return { ok: true, name };
+`,
+  (before, after, outcome) => {
+    if (after.length !== before.length + 1) {
+      return `expected ${before.length + 1} layers, panel shows ${after.length}`;
+    }
+    const fresh = after.find((r) => !before.some((b) => b.id === r.id));
+    if (!fresh) return "no new layer row appeared";
+    // A timestamp-shaped id means the client invented one instead of using the
+    // row the server created, so every later action on it would miss.
+    if (fresh.id > 1e11) return `new layer has a fabricated id (${fresh.id})`;
+    if (fresh.name !== outcome.name) {
+      return `new layer is named "${fresh.name}", expected "${String(outcome.name)}"`;
+    }
+    createdLayerId = fresh.id;
+    return null;
+  }
 );
 
-await runAction("toggle-postal-code", `
+await runAction(
+  "rename-active-layer",
+  `
+  const active = document.querySelector('[data-layer-active="true"]');
+  if (!active) return { ok: false, reason: 'no active layer row' };
+  const span = [...active.querySelectorAll('span')].find((e) => /Doppelklick/.test(e.getAttribute('title') || ''));
+  if (!span) return { ok: false, reason: 'no name element' };
+  span.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  await sleep(600);
+  const input = active.querySelector('input') || (document.activeElement && document.activeElement.tagName === 'INPUT' ? document.activeElement : null);
+  if (!input) return { ok: false, reason: 'rename input never opened' };
+  const name = 'REN ' + Date.now().toString().slice(-5);
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(input, name);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(200);
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  const form = input.closest('form');
+  if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  return { ok: true, name };
+`,
+  (_before, after, outcome) => {
+    const row = byId(after, createdLayerId);
+    if (!row) return `layer ${createdLayerId} is gone from the panel`;
+    if (row.name !== outcome.name) {
+      return `panel still shows "${row.name}", expected "${String(outcome.name)}"`;
+    }
+    return null;
+  }
+);
+
+await runAction(
+  "toggle-postal-code",
+  `
   ${openPalette}
   const dlg = document.querySelector('[role="dialog"]');
   const input = dlg && dlg.querySelector('[cmdk-input]');
@@ -264,8 +395,6 @@ await runAction("toggle-postal-code", `
   setter.call(input, '86899');
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await sleep(1200);
-  // Whichever direction the code is currently in — this must not depend on
-  // whatever a previous run left behind.
   const item = [...document.querySelectorAll('[cmdk-item]')]
     .find((e) => /hinzuf|entfernen/i.test(e.textContent));
   if (!item) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { ok: false, reason: 'no add/remove command' }; }
@@ -273,49 +402,420 @@ await runAction("toggle-postal-code", `
   item.click();
   await sleep(2000);
   return { ok: true, did: was };
-`);
+`,
+  (before, after, outcome) => {
+    // The command acts on whichever layer holds the code, which is not always
+    // the active one, so this counts across the whole area.
+    const total = (rows: LayerRow[]) =>
+      rows.reduce((sum, r) => sum + r.codes, 0);
+    const delta = total(after) - total(before);
+    const want = outcome.did === "add" ? 1 : -1;
+    if (delta !== want) {
+      return `area code count moved by ${delta} on a "${String(outcome.did)}"`;
+    }
+    return null;
+  }
+);
 
-await runAction("toggle-layer-visibility", paletteRun("ein-/ausblenden"));
-await runAction("duplicate-active-layer", paletteRun("Aktive Ebene duplizieren"));
-// select-all-unassigned is not in the default set: on a small test area it
-// writes every unassigned code in the country, which is thousands of rows per
-// run. Enable it deliberately with HEAVY=1.
+const toggleFirstLayerVisibility = `
+  ${openPalette}
+  // "ein-/ausblenden" also matches "Nicht zugeordnete PLZ ein-/ausblenden",
+  // which toggles an overlay rather than a layer. Match on the command value.
+  const item = [...document.querySelectorAll('[cmdk-item]')]
+    .find((e) => (e.getAttribute('data-value') || '').indexOf('ebene sichtbarkeit') === 0);
+  if (!item) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { ok: false, reason: 'no layer visibility command' }; }
+  const label = (item.textContent || '').trim().slice(0, 40);
+  item.click();
+  await sleep(2000);
+  return { ok: true, label };
+`;
+
+await runAction(
+  "toggle-layer-visibility",
+  toggleFirstLayerVisibility,
+  (before, after) => {
+    // The palette offers one visibility command per layer and the suite clicks
+    // the first, which is not necessarily the active layer — so assert that
+    // exactly one row flipped rather than guessing which.
+    const changed = after.filter((a) => {
+      const b = before.find((x) => x.id === a.id);
+      return b && b.visible !== a.visible;
+    });
+    if (changed.length !== 1) {
+      return `${changed.length} rows changed visibility, expected exactly 1`;
+    }
+    return null;
+  }
+);
+
+// Put it back, so the rest of the run sees an ordinary layer.
+await runAction(
+  "restore-layer-visibility",
+  toggleFirstLayerVisibility,
+  (before, after) => {
+    // The palette offers one visibility command per layer and the suite clicks
+    // the first, which is not necessarily the active layer — so assert that
+    // exactly one row flipped rather than guessing which.
+    const changed = after.filter((a) => {
+      const b = before.find((x) => x.id === a.id);
+      return b && b.visible !== a.visible;
+    });
+    if (changed.length !== 1) {
+      return `${changed.length} rows changed visibility, expected exactly 1`;
+    }
+    return null;
+  }
+);
+
+await runAction(
+  "change-layer-opacity",
+  `
+  ${dismissDialogs}
+  const active = document.querySelector('[data-layer-active="true"]');
+  if (!active) return { ok: false, reason: 'no active layer row' };
+  // Opacity lives in the colour popover, behind the colour dot.
+  const dot = active.querySelector('button[title="Farbe ändern"]');
+  if (!dot) return { ok: false, reason: 'no colour dot' };
+  dot.click();
+  await sleep(900);
+  // The base-ui slider keeps its value on a hidden range input; the only
+  // element with role="slider" here is the colour picker's hue control.
+  const thumb = document.querySelector('[data-slot="slider-thumb"]');
+  const input = thumb && thumb.querySelector('input[type="range"]');
+  if (!input) return { ok: false, reason: 'no opacity slider in the popover' };
+  const sliderBefore = input.value;
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  const target = String(Math.max(10, Number(sliderBefore) - 20));
+  setter.call(input, target);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  await sleep(2000);
+  const sliderAfter = input.value;
+  ${dismissDialogs}
+  await sleep(800);
+  if (sliderBefore === sliderAfter) return { ok: false, reason: 'slider did not move (' + sliderBefore + ')' };
+  return { ok: true, sliderBefore, sliderAfter };
+`,
+  (before, after) => {
+    const b = activeOf(before);
+    const a = b ? byId(after, b.id) : undefined;
+    if (!(a && b)) return "no active layer to compare";
+    return a.opacity === b.opacity ? `opacity is still ${a.opacity}` : null;
+  }
+);
+
+await runAction(
+  "change-layer-color",
+  `
+  ${dismissDialogs}
+  const active = document.querySelector('[data-layer-active="true"]');
+  if (!active) return { ok: false, reason: 'no active layer row' };
+  const was = active.getAttribute('data-layer-color');
+  const dot = active.querySelector('button[title="Farbe ändern"]');
+  if (!dot) return { ok: false, reason: 'no colour dot' };
+  dot.click();
+  await sleep(900);
+  // Palette swatches carry the hex as their title.
+  const swatch = [...document.querySelectorAll('button[title]')]
+    .filter((b) => /^#[0-9a-f]{6}/i.test(b.getAttribute('title') || ''))
+    .find((b) => (b.getAttribute('title') || '').slice(0, 7).toLowerCase() !== (was || '').toLowerCase());
+  if (!swatch) { ${dismissDialogs} return { ok: false, reason: 'no other colour to pick' }; }
+  const picked = swatch.getAttribute('title').slice(0, 7);
+  swatch.click();
+  await sleep(1800);
+  ${dismissDialogs}
+  return { ok: true, picked, was };
+`,
+  (before, after, outcome) => {
+    const b = activeOf(before);
+    const a = b ? byId(after, b.id) : undefined;
+    if (!(a && b)) return "no active layer to compare";
+    if (a.color.toLowerCase() !== String(outcome.picked).toLowerCase()) {
+      return `colour is ${a.color}, expected ${String(outcome.picked)}`;
+    }
+    return null;
+  }
+);
+
+await runAction(
+  "duplicate-active-layer",
+  paletteRun("Aktive Ebene duplizieren"),
+  (before, after) =>
+    after.length === before.length + 1
+      ? null
+      : `expected ${before.length + 1} layers, panel shows ${after.length}`
+);
+
+await runAction(
+  "delete-duplicate",
+  `
+  ${openPalette}
+  const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Aktive Ebene l(ö|o)schen/i.test(e.textContent));
+  if (!item) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { ok: false, reason: 'command missing' }; }
+  item.click();
+  await sleep(1500);
+  // The confirmation is an AlertDialog, so role="dialog" alone does not find it.
+  const sheet = [...document.querySelectorAll('[role="alertdialog"],[role="dialog"]')].pop();
+  const confirm = sheet && [...sheet.querySelectorAll('button')]
+    .find((b) => /l(ö|o)schen|entfernen|best(ä|a)tigen/i.test(b.textContent || '') && !/abbrechen/i.test(b.textContent || ''));
+  if (!confirm) { ${dismissDialogs} return { ok: false, reason: 'delete confirmation never appeared' }; }
+  confirm.click();
+  await sleep(2000);
+  return { ok: true };
+`,
+  (before, after) =>
+    after.length === before.length - 1
+      ? null
+      : `expected ${before.length - 1} layers, panel shows ${after.length}`
+);
+
+await runAction(
+  "radius-search",
+  `
+  ${openPalette}
+  // The bare "Umkreissuche…" entry has no point to search around and only
+  // shows a hint; the one that opens the dialog comes from a typed code.
+  const dlg = document.querySelector('[role="dialog"]');
+  const input = dlg && dlg.querySelector('[cmdk-input]');
+  if (!input) return { ok: false, reason: 'no palette input' };
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(input, '86899');
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(1400);
+  const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Umkreis um PLZ/i.test(e.textContent || ''));
+  if (!item) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { ok: false, reason: 'no "Umkreis um PLZ" command' }; }
+  item.click();
+  let sheet = null;
+  for (let i = 0; i < 30 && !sheet; i++) {
+    await sleep(400);
+    sheet = [...document.querySelectorAll('[role="dialog"]')].find((d) => /Umkreis|Radius|Fahrzeit/i.test(d.textContent || ''));
+  }
+  if (!sheet) return { ok: false, reason: 'radius dialog never opened' };
+  // The confirm button names the chosen radius, e.g. "5km Fahrstrecke auswählen".
+  const submit = [...sheet.querySelectorAll('button')].find((b) => /ausw(ä|a)hlen|suchen|hinzuf|anwenden/i.test(b.textContent || '') && !b.disabled);
+  if (!submit) { ${dismissDialogs} return { ok: false, reason: 'no enabled submit button' }; }
+  submit.click();
+  await sleep(5000);
+  ${dismissDialogs}
+  return { ok: true };
+`,
+  (before, after) => {
+    const total = (rows: LayerRow[]) => rows.reduce((sum, r) => sum + r.codes, 0);
+    return total(after) > total(before)
+      ? null
+      : `area code count did not grow (${total(before)}->${total(after)})`;
+  },
+  9000
+);
+
 if (process.env.HEAVY === "1") {
-  await runAction("select-all-unassigned", `
+  // Writes every unassigned code in the country, thousands of rows per run.
+  await runAction(
+    "select-all-unassigned",
+    `
     ${openPalette}
     const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /nicht zugeordneten PLZ hinzuf/i.test(e.textContent));
     if (!item) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { ok: false, reason: 'command missing' }; }
     item.click();
     await sleep(2500);
     return { ok: true };
-  `, 9000);
+  `,
+    (before, after) => {
+      const b = activeOf(before);
+      const a = b ? byId(after, b.id) : undefined;
+      if (!(a && b)) return "no active layer to compare";
+      return a.codes > b.codes
+        ? null
+        : `code count did not grow (${b.codes}->${a.codes})`;
+    },
+    9000
+  );
 }
 
-await runAction("undo", `
+// Undo and redo only mean something against a change that just happened, so
+// make one here rather than depending on whatever ran last.
+await runAction(
+  "postal-code-change-for-undo",
+  `
+  ${openPalette}
+  const dlg = document.querySelector('[role="dialog"]');
+  const input = dlg && dlg.querySelector('[cmdk-input]');
+  if (!input) return { ok: false, reason: 'no palette input' };
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(input, '86899');
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(1400);
+  const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /hinzuf|entfernen/i.test(e.textContent));
+  if (!item) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { ok: false, reason: 'no add/remove command' }; }
+  const did = /entfernen/i.test(item.textContent) ? 'remove' : 'add';
+  item.click();
+  await sleep(2400);
+  return { ok: true, did };
+`,
+  (before, after, outcome) => {
+    const total = (rows: LayerRow[]) => rows.reduce((sum, r) => sum + r.codes, 0);
+    const delta = total(after) - total(before);
+    // Adding puts the code in exactly one layer. Removing takes it out of every
+    // layer that held it, which can be more than one, so only the sign is fixed.
+    if (outcome.did === "add") {
+      undoDirection = 1;
+      return delta === 1 ? null : `area code count moved by ${delta}, expected 1`;
+    }
+    undoDirection = -1;
+    return delta < 0
+      ? null
+      : `area code count moved by ${delta}, expected it to drop`;
+  }
+);
+
+await runAction(
+  "undo",
+  `
+  ${dismissDialogs}
   const b = [...document.querySelectorAll('button')].find((x) => /^R(ü|u)ckg(ä|a)ngig/.test((x.getAttribute('aria-label')||x.title||'')));
   if (!b) return { ok: false, reason: 'no undo button' };
+  if (b.disabled) return { ok: false, reason: 'undo is disabled' };
   b.click();
-  await sleep(2000);
+  await sleep(2500);
   return { ok: true };
-`, 8000);
-await runAction("redo", `
+`,
+  (before, after) => {
+    const total = (rows: LayerRow[]) => rows.reduce((sum, r) => sum + r.codes, 0);
+    const delta = total(after) - total(before);
+    // One undo pops one recorded change, and a removal that spanned several
+    // layers recorded one per layer — so only the direction is predictable.
+    return Math.sign(delta) === -undoDirection
+      ? null
+      : `area code count moved by ${delta}, expected it to go ${undoDirection > 0 ? "down" : "up"}`;
+  },
+  8000
+);
+
+await runAction(
+  "redo",
+  `
+  ${dismissDialogs}
   const b = [...document.querySelectorAll('button')].find((x) => /^Wiederholen/.test((x.getAttribute('aria-label')||x.title||'')));
   if (!b) return { ok: false, reason: 'no redo button' };
+  if (b.disabled) return { ok: false, reason: 'redo is disabled' };
   b.click();
-  await sleep(2000);
+  await sleep(2500);
   return { ok: true };
-`, 8000);
+`,
+  (before, after) => {
+    const total = (rows: LayerRow[]) => rows.reduce((sum, r) => sum + r.codes, 0);
+    const delta = total(after) - total(before);
+    return Math.sign(delta) === undoDirection
+      ? null
+      : `area code count moved by ${delta}, expected it to go ${undoDirection > 0 ? "up" : "down"}`;
+  },
+  8000
+);
+
 await runAction("create-version", paletteRun("Version erstellen"));
-await runAction("delete-active-layer", `
+
+await runAction(
+  "delete-active-layer",
+  `
   ${openPalette}
   const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Aktive Ebene l(ö|o)schen/i.test(e.textContent));
   if (!item) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { ok: false, reason: 'command missing' }; }
   item.click();
-  await sleep(1200);
-  const confirm = [...document.querySelectorAll('[role="dialog"] button')].find((b) => /l(ö|o)schen|entfernen|best(ä|a)tigen/i.test(b.textContent || ''));
-  if (confirm) { confirm.click(); await sleep(1500); }
+  await sleep(1500);
+  // The confirmation is an AlertDialog, so role="dialog" alone does not find it.
+  const sheet = [...document.querySelectorAll('[role="alertdialog"],[role="dialog"]')].pop();
+  const confirm = sheet && [...sheet.querySelectorAll('button')]
+    .find((b) => /l(ö|o)schen|entfernen|best(ä|a)tigen/i.test(b.textContent || '') && !/abbrechen/i.test(b.textContent || ''));
+  if (!confirm) { ${dismissDialogs} return { ok: false, reason: 'delete confirmation never appeared' }; }
+  confirm.click();
+  await sleep(2000);
   return { ok: true };
-`);
+`,
+  (before, after) => {
+    if (after.length !== before.length - 1) {
+      const gone = before.filter((b) => !after.some((a) => a.id === b.id));
+      return `expected ${before.length - 1} layers, panel shows ${after.length} (removed: ${gone.map((g) => g.id).join(",") || "none"})`;
+    }
+    return null;
+  }
+);
+
+// ---- leave the test area as we found it ----
+//
+// Without this the area grows by a few layers every run, and after a dozen runs
+// the fixture no longer resembles anything a person would have.
+const TEST_NAME = /^(ACT|REN|PROBE|Kopie von (ACT|REN))/;
+let removed = 0;
+for (let pass = 0; pass < 15; pass++) {
+  const rows = await readLayers();
+  const junk = rows.find((r) => TEST_NAME.test(r.name));
+  if (!junk) break;
+  const done = await cdp.evaluate<boolean>(`(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    ${dismissDialogs}
+    const row = document.querySelector('[data-layer-row="${junk.id}"]');
+    if (!row) return false;
+    const hit = row.querySelector('[role="button"]');
+    (hit || row).click();
+    await sleep(700);
+    ${openPalette}
+    const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Aktive Ebene l(ö|o)schen/i.test(e.textContent));
+    if (!item) return false;
+    item.click();
+    await sleep(1400);
+    const sheet = [...document.querySelectorAll('[role="alertdialog"],[role="dialog"]')].pop();
+    const confirm = sheet && [...sheet.querySelectorAll('button')]
+      .find((b) => /l(ö|o)schen|entfernen|best(ä|a)tigen/i.test(b.textContent || '') && !/abbrechen/i.test(b.textContent || ''));
+    if (!confirm) return false;
+    confirm.click();
+    await sleep(1800);
+    return true;
+  })()`);
+  if (!done) break;
+  removed++;
+}
+console.log(`  cleanup ... removed ${removed} test layer(s)`);
+
+// ---- does the screen still agree with the database? ----
+//
+// Everything above reads client state. This reloads and compares, which is the
+// only way to catch a UI that updated itself into a lie.
+const fingerprint = (rows: LayerRow[]) =>
+  rows
+    .map((r) => `${r.id}:${r.name}:${r.color}:${r.visible}:${r.codes}`)
+    .sort()
+    .join("|");
+
+try {
+  const beforeReload = await readLayers();
+  await cdp.send("Page.reload", {});
+  await cdp.waitFor(
+    "document.querySelectorAll('[data-layer-row]').length > 0",
+    180000
+  );
+  await sleep(2500);
+  const afterReload = await readLayers();
+  const consistent = fingerprint(beforeReload) === fingerprint(afterReload);
+  results.push({
+    name: "ui-matches-server",
+    ok: consistent,
+    detail: consistent
+      ? `stable driven updated — ${afterReload.length} layers identical after reload`
+      : `STALE-UI — screen had ${beforeReload.length} layers, server has ${afterReload.length}` +
+        `
+      screen: ${fingerprint(beforeReload).slice(0, 220)}` +
+        `
+      server: ${fingerprint(afterReload).slice(0, 220)}`,
+  });
+  console.log(`  ui-matches-server ... ${consistent ? "PASS" : "FAIL"}`);
+} catch (error) {
+  results.push({
+    name: "ui-matches-server",
+    ok: false,
+    detail: `check threw: ${String(error).slice(0, 160)}`,
+  });
+  console.log("  ui-matches-server ... FAIL");
+}
 
 // ---- report ----
 console.log("\\n=== action results ===");
@@ -332,4 +832,5 @@ if (errors.length > 0) {
   for (const e of errors) console.log("  " + e);
 }
 
+await cdp.evaluate("delete window.__actionRun");
 cdp.detach();

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, like, or } from "drizzle-orm";
+import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
 import {
@@ -13,6 +13,7 @@ import {
   areas,
   areaLayers,
   areaLayerPostalCodes,
+  areaUndoStacks,
   postalCodes,
 } from "../../lib/schema/schema";
 import { recordChangeAction } from "./change-tracking-actions";
@@ -62,9 +63,9 @@ export async function createLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
 
     return { success: true, data: { id: layer.id } };
   } catch (error) {
@@ -177,9 +178,9 @@ export async function updateLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
     return { success: true };
   } catch (error) {
     console.error("Error updating layer:", error);
@@ -202,8 +203,8 @@ export async function batchUpdateVisibilityAction(
       }
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
     return { success: true };
   } catch (error) {
     console.error("Error batch-updating visibility:", error);
@@ -260,9 +261,9 @@ export async function deleteLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
     return { success: true };
   } catch (error) {
     console.error("Error deleting layer:", error);
@@ -376,9 +377,9 @@ export async function addPostalCodesToLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
     return { success: true };
   } catch (error) {
     console.error("Error adding postal codes to layer:", error);
@@ -441,9 +442,9 @@ export async function removePostalCodesFromLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
     return { success: true };
   } catch (error) {
     console.error("Error removing postal codes from layer:", error);
@@ -527,9 +528,9 @@ export async function mergeLayersAction(
       },
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
     return { success: true };
   } catch (error) {
     console.error("Error merging layers:", error);
@@ -598,13 +599,68 @@ export async function removePostalCodesByCountryAction(
       previousData: { postalCodes: codeList },
     });
 
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
 
     return { success: true, data: { removed: codeList.length } };
   } catch (error) {
     console.error("removePostalCodesByCountryAction error:", error);
     return { success: false, error: "Fehler beim Entfernen der PLZ" };
+  }
+}
+
+/**
+ * The area's layers and undo/redo counters, read straight from the database.
+ *
+ * Most mutations are modelled on the client, so it can update its list without
+ * asking. A few — undo, redo, restoring a version, bulk import, merging or
+ * splitting layers, changing granularity — rewrite the whole set in ways the
+ * client cannot predict. Those call this afterwards and replace their state
+ * wholesale, which keeps the UI current without re-rendering the route. A route
+ * re-render swaps the page segment and remounts the map, which is the ten
+ * seconds of blank canvas this whole arrangement exists to avoid.
+ */
+export async function getAreaLayerStateAction(areaId: number) {
+  try {
+    const [layerRows, undoRows] = await Promise.all([
+      db.query.areaLayers.findMany({
+        where: eq(areaLayers.areaId, areaId),
+        with: { postalCodes: { columns: { postalCode: true } } },
+        orderBy: (layers, { asc }) => [asc(layers.orderIndex)],
+      }),
+      db
+        .select({
+          undoCount: sql<number>`coalesce(jsonb_array_length(${areaUndoStacks.undoStack}), 0)`,
+          redoCount: sql<number>`coalesce(jsonb_array_length(${areaUndoStacks.redoStack}), 0)`,
+        })
+        .from(areaUndoStacks)
+        .where(eq(areaUndoStacks.areaId, areaId))
+        .limit(1),
+    ]);
+
+    const { undoCount, redoCount } = undoRows[0] ?? {
+      undoCount: 0,
+      redoCount: 0,
+    };
+
+    return {
+      success: true as const,
+      data: {
+        layers: layerRows.map(({ postalCodes: codes, ...layer }) => ({
+          ...layer,
+          codes: codes.map((entry) => entry.postalCode),
+        })),
+        undoRedo: {
+          canUndo: undoCount > 0,
+          canRedo: redoCount > 0,
+          undoCount,
+          redoCount,
+        },
+      },
+    };
+  } catch (error) {
+    console.error("Error reading area layer state:", error);
+    return { success: false as const, error: "Failed to read layers" };
   }
 }

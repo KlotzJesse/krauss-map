@@ -228,11 +228,11 @@ export async function bulkImportPostalCodesAndLayers(
     }
 
     // Update cache tags and refresh
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
-    revalidateTag("recent-activity", "minutes");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag("recent-activity", "max");
 
     return {
       success: errors.length === 0,

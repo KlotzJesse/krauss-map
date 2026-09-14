@@ -463,6 +463,16 @@ export const LayerListItem = memo(function LayerListItem({
     <ContextMenu>
       <ContextMenuTrigger render={<div className="contents" />}>
         <div
+          // Lets the action suite assert on the real layer list — which layers
+          // exist, which one is active, how many codes each holds — instead of
+          // inferring it from pixels.
+          data-layer-row={layer.id}
+          data-layer-active={activeLayerId === layer.id ? "true" : "false"}
+          data-layer-visible={isVisible ? "true" : "false"}
+          data-layer-codes={postalCodes.length}
+          data-layer-name={layer.name}
+          data-layer-color={layer.color}
+          data-layer-opacity={layer.opacity}
           className={cn(
             "group relative rounded-md border transition-all",
             activeLayerId === layer.id

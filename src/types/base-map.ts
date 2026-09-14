@@ -3,7 +3,7 @@ import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import type { CountryCode } from "@/lib/config/countries";
 import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { VersionSummary, ChangeSummary } from "@/lib/schema/schema";
-import type { Layer } from "@/lib/types/area-types";
+import type { Layer, LayerChange } from "@/lib/types/area-types";
 
 export interface BaseMapProps {
   /** Codes, representative points, areas and bounds. The outlines themselves
@@ -30,6 +30,10 @@ export interface BaseMapProps {
     layerId: number,
     codes: string[]
   ) => Promise<void>;
+  /** Apply a layer create/update/delete the caller already has the result of. */
+  onLayerChange?: (change: LayerChange) => void;
+  /** Re-read layers from the server when the client cannot predict the result. */
+  onResyncLayers?: () => Promise<void>;
   isViewingVersion: boolean;
   versionId: number | null;
   versions: VersionSummary[];

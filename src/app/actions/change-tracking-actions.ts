@@ -172,11 +172,11 @@ export async function recordChangeAction(
       return { success: false, error: "Area not found" };
     }
 
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
 
     if (options?.invalidateHistory !== false) {
-      revalidateTag(`area-${areaId}-change-history`, "minutes");
-      revalidateTag("recent-activity", "minutes");
+      revalidateTag(`area-${areaId}-change-history`, "max");
+      revalidateTag("recent-activity", "max");
     }
 
     return { success: true, data: result };
@@ -288,8 +288,8 @@ export async function undoChangeAction(
       return changeKey;
     });
 
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
 
     return { success: true, data: result };
   } catch (error) {
@@ -398,8 +398,8 @@ export async function redoChangeAction(
       return changeKey;
     });
 
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
 
     return { success: true, data: result };
   } catch (error) {
@@ -705,8 +705,8 @@ export async function clearUndoRedoStacksAction(
         .where(eq(areaUndoStacks.id, stack.id));
     }
 
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-    revalidateTag(`area-${areaId}-change-history`, "minutes");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-change-history`, "max");
 
     return { success: true };
   } catch (error) {

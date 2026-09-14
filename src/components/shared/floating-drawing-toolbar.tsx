@@ -34,6 +34,12 @@ interface FloatingDrawingToolbarProps {
     undoCount: number;
     redoCount: number;
   };
+  /**
+   * Called once the server has applied an undo or redo. Both rewrite layers in
+   * ways the client cannot predict, so the owner re-reads them. Without this the
+   * toast said "Änderung rückgängig gemacht" and nothing on screen moved.
+   */
+  onUndoRedoApplied?: () => void | Promise<void>;
 }
 
 const drawingModes = [
@@ -120,9 +126,11 @@ const ToolbarButton = memo(function ToolbarButton({
 const UndoRedoButtons = memo(function UndoRedoButtons({
   areaId,
   initialStatus,
+  onApplied,
 }: {
   areaId: number;
   initialStatus?: FloatingDrawingToolbarProps["undoRedoStatus"];
+  onApplied?: () => void | Promise<void>;
 }) {
   const defaultStatus = {
     canUndo: false,
@@ -152,7 +160,7 @@ const UndoRedoButtons = memo(function UndoRedoButtons({
   const { undo, redo, isLoading } = useUndoRedo(
     areaId,
     optimisticStatus,
-    undefined,
+    onApplied,
     {
       onOptimisticUndo: () => updateOptimisticStatus("undo"),
       onOptimisticRedo: () => updateOptimisticStatus("redo"),
@@ -236,6 +244,7 @@ export function FloatingDrawingToolbar({
   onModeChange,
   isPanelOpen = false,
   undoRedoStatus,
+  onUndoRedoApplied,
 }: FloatingDrawingToolbarProps) {
   const handleModeClick = useStableCallback((modeId: string) => {
     const terraDrawMode = (
@@ -283,6 +292,7 @@ export function FloatingDrawingToolbar({
                 <UndoRedoButtons
                   areaId={areaId}
                   initialStatus={undoRedoStatus}
+                  onApplied={onUndoRedoApplied}
                 />
               </>
             )}

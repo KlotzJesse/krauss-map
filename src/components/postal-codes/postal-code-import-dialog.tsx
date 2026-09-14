@@ -53,6 +53,11 @@ interface PostalCodeImportDialogProps {
    */
   onImport: (postalCodes: string[]) => void | Promise<boolean | void>;
   areaId?: number; // Optional for bulk import
+  /**
+   * Called after a bulk import, which creates and fills layers server-side.
+   * The client cannot predict the result, so it re-reads the layer list.
+   */
+  onLayersChanged?: () => void | Promise<void>;
 }
 
 export function PostalCodeImportDialog({
@@ -60,6 +65,7 @@ export function PostalCodeImportDialog({
   onOpenChange,
   availableCodes,
   granularity,
+  onLayersChanged,
   onImport,
   areaId,
 }: PostalCodeImportDialogProps) {
@@ -399,6 +405,7 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
             onImportComplete={() => {
               setBulkImportOpen(false);
               onOpenChange(false);
+              void onLayersChanged?.();
             }}
           />
         </Suspense>

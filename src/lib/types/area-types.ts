@@ -39,6 +39,42 @@ export type LayerWire = Omit<Layer, "postalCodes"> & {
   codes: string[];
 };
 
+/**
+ * A change to the area's layer list that the client can apply itself.
+ *
+ * The view owns the one authoritative copy of the layers; every panel and the
+ * map read from it. Anything that mutates layers describes the mutation with
+ * one of these instead of keeping a second copy, which is what used to let the
+ * panel and the map disagree about which layers exist.
+ *
+ * `replace` is the escape hatch for server-side rewrites — undo, redo, version
+ * restore, import, merge, split, granularity change — where the client cannot
+ * predict the result and re-reads it instead.
+ */
+export type LayerChange =
+  | { type: "create"; layer: Layer }
+  | { type: "update"; id: number; patch: Partial<Layer> }
+  | { type: "delete"; id: number }
+  | { type: "replace"; layers: Layer[] };
+
+/** Apply a {@link LayerChange} to a layer list, returning a new list. */
+export function reduceLayerChange(layers: Layer[], change: LayerChange): Layer[] {
+  switch (change.type) {
+    case "create":
+      return layers.some((layer) => layer.id === change.layer.id)
+        ? layers
+        : [...layers, change.layer];
+    case "update":
+      return layers.map((layer) =>
+        layer.id === change.id ? { ...layer, ...change.patch } : layer
+      );
+    case "delete":
+      return layers.filter((layer) => layer.id !== change.id);
+    case "replace":
+      return change.layers;
+  }
+}
+
 export type AreaWithLayers = Area & {
   layers: Layer[];
 };

@@ -158,8 +158,8 @@ export async function changeAreaGranularityAction(
         .where(eq(areas.id, areaId));
     });
 
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-layers`, "minutes");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-layers`, "max");
 
     return {
       success: true,

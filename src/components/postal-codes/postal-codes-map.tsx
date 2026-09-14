@@ -4,7 +4,7 @@ import { BaseMap } from "@/components/shared/base-map";
 import type { CountryCode } from "@/lib/config/countries";
 import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
-import type { Layer } from "@/lib/types/area-types";
+import type { Layer, LayerChange } from "@/lib/types/area-types";
 
 const EMPTY_ARRAY: never[] = [];
 
@@ -28,6 +28,8 @@ interface PostalCodesMapProps {
     layerId: number,
     codes: string[]
   ) => Promise<void>;
+  onLayerChange?: (change: LayerChange) => void;
+  onResyncLayers?: () => Promise<void>;
   isViewingVersion?: boolean;
   versionId: number | null;
   versions: VersionSummary[];
@@ -55,6 +57,8 @@ export const PostalCodesMap = memo(function PostalCodesMap({
   areaTags,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
+  onLayerChange,
+  onResyncLayers,
   isViewingVersion = false,
   versionId,
   versions,
@@ -82,6 +86,8 @@ export const PostalCodesMap = memo(function PostalCodesMap({
       onZoomToLayer={onZoomToLayer}
       addPostalCodesToLayer={addPostalCodesToLayer}
       removePostalCodesFromLayer={removePostalCodesFromLayer}
+      onLayerChange={onLayerChange}
+      onResyncLayers={onResyncLayers}
       isViewingVersion={isViewingVersion}
       versionId={versionId}
       versions={versions}

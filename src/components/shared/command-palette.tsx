@@ -365,7 +365,7 @@ export function CommandPalette({
                       >
                         <IconTrash className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="flex-1">
-                          PLZ {plzQuery} aus der aktiven Ebene entfernen
+                          PLZ {plzQuery} aus dem Gebiet entfernen
                         </span>
                         <span className="flex gap-0.5 shrink-0">
                           {plzInArea.layers.slice(0, 3).map((layer) => (

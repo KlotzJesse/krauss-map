@@ -342,6 +342,8 @@ const MapInner = memo(function MapInner({
   onZoomToLayer,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
+  onLayerChange,
+  onResyncLayers,
   isViewingVersion,
   versionId,
   versions,
@@ -807,6 +809,7 @@ const MapInner = memo(function MapInner({
         areaId={areaId}
         isPanelOpen={interactions.isDrawingToolsVisible}
         undoRedoStatus={initialUndoRedoStatus}
+        onUndoRedoApplied={onResyncLayers}
       />
       {/* Edit bar - appears above the toolbar when a drawn shape is selected */}
       {interactions.editingFeatureId && (
@@ -849,6 +852,8 @@ const MapInner = memo(function MapInner({
                   isLayerSwitchPending={isLayerPending}
                   addPostalCodesToLayer={addPostalCodesToLayer}
                   removePostalCodesFromLayer={removePostalCodesFromLayer}
+                  onLayerChange={onLayerChange}
+                  onResyncLayers={onResyncLayers}
                   layers={layers}
                   isViewingVersion={isViewingVersion}
                   country={country}
@@ -1242,6 +1247,8 @@ const BaseMapComponent = ({
   onZoomToLayer,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
+  onLayerChange,
+  onResyncLayers,
   isViewingVersion = false,
   versionId,
   versions,
@@ -1404,6 +1411,8 @@ const BaseMapComponent = ({
               onZoomToLayer={onZoomToLayer}
               addPostalCodesToLayer={addPostalCodesToLayer}
               removePostalCodesFromLayer={removePostalCodesFromLayer}
+              onLayerChange={onLayerChange}
+              onResyncLayers={onResyncLayers}
               isViewingVersion={isViewingVersion}
               versionId={versionId}
               versions={versions}

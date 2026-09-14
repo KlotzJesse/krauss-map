@@ -169,7 +169,7 @@ import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
-import type { Layer } from "@/lib/types/area-types";
+import type { Layer, LayerChange } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import {
   extractRawCode,
@@ -299,7 +299,15 @@ export interface DrawingToolsProps {
 
   layers?: Layer[];
 
-  onLayerUpdate?: () => void; // Callback to refresh layer data
+  /**
+   * Report a layer create/update/delete whose result is already known, so the
+   * view — which owns the one authoritative layer list — can apply it. This
+   * panel deliberately keeps no list of its own.
+   */
+  onLayerChange?: (change: LayerChange) => void;
+
+  /** Ask the view to re-read layers when the server rewrote them wholesale. */
+  onResyncLayers?: () => Promise<void>;
 
   addPostalCodesToLayer?: (layerId: number, codes: string[]) => Promise<void>;
 
@@ -512,7 +520,8 @@ interface UseDrawingToolsActionsProps {
   activeLayerId: DrawingToolsProps["activeLayerId"];
   onLayerSelect: DrawingToolsProps["onLayerSelect"];
   layers: Layer[];
-  onLayerUpdate: DrawingToolsProps["onLayerUpdate"];
+  onLayerChange: DrawingToolsProps["onLayerChange"];
+  onResyncLayers: DrawingToolsProps["onResyncLayers"];
   addPostalCodesToLayer: DrawingToolsProps["addPostalCodesToLayer"];
   removePostalCodesFromLayer: DrawingToolsProps["removePostalCodesFromLayer"];
   pendingPostalCodes: string[];
@@ -529,7 +538,8 @@ function useDrawingToolsActions({
   activeLayerId,
   onLayerSelect,
   layers,
-  onLayerUpdate,
+  onLayerChange,
+  onResyncLayers,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
   pendingPostalCodes,
@@ -539,9 +549,12 @@ function useDrawingToolsActions({
   country,
   availableCodes,
 }: UseDrawingToolsActionsProps) {
-  const [baseLayers, setBaseLayers] = useState(layers);
+  // No local copy of the layer list. The `layers` prop is the single source of
+  // truth (the view owns it); this only overlays mutations that are still in
+  // flight. Keeping a second copy here is what used to make a freshly created
+  // layer disappear the moment any other edit re-sent the prop.
   const [optimisticLayers, updateOptimisticLayers] = useOptimistic(
-    baseLayers,
+    layers,
     (
       currentLayers: Layer[],
       update: {
@@ -568,15 +581,6 @@ function useDrawingToolsActions({
       return currentLayers;
     }
   );
-
-  // Adjust during render instead of in an Effect: an Effect commits the
-  // stale list first, then re-renders, so every server refresh cost an
-  // extra commit of the whole list.
-  const [prevLayers, setPrevLayers] = useState(layers);
-  if (layers !== prevLayers) {
-    setPrevLayers(layers);
-    setBaseLayers(layers);
-  }
 
   // Stable ref so callbacks that iterate all layers don't include optimisticLayers
   // in their dep array (which would recreate them on every layer change,
@@ -652,13 +656,18 @@ function useDrawingToolsActions({
       isVisible: true,
       orderIndex: data.orderIndex,
     });
-    if (result.success) {
-      // Update base state to persist optimistic change
-      setBaseLayers((prev) => [
-        ...prev,
-        { ...result.data, id: Date.now() } as Layer,
-      ]);
-      onLayerUpdate?.();
+    if (result.success && result.data) {
+      // Use the row the server returned, id and all. Replacing the id with a
+      // timestamp — as this did — meant every later action on the new layer
+      // addressed a layer that does not exist.
+      const { codes, ...layer } = result.data;
+      onLayerChange?.({
+        type: "create",
+        layer: {
+          ...layer,
+          postalCodes: codes.map((postalCode) => ({ postalCode })),
+        } as Layer,
+      });
       return result.data;
     }
     throw new Error(result.error);
@@ -673,11 +682,11 @@ function useDrawingToolsActions({
     }
     const result = await updateLayerAction(areaId, layerId, data);
     if (result.success) {
-      // Update base state to persist optimistic change
-      setBaseLayers((prev) =>
-        prev.map((l) => (l.id === layerId ? { ...l, ...data } : l))
-      );
-      onLayerUpdate?.();
+      onLayerChange?.({
+        type: "update",
+        id: layerId,
+        patch: data as Partial<Layer>,
+      });
     } else {
       throw new Error(result.error);
     }
@@ -689,9 +698,18 @@ function useDrawingToolsActions({
     }
     const result = await deleteLayerAction(areaId, layerId);
     if (result.success) {
-      // Update base state to persist optimistic change
-      setBaseLayers((prev) => prev.filter((l) => l.id !== layerId));
-      onLayerUpdate?.();
+      onLayerChange?.({ type: "delete", id: layerId });
+      // Deleting the layer you were working in used to leave the area with no
+      // active layer at all, and every command that acts on "the active layer"
+      // silently did nothing until you clicked one by hand.
+      if (activeLayerId === layerId) {
+        const remaining = layers.filter((l) => l.id !== layerId);
+        const index = layers.findIndex((l) => l.id === layerId);
+        const next = remaining[Math.min(index, remaining.length - 1)];
+        if (next) {
+          onLayerSelect?.(next.id);
+        }
+      }
     } else {
       throw new Error(result.error);
     }
@@ -979,11 +997,20 @@ function useDrawingToolsActions({
           const result = await batchUpdateVisibilityAction(areaId, [
             { layerId, isVisible: visible },
           ]);
-          if (result.success) onLayerUpdate?.();
+          // The optimistic overlay is discarded when this transition ends, so
+          // the change has to land in the list the view owns or the eye icon
+          // snaps back.
+          if (result.success) {
+            onLayerChange?.({
+              type: "update",
+              id: layerId,
+              patch: { isVisible: visible ? "true" : "false" },
+            });
+          }
         }
       });
     },
-    [startTransition, updateOptimisticLayers, areaId, onLayerUpdate]
+    [startTransition, updateOptimisticLayers, areaId, onResyncLayers]
   );
 
   const handleSoloLayer = useCallback(
@@ -1005,11 +1032,19 @@ function useDrawingToolsActions({
         }
         if (areaId && updates.length > 0) {
           const result = await batchUpdateVisibilityAction(areaId, updates);
-          if (result.success) onLayerUpdate?.();
+          if (result.success) {
+            for (const update of updates) {
+              onLayerChange?.({
+                type: "update",
+                id: update.layerId,
+                patch: { isVisible: update.isVisible ? "true" : "false" },
+              });
+            }
+          }
         }
       });
     },
-    [startTransition, updateOptimisticLayers, areaId, onLayerUpdate]
+    [startTransition, updateOptimisticLayers, areaId, onResyncLayers]
   );
 
   const handleShowAllLayers = useCallback(() => {
@@ -1028,10 +1063,18 @@ function useDrawingToolsActions({
       }
       if (areaId && updates.length > 0) {
         const result = await batchUpdateVisibilityAction(areaId, updates);
-        if (result.success) onLayerUpdate?.();
+        if (result.success) {
+          for (const update of updates) {
+            onLayerChange?.({
+              type: "update",
+              id: update.layerId,
+              patch: { isVisible: update.isVisible ? "true" : "false" },
+            });
+          }
+        }
       }
     });
-  }, [startTransition, updateOptimisticLayers, areaId, onLayerUpdate]);
+  }, [startTransition, updateOptimisticLayers, areaId, onResyncLayers]);
 
   const handleDeleteLayer = useCallback(
     (layerId: number) => {
@@ -1121,13 +1164,13 @@ function useDrawingToolsActions({
             [...colorMap].map(([id, color]) => updateLayer(id, { color }))
           );
           toast.success("Farben optimiert");
-          onLayerUpdate?.();
+          void onResyncLayers?.();
         } catch {
           toast.error("Fehler beim Zuweisen der Farben");
         }
       });
     },
-    [startTransition, updateOptimisticLayers, onLayerUpdate]
+    [startTransition, updateOptimisticLayers, onResyncLayers]
   );
 
   const handleReorderLayers = useCallback(
@@ -1152,13 +1195,13 @@ function useDrawingToolsActions({
               updateLayer(l.id, { orderIndex: l.orderIndex })
             )
           );
-          onLayerUpdate?.();
+          void onResyncLayers?.();
         } catch {
           toast.error("Fehler beim Speichern der Reihenfolge");
         }
       });
     },
-    [startTransition, updateOptimisticLayers, onLayerUpdate]
+    [startTransition, updateOptimisticLayers, onResyncLayers]
   );
 
   const handleSortByCount = useCallback(() => {
@@ -1174,13 +1217,13 @@ function useDrawingToolsActions({
             updateLayer(l.id, { orderIndex: l.orderIndex })
           )
         );
-        onLayerUpdate?.();
+        void onResyncLayers?.();
         toast.success("Gebiete nach PLZ-Anzahl sortiert");
       } catch {
         toast.error("Fehler beim Sortieren");
       }
     });
-  }, [startTransition, updateOptimisticLayers, onLayerUpdate]);
+  }, [startTransition, updateOptimisticLayers, onResyncLayers]);
 
   const handleRemovePostalCodeFromLayer = useStableCallback(
     (layerId: number, postalCode: string) => {
@@ -1197,7 +1240,7 @@ function useDrawingToolsActions({
         });
         try {
           await removePostalCodesFromLayer(layerId, [postalCode]);
-          onLayerUpdate?.();
+          void onResyncLayers?.();
         } catch {
           toast.error("Fehler beim Entfernen der PLZ");
         }
@@ -1218,7 +1261,7 @@ function useDrawingToolsActions({
       });
       try {
         await removePostalCodesFromLayer(layerId, codes);
-        onLayerUpdate?.();
+        void onResyncLayers?.();
         toast.success(`${codes.length} PLZ entfernt`);
       } catch {
         toast.error("Fehler beim Leeren des Layers");
@@ -1254,7 +1297,7 @@ function useDrawingToolsActions({
         try {
           await addPostalCodesToLayer(toLayerId, [postalCode]);
           await removePostalCodesFromLayer(fromLayerId, [postalCode]);
-          onLayerUpdate?.();
+          void onResyncLayers?.();
           toast.success(`${postalCode} → ${toLayer.name}`);
         } catch {
           toast.error("Fehler beim Verschieben der PLZ");
@@ -1339,7 +1382,7 @@ function useDrawingToolsActions({
         try {
           await addPostalCodesToLayer(toLayerId, codes);
           await removePostalCodesFromLayer(fromLayerId, codes);
-          onLayerUpdate?.();
+          void onResyncLayers?.();
           toast.success(`${codes.length} PLZ → ${toLayer.name}`);
         } catch {
           toast.error("Fehler beim Verschieben der PLZ");
@@ -1366,7 +1409,7 @@ function useDrawingToolsActions({
         });
         try {
           await removePostalCodesFromLayer(layerId, codes);
-          onLayerUpdate?.();
+          void onResyncLayers?.();
           toast.success(`${codes.length} PLZ entfernt`);
         } catch {
           toast.error("Fehler beim Entfernen der PLZ");
@@ -1465,7 +1508,7 @@ interface LayerDialogsProps {
   layers: Layer[];
   versions: DrawingToolsProps["versions"];
   changes: DrawingToolsProps["changes"];
-  onLayerUpdate: DrawingToolsProps["onLayerUpdate"];
+  onResyncLayers: DrawingToolsProps["onResyncLayers"];
   confirmDeleteLayer: () => void;
 }
 
@@ -1478,9 +1521,14 @@ const LayerDialogs = memo(function LayerDialogs({
   layers,
   versions,
   changes,
-  onLayerUpdate,
+  onResyncLayers,
   confirmDeleteLayer,
 }: LayerDialogsProps) {
+  const handleVersionRestored = useCallback(
+    () => onResyncLayers?.(),
+    [onResyncLayers]
+  );
+
   const handleHistoryOpenChange = useCallback(
     (open: boolean) =>
       dispatchUI(open ? { type: "OPEN_HISTORY" } : { type: "CLOSE_HISTORY" }),
@@ -1512,12 +1560,12 @@ const LayerDialogs = memo(function LayerDialogs({
     [dispatchForm]
   );
   const handleVersionCreated = useCallback(
-    () => onLayerUpdate?.(),
-    [onLayerUpdate]
+    () => void onResyncLayers?.(),
+    [onResyncLayers]
   );
   const handleMergeComplete = useCallback(
-    () => onLayerUpdate?.(),
-    [onLayerUpdate]
+    () => void onResyncLayers?.(),
+    [onResyncLayers]
   );
   const handleCloseDelete = useCallback(
     () => dispatchForm({ type: "CLOSE_DELETE" }),
@@ -1539,6 +1587,7 @@ const LayerDialogs = memo(function LayerDialogs({
         areaId={areaId}
         versions={versions}
         changes={changes}
+        onRestored={handleVersionRestored}
       />
       )}
       {mountCreateVersion && (
@@ -1724,7 +1773,8 @@ function DrawingToolsImpl({
   activeLayerId,
   onLayerSelect,
   layers = EMPTY_ARRAY,
-  onLayerUpdate,
+  onLayerChange,
+  onResyncLayers,
   addPostalCodesToLayer,
   removePostalCodesFromLayer,
   isViewingVersion = false,
@@ -1774,8 +1824,8 @@ function DrawingToolsImpl({
     const trimmed = descDraft.trim();
     if (trimmed === (areaDescription ?? "")) return;
     await updateAreaAction(areaId, { description: trimmed || undefined });
-    onLayerUpdate?.();
-  }, [areaId, descDraft, areaDescription, onLayerUpdate]);
+    void onResyncLayers?.();
+  }, [areaId, descDraft, areaDescription, onResyncLayers]);
 
   // Intercept addPostalCodesToLayer to block writes on locked layers
   const guardedAddPostalCodesToLayer = useStableCallback(
@@ -1830,7 +1880,8 @@ function DrawingToolsImpl({
     activeLayerId,
     onLayerSelect,
     layers,
-    onLayerUpdate,
+    onLayerChange,
+    onResyncLayers,
     addPostalCodesToLayer: guardedAddPostalCodesToLayer,
     removePostalCodesFromLayer,
     pendingPostalCodes,
@@ -1886,9 +1937,11 @@ function DrawingToolsImpl({
         loading: "Dupliziere Layer...",
         success: "Layer dupliziert",
         error: "Duplizieren fehlgeschlagen",
-      }).catch(() => {});
+      })
+        .then(() => onResyncLayers?.())
+        .catch(() => {});
     },
-    [areaId]
+    [areaId, onResyncLayers]
   );
 
   const [, startSplitTransition] = useTransition();
@@ -1903,31 +1956,36 @@ function DrawingToolsImpl({
             `Layer in ${splitCount} Teile aufgeteilt (${res.data?.createdLayerIds.length} neue Layer)`,
             { id: toastId }
           );
-          onLayerUpdate?.();
+          void onResyncLayers?.();
         } else {
           toast.error(res.error ?? "Fehler beim Aufteilen", { id: toastId });
         }
       });
     },
-    [areaId, onLayerUpdate]
+    [areaId, onResyncLayers]
   );
 
   const [isCopyingLayer, startCopyLayerTransition] = useTransition();
   const [isUndoRedoPending, startUndoRedoTransition] = useTransition();
 
+  // Undo and redo rewrite the layer set in ways the client cannot work out from
+  // the button press, so they re-read it afterwards. Without this they changed
+  // the database and nothing on screen until a reload.
   const handleUndo = useCallback(() => {
     if (!areaId || !undoRedoStatus?.canUndo || isUndoRedoPending) return;
     startUndoRedoTransition(async () => {
       await undoChangeAction(areaId);
+      await onResyncLayers?.();
     });
-  }, [areaId, undoRedoStatus?.canUndo, isUndoRedoPending]);
+  }, [areaId, undoRedoStatus?.canUndo, isUndoRedoPending, onResyncLayers]);
 
   const handleRedo = useCallback(() => {
     if (!areaId || !undoRedoStatus?.canRedo || isUndoRedoPending) return;
     startUndoRedoTransition(async () => {
       await redoChangeAction(areaId);
+      await onResyncLayers?.();
     });
-  }, [areaId, undoRedoStatus?.canRedo, isUndoRedoPending]);
+  }, [areaId, undoRedoStatus?.canRedo, isUndoRedoPending, onResyncLayers]);
 
   const handleOpenCopyToArea = useCallback(
     (layerId: number, layerName: string) => {
@@ -2049,8 +2107,8 @@ function DrawingToolsImpl({
   );
 
   const handleMergeSuccess = useCallback(
-    () => onLayerUpdate?.(),
-    [onLayerUpdate]
+    () => void onResyncLayers?.(),
+    [onResyncLayers]
   );
 
   const handleOpenConflicts = useCallback(() => {
@@ -2815,7 +2873,7 @@ function DrawingToolsImpl({
             allCodesSet={allCodesSet}
             getAllCodesSet={getAllCodesSet}
             activeCodesTotal={activeTotalCodes}
-            onLayerUpdate={onLayerUpdate}
+            onLayerUpdate={onResyncLayers}
             handleExportLayerCSV={handleExportLayerCSV}
           />
         )}
@@ -2873,7 +2931,7 @@ function DrawingToolsImpl({
             layers={optimisticLayers}
             availableCodes={availableCodes}
             areaId={areaId}
-            onLayerUpdate={onLayerUpdate}
+            onLayerUpdate={onResyncLayers}
           />
         )}
 
@@ -2888,7 +2946,7 @@ function DrawingToolsImpl({
             layers={layers}
             versions={versions}
             changes={changes}
-            onLayerUpdate={onLayerUpdate}
+            onResyncLayers={onResyncLayers}
             confirmDeleteLayer={confirmDeleteLayer}
           />
         )}

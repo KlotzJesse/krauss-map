@@ -78,10 +78,10 @@ export async function createVersionAction(
 
     await clearUndoRedoStacksAction(areaId);
 
-    revalidateTag(`area-${areaId}-versions`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-    revalidateTag(`area-${areaId}-version-info`, "minutes");
+    revalidateTag(`area-${areaId}-versions`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-version-info`, "max");
 
     return { success: true, data: result };
   } catch (error) {
@@ -363,13 +363,13 @@ export async function restoreVersionAction(
 
     await clearUndoRedoStacksAction(areaId);
 
-    revalidateTag("versions", "minutes");
-    revalidateTag(`area-${areaId}-versions`, "minutes");
-    revalidateTag(`area-${areaId}`, "minutes");
-    revalidateTag(`area-${areaId}-layers`, "minutes");
-    revalidateTag(`area-${areaId}-undo-redo`, "minutes");
-    revalidateTag("version-info", "minutes");
-    revalidateTag(`area-${areaId}-version-info`, "minutes");
+    revalidateTag("versions", "max");
+    revalidateTag(`area-${areaId}-versions`, "max");
+    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag("version-info", "max");
+    revalidateTag(`area-${areaId}-version-info`, "max");
 
     return { success: true, data: result };
   } catch (error) {
