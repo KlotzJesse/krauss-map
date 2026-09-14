@@ -22,10 +22,11 @@ import type { AreaSummary } from "@/lib/types/area-types";
 
 import { AreaItemDropdown } from "./area-item-menu";
 import { TagBadge } from "./tag-badge";
+import { parseDbTimestamp } from "@/lib/utils/db-date";
 
 function relativeTime(date: Date | string | null | undefined): string {
   if (!date) return "";
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseDbTimestamp(date);
   const now = Date.now();
   const diff = now - d.getTime();
   const minutes = Math.floor(diff / 60_000);

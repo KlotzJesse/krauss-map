@@ -3,6 +3,8 @@
 import { eq } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
+import { FRESH_AFTER_EDIT } from "../../lib/cache/after-edit";
+
 import {
   type CountryCode,
   detectCountryFromCode,
@@ -228,11 +230,11 @@ export async function bulkImportPostalCodesAndLayers(
     }
 
     // Update cache tags and refresh
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
-    revalidateTag("recent-activity", "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
 
     return {
       success: errors.length === 0,

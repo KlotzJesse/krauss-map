@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, useOptimistic } from "react";
 
 import { createAreaAction } from "@/app/actions/area-actions";
+import { notifyAreasChanged } from "@/lib/sync/sidebar-data";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -75,6 +76,7 @@ export function CreateAreaDialog({
       // Navigate only after the toast has resolved and the dialog is closed,
       // so rendering the (large) area page never keeps the toast spinning.
       if (result?.success && result.areaId) {
+        notifyAreasChanged();
         router.push(`/postal-codes/${result.areaId}`);
       }
     });

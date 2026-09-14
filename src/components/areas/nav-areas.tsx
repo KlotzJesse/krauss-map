@@ -69,6 +69,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAreaPins } from "@/lib/hooks/use-area-pins";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
+import { notifyAreasChanged } from "@/lib/sync/sidebar-data";
 import type { AreaSummary } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import { exportAllAreasXLSX } from "@/lib/utils/export-utils";
@@ -483,6 +484,8 @@ export const NavAreas = memo(function NavAreas({
           )
         );
         dispatch({ type: "FINISH_EDIT" });
+        // The page header and the tools panel show the name too.
+        notifyAreasChanged();
       }
     });
   });
@@ -516,6 +519,7 @@ export const NavAreas = memo(function NavAreas({
       });
       // Navigate after the toast resolves — the action no longer redirects.
       if (result?.success && result.areaId) {
+        notifyAreasChanged();
         router.push(`/postal-codes/${result.areaId}` as Route);
       }
     });
@@ -550,6 +554,7 @@ export const NavAreas = memo(function NavAreas({
                 : a
             )
           );
+          notifyAreasChanged();
         }
       });
     },
@@ -587,6 +592,8 @@ export const NavAreas = memo(function NavAreas({
           success: `Tag ${ids.length} Gebiet(en) zugewiesen`,
           error: "Zuweisung fehlgeschlagen",
         });
+        // Tag badges on each area come from the list, which nothing else updates.
+        notifyAreasChanged();
       });
     },
     [selectedAreaIds, startTransition]
@@ -602,6 +609,7 @@ export const NavAreas = memo(function NavAreas({
           success: `Tag von ${ids.length} Gebiet(en) entfernt`,
           error: "Entfernen fehlgeschlagen",
         });
+        notifyAreasChanged();
       });
     },
     [selectedAreaIds, startTransition]
@@ -625,6 +633,9 @@ export const NavAreas = memo(function NavAreas({
     );
     setIsSavingNotes(false);
     setNotesArea(null);
+    // Reopening the notes showed the old text: the list entry it reads from was
+    // never updated.
+    notifyAreasChanged();
   };
 
   const handleBulkExport = useCallback(async () => {
@@ -658,6 +669,7 @@ export const NavAreas = memo(function NavAreas({
       if (result && "success" in result && result.success) {
         // Update base state to persist optimistic change
         setBaseAreas((prev) => prev.filter((a) => a.id !== areaToDelete.id));
+        notifyAreasChanged();
         if ("redirectTo" in result && result.redirectTo) {
           router.push(result.redirectTo as Route);
         }

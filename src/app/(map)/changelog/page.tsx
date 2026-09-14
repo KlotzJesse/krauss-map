@@ -16,6 +16,7 @@ import { getAreas, getGlobalChangelog } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
 
 import { AreaSelect } from "./area-select";
+import { DISPLAY_TIME_ZONE, parseDbTimestamp } from "@/lib/utils/db-date";
 
 const PAGE_SIZE = 50;
 
@@ -79,8 +80,10 @@ function getChangeMeta(changeType: string) {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseDbTimestamp(dateStr);
+  // Rendered on the server, which runs in UTC.
   return date.toLocaleString("de-DE", {
+    timeZone: DISPLAY_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

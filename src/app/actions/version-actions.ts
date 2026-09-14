@@ -3,7 +3,10 @@
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
+import { FRESH_AFTER_EDIT } from "../../lib/cache/after-edit";
+
 import { db } from "../../lib/db";
+import { readVersionIndicatorInfo } from "../../lib/db/data-functions";
 import {
   areaVersions,
   areas,
@@ -11,6 +14,10 @@ import {
   areaLayerPostalCodes,
   areaChanges,
 } from "../../lib/schema/schema";
+import {
+  getChangeSummaries,
+  getVersionSummaries,
+} from "../../lib/db/data-functions";
 import { clearUndoRedoStacksAction } from "./change-tracking-actions";
 
 type ServerActionResponse<T = void> = Promise<{
@@ -78,10 +85,10 @@ export async function createVersionAction(
 
     await clearUndoRedoStacksAction(areaId);
 
-    revalidateTag(`area-${areaId}-versions`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    revalidateTag(`area-${areaId}-version-info`, "max");
+    revalidateTag(`area-${areaId}-versions`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-version-info`, FRESH_AFTER_EDIT);
 
     return { success: true, data: result };
   } catch (error) {
@@ -363,13 +370,16 @@ export async function restoreVersionAction(
 
     await clearUndoRedoStacksAction(areaId);
 
-    revalidateTag("versions", "max");
-    revalidateTag(`area-${areaId}-versions`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    revalidateTag("version-info", "max");
-    revalidateTag(`area-${areaId}-version-info`, "max");
+    revalidateTag("versions", FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-versions`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag("version-info", FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-version-info`, FRESH_AFTER_EDIT);
+    // Tags, counts and granularity show in the area list.
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
 
     return { success: true, data: result };
   } catch (error) {
@@ -493,5 +503,42 @@ export async function compareVersionsAction(
     console.error("Error comparing versions:", error);
 
     return { success: false, error: "Failed to compare versions" };
+  }
+}
+
+/**
+ * Versions and the change log, read fresh.
+ *
+ * The page hands both over once, as server props. Edits no longer re-render the
+ * route (that remounted the map), so without this the history dialog kept
+ * showing whatever was true when the page loaded: a version created a minute
+ * ago was missing, and so was every change since.
+ */
+export async function getVersionHistoryAction(areaId: number) {
+  try {
+    const [versions, changes] = await Promise.all([
+      getVersionSummaries(areaId),
+      getChangeSummaries(areaId, { limit: 50 }),
+    ]);
+    return { success: true as const, data: { versions, changes } };
+  } catch (error) {
+    console.error("Error reading version history:", error);
+    return { success: false as const, error: "Failed to read version history" };
+  }
+}
+
+/**
+ * The header's version badge, read without the cache. Creating or restoring a
+ * version no longer re-renders the route, so the badge re-reads this instead.
+ */
+export async function getVersionIndicatorInfoAction(areaId: number) {
+  try {
+    return {
+      success: true as const,
+      data: await readVersionIndicatorInfo(areaId),
+    };
+  } catch (error) {
+    console.error("Error reading version info:", error);
+    return { success: false as const, error: "Failed to read version info" };
   }
 }

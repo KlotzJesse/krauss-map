@@ -169,6 +169,10 @@ import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { TerraDrawMode } from "@/lib/hooks/use-terradraw";
 import type { ChangeSummary, VersionSummary } from "@/lib/schema/schema";
+import {
+  notifyAreasChanged,
+  useLiveAreaText,
+} from "@/lib/sync/sidebar-data";
 import type { Layer, LayerChange } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import {
@@ -1448,16 +1452,29 @@ function useDrawingToolsActions({
           });
         }
         try {
-          await batchUpdateVisibilityAction(
+          const result = await batchUpdateVisibilityAction(
             areaId,
             layerIds.map((id) => ({ layerId: id, isVisible: visible }))
           );
+          // Land it in the view's list, or the optimistic overlay expires with
+          // this transition and every selected eye icon snaps back.
+          if (result.success) {
+            for (const id of layerIds) {
+              onLayerChange?.({
+                type: "update",
+                id,
+                patch: { isVisible: visible ? "true" : "false" },
+              });
+            }
+          } else {
+            toast.error("Fehler beim Ändern der Sichtbarkeit");
+          }
         } catch {
           toast.error("Fehler beim Ändern der Sichtbarkeit");
         }
       });
     },
-    [startTransition, updateOptimisticLayers, areaId]
+    [startTransition, updateOptimisticLayers, areaId, onLayerChange]
   );
 
   return {
@@ -1808,24 +1825,69 @@ function DrawingToolsImpl({
   const mountCopyLayer = useMountOnce(copyLayerDialog.open);
   const mountMergeLayers = useMountOnce(mergeLayersDialog.open);
 
-  // Area description inline editing
-  const [descDraft, setDescDraft] = useState(areaDescription ?? "");
+  // Area description inline editing.
+  //
+  // `areaDescription` is a server prop and edits no longer re-render the route,
+  // so it stays at whatever the page loaded with. The last saved value is kept
+  // here instead (keyed by area, so it is dropped on navigation) and is what the
+  // panel shows, what Escape returns to, and what a save is compared against.
+  // Comparing against the prop re-sent an unchanged description, and Escape
+  // brought back text the user had already replaced.
+  // Name and description as the rest of the app last saw them: a rename or a
+  // notes edit in the sidebar lands here without a reload.
+  // Strings, not the live list, so a refresh that changes some other area does
+  // not re-render this whole panel.
+  const currentAreaName = useLiveAreaText(areaId, "name", areaName);
+  const liveDescription =
+    useLiveAreaText(areaId, "description", areaDescription) ?? "";
+  // What was just saved, shown until the live copy has caught up with it. Once
+  // the live description differs from what it was at save time, a newer edit
+  // (say, notes in the sidebar) has landed and wins.
+  const [savedDescription, setSavedDescription] = useState<{
+    areaId: number | null | undefined;
+    value: string;
+    liveAtSave: string;
+  } | null>(null);
+  const savedStillNewest =
+    savedDescription !== null &&
+    savedDescription.areaId === areaId &&
+    savedDescription.liveAtSave === liveDescription;
+  const currentDescription = savedStillNewest
+    ? savedDescription.value
+    : liveDescription;
+  const [descDraft, setDescDraft] = useState(currentDescription);
   const [descEditing, setDescEditing] = useState(false);
-  // Sync draft when areaDescription changes (e.g., after server revalidation)
-  const prevAreaDescription = useRef(areaDescription);
-  if (prevAreaDescription.current !== areaDescription) {
-    prevAreaDescription.current = areaDescription;
-    if (!descEditing) setDescDraft(areaDescription ?? "");
-  }
+
+  const startDescriptionEdit = useCallback(() => {
+    setDescDraft(currentDescription);
+    setDescEditing(true);
+  }, [currentDescription]);
 
   const handleDescriptionSave = useCallback(async () => {
     setDescEditing(false);
     if (!areaId) return;
     const trimmed = descDraft.trim();
-    if (trimmed === (areaDescription ?? "")) return;
-    await updateAreaAction(areaId, { description: trimmed || undefined });
-    void onResyncLayers?.();
-  }, [areaId, descDraft, areaDescription, onResyncLayers]);
+    if (trimmed === currentDescription) return;
+    const previous = currentDescription;
+    setSavedDescription({
+      areaId,
+      value: trimmed,
+      liveAtSave: liveDescription,
+    });
+    // An empty string, not undefined: `set({ description: undefined })` leaves
+    // the column untouched, so clearing a description never reached the server.
+    const result = await updateAreaAction(areaId, { description: trimmed });
+    if (result.success) {
+      notifyAreasChanged();
+    } else {
+      setSavedDescription({
+        areaId,
+        value: previous,
+        liveAtSave: liveDescription,
+      });
+      toast.error(result.error ?? "Beschreibung konnte nicht gespeichert werden");
+    }
+  }, [areaId, descDraft, currentDescription, liveDescription]);
 
   // Intercept addPostalCodesToLayer to block writes on locked layers
   const guardedAddPostalCodesToLayer = useStableCallback(
@@ -2578,10 +2640,10 @@ function DrawingToolsImpl({
     >
       <CardHeader className="pb-0 gap-0.5">
         <CardTitle className="text-base leading-tight">Kartentools</CardTitle>
-        {areaName && (
+        {currentAreaName && (
           <div>
             <p className="text-xs font-medium text-foreground truncate">
-              {areaName}
+              {currentAreaName}
             </p>
             {descEditing ? (
               <textarea
@@ -2597,23 +2659,24 @@ function DrawingToolsImpl({
                   }
                   if (e.key === "Escape") {
                     setDescEditing(false);
-                    setDescDraft(areaDescription ?? "");
+                    setDescDraft(currentDescription);
                   }
                 }}
                 placeholder="Beschreibung hinzufügen…"
                 rows={2}
                 className="w-full text-xs text-muted-foreground bg-muted border border-input rounded px-1.5 py-0.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
               />
-            ) : descDraft ? (
+            ) : currentDescription ? (
               <button
                 type="button"
+                data-area-description
                 onClick={() => {
-                  if (areaId && !isViewingVersion) setDescEditing(true);
+                  if (areaId && !isViewingVersion) startDescriptionEdit();
                 }}
                 title={isViewingVersion ? undefined : "Beschreibung bearbeiten"}
                 className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors truncate"
               >
-                {descDraft}
+                {currentDescription}
               </button>
             ) : null}
             {areaId && !isViewingVersion && (

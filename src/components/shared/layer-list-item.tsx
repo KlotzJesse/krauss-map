@@ -87,6 +87,7 @@ import { cn } from "@/lib/utils";
 import { extractRawCode } from "@/lib/utils/postal-code-keys";
 import { copyPostalCodesCSV } from "@/lib/utils/export-utils";
 import { generatePalette } from "@/lib/utils/layer-colors";
+import { parseDbTimestamp } from "@/lib/utils/db-date";
 
 export const DEFAULT_LAYER_COLORS = generatePalette(16);
 
@@ -1055,7 +1056,7 @@ export const LayerListItem = memo(function LayerListItem({
                           codes.slice(0, 3).join(", ") +
                           (codes.length > 3 ? ` +${codes.length - 3}` : "");
                         const date = item.createdAt
-                          ? new Date(item.createdAt).toLocaleDateString(
+                          ? parseDbTimestamp(item.createdAt).toLocaleDateString(
                               "de-DE",
                               {
                                 day: "2-digit",

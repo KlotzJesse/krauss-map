@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { CompareAreasButton } from "./compare-areas-button";
 import { ExportAllAreasButton } from "./export-all-areas-button";
 import { OverviewAreaList } from "./overview-area-list";
+import { DISPLAY_TIME_ZONE, parseDbTimestamp } from "@/lib/utils/db-date";
 
 const CHANGE_ICONS: Record<string, React.ElementType> = {
   add_postal_codes: IconPlus,
@@ -61,7 +62,7 @@ const CHANGE_LABELS: Record<string, string> = {
 };
 
 function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseDbTimestamp(dateStr);
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "gerade eben";
@@ -85,7 +86,11 @@ export async function PostalCodesOverview() {
     (typeof rawActivity)[0] & { count: number }
   >();
   for (const item of rawActivity) {
-    const day = item.createdAt.slice(0, 10);
+    // The German calendar day, not the UTC one: edits made between midnight and
+    // 2am would otherwise be grouped with the previous day.
+    const day = parseDbTimestamp(item.createdAt).toLocaleDateString("sv-SE", {
+      timeZone: DISPLAY_TIME_ZONE,
+    });
     const key = `${item.areaId}:${item.changeType}:${day}`;
     const existing = activityGroupMap.get(key);
     if (existing) {

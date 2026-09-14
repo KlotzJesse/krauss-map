@@ -15,6 +15,7 @@ import { memo, useState } from "react";
 
 import type { RecentActivityItem } from "@/lib/db/data-functions";
 import { cn } from "@/lib/utils";
+import { parseDbTimestamp } from "@/lib/utils/db-date";
 
 const CHANGE_TYPE_META: Record<
   string,
@@ -68,7 +69,7 @@ function getChangeMeta(changeType: string) {
 }
 
 function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseDbTimestamp(dateStr);
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "gerade eben";

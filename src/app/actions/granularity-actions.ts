@@ -3,6 +3,8 @@
 import { eq, and, like, or } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
+import { FRESH_AFTER_EDIT } from "../../lib/cache/after-edit";
+
 import { getGranularityLevel } from "@/lib/utils/granularity-utils";
 
 import { db } from "../../lib/db";
@@ -158,8 +160,11 @@ export async function changeAreaGranularityAction(
         .where(eq(areas.id, areaId));
     });
 
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    // Tags, counts and granularity show in the area list.
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
 
     return {
       success: true,

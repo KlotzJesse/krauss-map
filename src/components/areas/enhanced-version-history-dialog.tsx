@@ -8,11 +8,18 @@ import {
 } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
-import { useState, useTransition, useOptimistic } from "react";
+import {
+  useCallback,
+  useEffect,
+  useOptimistic,
+  useState,
+  useTransition,
+} from "react";
 
 import {
-  restoreVersionAction,
   compareVersionsAction,
+  getVersionHistoryAction,
+  restoreVersionAction,
 } from "@/app/actions/version-actions";
 import {
   AlertDialog,
@@ -39,6 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { VersionSummary, ChangeSummary } from "@/lib/schema/schema";
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
+import { parseDbTimestamp } from "@/lib/utils/db-date";
 
 interface ComparisonResult {
   layersAdded: { name: string }[];
@@ -78,12 +86,29 @@ export function EnhancedVersionHistoryDialog({
 
   areaId,
 
-  versions,
-
-  changes,
-
   onRestored,
+  versions: initialVersions,
+  changes: initialChanges,
 }: EnhancedVersionHistoryDialogProps) {
+  // The props are a snapshot from page load. Re-read whenever the dialog opens,
+  // so versions and changes made since then are actually listed.
+  const [history, setHistory] = useState({
+    versions: initialVersions,
+    changes: initialChanges,
+  });
+  const reloadHistory = useCallback(async () => {
+    const result = await getVersionHistoryAction(areaId);
+    if (result.success) {
+      setHistory(result.data);
+    }
+  }, [areaId]);
+  useEffect(() => {
+    if (open) {
+      void reloadHistory();
+    }
+  }, [open, reloadHistory]);
+  const { versions, changes } = history;
+
   const [selectedVersion, setSelectedVersion] = useState<VersionSummary | null>(
     null
   );
@@ -139,7 +164,7 @@ export function EnhancedVersionHistoryDialog({
         onOpenChange(false);
         setShowRestoreDialog(false);
         setVersionToRestore(null);
-        await onRestored?.();
+        await Promise.all([onRestored?.(), reloadHistory()]);
       }
       updateOptimisticRestoring(false);
     });
@@ -265,7 +290,7 @@ export function EnhancedVersionHistoryDialog({
                           )}
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          {formatDistanceToNow(new Date(version.createdAt), {
+                          {formatDistanceToNow(parseDbTimestamp(version.createdAt), {
                             addSuffix: true,
 
                             locale: de,
@@ -316,7 +341,7 @@ export function EnhancedVersionHistoryDialog({
                           {getChangeTypeLabel(change.changeType)}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(change.createdAt), {
+                          {formatDistanceToNow(parseDbTimestamp(change.createdAt), {
                             addSuffix: true,
 
                             locale: de,

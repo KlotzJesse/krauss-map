@@ -1,192 +1,17 @@
 "use server";
 
-import { and, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, eq, inArray, like, sql } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
-import {
-  type CountryCode,
-  detectCountryFromCode,
-  formatWithPrefix,
-} from "../../lib/config/countries";
+import { FRESH_AFTER_EDIT } from "../../lib/cache/after-edit";
+
 import { db } from "../../lib/db";
 import {
-  areas,
   areaLayers,
   areaLayerPostalCodes,
   areaUndoStacks,
-  postalCodes,
 } from "../../lib/schema/schema";
 import { recordChangeAction } from "./change-tracking-actions";
-
-export async function createLayerAction(
-  areaId: number,
-  data: {
-    name: string;
-    color?: string;
-    opacity?: number;
-    isVisible?: boolean | string;
-    orderIndex?: number;
-  },
-  createdBy?: string
-) {
-  try {
-    const isVisibleStr =
-      data.isVisible === undefined ? "true" : String(data.isVisible);
-
-    const [layer] = await db
-      .insert(areaLayers)
-      .values({
-        areaId,
-        name: data.name.slice(0, 31),
-        color: data.color || "#3b82f6",
-        opacity: data.opacity ?? 80,
-        isVisible: isVisibleStr,
-        orderIndex: data.orderIndex ?? 0,
-      })
-      .returning();
-
-    // Record change
-    await recordChangeAction(areaId, {
-      changeType: "create_layer",
-      entityType: "layer",
-      entityId: layer.id,
-      changeData: {
-        layer: {
-          areaId,
-          name: data.name,
-          color: data.color || "#3b82f6",
-          opacity: data.opacity ?? 80,
-          isVisible: isVisibleStr,
-          orderIndex: data.orderIndex ?? 0,
-        },
-      },
-      createdBy,
-    });
-
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-
-    return { success: true, data: { id: layer.id } };
-  } catch (error) {
-    console.error("Error creating layer:", error);
-    return { success: false, error: "Failed to create layer" };
-  }
-}
-
-export async function updateLayerAction(
-  areaId: number,
-  layerId: number,
-  data: {
-    name?: string;
-    color?: string;
-    opacity?: number;
-    isVisible?: boolean | string;
-    orderIndex?: number;
-    postalCodes?: string[];
-  },
-  createdBy?: string
-) {
-  try {
-    // Get previous state
-    const previousLayer = await db.query.areaLayers.findFirst({
-      where: eq(areaLayers.id, layerId),
-      with: { postalCodes: true },
-    });
-
-    await db.transaction(async (tx) => {
-      // Update layer properties
-      const updates: Record<string, string | number> = {};
-      if (data.name !== undefined) {
-        updates.name = data.name.slice(0, 31);
-      }
-      if (data.color !== undefined) {
-        updates.color = data.color;
-      }
-      if (data.opacity !== undefined) {
-        updates.opacity = data.opacity;
-      }
-      if (data.isVisible !== undefined) {
-        updates.isVisible = String(data.isVisible);
-      }
-      if (data.orderIndex !== undefined) {
-        updates.orderIndex = data.orderIndex;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await tx
-          .update(areaLayers)
-          .set(updates)
-          .where(eq(areaLayers.id, layerId));
-      }
-
-      // Update postal codes if provided
-      if (data.postalCodes !== undefined) {
-        // Delete existing postal codes
-        await tx
-          .delete(areaLayerPostalCodes)
-          .where(eq(areaLayerPostalCodes.layerId, layerId));
-
-        // Insert new postal codes
-        if (data.postalCodes.length > 0) {
-          await tx.insert(areaLayerPostalCodes).values(
-            data.postalCodes.map((code: string) => ({
-              layerId,
-              postalCode: code,
-            }))
-          );
-        }
-      }
-    });
-
-    // Record change
-    const changeData: Record<string, unknown> = {};
-    const previousData: Record<string, unknown> = {};
-
-    if (data.name !== undefined) {
-      changeData.name = data.name;
-      previousData.name = previousLayer?.name;
-    }
-    if (data.color !== undefined) {
-      changeData.color = data.color;
-      previousData.color = previousLayer?.color;
-    }
-    if (data.opacity !== undefined) {
-      changeData.opacity = data.opacity;
-      previousData.opacity = previousLayer?.opacity;
-    }
-    if (data.isVisible !== undefined) {
-      changeData.isVisible = String(data.isVisible);
-      previousData.isVisible = previousLayer?.isVisible;
-    }
-    if (data.orderIndex !== undefined) {
-      changeData.orderIndex = data.orderIndex;
-      previousData.orderIndex = previousLayer?.orderIndex;
-    }
-    if (data.postalCodes !== undefined) {
-      changeData.postalCodes = data.postalCodes;
-      previousData.postalCodes =
-        previousLayer?.postalCodes?.map((pc) => pc.postalCode) || [];
-    }
-
-    await recordChangeAction(areaId, {
-      changeType: "update_layer",
-      entityType: "layer",
-      entityId: layerId,
-      changeData,
-      previousData,
-      createdBy,
-    });
-
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    return { success: true };
-  } catch (error) {
-    console.error("Error updating layer:", error);
-    return { success: false, error: "Failed to update layer" };
-  }
-}
 
 /** Batch-update visibility for multiple layers in a single transaction + one revalidation. */
 export async function batchUpdateVisibilityAction(
@@ -203,252 +28,12 @@ export async function batchUpdateVisibilityAction(
       }
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
     return { success: true };
   } catch (error) {
     console.error("Error batch-updating visibility:", error);
     return { success: false, error: "Failed to update visibility" };
-  }
-}
-
-export async function deleteLayerAction(
-  areaId: number,
-  layerId: number,
-  createdBy?: string
-) {
-  try {
-    // Get layer data before deletion
-    const layer = await db.query.areaLayers.findFirst({
-      where: eq(areaLayers.id, layerId),
-      with: {
-        postalCodes: true,
-      },
-    });
-
-    if (!layer) {
-      return { success: false, error: "Layer not found" };
-    }
-
-    await db.transaction(async (tx) => {
-      // Delete postal codes first (foreign key constraint)
-      await tx
-        .delete(areaLayerPostalCodes)
-        .where(eq(areaLayerPostalCodes.layerId, layerId));
-
-      // Delete the layer
-      await tx.delete(areaLayers).where(eq(areaLayers.id, layerId));
-    });
-
-    // Record change
-    await recordChangeAction(areaId, {
-      changeType: "delete_layer",
-      entityType: "layer",
-      entityId: layerId,
-      changeData: {},
-      previousData: {
-        layer: {
-          id: layer.id,
-          areaId: layer.areaId,
-          name: layer.name,
-          color: layer.color,
-          opacity: layer.opacity,
-          isVisible: layer.isVisible,
-          orderIndex: layer.orderIndex,
-        },
-        postalCodes: layer.postalCodes?.map((pc) => pc.postalCode) || [],
-      },
-      createdBy,
-    });
-
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting layer:", error);
-    return { success: false, error: "Failed to delete layer" };
-  }
-}
-
-export async function addPostalCodesToLayerAction(
-  areaId: number,
-  layerId: number,
-  inputCodes: string[],
-  createdBy?: string
-) {
-  try {
-    // Fetch area context and existing layer codes in parallel
-    const [area, layer] = await Promise.all([
-      db.query.areas.findFirst({
-        where: eq(areas.id, areaId),
-        columns: { country: true, granularity: true },
-      }),
-      db.query.areaLayers.findFirst({
-        where: eq(areaLayers.id, layerId),
-        with: {
-          postalCodes: { columns: { postalCode: true } },
-        },
-      }),
-    ]);
-    const areaCountry = (area?.country ?? "DE") as CountryCode;
-    const areaGranularity = area?.granularity ?? "5digit";
-
-    if (!layer) {
-      return { success: false, error: "Layer not found" };
-    }
-
-    const existingCodesSet = new Set(
-      layer.postalCodes?.map((pc) => pc.postalCode) ?? []
-    );
-
-    // Normalize incoming codes: detect country prefix, convert to stored format
-    const normalized = inputCodes
-      .map((code) => {
-        const detected = detectCountryFromCode(code);
-        const country = (detected.country ?? areaCountry) as CountryCode;
-        const rawCode = detected.code;
-        if (!rawCode || rawCode.length < 1 || rawCode.length > 6) return null;
-        const storedCode = formatWithPrefix(rawCode, country);
-        return { rawCode, country, storedCode };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null);
-
-    const toAdd = normalized.filter(
-      ({ storedCode }) => !existingCodesSet.has(storedCode)
-    );
-
-    if (toAdd.length === 0) {
-      return { success: true };
-    }
-
-    // Group by country for efficient postalCodeId look up
-    const byCountry = new Map<CountryCode, string[]>();
-    for (const { rawCode, country } of toAdd) {
-      const arr = byCountry.get(country) ?? [];
-      arr.push(rawCode);
-      byCountry.set(country, arr);
-    }
-
-    // Bulk look up postalCodeId for each (country, rawCode) pair
-    const postalCodeIdMap = new Map<string, number>(); // "country:rawCode" → id
-    for (const [country, rawCodes] of byCountry) {
-      const rows = await db
-        .select({ id: postalCodes.id, code: postalCodes.code })
-        .from(postalCodes)
-        .where(
-          and(
-            inArray(postalCodes.code, rawCodes),
-            eq(postalCodes.country, country),
-            eq(postalCodes.granularity, areaGranularity)
-          )
-        );
-      for (const row of rows) {
-        postalCodeIdMap.set(`${country}:${row.code}`, row.id);
-      }
-    }
-
-    // Build insert rows with stored-format postalCode and populated postalCodeId
-    const insertRows = toAdd.map(({ rawCode, country, storedCode }) => ({
-      layerId,
-      postalCode: storedCode,
-      postalCodeId: postalCodeIdMap.get(`${country}:${rawCode}`) ?? null,
-    }));
-
-    await db
-      .insert(areaLayerPostalCodes)
-      .values(insertRows)
-      .onConflictDoNothing();
-
-    const codesToAddStored = insertRows.map((r) => r.postalCode);
-
-    await recordChangeAction(areaId, {
-      changeType: "add_postal_codes",
-      entityType: "postal_code",
-      entityId: layerId,
-      changeData: {
-        postalCodes: codesToAddStored,
-        layerId,
-      },
-      // No previousData. Undoing an add deletes exactly the codes in
-      // changeData, and nothing else reads previousData for this change type,
-      // so storing the layer's entire prior list wrote ~85KB of JSONB per add
-      // on a large layer for no reader.
-      createdBy,
-    });
-
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    return { success: true };
-  } catch (error) {
-    console.error("Error adding postal codes to layer:", error);
-    return { success: false, error: "Failed to add postal codes" };
-  }
-}
-
-export async function removePostalCodesFromLayerAction(
-  areaId: number,
-  layerId: number,
-  postalCodes: string[],
-  createdBy?: string
-) {
-  try {
-    // Get existing postal codes for this layer
-    const layer = await db.query.areaLayers.findFirst({
-      where: eq(areaLayers.id, layerId),
-      with: {
-        postalCodes: true,
-      },
-    });
-
-    if (!layer) {
-      return { success: false, error: "Layer not found" };
-    }
-
-    const existingCodesSet = new Set(
-      layer.postalCodes?.map((pc) => pc.postalCode) ?? []
-    );
-    const codesToRemove = postalCodes.filter((code) =>
-      existingCodesSet.has(code)
-    );
-
-    if (codesToRemove.length === 0) {
-      return { success: true }; // No codes to remove
-    }
-
-    // Delta delete only the specified codes
-    await db
-      .delete(areaLayerPostalCodes)
-      .where(
-        and(
-          eq(areaLayerPostalCodes.layerId, layerId),
-          inArray(areaLayerPostalCodes.postalCode, codesToRemove)
-        )
-      );
-
-    // Record change
-    await recordChangeAction(areaId, {
-      changeType: "remove_postal_codes",
-      entityType: "postal_code",
-      entityId: layerId,
-      changeData: {
-        postalCodes: codesToRemove,
-        layerId,
-      },
-      previousData: {
-        postalCodes: codesToRemove, // Store removed codes for undo
-      },
-      createdBy,
-    });
-
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    return { success: true };
-  } catch (error) {
-    console.error("Error removing postal codes from layer:", error);
-    return { success: false, error: "Failed to remove postal codes" };
   }
 }
 
@@ -528,9 +113,9 @@ export async function mergeLayersAction(
       },
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
     return { success: true };
   } catch (error) {
     console.error("Error merging layers:", error);
@@ -599,9 +184,9 @@ export async function removePostalCodesByCountryAction(
       previousData: { postalCodes: codeList },
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
 
     return { success: true, data: { removed: codeList.length } };
   } catch (error) {
@@ -621,28 +206,34 @@ export async function removePostalCodesByCountryAction(
  * re-render swaps the page segment and remounts the map, which is the ten
  * seconds of blank canvas this whole arrangement exists to avoid.
  */
+async function readUndoRedoStatus(areaId: number) {
+  const [row] = await db
+    .select({
+      undoCount: sql<number>`coalesce(jsonb_array_length(${areaUndoStacks.undoStack}), 0)`,
+      redoCount: sql<number>`coalesce(jsonb_array_length(${areaUndoStacks.redoStack}), 0)`,
+    })
+    .from(areaUndoStacks)
+    .where(eq(areaUndoStacks.areaId, areaId))
+    .limit(1);
+  const { undoCount, redoCount } = row ?? { undoCount: 0, redoCount: 0 };
+  return {
+    canUndo: undoCount > 0,
+    canRedo: redoCount > 0,
+    undoCount,
+    redoCount,
+  };
+}
+
 export async function getAreaLayerStateAction(areaId: number) {
   try {
-    const [layerRows, undoRows] = await Promise.all([
+    const [layerRows, undoRedo] = await Promise.all([
       db.query.areaLayers.findMany({
         where: eq(areaLayers.areaId, areaId),
         with: { postalCodes: { columns: { postalCode: true } } },
         orderBy: (layers, { asc }) => [asc(layers.orderIndex)],
       }),
-      db
-        .select({
-          undoCount: sql<number>`coalesce(jsonb_array_length(${areaUndoStacks.undoStack}), 0)`,
-          redoCount: sql<number>`coalesce(jsonb_array_length(${areaUndoStacks.redoStack}), 0)`,
-        })
-        .from(areaUndoStacks)
-        .where(eq(areaUndoStacks.areaId, areaId))
-        .limit(1),
+      readUndoRedoStatus(areaId),
     ]);
-
-    const { undoCount, redoCount } = undoRows[0] ?? {
-      undoCount: 0,
-      redoCount: 0,
-    };
 
     return {
       success: true as const,
@@ -651,16 +242,25 @@ export async function getAreaLayerStateAction(areaId: number) {
           ...layer,
           codes: codes.map((entry) => entry.postalCode),
         })),
-        undoRedo: {
-          canUndo: undoCount > 0,
-          canRedo: redoCount > 0,
-          undoCount,
-          redoCount,
-        },
+        undoRedo,
       },
     };
   } catch (error) {
     console.error("Error reading area layer state:", error);
     return { success: false as const, error: "Failed to read layers" };
+  }
+}
+
+/**
+ * Just the undo/redo counters. Edits made outside the map — renaming the area
+ * or writing notes in the sidebar — are undoable too, and without this the open
+ * page kept its undo button disabled until a reload.
+ */
+export async function getUndoRedoStatusAction(areaId: number) {
+  try {
+    return { success: true as const, data: await readUndoRedoStatus(areaId) };
+  } catch (error) {
+    console.error("Error reading undo/redo status:", error);
+    return { success: false as const, error: "Failed to read undo status" };
   }
 }

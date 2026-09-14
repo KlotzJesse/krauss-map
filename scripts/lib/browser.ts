@@ -9,7 +9,14 @@
 
 const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 export const DEBUG_PORT = Number(process.env.CHROME_PORT ?? 9333);
-const PROFILE = `${process.env.TEMP ?? "."}\\krauss-debug-chrome`;
+// One profile per port: Chrome refuses to share a profile directory between two
+// running instances, and a second instance (CHROME_PORT=9334) is how a script
+// runs next to the action suite without the two fighting over one window,
+// where background tabs get throttled or discarded mid-run.
+const PROFILE =
+  DEBUG_PORT === 9333
+    ? `${process.env.TEMP ?? "."}\\krauss-debug-chrome`
+    : `${process.env.TEMP ?? "."}\\krauss-debug-chrome-${DEBUG_PORT}`;
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -66,6 +73,40 @@ export async function ensureBrowser(): Promise<void> {
   throw new Error("Chrome debugging port never came up");
 }
 
+async function sharedTab(): Promise<TargetInfo> {
+  // Reuse the tab that is already on the app, so the HTTP cache and the
+  // warmed bundle survive between runs.
+  const targets = await listTargets();
+  const target =
+    targets.find(
+      (t) => t.type === "page" && t.url.includes("/postal-codes/")
+    ) ?? targets.find((t) => t.type === "page");
+  if (!target) {
+    throw new Error("no page target to attach to");
+  }
+  return target;
+}
+
+async function privateTab(name: string): Promise<TargetInfo> {
+  const { existsSync, readFileSync, writeFileSync } = await import("node:fs");
+  const idFile = `${PROFILE}-tab-${name}.id`;
+  const targets = await listTargets();
+  if (existsSync(idFile)) {
+    const id = readFileSync(idFile, "utf8").trim();
+    const known = targets.find((t) => t.id === id && t.type === "page");
+    if (known) {
+      return known;
+    }
+  }
+  const res = await fetch(
+    `http://127.0.0.1:${DEBUG_PORT}/json/new?about:blank`,
+    { method: "PUT" }
+  );
+  const created = (await res.json()) as TargetInfo;
+  writeFileSync(idFile, created.id);
+  return created;
+}
+
 export class Cdp {
   static consoleEvents: { text: string }[] = [];
   private nextId = 1;
@@ -113,20 +154,18 @@ export class Cdp {
     });
   }
 
-  static async attach(url: string): Promise<Cdp> {
+  /**
+   * Attach to the shared app tab, or — with `tab` — to a private tab of that
+   * name. Two scripts driving one tab fight over focus, dialogs and the page
+   * lock, so anything that runs next to the action suite should pass a name.
+   * The private tab is remembered by id and reused on the next run.
+   */
+  static async attach(url: string, options: { tab?: string } = {}): Promise<Cdp> {
     await ensureBrowser();
 
-    // Reuse the tab that is already on the app, so the HTTP cache and the
-    // warmed bundle survive between runs.
-    let target = (await listTargets()).find(
-      (t) => t.type === "page" && t.url.includes("/postal-codes/")
-    );
-    if (!target) {
-      target = (await listTargets()).find((t) => t.type === "page");
-    }
-    if (!target) {
-      throw new Error("no page target to attach to");
-    }
+    const target = options.tab
+      ? await privateTab(options.tab)
+      : await sharedTab();
 
     const socket = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise<void>((resolve, reject) => {

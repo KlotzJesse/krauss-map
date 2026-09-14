@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
+import { LiveAreaTitle } from "@/components/areas/live-area-title";
 import ServerPostalCodesView from "@/components/postal-codes/server-postal-codes-view";
 import { SiteHeader } from "@/components/site-header";
 import { PostalCodesErrorBoundary } from "@/components/ui/error-boundaries";
@@ -125,7 +126,14 @@ export default async function PostalCodesPage({
         href="https://tiles.versatiles.org"
         crossOrigin="anonymous"
       />
-      <SiteHeader title={areaName ?? "Gebietsmanagement"}>
+      <SiteHeader
+        title={
+          <LiveAreaTitle
+            areaId={areaId}
+            fallback={areaName ?? "Gebietsmanagement"}
+          />
+        }
+      >
         <Suspense fallback={<VersionIndicatorSkeleton />}>
           <VersionIndicator areaId={areaId} />
         </Suspense>

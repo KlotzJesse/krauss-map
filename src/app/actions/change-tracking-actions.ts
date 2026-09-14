@@ -17,6 +17,8 @@ export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 import { revalidateTag } from "next/cache";
 
+import { FRESH_AFTER_EDIT } from "../../lib/cache/after-edit";
+
 type ServerActionResponse<T = void> = Promise<{
   success: boolean;
 
@@ -145,6 +147,18 @@ export async function recordChangeWithTx(
       )
     );
 
+  // Every recorded change moves the area list (counts, last edited), the
+  // activity feed, the change history and the undo/redo buttons. Invalidating
+  // here — the one place every mutation passes through — covers the call sites
+  // that only remembered their own tag. These only affect the next page load;
+  // the open page has already applied the edit.
+  revalidateTag("areas", FRESH_AFTER_EDIT);
+  revalidateTag("recent-activity", FRESH_AFTER_EDIT);
+  revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+  revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+  revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
+  revalidateTag(`area-${areaId}-version-info`, FRESH_AFTER_EDIT);
+
   return changeKey;
 }
 
@@ -172,11 +186,11 @@ export async function recordChangeAction(
       return { success: false, error: "Area not found" };
     }
 
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
 
     if (options?.invalidateHistory !== false) {
-      revalidateTag(`area-${areaId}-change-history`, "max");
-      revalidateTag("recent-activity", "max");
+      revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
+      revalidateTag("recent-activity", FRESH_AFTER_EDIT);
     }
 
     return { success: true, data: result };
@@ -288,8 +302,13 @@ export async function undoChangeAction(
       return changeKey;
     });
 
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
+    // Undo and redo rewrite layers and codes, so everything derived from them.
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
 
     return { success: true, data: result };
   } catch (error) {
@@ -398,8 +417,13 @@ export async function redoChangeAction(
       return changeKey;
     });
 
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
+    // Undo and redo rewrite layers and codes, so everything derived from them.
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
 
     return { success: true, data: result };
   } catch (error) {
@@ -705,8 +729,8 @@ export async function clearUndoRedoStacksAction(
         .where(eq(areaUndoStacks.id, stack.id));
     }
 
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
 
     return { success: true };
   } catch (error) {

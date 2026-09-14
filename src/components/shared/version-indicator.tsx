@@ -1,9 +1,8 @@
-import { IconEye, IconHistory } from "@tabler/icons-react";
 import { connection } from "next/server";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { getVersionIndicatorInfo } from "@/lib/db/data-functions";
+
+import { LiveVersionBadge } from "./live-version-badge";
 
 interface VersionIndicatorProps {
   areaId?: number | null;
@@ -17,33 +16,5 @@ export async function VersionIndicator({ areaId }: VersionIndicatorProps) {
   await connection();
   const versionInfo = await getVersionIndicatorInfo(areaId);
 
-  // Don't show anything if no versions exist
-  if (!versionInfo.hasVersions || !versionInfo.versionInfo) {
-    return null;
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <Badge
-        variant={versionInfo.versionInfo.isLatest ? "default" : "secondary"}
-        className="flex items-center gap-1"
-      >
-        <IconHistory className="h-3 w-3" />
-        {versionInfo.versionInfo.isLatest ? "Aktuell " : ""}v
-        {versionInfo.versionInfo.versionNumber}
-        {versionInfo.versionInfo.name && ` (${versionInfo.versionInfo.name})`}
-      </Badge>
-      {!versionInfo.versionInfo.isLatest && (
-        <Button variant="outline" size="sm" className="h-6 text-xs">
-          <IconEye className="h-3 w-3 mr-1" />
-          Aktuelle Version
-        </Button>
-      )}
-      {!versionInfo.versionInfo.isLatest && (
-        <span className="text-xs text-muted-foreground">
-          Änderungen → neue Version
-        </span>
-      )}
-    </div>
-  );
+  return <LiveVersionBadge areaId={areaId} initial={versionInfo} />;
 }

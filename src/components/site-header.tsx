@@ -5,7 +5,7 @@ export function SiteHeader({
   title = "Gebietsmanagement",
   children,
 }: {
-  title?: string;
+  title?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (

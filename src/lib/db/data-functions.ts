@@ -25,6 +25,18 @@ export async function getAreas() {
   "use cache";
   cacheLife("minutes");
   cacheTag("areas");
+  return readAreas();
+}
+
+/**
+ * The area list straight from the database, bypassing the cache.
+ *
+ * The sidebar re-reads this after an edit. Edits no longer re-render the route
+ * (that remounts the map), so the cached `getAreas` the layout rendered with
+ * would otherwise keep showing yesterday's counts, tags and newly created areas
+ * until a reload.
+ */
+export async function readAreas() {
   try {
     // CTE-based query: all aggregates computed in one pass instead of N correlated
     // subqueries per row, which caused timeouts on large datasets.
@@ -405,6 +417,14 @@ export async function getVersionIndicatorInfo(
   "use cache";
   cacheLife("minutes");
   cacheTag("version-info", `area-${areaId}-version-info`);
+  return readVersionIndicatorInfo(areaId, versionId);
+}
+
+/** The header's version badge data, bypassing the cache; see readAreas. */
+export async function readVersionIndicatorInfo(
+  areaId: number,
+  versionId?: number | null
+) {
   try {
     // Fetch only the latest version (lightweight — no snapshot)
     const latest = await db.query.areaVersions.findFirst({
@@ -614,6 +634,13 @@ export async function getRecentActivity(
   "use cache";
   cacheLife("minutes");
   cacheTag("recent-activity");
+  return readRecentActivity(limit);
+}
+
+/** Recent activity straight from the database; see {@link readAreas}. */
+export async function readRecentActivity(
+  limit = 12
+): Promise<RecentActivityItem[]> {
   try {
     const result = await db.execute(sql`
       SELECT

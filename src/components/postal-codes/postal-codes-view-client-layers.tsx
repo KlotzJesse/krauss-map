@@ -13,13 +13,17 @@ import {
   useMemo,
   useRef,
   memo,
+  useEffect,
 } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { getAreaLayerStateAction } from "@/app/actions/layer-actions";
+import {
+  getAreaLayerStateAction,
+  getUndoRedoStatusAction,
+} from "@/app/actions/layer-actions";
 import {
   addPostalCodesToLayerAction,
+  createLayerAction,
   removePostalCodesFromLayerAction,
   radiusSearchAction,
   drivingRadiusSearchAction,
@@ -53,7 +57,7 @@ import {
   extractRawCode,
   storedCodeToCompositeKey,
 } from "@/lib/utils/postal-code-keys";
-import { isLightColor } from "@/lib/utils/layer-colors";
+import { generateNextColor, isLightColor } from "@/lib/utils/layer-colors";
 import { Kbd } from "@/components/ui/kbd";
 import {
   useCommandPalette,
@@ -61,6 +65,10 @@ import {
   useRegisterMapCommands,
 } from "@/lib/context/command-palette-context";
 import { useMountOnce } from "@/lib/hooks/use-mount-once";
+import {
+  notifyAreasChanged,
+  onAreasRefreshed,
+} from "@/lib/sync/sidebar-data";
 
 const RadiusSearchDialog = dynamic(
   () =>
@@ -149,7 +157,8 @@ interface PostalCodesViewClientWithLayersProps {
 
 interface PostalCodesLayerActionsOptions {
   areaId: number;
-  activeLayerId: number | null;
+  /** The layer the URL asks for; may no longer exist (see activeLayerId). */
+  requestedActiveLayerId: number | null;
   granularity: string;
   countries: CountryCode[];
   initialLayers: Layer[];
@@ -163,7 +172,7 @@ interface PostalCodesLayerActionsOptions {
 
 function usePostalCodesLayerActions({
   areaId,
-  activeLayerId,
+  requestedActiveLayerId,
   granularity,
   countries,
   initialLayers,
@@ -194,6 +203,17 @@ function usePostalCodesLayerActions({
   const [optimisticUndoRedo, setOptimisticUndoRedo] = useState(
     initialUndoRedoStatus
   );
+
+  // The active layer, resolved against the layers that actually exist. The URL
+  // keeps whatever id was last selected; after a delete, merge, split or version
+  // restore that id can be gone, and resolving it blindly left the area with no
+  // active layer — every "add to active layer" command then silently did
+  // nothing. Fall back to the first layer, as a fresh load does.
+  const activeLayerId =
+    requestedActiveLayerId !== null &&
+    optimisticLayers.some((layer) => layer.id === requestedActiveLayerId)
+      ? requestedActiveLayerId
+      : (optimisticLayers[0]?.id ?? null);
 
   const applyLayerUpdate = useStableCallback(
     (
@@ -328,9 +348,7 @@ function usePostalCodesLayerActions({
             const result = await addPostalCodesToLayerAction(
               areaId,
               layerId,
-              postalCodes,
-              undefined,
-              { skipInvalidate: true }
+              postalCodes
             );
             if (!result.success) {
               pendingMutationsRef.current = pendingMutationsRef.current.filter(
@@ -354,6 +372,8 @@ function usePostalCodesLayerActions({
             );
             recomputeOptimisticState();
             restoreDroppedQueryParams(searchBeforeAction);
+            // Code counts in the sidebar.
+            notifyAreasChanged();
             resolve();
           } catch (error) {
             pendingMutationsRef.current = pendingMutationsRef.current.filter(
@@ -404,9 +424,7 @@ function usePostalCodesLayerActions({
             const result = await removePostalCodesFromLayerAction(
               areaId,
               layerId,
-              postalCodes,
-              undefined,
-              { skipInvalidate: true }
+              postalCodes
             );
             if (!result.success) {
               pendingMutationsRef.current = pendingMutationsRef.current.filter(
@@ -430,6 +448,8 @@ function usePostalCodesLayerActions({
             );
             recomputeOptimisticState();
             restoreDroppedQueryParams(searchBeforeAction);
+            // Code counts in the sidebar.
+            notifyAreasChanged();
             resolve();
           } catch (error) {
             pendingMutationsRef.current = pendingMutationsRef.current.filter(
@@ -447,6 +467,60 @@ function usePostalCodesLayerActions({
       });
     }
   );
+
+  /**
+   * The layer new codes should go into, creating the area's first layer if it
+   * has none. A fresh area starts empty, and adding a code there used to end in
+   * "Kein aktiver Layer ausgewählt" even though the palette had just offered to
+   * add it. The new layer becomes active on its own: with nothing else in the
+   * list, activeLayerId resolves to it.
+   */
+  const creatingFirstLayerRef = useRef<Promise<number | null> | null>(null);
+  const resolveTargetLayerId = useStableCallback(async () => {
+    if (activeLayerId) {
+      return activeLayerId;
+    }
+    if (!areaId) {
+      toast.error("Kein Gebiet ausgewählt");
+      return null;
+    }
+    // Two quick adds on an empty area both see "no layer" before the first one
+    // re-renders; share the one creation instead of making two layers.
+    if (creatingFirstLayerRef.current) {
+      return creatingFirstLayerRef.current;
+    }
+    const creation = createFirstLayer(areaId);
+    creatingFirstLayerRef.current = creation;
+    try {
+      return await creation;
+    } finally {
+      creatingFirstLayerRef.current = null;
+    }
+  });
+
+  const createFirstLayer = useStableCallback(async (targetAreaId: number) => {
+    const existing = optimisticLayersRef.current;
+    const result = await createLayerAction(targetAreaId, {
+      name: `Gebiet ${existing.length + 1}`,
+      color: generateNextColor(existing.map((layer) => layer.color)),
+      opacity: 70,
+      isVisible: true,
+      orderIndex: existing.length,
+    });
+    if (!(result.success && result.data)) {
+      toast.error("Gebiet konnte nicht angelegt werden");
+      return null;
+    }
+    const { codes, ...layer } = result.data;
+    applyLayerChange({
+      type: "create",
+      layer: {
+        ...layer,
+        postalCodes: codes.map((postalCode) => ({ postalCode })),
+      } as Layer,
+    });
+    return layer.id;
+  });
 
   const performRadiusSearch = useStableCallback(
     async (searchData: {
@@ -476,10 +550,9 @@ function usePostalCodesLayerActions({
       const result = await action();
       if (result?.success && result.data) {
         const postalCodes = result.data.postalCodes;
-        if (activeLayerId && areaId) {
-          await addPostalCodesToLayer(activeLayerId, postalCodes);
-        } else {
-          toast.error("Bitte aktives Gebiet wählen");
+        const targetLayerId = await resolveTargetLayerId();
+        if (targetLayerId) {
+          await addPostalCodesToLayer(targetLayerId, postalCodes);
         }
       }
     }
@@ -518,10 +591,9 @@ function usePostalCodesLayerActions({
       const result = await action();
       if (result?.success && result.data) {
         const postalCodes = result.data.postalCodes;
-        if (activeLayerId && areaId) {
-          await addPostalCodesToLayer(activeLayerId, postalCodes);
-        } else {
-          toast.error("Bitte aktives Gebiet wählen");
+        const targetLayerId = await resolveTargetLayerId();
+        if (targetLayerId) {
+          await addPostalCodesToLayer(targetLayerId, postalCodes);
         }
       }
     }
@@ -536,11 +608,10 @@ function usePostalCodesLayerActions({
         toast.error("Keine PLZ für Adresse gefunden");
         return;
       }
-      if (activeLayerId && areaId) {
-        await addPostalCodesToLayer(activeLayerId, [code]);
+      const targetLayerId = await resolveTargetLayerId();
+      if (targetLayerId) {
+        await addPostalCodesToLayer(targetLayerId, [code]);
         toast.success(`PLZ ${code} hinzugefügt`);
-      } else {
-        toast.success(`PLZ ${code} gewählt`);
       }
     }
   );
@@ -557,13 +628,11 @@ function usePostalCodesLayerActions({
   );
 
   const handleImport = useStableCallback(async (postalCodes: string[]) => {
-    if (!(activeLayerId && areaId)) {
-      toast.warning("Bitte aktives Gebiet wählen", {
-        duration: 3000,
-      });
+    const targetLayerId = await resolveTargetLayerId();
+    if (!targetLayerId) {
       return false;
     }
-    await addPostalCodesToLayer(activeLayerId, postalCodes);
+    await addPostalCodesToLayer(targetLayerId, postalCodes);
     toast.success(`${postalCodes.length} PLZ hinzugefügt`);
     return true;
   });
@@ -582,6 +651,7 @@ function usePostalCodesLayerActions({
       change
     );
     recomputeOptimisticState();
+    notifyAreasChanged();
   });
 
   /**
@@ -610,6 +680,21 @@ function usePostalCodesLayerActions({
     // either already reflected in it or was rolled back on the server.
     pendingMutationsRef.current = [];
     recomputeOptimisticState();
+    notifyAreasChanged();
+  });
+
+  /** Re-read only the undo/redo counters; see getUndoRedoStatusAction. */
+  const refreshUndoRedo = useStableCallback(async () => {
+    if (!areaId || pendingMutationsRef.current.length > 0) {
+      return;
+    }
+    const result = await getUndoRedoStatusAction(areaId);
+    // An edit that started while this was in flight owns the counters now.
+    if (!result.success || pendingMutationsRef.current.length > 0) {
+      return;
+    }
+    committedUndoRedoRef.current = result.data;
+    recomputeOptimisticState();
   });
 
   return {
@@ -624,6 +709,9 @@ function usePostalCodesLayerActions({
     performDrivingRadiusSearchWrapper,
     applyLayerChange,
     resyncLayers,
+    activeLayerId,
+    resolveTargetLayerId,
+    refreshUndoRedo,
   };
 }
 
@@ -688,20 +776,32 @@ export const PostalCodesViewClientWithLayers = memo(
       return [...countrySet];
     }, [areaCountriesFromServer, country, initialLayers]);
 
+    // The area's granularity as last confirmed on this page. It starts as the
+    // server's value and is overridden once the user changes it, so the switch
+    // happens in place: the index, the tile source and the layers follow this
+    // value instead of waiting for a route re-render that would remount the map.
+    // Keyed by area so navigating to another area drops the override.
+    const [granularityOverride, setGranularityOverride] = useState<{
+      areaId: number | null | undefined;
+      granularity: string;
+    } | null>(null);
+    const granularity =
+      granularityOverride && granularityOverride.areaId === areaId
+        ? granularityOverride.granularity
+        : defaultGranularity;
+
     // Codes, representative points, areas and bounds. The outlines arrive
     // separately as vector tiles, per visible tile rather than all at once.
     const {
       index,
       isLoading: isGeodataLoading,
       error: indexError,
-    } = usePostalCodeIndex(defaultGranularity, areaCountries);
+    } = usePostalCodeIndex(granularity, areaCountries);
 
     // Read activeLayerId directly from URL state for instant switching
     const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
     const setMapCenterZoom = useSetMapCenterZoom();
-    const activeLayerId = urlActiveLayerId || initialLayers[0]?.id || null;
 
-    const router = useRouter();
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const openImportDialog = useCallback(() => setImportDialogOpen(true), []);
     const [previewPostalCode, setPreviewPostalCode] = useState<string | null>(
@@ -720,10 +820,13 @@ export const PostalCodesViewClientWithLayers = memo(
       performDrivingRadiusSearchWrapper,
       applyLayerChange,
       resyncLayers,
+      activeLayerId,
+      resolveTargetLayerId,
+      refreshUndoRedo,
     } = usePostalCodesLayerActions({
       areaId,
-      activeLayerId,
-      granularity: defaultGranularity,
+      requestedActiveLayerId: urlActiveLayerId ?? null,
+      granularity,
       countries: areaCountries,
       initialLayers,
       initialUndoRedoStatus,
@@ -808,25 +911,27 @@ export const PostalCodesViewClientWithLayers = memo(
       [country, index, setMapCenterZoom]
     );
 
+    // Any edit in the app — including ones made outside the map, like renaming
+    // the area in the sidebar — refreshes the live sidebar data. Follow it with
+    // the undo/redo counters, since those edits are undoable from here too.
+    useEffect(
+      () => onAreasRefreshed(() => void refreshUndoRedo()),
+      [refreshUndoRedo]
+    );
+
     const handleGranularityChange = useCallback(
       (newGranularity: string) => {
-        if (newGranularity === defaultGranularity) {
+        if (newGranularity === granularity) {
           return;
         }
-
-        // The one action that does re-render the route, deliberately. Changing
-        // granularity swaps the vector-tile source, the postal-code index and
-        // every layer's codes at once; the granularity itself arrives as a
-        // server prop. There is nothing here for the client to patch, so it
-        // asks the server for the page again. Every other mutation updates in
-        // place — see applyLayerChange / resyncLayers above.
-        toast.info("Granularität wird aktualisiert", {
-          description: "Die Karte wird neu aufgebaut",
-          duration: 3000,
-        });
-        router.refresh();
+        // The selector has already saved the change. Switching the value here
+        // reloads the index and tile source for the new granularity, and the
+        // resync picks up the codes the server migrated, all without touching
+        // the route — so the map stays mounted.
+        setGranularityOverride({ areaId, granularity: newGranularity });
+        void resyncLayers();
       },
-      [defaultGranularity, router]
+      [granularity, areaId, resyncLayers]
     );
 
     const activeLayer = useMemo(
@@ -865,11 +970,11 @@ export const PostalCodesViewClientWithLayers = memo(
         () => ({
           areaId,
           areaName: areaName ?? "Gebiet",
-          granularity: defaultGranularity,
+          granularity,
           layers: optimisticLayers,
           activeLayerId,
         }),
-        [areaId, areaName, defaultGranularity, optimisticLayers, activeLayerId]
+        [areaId, areaName, granularity, optimisticLayers, activeLayerId]
       )
     );
 
@@ -890,11 +995,11 @@ export const PostalCodesViewClientWithLayers = memo(
 
     useRegisterMapCommands({
       onAddPostalCode: async (code: string) => {
-        if (!activeLayerId) {
-          toast.error("Kein aktiver Layer ausgewählt");
+        const targetLayerId = await resolveTargetLayerId();
+        if (!targetLayerId) {
           return;
         }
-        await addPostalCodesToLayer(activeLayerId, [code]);
+        await addPostalCodesToLayer(targetLayerId, [code]);
         toast.success(`PLZ ${code} hinzugefügt`);
       },
       onRemovePostalCode: async (code: string) => {
@@ -1026,7 +1131,7 @@ export const PostalCodesViewClientWithLayers = memo(
           <MapErrorBoundary>
             <PostalCodesMap
               index={index}
-              granularity={defaultGranularity}
+              granularity={granularity}
               country={country}
               countries={areaCountries}
               onGranularityChange={handleGranularityChange}
@@ -1071,7 +1176,7 @@ export const PostalCodesViewClientWithLayers = memo(
               setRadiusDialog((prev) => ({ ...prev, open }))
             }
             coords={radiusDialog.coords}
-            granularity={defaultGranularity}
+            granularity={granularity}
             onStraightRadius={handleRadiusSelect}
             performDrivingRadiusSearch={performDrivingRadiusSearchWrapper}
           />
@@ -1082,7 +1187,7 @@ export const PostalCodesViewClientWithLayers = memo(
           open={importDialogOpen}
           onOpenChange={setImportDialogOpen}
           availableCodes={index.keys}
-          granularity={defaultGranularity}
+          granularity={granularity}
           onImport={handleImport}
           onLayersChanged={resyncLayers}
           areaId={areaId}

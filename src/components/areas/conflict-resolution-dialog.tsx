@@ -11,7 +11,8 @@ import {
 import { X } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
-import { updateLayerAction } from "@/app/actions/layer-actions";
+import { toast } from "sonner";
+
 import { Activity } from "@/components/ui/activity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,8 +41,6 @@ import type { ConflictGroup } from "@/lib/hooks/use-layer-conflicts";
 import { useLayerConflicts } from "@/lib/hooks/use-layer-conflicts";
 import type { Layer } from "@/lib/types/area-types";
 import { cn } from "@/lib/utils";
-import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
-import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import { isLightColor } from "@/lib/utils/layer-colors";
 
 interface ConflictResolutionPanelProps {
@@ -53,15 +52,25 @@ interface ConflictResolutionPanelProps {
   country?: string;
   /** Active layer — used for "keep in active layer" auto-resolve */
   activeLayerId?: number | null;
+  /**
+   * The view's optimistic remove. Resolving through it updates the map and the
+   * panel immediately, records one undoable change per layer, and normalizes
+   * codes — rewriting each layer's whole code list did none of that and only
+   * showed up after a reload.
+   */
+  removePostalCodesFromLayer?: (
+    layerId: number,
+    codes: string[]
+  ) => Promise<void>;
 }
 
 export function ConflictResolutionPanel({
   onClose,
   onHighlightCodes,
-  areaId,
   layers,
   country,
   activeLayerId,
+  removePostalCodesFromLayer,
 }: ConflictResolutionPanelProps) {
   // Convert raw postal codes to composite keys for feature-index lookup
   const toCompositeSet = useCallback(
@@ -161,7 +170,7 @@ export function ConflictResolutionPanel({
     !isGroupFullySelected(group);
 
   /**
-   * Batch resolve: collect all removals per layer, then execute one updateLayerAction per affected layer.
+   * Batch resolve: collect all removals per layer, then remove them through the view's optimistic remove, one call per layer.
    */
   const handleBatchResolve = useCallback(
     async (
@@ -195,27 +204,23 @@ export function ConflictResolutionPanel({
       const totalOps = removals.size;
       let completed = 0;
 
+      let removedTotal = 0;
       for (const [layerId, codesToRemove] of removals) {
         const layer = layers.find((l) => l.id === layerId);
-        if (!layer) continue;
+        if (!(layer && removePostalCodesFromLayer)) continue;
 
-        const currentCodes =
-          layer.postalCodes?.map((pc) => pc.postalCode) ?? [];
-        const newCodes = currentCodes.filter((c) => !codesToRemove.has(c));
-
-        if (newCodes.length < currentCodes.length) {
-          await withCallbacks(
-            () => updateLayerAction(areaId, layerId, { postalCodes: newCodes }),
-            createToastCallbacks({
-              loadingMessage: `Aktualisiere ${layer.name}...`,
-              successMessage: `${codesToRemove.size} PLZ aus ${layer.name} entfernt`,
-              errorMessage: `Fehler bei ${layer.name}`,
-            })
-          )();
+        try {
+          await removePostalCodesFromLayer(layerId, [...codesToRemove]);
+          removedTotal += codesToRemove.size;
+        } catch {
+          // The optimistic remove already rolled back and toasted the error.
         }
 
         completed++;
         setResolveProgress(Math.round((completed / totalOps) * 100));
+      }
+      if (removedTotal > 0) {
+        toast.success(`${removedTotal} Überschneidungen aufgelöst`);
       }
 
       setSelectedCodes(new Set());
@@ -223,7 +228,7 @@ export function ConflictResolutionPanel({
       setResolveProgress(0);
       detectConflicts();
     },
-    [conflicts, layers, areaId, detectConflicts]
+    [conflicts, layers, removePostalCodesFromLayer, detectConflicts]
   );
 
   /** Auto-resolve: for each group, keep codes in the layer that has the most postal codes overall. */

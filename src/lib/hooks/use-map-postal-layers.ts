@@ -2,6 +2,7 @@
 
 import type {
   ExpressionSpecification,
+  FilterSpecification,
   GeoJSONSourceSpecification,
   Map as MapLibreMap,
   MapGeoJSONFeature,
@@ -31,12 +32,20 @@ const SOURCE_LAYER = "plz";
 const STATES_SOURCE_ID = "state-boundaries";
 const COUNTRIES_SOURCE_ID = "country-shapes";
 
+/**
+ * Stripe layers are created per pattern, so their ids are not in LAYER_IDS.
+ * `fill-pattern` is a cross-faded property that only accepts zoom and feature
+ * properties — not feature-state — so it cannot be switched per code the way
+ * the colours are. Each distinct pattern gets its own layer with a constant
+ * pattern and a filter on the code key instead.
+ */
+const STRIPE_LAYER_PREFIX = "pc-stripe:";
+
 /** Every layer this hook owns, in draw order. */
 const LAYER_IDS = [
   "pc-states-fill",
   "pc-states-line",
   "pc-fill",
-  "pc-stripe",
   "pc-line",
   "pc-dup1",
   "pc-dup2",
@@ -59,7 +68,6 @@ interface CodeState extends Record<string, unknown> {
   fill?: string;
   line?: string;
   lw?: number;
-  pat?: string;
   l1?: string;
   l2?: string;
   l3?: string;
@@ -195,11 +203,11 @@ export function useMapPostalLayers({
     hideTooltip,
   } = state;
 
-  const needsStripeRef = useRef(false);
+  const needsDupRef = useRef(false);
   const needsDup3Ref = useRef(false);
   const needsPreviewRef = useRef(false);
   const needsConflictRef = useRef(false);
-  needsStripeRef.current = multiLayerCodes.size > 0;
+  needsDupRef.current = multiLayerCodes.size > 0;
   needsDup3Ref.current = state.hasThreePlusLayerCodes;
   needsPreviewRef.current = previewCodes !== null;
   needsConflictRef.current =
@@ -307,22 +315,6 @@ export function useMapPostalLayers({
       paint: { "fill-color": stateColor("fill", "rgba(98,125,152,0.098)") },
     });
 
-    // Second pass for codes in several layers: the secondary colour showing
-    // through a stripe or crosshatch, over the primary colour drawn by pc-fill.
-    add({
-      id: "pc-stripe",
-      type: "fill",
-      source: SOURCE_ID,
-      "source-layer": SOURCE_LAYER,
-      paint: {
-        "fill-pattern": [
-          "coalesce",
-          ["feature-state", "pat"],
-          "",
-        ] as unknown as ExpressionSpecification,
-      },
-    }, needsStripeRef.current);
-
     add({
       id: "pc-line",
       type: "line",
@@ -346,7 +338,7 @@ export function useMapPostalLayers({
         "line-color": stateColor("l1", "rgba(0,0,0,0)"),
         "line-width": 2.5,
       },
-    }, needsStripeRef.current);
+    }, needsDupRef.current);
     add({
       id: "pc-dup2",
       type: "line",
@@ -357,7 +349,7 @@ export function useMapPostalLayers({
         "line-color": stateColor("l2", "rgba(0,0,0,0)"),
         "line-width": 1.5,
       },
-    }, needsStripeRef.current);
+    }, needsDupRef.current);
     add({
       id: "pc-dup3",
       type: "line",
@@ -455,6 +447,7 @@ export function useMapPostalLayers({
         return;
       }
       patternsRef.current.clear();
+      stripeFiltersRef.current.clear();
       appliedRef.current.clear();
       hoveredIdRef.current = null;
       installStyle();
@@ -540,15 +533,12 @@ export function useMapPostalLayers({
     for (const key of multiLayerCodes) {
       const style = styles.get(key);
       if (!style) continue;
-      const secondary = style.secondaryFillColor;
-      const shape = sameColorCodes.has(key) ? "cross" : "stripe";
       put(key, {
-        // pc-fill paints the primary colour; pc-stripe puts the secondary on
-        // top through the pattern.
+        // pc-fill paints the primary colour; a stripe layer puts the
+        // secondary on top through its pattern (see patternGroups).
         fill: rgba(style.primaryFillColor),
         line: rgba(style.lineColor),
         lw: style.lineWidth,
-        pat: `${shape}-${secondary[0]}-${secondary[1]}-${secondary[2]}-${secondary[3]}`,
         l1: style.layerLineColors[0]
           ? rgba([
               style.layerLineColors[0][0],
@@ -595,29 +585,92 @@ export function useMapPostalLayers({
     normalizedHighlightedCodes,
   ]);
 
-  // Register a pattern image per distinct secondary colour. MapLibre paints
-  // fill-pattern as-is rather than tinting it, so the colour is baked into the
-  // image — at most two per visible layer.
+  /**
+   * Codes grouped by the stripe pattern they need: pattern name → code keys.
+   * The name encodes shape and colour, e.g. "stripe-220-38-38-120".
+   */
+  const patternGroups = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    const styles = resolvedStylesRef.current;
+    for (const key of multiLayerCodes) {
+      const style = styles.get(key);
+      if (!style) continue;
+      const secondary = style.secondaryFillColor;
+      const shape = sameColorCodes.has(key) ? "cross" : "stripe";
+      const name = `${shape}-${secondary[0]}-${secondary[1]}-${secondary[2]}-${secondary[3]}`;
+      const keys = groups.get(name);
+      if (keys) {
+        keys.push(key);
+      } else {
+        groups.set(name, [key]);
+      }
+    }
+    return groups;
+    // resolvedStylesVersion stands in for the contents of resolvedStylesRef.
+  }, [resolvedStylesRef, resolvedStylesVersion, multiLayerCodes, sameColorCodes]);
+
+  /** Filter currently applied to each stripe layer, to skip no-op updates. */
+  const stripeFiltersRef = useRef<Map<string, string>>(new Map());
+
+  // One layer per pattern: the pattern image is registered once (MapLibre
+  // paints fill-pattern as-is rather than tinting it, so the colour is baked
+  // in), the layer paints it, and a filter picks the codes. Changing which codes
+  // carry a pattern only touches that layer's filter.
   useEffect(() => {
-    if (!(map && isMapLoaded)) {
+    if (!(map && isMapLoaded && map.getLayer("pc-line"))) {
       return;
     }
-    for (const patch of desiredState.values()) {
-      const name = patch.pat;
-      if (!name || patternsRef.current.has(name) || map.hasImage(name)) {
-        continue;
-      }
-      const [shape, r, g, b, a] = name.split("-");
-      const image = createColoredPatternImage(
-        shape === "cross" ? "cross" : "stripe",
-        [Number(r), Number(g), Number(b), Number(a)]
-      );
-      if (image) {
+    const filters = stripeFiltersRef.current;
+
+    for (const [name, keys] of patternGroups) {
+      if (!(patternsRef.current.has(name) || map.hasImage(name))) {
+        const [shape, r, g, b, a] = name.split("-");
+        const image = createColoredPatternImage(
+          shape === "cross" ? "cross" : "stripe",
+          [Number(r), Number(g), Number(b), Number(a)]
+        );
+        if (!image) continue;
         map.addImage(name, image, { pixelRatio: 2 });
-        patternsRef.current.add(name);
+      }
+      patternsRef.current.add(name);
+
+      const id = `${STRIPE_LAYER_PREFIX}${name}`;
+      const filter: FilterSpecification = [
+        "in",
+        ["get", "key"],
+        ["literal", keys],
+      ];
+      const signature = keys.join(",");
+      if (!map.getLayer(id)) {
+        // Above the fills, below every outline.
+        map.addLayer(
+          {
+            id,
+            type: "fill",
+            source: SOURCE_ID,
+            "source-layer": SOURCE_LAYER,
+            filter,
+            paint: { "fill-pattern": name },
+          },
+          "pc-line"
+        );
+        filters.set(id, signature);
+      } else if (filters.get(id) !== signature) {
+        map.setFilter(id, filter);
+        filters.set(id, signature);
       }
     }
-  }, [map, isMapLoaded, desiredState, styleEpoch]);
+
+    for (const id of [...filters.keys()]) {
+      const name = id.slice(STRIPE_LAYER_PREFIX.length);
+      if (!patternGroups.has(name)) {
+        if (map.getLayer(id)) {
+          map.removeLayer(id);
+        }
+        filters.delete(id);
+      }
+    }
+  }, [map, isMapLoaded, patternGroups, styleEpoch]);
 
   // Push only what changed. A colour tweak touches a few hundred values and
   // never re-tessellates, which is the whole reason for using feature-state.
@@ -754,6 +807,11 @@ export function useMapPostalLayers({
       for (const id of LAYER_IDS) {
         if (map.getLayer(id)) {
           map.removeLayer(id);
+        }
+      }
+      for (const layer of map.getStyle()?.layers ?? []) {
+        if (layer.id.startsWith(STRIPE_LAYER_PREFIX)) {
+          map.removeLayer(layer.id);
         }
       }
       for (const id of [SOURCE_ID, STATES_SOURCE_ID, COUNTRIES_SOURCE_ID]) {

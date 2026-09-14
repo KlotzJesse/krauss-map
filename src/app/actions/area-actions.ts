@@ -3,6 +3,8 @@
 import { eq, and, inArray, or, sql, like } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
+import { FRESH_AFTER_EDIT } from "../../lib/cache/after-edit";
+
 import {
   type CountryCode,
   COUNTRY_CODES,
@@ -11,6 +13,7 @@ import {
   getCountryConfig,
 } from "../../lib/config/countries";
 import { db } from "../../lib/db";
+import { readAreas, readRecentActivity } from "../../lib/db/data-functions";
 import {
   areas,
   areaLayers,
@@ -110,15 +113,15 @@ export async function createAreaAction(data: {
       throw new Error("Erstversion konnte nicht erstellt werden");
     }
 
-    revalidateTag("areas", "max");
+    revalidateTag("areas", FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${area.id}`, "max");
+    revalidateTag(`area-${area.id}`, FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${area.id}-undo-redo`, "max");
+    revalidateTag(`area-${area.id}-undo-redo`, FRESH_AFTER_EDIT);
 
-    revalidateTag("version-info", "max");
+    revalidateTag("version-info", FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${area.id}-version-info`, "max");
+    revalidateTag(`area-${area.id}-version-info`, FRESH_AFTER_EDIT);
 
     // Deliberately no redirect() here. Redirecting from the action makes the
     // action response carry the whole destination page render, so the caller's
@@ -146,13 +149,16 @@ export async function updateAreaAction(
   createdBy?: string
 ): ServerActionResponse {
   try {
-    const [previousArea] = await Promise.all([
-      db.query.areas.findFirst({ where: eq(areas.id, id) }),
-      db
-        .update(areas)
-        .set({ ...data, updatedAt: new Date().toISOString() })
-        .where(eq(areas.id, id)),
-    ]);
+    // Read the previous values before writing. Running both at once let the
+    // read land after the update, so the undo record held the new name and
+    // undoing a rename changed nothing.
+    const previousArea = await db.query.areas.findFirst({
+      where: eq(areas.id, id),
+    });
+    await db
+      .update(areas)
+      .set({ ...data, updatedAt: new Date().toISOString() })
+      .where(eq(areas.id, id));
 
     // Record change
 
@@ -178,11 +184,11 @@ export async function updateAreaAction(
       createdBy,
     });
 
-    revalidateTag("areas", "max");
+    revalidateTag("areas", FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${id}`, "max");
+    revalidateTag(`area-${id}`, FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${id}-undo-redo`, "max");
+    revalidateTag(`area-${id}-undo-redo`, FRESH_AFTER_EDIT);
 
     return { success: true };
   } catch (error) {
@@ -227,7 +233,7 @@ export async function deleteAreaAction(id: number) {
       await tx.delete(areas).where(eq(areas.id, id));
     });
 
-    revalidateTag("areas", "max");
+    revalidateTag("areas", FRESH_AFTER_EDIT);
 
     // No redirect() here — see createAreaAction. Redirecting from the action
     // makes its response carry the destination page render, so the caller's
@@ -253,8 +259,8 @@ export async function archiveAreaAction(
       })
       .where(eq(areas.id, id));
 
-    revalidateTag("areas", "max");
-    revalidateTag(`area-${id}`, "max");
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag(`area-${id}`, FRESH_AFTER_EDIT);
     return { success: true };
   } catch (error) {
     console.error("Error archiving area:", error);
@@ -497,9 +503,9 @@ export async function importAreaFromDataAction(
 
     if (!newAreaId) throw new Error("Area creation failed");
 
-    revalidateTag("areas", "max");
-    revalidateTag(`area-${newAreaId}`, "max");
-    revalidateTag("version-info", "max");
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag(`area-${newAreaId}`, FRESH_AFTER_EDIT);
+    revalidateTag("version-info", FRESH_AFTER_EDIT);
 
     return { success: true as const, data: { areaId: newAreaId } };
   } catch (error) {
@@ -593,8 +599,8 @@ export async function duplicateAreaAction(
         description: `Dupliziert von "${sourceArea.name}"`,
       });
 
-      revalidateTag("areas", "max");
-      revalidateTag(`area-${newArea.id}`, "max");
+      revalidateTag("areas", FRESH_AFTER_EDIT);
+      revalidateTag(`area-${newArea.id}`, FRESH_AFTER_EDIT);
       duplicatedAreaId = newArea.id;
     });
     return { success: true as const, areaId: duplicatedAreaId };
@@ -676,11 +682,11 @@ export async function createLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
 
     // Return the whole row, not just the id. The client puts this straight into
     // its layer list; a partial object rendered a layer with no name and no
@@ -849,11 +855,11 @@ export async function updateLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
 
     return { success: true };
   } catch (error) {
@@ -933,11 +939,11 @@ export async function deleteLayerAction(
       createdBy,
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${areaId}`, "max");
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
 
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
 
     return { success: true };
   } catch (error) {
@@ -1002,9 +1008,12 @@ export async function mergeLayersAction(
       await tx.delete(areaLayers).where(inArray(areaLayers.id, uniqueSourceIds));
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    // Tags, counts and granularity show in the area list.
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
 
     return {
       success: true,
@@ -1092,9 +1101,9 @@ export async function duplicateLayerAction(
       return newLayer.id;
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
 
     return { success: true, data: { id: newLayerId } };
   } catch (error) {
@@ -1186,9 +1195,9 @@ export async function copyLayerToAreaAction(
       return newLayer.id;
     });
 
-    revalidateTag(`area-${targetAreaId}-layers`, "max");
-    revalidateTag(`area-${targetAreaId}`, "max");
-    revalidateTag(`area-${targetAreaId}-undo-redo`, "max");
+    revalidateTag(`area-${targetAreaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${targetAreaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${targetAreaId}-undo-redo`, FRESH_AFTER_EDIT);
 
     return { success: true, data: { id: newLayerId } };
   } catch (error) {
@@ -1201,8 +1210,7 @@ export async function addPostalCodesToLayerAction(
   areaId: number,
   layerId: number,
   postalCodes: string[],
-  createdBy?: string,
-  options?: { skipInvalidate?: boolean }
+  createdBy?: string
 ): ServerActionResponse {
   try {
     if (!areaId || !layerId || !postalCodes || postalCodes.length === 0) {
@@ -1274,11 +1282,16 @@ export async function addPostalCodesToLayerAction(
       return { success: true };
     }
 
-    if (!options?.skipInvalidate) {
-      revalidateTag(`area-${areaId}-layers`, "max");
-      revalidateTag(`area-${areaId}-undo-redo`, "max");
-      revalidateTag(`area-${areaId}-change-history`, "max");
-    }
+    // The open page applied this edit itself; these only keep the next load
+    // honest — code counts in the area list, activity feed, histories. The
+    // optimistic caller used to skip them to dodge the route re-render that
+    // updateTag caused, which left those views stale for minutes.
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
+    revalidateTag(`layer-${layerId}-history`, FRESH_AFTER_EDIT);
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
 
     return { success: true };
   } catch (error) {
@@ -1295,8 +1308,7 @@ export async function removePostalCodesFromLayerAction(
 
   postalCodes: string[],
 
-  createdBy?: string,
-  options?: { skipInvalidate?: boolean }
+  createdBy?: string
 ): ServerActionResponse {
   try {
     if (!areaId || !layerId || !postalCodes || postalCodes.length === 0) {
@@ -1376,11 +1388,16 @@ export async function removePostalCodesFromLayerAction(
       return { success: true };
     }
 
-    if (!options?.skipInvalidate) {
-      revalidateTag(`area-${areaId}-layers`, "max");
-      revalidateTag(`area-${areaId}-undo-redo`, "max");
-      revalidateTag(`area-${areaId}-change-history`, "max");
-    }
+    // The open page applied this edit itself; these only keep the next load
+    // honest — code counts in the area list, activity feed, histories. The
+    // optimistic caller used to skip them to dodge the route re-render that
+    // updateTag caused, which left those views stale for minutes.
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
+    revalidateTag(`layer-${layerId}-history`, FRESH_AFTER_EDIT);
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
 
     return { success: true };
   } catch (error) {
@@ -1557,9 +1574,9 @@ export async function balanceLayersAction(
       return moves;
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
 
     return { success: true, data: result };
   } catch (error) {
@@ -1624,8 +1641,8 @@ export async function fixDuplicateCodeAction(
       return { keptLayerId: keptLayer.id };
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
 
     return { success: true, data: result };
   } catch (error) {
@@ -1671,8 +1688,8 @@ export async function fixDuplicateWithLayerAction(
       }
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
 
     return { success: true, data: { keptLayerId: keepLayerId } };
   } catch (error) {
@@ -1751,8 +1768,8 @@ export async function addPostalCodesByPrefixAction(
       return { count: inserted.length };
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
 
     return { success: true, data: result };
   } catch (error) {
@@ -2543,7 +2560,10 @@ export async function applyLayerTemplateAction(
       }
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    // Tags, counts and granularity show in the area list.
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
     return { success: true };
   } catch (error) {
     console.error("Error applying layer template:", error);
@@ -2804,7 +2824,10 @@ export async function createTagAction(
         color: areaTags.color,
       });
 
-    revalidateTag("tags", "max");
+    revalidateTag("tags", FRESH_AFTER_EDIT);
+    // Tags, counts and granularity show in the area list.
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
     return { success: true, data: tag };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2816,7 +2839,10 @@ export async function deleteTagAction(
 ): ServerActionResponse<void> {
   try {
     await db.delete(areaTags).where(eq(areaTags.id, tagId));
-    revalidateTag("tags", "max");
+    revalidateTag("tags", FRESH_AFTER_EDIT);
+    // Tags, counts and granularity show in the area list.
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2833,8 +2859,11 @@ export async function assignTagToAreaAction(
       .values({ areaId, tagId })
       .onConflictDoNothing();
 
-    revalidateTag(`area-${areaId}-tags`, "max");
-    revalidateTag("tags", "max");
+    revalidateTag(`area-${areaId}-tags`, FRESH_AFTER_EDIT);
+    revalidateTag("tags", FRESH_AFTER_EDIT);
+    // Tags, counts and granularity show in the area list.
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2855,8 +2884,11 @@ export async function removeTagFromAreaAction(
         )
       );
 
-    revalidateTag(`area-${areaId}-tags`, "max");
-    revalidateTag("tags", "max");
+    revalidateTag(`area-${areaId}-tags`, FRESH_AFTER_EDIT);
+    revalidateTag("tags", FRESH_AFTER_EDIT);
+    // Tags, counts and granularity show in the area list.
+    revalidateTag("areas", FRESH_AFTER_EDIT);
+    revalidateTag("recent-activity", FRESH_AFTER_EDIT);
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2875,10 +2907,10 @@ export async function bulkAssignTagToAreasAction(
       .onConflictDoNothing();
 
     for (const areaId of areaIds) {
-      revalidateTag(`area-${areaId}-tags`, "max");
+      revalidateTag(`area-${areaId}-tags`, FRESH_AFTER_EDIT);
     }
-    revalidateTag("tags", "max");
-    revalidateTag("areas", "max");
+    revalidateTag("tags", FRESH_AFTER_EDIT);
+    revalidateTag("areas", FRESH_AFTER_EDIT);
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2901,10 +2933,10 @@ export async function bulkRemoveTagFromAreasAction(
       );
 
     for (const areaId of areaIds) {
-      revalidateTag(`area-${areaId}-tags`, "max");
+      revalidateTag(`area-${areaId}-tags`, FRESH_AFTER_EDIT);
     }
-    revalidateTag("tags", "max");
-    revalidateTag("areas", "max");
+    revalidateTag("tags", FRESH_AFTER_EDIT);
+    revalidateTag("areas", FRESH_AFTER_EDIT);
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -2922,8 +2954,8 @@ export async function updateTagAction(
       .set({ name: name.trim().slice(0, 50), color })
       .where(eq(areaTags.id, tagId));
 
-    revalidateTag("tags", "max");
-    revalidateTag("areas", "max");
+    revalidateTag("tags", FRESH_AFTER_EDIT);
+    revalidateTag("areas", FRESH_AFTER_EDIT);
     return { success: true, data: undefined };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -3200,9 +3232,9 @@ export async function splitLayerAction(
       return createdLayerIds;
     });
 
-    revalidateTag(`area-${areaId}-layers`, "max");
-    revalidateTag(`area-${areaId}-undo-redo`, "max");
-    revalidateTag(`area-${areaId}-change-history`, "max");
+    revalidateTag(`area-${areaId}-layers`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
 
     return { success: true, data: { createdLayerIds: result } };
   } catch (error) {
@@ -3211,5 +3243,29 @@ export async function splitLayerAction(
       success: false,
       error: error instanceof Error ? error.message : "Failed to split layer",
     };
+  }
+}
+
+/**
+ * The sidebar's data — area list with counts and tags, plus recent activity —
+ * read without the cache.
+ *
+ * The layout renders the sidebar once and edits no longer re-render the route,
+ * so after creating an area, adding codes, tagging or writing notes the client
+ * asks for this instead of waiting for a reload.
+ */
+export async function getSidebarDataAction() {
+  try {
+    const [areaList, recentActivity] = await Promise.all([
+      readAreas(),
+      readRecentActivity(12),
+    ]);
+    return {
+      success: true as const,
+      data: { areas: areaList, recentActivity },
+    };
+  } catch (error) {
+    console.error("Error reading sidebar data:", error);
+    return { success: false as const, error: "Failed to read areas" };
   }
 }

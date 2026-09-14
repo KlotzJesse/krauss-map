@@ -3,6 +3,7 @@
 import { Tag, Plus, Trash2, Pencil, Check, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { notifyAreasChanged } from "@/lib/sync/sidebar-data";
 
 import {
   getAllTagsAction,
@@ -64,6 +65,7 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
     startTransition(async () => {
       const res = await assignTagToAreaAction(areaId, tag.id);
       if (res.success) {
+        notifyAreasChanged();
         setTags((prev) =>
           [...prev, tag].sort((a, b) => a.name.localeCompare(b.name))
         );
@@ -78,6 +80,7 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
     startTransition(async () => {
       const res = await removeTagFromAreaAction(areaId, tagId);
       if (res.success) {
+        notifyAreasChanged();
         setTags((prev) => prev.filter((t) => t.id !== tagId));
         toast.success(`Tag „${tagName}" entfernt`);
       } else {
@@ -110,6 +113,7 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
     startTransition(async () => {
       const res = await deleteTagAction(tagId);
       if (res.success) {
+        notifyAreasChanged();
         setAllTags((prev) => prev.filter((t) => t.id !== tagId));
         setTags((prev) => prev.filter((t) => t.id !== tagId));
         toast.success(`Tag „${tagName}" gelöscht`);
@@ -131,6 +135,7 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
     startTransition(async () => {
       const res = await updateTagAction(editingTagId, trimmed, editingTagColor);
       if (res.success) {
+        notifyAreasChanged();
         setAllTags((prev) =>
           prev.map((t) =>
             t.id === editingTagId

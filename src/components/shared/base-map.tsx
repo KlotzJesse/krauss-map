@@ -1041,6 +1041,7 @@ const MapInner = memo(function MapInner({
             layers={layers ?? []}
             country={country}
             activeLayerId={activeLayerId}
+            removePostalCodesFromLayer={removePostalCodesFromLayer}
           />
         </div>
       </Activity>

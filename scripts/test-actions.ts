@@ -56,7 +56,7 @@ if (!ready) {
 await sleep(4000);
 
 /** Instrumentation that survives a remount, installed once per page load. */
-await cdp.evaluate(`(() => {
+const PROBE_SCRIPT = `(() => {
   if (window.__probe) { window.__probe.reset(); return 'already'; }
 
   const probe = {
@@ -138,7 +138,8 @@ await cdp.evaluate(`(() => {
 
   probe.reset();
   return 'installed';
-})()`);
+})()`;
+await cdp.evaluate(PROBE_SCRIPT);
 
 interface ActionResult {
   name: string;
@@ -193,6 +194,10 @@ async function runAction(
   const tStart = Date.now();
   const mark = (label: string) =>
     process.stdout.write(`${label}=${Date.now() - tStart}ms `);
+  // A reload or navigation earlier in the run wipes the probe; put it back.
+  if (!(await cdp.evaluate<boolean>("Boolean(window.__probe)"))) {
+    await cdp.evaluate(PROBE_SCRIPT);
+  }
   await cdp.evaluate("window.__probe.reset(); window.__t = performance.now();");
   const baseline = await cdp.evaluate<number>("window.__probe.baselineColors");
   const layersBefore = await readLayers();
@@ -210,6 +215,8 @@ async function runAction(
     ])) as Record<string, unknown>;
   } catch (error) {
     results.push({ name, ok: false, detail: `threw: ${String(error).slice(0, 120)}` });
+    console.log(`FAIL
+      threw: ${String(error).slice(0, 120)}`);
     return;
   }
 
@@ -268,7 +275,9 @@ async function runAction(
   });
 
   mark("verdict");
-  console.log(results[results.length - 1].ok ? "PASS" : "FAIL");
+  const last = results[results.length - 1];
+  console.log(last.ok ? "PASS" : `FAIL
+      ${last.detail}`);
   await cdp.screenshot(`${SHOT_DIR}\\${name.replace(/[^a-z0-9]+/gi, "-")}.jpg`);
 }
 
@@ -302,6 +311,44 @@ const paletteRun = (label: string) => `
   await sleep(1500);
   return { ok: true };
 `;
+
+/** Delete every test-named layer. Runs before the actions and after them. */
+async function cleanupTestLayers(): Promise<number> {
+  // "Gebiet N" is what adding a code to a layerless area creates.
+const TEST_NAME = /^(ACT|REN|PROBE|Kopie von (ACT|REN))|^Gebiet \d+$/;
+  let removed = 0;
+  for (let pass = 0; pass < 15; pass++) {
+    const rows = await readLayers();
+    const junk = rows.find((r) => TEST_NAME.test(r.name));
+    if (!junk) break;
+    const done = await cdp.evaluate<boolean>(`(async () => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      ${dismissDialogs}
+      const row = document.querySelector('[data-layer-row="${junk.id}"]');
+      if (!row) return false;
+      const hit = row.querySelector('[role="button"]');
+      (hit || row).click();
+      await sleep(700);
+      ${openPalette}
+      const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Aktive Ebene l(ö|o)schen/i.test(e.textContent));
+      if (!item) return false;
+      item.click();
+      await sleep(1400);
+      const sheet = [...document.querySelectorAll('[role="alertdialog"],[role="dialog"]')].pop();
+      const confirm = sheet && [...sheet.querySelectorAll('button')]
+        .find((b) => /l(ö|o)schen|entfernen|best(ä|a)tigen/i.test(b.textContent || '') && !/abbrechen/i.test(b.textContent || ''));
+      if (!confirm) return false;
+      confirm.click();
+      await sleep(1800);
+      return true;
+    })()`);
+    if (!done) break;
+    removed++;
+  }
+  return removed;
+}
+
+console.log(`  pre-clean ... removed ${await cleanupTestLayers()} leftover test layer(s)`);
 
 // ---- the actions ----
 //
@@ -712,11 +759,486 @@ await runAction(
   8000
 );
 
-await runAction("create-version", paletteRun("Version erstellen"));
+// ---- actions that rewrite layers on the server ----
+//
+// Split, merge, conflict resolution, import and version restore all change the
+// layer set in ways the client cannot predict, so each one has to re-read it.
+// These are the paths that quietly relied on a route refresh before.
+
+const TEST_LAYER = /^(ACT|REN|PROBE)/;
+const totalCodes = (rows: LayerRow[]) =>
+  rows.reduce((sum, r) => sum + r.codes, 0);
+const fixtureCodes = (rows: LayerRow[]) =>
+  rows
+    .filter((r) => !TEST_LAYER.test(r.name))
+    .map((r) => `${r.id}:${r.codes}`)
+    .join("|");
+
+/** Make a test layer the active one, so nothing below touches fixture layers. */
+const activateTestLayer = `
+  ${dismissDialogs}
+  {
+    // The test layer holding the most codes — split needs at least four, and a
+    // leftover empty copy must not be picked just because it is active.
+    const best = [...document.querySelectorAll('[data-layer-row]')]
+      .filter((r) => /^(ACT|REN|PROBE)/.test(r.getAttribute('data-layer-name') || ''))
+      .sort((a, b) => Number(b.getAttribute('data-layer-codes')) - Number(a.getAttribute('data-layer-codes')))[0];
+    if (best && best.getAttribute('data-layer-active') !== 'true') {
+      (best.querySelector('[role="button"]') || best).click();
+      await sleep(900);
+    }
+  }
+`;
+
+/** Open a layer row's "…" menu and click an entry by its text. */
+const layerMenu = (rowExpression: string, entry: string) => `
+  const row = ${rowExpression};
+  if (!row) return { ok: false, reason: 'layer row not found' };
+  row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+  await sleep(300);
+  const trigger = row.querySelector('button[aria-label^="Aktionen für"]');
+  if (!trigger) return { ok: false, reason: 'no layer menu button' };
+  trigger.click();
+  await sleep(700);
+  const item = [...document.querySelectorAll('[role="menuitem"]')]
+    .find((e) => (e.textContent || '').trim().indexOf(${JSON.stringify(entry)}) === 0);
+  if (!item) { ${dismissDialogs} return { ok: false, reason: 'menu entry missing: ' + ${JSON.stringify(entry)} }; }
+`;
+
+await runAction(
+  "paste-import",
+  `
+  ${activateTestLayer}
+  ${openPalette}
+  const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /PLZ importieren/.test(e.textContent || ''));
+  if (!item) { ${dismissDialogs} return { ok: false, reason: 'no import command' }; }
+  item.click();
+  let dlg = null;
+  for (let i = 0; i < 25 && !dlg; i++) {
+    await sleep(300);
+    dlg = [...document.querySelectorAll('[role="dialog"]')].find((d) => d.querySelector('textarea'));
+  }
+  if (!dlg) return { ok: false, reason: 'import dialog never opened' };
+  const area = dlg.querySelector('textarea');
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+  // Berlin codes: nowhere near the Bavarian codes the rest of the run uses,
+  // and enough of them that the split below has something to divide.
+  setter.call(area, '10115, 10117, 10119, 10178, 10179');
+  area.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(1500);
+  const go = [...dlg.querySelectorAll('button')].find((b) => /PLZ importieren$/.test((b.textContent || '').trim()) && !b.disabled);
+  if (!go) { ${dismissDialogs} return { ok: false, reason: 'import button disabled — code not recognised?' }; }
+  go.click();
+  await sleep(3000);
+  ${dismissDialogs}
+  return { ok: true };
+`,
+  (before, after) => {
+    const b = activeOf(before);
+    const a = b ? byId(after, b.id) : undefined;
+    if (!(a && b)) return "no active layer to compare";
+    return a.codes === b.codes + 5
+      ? null
+      : `active layer went ${b.codes}->${a.codes}, expected +5`;
+  }
+);
+
+await runAction(
+  "split-active-layer",
+  `
+  ${activateTestLayer}
+  const active = document.querySelector('[data-layer-active="true"]');
+  if (!active) return { ok: false, reason: 'no active layer' };
+  if (Number(active.getAttribute('data-layer-codes')) < 4) return { ok: false, reason: 'active layer has fewer than 4 codes' };
+  ${layerMenu(`document.querySelector('[data-layer-active="true"]')`, "Aufteilen")}
+  item.click();
+  item.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+  item.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+  await sleep(700);
+  const two = [...document.querySelectorAll('[role="menuitem"]')].find((e) => /^2×/.test((e.textContent || '').trim()));
+  if (!two) { ${dismissDialogs} return { ok: false, reason: 'no "2×" split option' }; }
+  two.click();
+  await sleep(4000);
+  return { ok: true };
+`,
+  (before, after) => {
+    if (after.length !== before.length + 1) {
+      return `expected ${before.length + 1} layers, panel shows ${after.length}`;
+    }
+    if (totalCodes(after) !== totalCodes(before)) {
+      return `splitting changed the area's code count (${totalCodes(before)}->${totalCodes(after)})`;
+    }
+    return null;
+  },
+  6000
+);
+
+await runAction(
+  "merge-layer-back",
+  `
+  ${dismissDialogs}
+  const active = document.querySelector('[data-layer-active="true"]');
+  if (!active) return { ok: false, reason: 'no active layer' };
+  const target = active.getAttribute('data-layer-name');
+  // The split produced "<name> 2"; merge it back into the layer it came from.
+  const source = [...document.querySelectorAll('[data-layer-row]')]
+    .find((r) => r.getAttribute('data-layer-name') === target + ' 2');
+  if (!source) return { ok: false, reason: 'no split-off layer named "' + target + ' 2"' };
+  ${layerMenu("source", "Zusammenführen")}
+  item.click();
+  let dlg = null;
+  for (let i = 0; i < 20 && !dlg; i++) {
+    await sleep(300);
+    dlg = [...document.querySelectorAll('[role="dialog"]')].find((d) => /zusammenführen/i.test(d.textContent || ''));
+  }
+  if (!dlg) return { ok: false, reason: 'merge dialog never opened' };
+  const selectTrigger = dlg.querySelector('#merge-target');
+  if (!selectTrigger) return { ok: false, reason: 'no target select' };
+  selectTrigger.click();
+  await sleep(700);
+  const option = [...document.querySelectorAll('[role="option"]')].find((o) => (o.textContent || '').trim() === target);
+  if (!option) { ${dismissDialogs} return { ok: false, reason: 'target option missing' }; }
+  option.click();
+  await sleep(500);
+  const go = [...dlg.querySelectorAll('button')].find((b) => /^Zusammenführen$/.test((b.textContent || '').trim()) && !b.disabled);
+  if (!go) { ${dismissDialogs} return { ok: false, reason: 'merge button disabled' }; }
+  go.click();
+  await sleep(4000);
+  return { ok: true };
+`,
+  (before, after) => {
+    if (after.length !== before.length - 1) {
+      return `expected ${before.length - 1} layers, panel shows ${after.length}`;
+    }
+    if (totalCodes(after) !== totalCodes(before)) {
+      return `merging changed the area's code count (${totalCodes(before)}->${totalCodes(after)})`;
+    }
+    return null;
+  },
+  6000
+);
+
+// Duplicating a layer makes every one of its codes a conflict; resolving in
+// favour of the active layer should empty the copy, on screen, immediately.
+await runAction(
+  "duplicate-for-conflict",
+  `${activateTestLayer}${paletteRun("Aktive Ebene duplizieren")}`,
+  (before, after) =>
+    after.length === before.length + 1
+      ? null
+      : `expected ${before.length + 1} layers, panel shows ${after.length}`
+);
+
+
+// A code held by two layers is drawn as stripes. The stripe layers are
+// constant-pattern MapLibre layers filtered by key, so assert one exists and
+// actually lists keys. The map instance is not exposed, so find it through the
+// React fibers above the map container.
+await runAction(
+  "stripes-for-shared-codes",
+  `
+  const isMap = (v) => v && typeof v === 'object' && typeof v.getStyle === 'function' && typeof v.queryRenderedFeatures === 'function';
+  const unwrap = (v) => {
+    if (!v || typeof v !== 'object') return null;
+    if (isMap(v)) return v;
+    if (typeof v.getMap === 'function') { try { const m = v.getMap(); if (isMap(m)) return m; } catch (e) {} }
+    if (v.current) return unwrap(v.current);
+    if (v.map) return unwrap(v.map);
+    return null;
+  };
+  let map = null;
+  const start = document.querySelector('.maplibregl-map') || document.querySelector('canvas');
+  for (let el = start; el && !map; el = el.parentElement) {
+    const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
+    for (let f = key ? el[key] : null, i = 0; f && i < 120 && !map; f = f.return, i++) {
+      // Walk the whole hook list, not a fixed depth: the map sits in a useState
+      // or useRef somewhere along it, or in a context value's props.
+      for (let h = f.memoizedState, n = 0; h && n < 80 && !map; h = h.next, n++) {
+        map = unwrap(h.memoizedState) || unwrap(h.memoizedState && h.memoizedState.current);
+      }
+      map = map || unwrap(f.memoizedProps && f.memoizedProps.value) || unwrap(f.stateNode);
+    }
+    if (map) break;
+  }
+  if (!map) return { ok: false, reason: 'could not reach the MapLibre instance' };
+  await sleep(1500);
+  const stripes = map.getStyle().layers
+    .filter((l) => l.id.indexOf('pc-stripe:') === 0)
+    .map((l) => ({ id: l.id, keys: Array.isArray(l.filter) && Array.isArray(l.filter[2]) ? (l.filter[2][1] || []).length : -1 }));
+  return { ok: true, stripes };
+`,
+  (_before, _after, outcome) => {
+    const stripes = (outcome.stripes ?? []) as { id: string; keys: number }[];
+    if (stripes.length === 0) return "no pc-stripe: layer although every code of the copy is shared";
+    if (!stripes.some((s) => s.keys > 0)) return `stripe layers list no keys: ${JSON.stringify(stripes)}`;
+    return null;
+  },
+  500
+);
+
+let fixtureBeforeConflicts = "";
+await runAction(
+  "resolve-conflicts",
+  `
+  ${activateTestLayer}
+  ${openPalette}
+  const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Konflikte lösen/.test(e.textContent || ''));
+  if (!item) { ${dismissDialogs} return { ok: false, reason: 'no conflicts command' }; }
+  item.click();
+  let button = null;
+  for (let i = 0; i < 30 && !button; i++) {
+    await sleep(400);
+    button = [...document.querySelectorAll('button[aria-label^="Alle Konflikte auflösen"]')]
+      .find((b) => !b.disabled && b.offsetParent !== null);
+  }
+  if (!button) return { ok: false, reason: 'no enabled "Aktives Gebiet" resolve button' };
+  button.click();
+  await sleep(5000);
+  return { ok: true };
+`,
+  (before, after) => {
+    fixtureBeforeConflicts = fixtureCodes(before);
+    // Resolving keeps codes in the active layer, so only the other copies must
+    // end up empty.
+    const copies = after.filter(
+      (r) =>
+        / \(Kopie\)$|^Kopie von /.test(r.name) &&
+        TEST_LAYER.test(r.name) &&
+        !r.active
+    );
+    if (copies.length === 0) return "the duplicated layer is gone";
+    if (copies.some((c) => c.codes !== 0)) {
+      return `copy still holds codes: ${copies.map((c) => `${c.name}=${c.codes}`).join(", ")}`;
+    }
+    return null;
+  },
+  6000
+);
+
+// Resolving is area-wide, so it may also have taken codes out of fixture
+// layers. Undo until the fixture is back where it started.
+for (let i = 0; i < 6; i++) {
+  const rows = await readLayers();
+  if (fixtureCodes(rows) === fixtureBeforeConflicts) break;
+  await cdp.evaluate(`(async () => {
+    const b = [...document.querySelectorAll('button')].find((x) => /^R(ü|u)ckg(ä|a)ngig/.test((x.getAttribute('aria-label')||x.title||'')));
+    if (b && !b.disabled) b.click();
+    await new Promise((r) => setTimeout(r, 3000));
+  })()`);
+}
+{
+  const restored = fixtureCodes(await readLayers()) === fixtureBeforeConflicts;
+  results.push({
+    name: "fixture-restored-after-conflicts",
+    ok: restored,
+    detail: restored
+      ? "stable driven updated — fixture layers back to their starting codes"
+      : `STALE-UI — fixture layers differ: ${fixtureCodes(await readLayers())} vs ${fixtureBeforeConflicts}`,
+  });
+  console.log(`  fixture-restored-after-conflicts ... ${restored ? "PASS" : "FAIL"}`);
+}
+
+
+// ---- area metadata ----
+
+let descriptionText = "";
+await runAction(
+  "edit-area-description",
+  `
+  ${dismissDialogs}
+  const trigger = document.querySelector('[title="Beschreibung bearbeiten"]');
+  if (!trigger) return { ok: false, reason: 'no description control' };
+  trigger.click();
+  await sleep(500);
+  const area = document.querySelector('textarea[placeholder="Beschreibung hinzufügen…"]');
+  if (!area) return { ok: false, reason: 'description editor never opened' };
+  const text = 'DESC ' + Date.now().toString().slice(-5);
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+  setter.call(area, text);
+  area.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(200);
+  area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await sleep(2500);
+  const shown = (document.querySelector('[title="Beschreibung bearbeiten"]')?.textContent || '').indexOf(text) !== -1;
+  return { ok: true, text, shown };
+`,
+  (_before, _after, outcome) => {
+    descriptionText = String(outcome.text ?? "");
+    return outcome.shown === true
+      ? null
+      : `description "${descriptionText}" not shown after saving`;
+  }
+);
+
+// ---- versions ----
+
+/** Open the history dialog, wait for its fresh read, report what it lists. */
+const readHistory = `
+  ${openPalette}
+  const open = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Versionsverlauf/.test(e.textContent || ''));
+  if (!open) { ${dismissDialogs} return { ok: false, reason: 'no history command' }; }
+  open.click();
+  let dlg = null;
+  for (let i = 0; i < 25 && !dlg; i++) {
+    await sleep(300);
+    dlg = [...document.querySelectorAll('[role="dialog"]')].find((d) => /Versionen \\(\\d+\\)/.test(d.textContent || ''));
+  }
+  if (!dlg) return { ok: false, reason: 'history dialog never opened' };
+  // The dialog re-reads on open; give that read time to land.
+  await sleep(3000);
+  const count = Number(((dlg.textContent || '').match(/Versionen \\((\\d+)\\)/) || [])[1]);
+  const text = dlg.textContent || '';
+`;
+
+let versionName = "";
+const createVersionScript = `  const badgeBefore = document.querySelector('[data-version-badge]')?.getAttribute('data-version-badge') ?? null;
+  ${readHistory}
+  const before = count;
+  ${dismissDialogs}
+  ${openPalette}
+  const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Version erstellen/.test(e.textContent || ''));
+  if (!item) { ${dismissDialogs} return { ok: false, reason: 'no create-version command' }; }
+  item.click();
+  let form = null;
+  for (let i = 0; i < 25 && !form; i++) {
+    await sleep(300);
+    form = [...document.querySelectorAll('[role="dialog"] form')].find((f) => f.querySelector('input[placeholder^="z.B."]'));
+  }
+  if (!form) return { ok: false, reason: 'create-version form never opened' };
+  const name = 'VER ' + Date.now().toString().slice(-5);
+  const input = form.querySelector('input[placeholder^="z.B."]');
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(input, name);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(300);
+  form.requestSubmit();
+  await sleep(4000);
+  ${dismissDialogs}
+  {
+    ${readHistory}
+    const listed = text.indexOf(name) !== -1;
+    ${dismissDialogs}
+    const badgeAfter = document.querySelector('[data-version-badge]')?.getAttribute('data-version-badge') ?? null;
+    return { ok: true, name, before, after: count, listed, badgeBefore, badgeAfter };
+  }
+`;
+
+await runAction(
+  "create-version",
+  createVersionScript,
+  (_before, _after, outcome) => {
+    versionName = String(outcome.name ?? "");
+    if (Number(outcome.after) !== Number(outcome.before) + 1) {
+      return `history lists ${String(outcome.after)} versions, expected ${Number(outcome.before) + 1}`;
+    }
+    if (outcome.listed !== true) {
+      return `new version "${versionName}" is not in the history without a reload`;
+    }
+    if (outcome.badgeBefore === null || outcome.badgeAfter === null) {
+      return "no [data-version-badge] in the header";
+    }
+    if (outcome.badgeAfter === outcome.badgeBefore) {
+      return `header version badge still shows ${String(outcome.badgeAfter)}`;
+    }
+    return null;
+  },
+  2000
+);
+
+let markerName = "";
+await runAction(
+  "create-layer-after-version",
+  `
+  ${dismissDialogs}
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true }));
+  await sleep(900);
+  const input = document.activeElement && document.activeElement.tagName === 'INPUT'
+    ? document.activeElement
+    : [...document.querySelectorAll('input')].find((i) => /Neues Gebiet/i.test(i.placeholder || ''));
+  if (!input) return { ok: false, reason: 'no new-layer input' };
+  const name = 'ACT M' + Date.now().toString().slice(-4);
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(input, name);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(250);
+  const form = input.closest('form');
+  if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  else input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await sleep(1500);
+  return { ok: true, name };
+`,
+  (before, after, outcome) => {
+    markerName = String(outcome.name ?? "");
+    return after.some((r) => r.name === markerName) && after.length === before.length + 1
+      ? null
+      : `marker layer "${markerName}" did not appear`;
+  }
+);
+
+// The version just created is the active one, and restoring the active
+// version is (rightly) disabled. Create a second version on top of the marker,
+// then restore the first: the marker must disappear.
+let restoreTarget = "";
+{
+  const first = versionName;
+  await runAction(
+    "create-second-version",
+    createVersionScript,
+    (_b, _a, outcome) =>
+      outcome.listed === true ? null : "second version not listed"
+  );
+  restoreTarget = first;
+  versionName = first;
+}
+
+await runAction(
+  "restore-version",
+  `
+  ${readHistory}
+  const wanted = ${JSON.stringify(restoreTarget)};
+  const card = [...dlg.querySelectorAll('[role="button"]')].find((c) => (c.textContent || '').indexOf(wanted) !== -1);
+  if (!card) { ${dismissDialogs} return { ok: false, reason: 'version card not found: ' + wanted }; }
+  card.click();
+  await sleep(600);
+  const restore = [...dlg.querySelectorAll('button')].find((b) => /wiederherstellen$/.test((b.textContent || '').trim()) && !b.disabled);
+  if (!restore) { ${dismissDialogs} return { ok: false, reason: 'restore button disabled (version already active?)' }; }
+  restore.click();
+  let confirm = null;
+  for (let i = 0; i < 15 && !confirm; i++) {
+    await sleep(300);
+    const sheet = [...document.querySelectorAll('[role="alertdialog"]')].pop();
+    confirm = sheet && [...sheet.querySelectorAll('button')].find((b) => /^Wiederherstellen$/.test((b.textContent || '').trim()));
+  }
+  if (!confirm) { ${dismissDialogs} return { ok: false, reason: 'restore confirmation never appeared' }; }
+  confirm.click();
+  await sleep(6000);
+  ${dismissDialogs}
+  return { ok: true };
+`,
+  (before, after) => {
+    if (after.some((r) => r.name === markerName)) {
+      return `layer "${markerName}" created after the version is still shown`;
+    }
+    if (after.length !== before.length - 1) {
+      return `expected ${before.length - 1} layers after restore, panel shows ${after.length}`;
+    }
+    if (!after.some((r) => r.active)) {
+      return "no layer is active after the restore";
+    }
+    return null;
+  },
+  4000
+);
+
 
 await runAction(
   "delete-active-layer",
   `
+  ${activateTestLayer}
+  const current = document.querySelector('[data-layer-active="true"]');
+  if (!current || !/^(ACT|REN|PROBE)/.test(current.getAttribute('data-layer-name') || '')) {
+    return { ok: false, reason: 'refusing to delete a non-test layer' };
+  }
   ${openPalette}
   const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Aktive Ebene l(ö|o)schen/i.test(e.textContent));
   if (!item) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { ok: false, reason: 'command missing' }; }
@@ -742,39 +1264,8 @@ await runAction(
 
 // ---- leave the test area as we found it ----
 //
-// Without this the area grows by a few layers every run, and after a dozen runs
-// the fixture no longer resembles anything a person would have.
-const TEST_NAME = /^(ACT|REN|PROBE|Kopie von (ACT|REN))/;
-let removed = 0;
-for (let pass = 0; pass < 15; pass++) {
-  const rows = await readLayers();
-  const junk = rows.find((r) => TEST_NAME.test(r.name));
-  if (!junk) break;
-  const done = await cdp.evaluate<boolean>(`(async () => {
-    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    ${dismissDialogs}
-    const row = document.querySelector('[data-layer-row="${junk.id}"]');
-    if (!row) return false;
-    const hit = row.querySelector('[role="button"]');
-    (hit || row).click();
-    await sleep(700);
-    ${openPalette}
-    const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Aktive Ebene l(ö|o)schen/i.test(e.textContent));
-    if (!item) return false;
-    item.click();
-    await sleep(1400);
-    const sheet = [...document.querySelectorAll('[role="alertdialog"],[role="dialog"]')].pop();
-    const confirm = sheet && [...sheet.querySelectorAll('button')]
-      .find((b) => /l(ö|o)schen|entfernen|best(ä|a)tigen/i.test(b.textContent || '') && !/abbrechen/i.test(b.textContent || ''));
-    if (!confirm) return false;
-    confirm.click();
-    await sleep(1800);
-    return true;
-  })()`);
-  if (!done) break;
-  removed++;
-}
-console.log(`  cleanup ... removed ${removed} test layer(s)`);
+// Without this the area grows by a few layers every run.
+console.log(`  cleanup ... removed ${await cleanupTestLayers()} test layer(s)`);
 
 // ---- does the screen still agree with the database? ----
 //
@@ -796,6 +1287,18 @@ try {
   await sleep(2500);
   const afterReload = await readLayers();
   const consistent = fingerprint(beforeReload) === fingerprint(afterReload);
+  if (descriptionText) {
+    const persisted = await cdp.evaluate<boolean>(
+      `(document.querySelector('[title="Beschreibung bearbeiten"]')?.textContent || '').indexOf(${JSON.stringify(descriptionText)}) !== -1`
+    );
+    results.push({
+      name: "description-persisted",
+      ok: persisted,
+      detail: persisted
+        ? "stable driven updated — description survives a reload"
+        : `STALE-UI — after reload the description is not "${descriptionText}"`,
+    });
+  }
   results.push({
     name: "ui-matches-server",
     ok: consistent,
@@ -815,6 +1318,180 @@ try {
     detail: `check threw: ${String(error).slice(0, 160)}`,
   });
   console.log("  ui-matches-server ... FAIL");
+}
+
+// ---- a throwaway area: create, switch granularity in place, delete ----
+//
+// Granularity changes are lossy on an area with codes, so this never touches
+// the fixture. A brand-new area has no codes, so any direction skips the
+// data-loss confirmation and only the setting changes.
+
+const TMP_AREA = `TMP ${Date.now().toString().slice(-5)}`;
+const sidebarHas = (name: string) =>
+  `[...document.querySelectorAll('[data-sidebar="sidebar"] *, aside *')].some((e) => e.children.length === 0 && (e.textContent || '').trim() === ${JSON.stringify(name)})`;
+
+const created = await cdp.evaluate<Record<string, unknown>>(`(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  ${dismissDialogs}
+  const plus = document.querySelector('[title="Neues Gebiet erstellen"]');
+  if (!plus) return { ok: false, reason: 'no create-area button' };
+  plus.click();
+  let form = null;
+  for (let i = 0; i < 20 && !form; i++) {
+    await sleep(300);
+    form = [...document.querySelectorAll('[role="dialog"] form')].find((f) => f.querySelector('#name'));
+  }
+  if (!form) return { ok: false, reason: 'create-area dialog never opened' };
+  const input = form.querySelector('#name');
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(input, ${JSON.stringify(TMP_AREA)});
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(300);
+  const from = location.pathname;
+  form.requestSubmit();
+  for (let i = 0; i < 60 && location.pathname === from; i++) await sleep(300);
+  if (location.pathname === from) return { ok: false, reason: 'did not navigate to the new area' };
+  const id = Number((location.pathname.match(/postal-codes\\/(\\d+)/) || [])[1]);
+  for (let i = 0; i < 60 && !document.querySelector('[aria-label="Kartentools-Panel"]'); i++) await sleep(500);
+  await sleep(2500);
+  return { ok: true, id, inSidebar: ${sidebarHas(TMP_AREA)} };
+})()`);
+const tmpAreaId = Number(created.id ?? 0);
+let granularityWanted = "";
+results.push({
+  name: "create-area-listed-live",
+  ok: created.ok === true && created.inSidebar === true,
+  detail:
+    created.ok !== true
+      ? `NOT-DRIVEN — ${String(created.reason)}`
+      : created.inSidebar === true
+        ? `stable driven updated — area ${tmpAreaId} in the sidebar without a reload`
+        : `STALE-UI — area ${tmpAreaId} created but not listed in the sidebar`,
+});
+console.log(`  create-area-listed-live ... ${results[results.length - 1].ok ? "PASS" : "FAIL"}`);
+
+if (tmpAreaId > 0) {
+  await cdp.evaluate("window.__probe && window.__probe.reset()");
+  await runAction(
+    "granularity-in-place",
+    `
+    ${dismissDialogs}
+    const trigger = [...document.querySelectorAll('[data-slot="select-trigger"], button[role="combobox"]')]
+      .find((b) => /\\d-stellig/.test(b.textContent || ''));
+    if (!trigger) return { ok: false, reason: 'no granularity select' };
+    const from = (trigger.textContent || '').trim();
+    const want = /3-stellig/.test(from) ? '2-stellig' : '3-stellig';
+    trigger.click();
+    await sleep(700);
+    const option = [...document.querySelectorAll('[role="option"]')].find((o) => (o.textContent || '').indexOf(want) !== -1);
+    if (!option) { ${dismissDialogs} return { ok: false, reason: 'option missing: ' + want }; }
+    option.click();
+    await sleep(1200);
+    // An empty area should not ask; if it does, confirm — there is nothing to lose.
+    const sheet = [...document.querySelectorAll('[role="alertdialog"]')].pop();
+    const confirm = sheet && [...sheet.querySelectorAll('button')].find((b) => !/abbrechen/i.test(b.textContent || ''));
+    const asked = Boolean(confirm);
+    if (confirm) { confirm.click(); await sleep(1500); }
+    await sleep(3500);
+    const now = ([...document.querySelectorAll('[data-slot="select-trigger"], button[role="combobox"]')]
+      .find((b) => /\\d-stellig/.test(b.textContent || '')) || {}).textContent || '';
+    return { ok: true, from, want, now: now.trim(), asked };
+  `,
+    (_before, _after, outcome) => {
+      granularityWanted = String(outcome.want ?? "");
+      return String(outcome.now).indexOf(granularityWanted) !== -1
+        ? null
+        : `selector shows "${String(outcome.now)}", expected "${granularityWanted}"`;
+    },
+    3000
+  );
+
+  const wanted = granularityWanted;
+  await cdp.send("Page.reload", {});
+  await cdp.waitFor("Boolean(document.querySelector('[aria-label=\"Kartentools-Panel\"]'))", 180000);
+  await sleep(3000);
+  const afterReload = await cdp.evaluate<string>(
+    `(([...document.querySelectorAll('[data-slot="select-trigger"], button[role="combobox"]')].find((b) => /\\d-stellig/.test(b.textContent || '')) || {}).textContent || '').trim()`
+  );
+  const persisted = wanted !== "" && afterReload.indexOf(wanted) !== -1;
+  results.push({
+    name: "granularity-persisted",
+    ok: persisted,
+    detail: persisted
+      ? `stable driven updated — still ${wanted} after reload`
+      : `STALE-UI — after reload the selector shows "${afterReload}", expected "${wanted}"`,
+  });
+  console.log(`  granularity-persisted ... ${persisted ? "PASS" : "FAIL"}`);
+
+  // Delete it again from the sidebar's context menu.
+  const deleted = await cdp.evaluate<Record<string, unknown>>(`(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    ${dismissDialogs}
+    const label = [...document.querySelectorAll('aside *, [data-sidebar="sidebar"] *')]
+      .find((e) => e.children.length === 0 && (e.textContent || '').trim() === ${JSON.stringify(TMP_AREA)});
+    if (!label) return { ok: false, reason: 'area not in sidebar' };
+    const item = label.closest('a, button, li') || label;
+    const box = item.getBoundingClientRect();
+    item.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: box.x + 5, clientY: box.y + 5 }));
+    await sleep(600);
+    const del = [...document.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'Löschen' && b.offsetParent !== null && !b.closest('[role="alertdialog"]'));
+    if (!del) return { ok: false, reason: 'no "Löschen" in the context menu' };
+    del.click();
+    let confirm = null;
+    for (let i = 0; i < 15 && !confirm; i++) {
+      await sleep(300);
+      const sheet = [...document.querySelectorAll('[role="alertdialog"]')].pop();
+      confirm = sheet && [...sheet.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'Löschen');
+    }
+    if (!confirm) return { ok: false, reason: 'delete confirmation never appeared' };
+    confirm.click();
+    await sleep(4000);
+    return { ok: true, stillListed: ${sidebarHas(TMP_AREA)} };
+  })()`);
+  results.push({
+    name: "delete-area-unlisted-live",
+    ok: deleted.ok === true && deleted.stillListed === false,
+    detail:
+      deleted.ok !== true
+        ? `NOT-DRIVEN — ${String(deleted.reason)} (area ${tmpAreaId} may need manual cleanup)`
+        : deleted.stillListed === false
+          ? "stable driven updated — gone from the sidebar without a reload"
+          : "STALE-UI — deleted but still listed in the sidebar",
+  });
+  console.log(`  delete-area-unlisted-live ... ${results[results.length - 1].ok ? "PASS" : "FAIL"}`);
+}
+
+// Coming back to an area you edited must show the edit, not a cached copy of
+// the page from before it.
+await cdp.send("Page.navigate", { url: URL_TO_OPEN });
+await cdp.waitFor("document.querySelectorAll('[data-layer-row]').length > 0", 180000);
+await sleep(2500);
+if (descriptionText) {
+  const fresh = await cdp.evaluate<boolean>(
+    `(document.querySelector('[title="Beschreibung bearbeiten"]')?.textContent || '').indexOf(${JSON.stringify(descriptionText)}) !== -1`
+  );
+  results.push({
+    name: "edit-visible-after-navigating-back",
+    ok: fresh,
+    detail: fresh
+      ? "stable driven updated — area shows its latest description"
+      : "STALE-UI — returning to the area showed the old description",
+  });
+}
+
+// MapLibre style warnings mean something on the map is not drawing.
+{
+  const warnings = Cdp.consoleEvents.filter((e) =>
+    /could not be loaded|Image ".*" /i.test(e.text)
+  );
+  results.push({
+    name: "no-map-style-warnings",
+    ok: warnings.length === 0,
+    detail:
+      warnings.length === 0
+        ? "stable driven updated — no missing-image warnings"
+        : `STALE-UI — ${warnings.length} warning(s): ${warnings[0].text.slice(0, 120)}`,
+  });
 }
 
 // ---- report ----

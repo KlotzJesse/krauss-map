@@ -19,6 +19,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import type { RecentActivityItem } from "@/lib/db/data-functions";
+import { useLiveSidebarData } from "@/lib/sync/sidebar-data";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 const NavAreas = dynamic(() =>
@@ -56,12 +57,16 @@ interface AppSidebarClientProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 export function AppSidebarClient({
-  areas,
-  recentActivity = [],
+  areas: serverAreas,
+  recentActivity: serverRecentActivity = [],
   currentAreaId: currentAreaIdProp,
   onAreaSelect,
   ...props
 }: AppSidebarClientProps) {
+  // The layout renders these once; after an edit the live copy takes over.
+  const live = useLiveSidebarData();
+  const areas = live?.areas ?? serverAreas;
+  const recentActivity = live?.recentActivity ?? serverRecentActivity;
   const [createAreaDialogOpen, setCreateAreaDialogOpen] = React.useState(false);
   const pathname = usePathname();
   const isPostalCodesRoute = pathname?.startsWith("/postal-codes/") ?? false;

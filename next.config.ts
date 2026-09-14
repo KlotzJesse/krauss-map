@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Lets a second build live next to the one being served, e.g.
+  // NEXT_DIST_DIR=.next2 for verifying a change without stopping :3000.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   typedRoutes: true,
   partialPrefetching: true,
   cacheComponents: true,
@@ -23,10 +26,14 @@ const nextConfig: NextConfig = {
     globalNotFound: true,
     authInterrupts: true,
     turbopackFileSystemCacheForDev: true,
-    // dynamic:30 = Router Cache serves recently-visited area pages from client cache for 30s,
-    // eliminating the server round-trip on back/forward and quick area switches.
+    // dynamic:0 — do not reuse a visited area page's data from the client cache.
+    // Edits no longer re-render the route (that remounts the map), so nothing
+    // purges this cache after a mutation any more: at 30s, editing area 57,
+    // opening another area and coming back showed 57's layers from before the
+    // edit. 0 is Next's default. The prefetched static shell below still makes
+    // switching areas feel instant; only the data is fetched fresh.
     // static:30 = prefetched static shells reused for 30s.
-    staleTimes: { dynamic: 30, static: 30 },
+    staleTimes: { dynamic: 0, static: 30 },
     optimizePackageImports: [
       "lucide-react",
       "@tabler/icons-react",
