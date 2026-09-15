@@ -3,6 +3,7 @@ import type { Content, PageSize } from "pdfmake/interfaces";
 import type { CountryCode } from "@/lib/config/countries";
 import {
   formatWithAllPrefixes,
+  formatWithPrefix,
   getPrefixLabel,
   formatPostalCodeForCountry,
   detectCountryFromCode,
@@ -227,9 +228,15 @@ export async function exportLayersXLSX(
 }
 
 /**
- * Copies an array of postal codes as a CSV string to the clipboard.
- * Ensures postal codes are formatted with leading zeros.
- * @param codes Array of postal codes (strings)
+ * Copies postal codes to the clipboard in stored form: "D-80331, A-1010".
+ *
+ * The prefix is kept. Stripping it — as this used to — made Austrian and Swiss
+ * codes indistinguishable (both four digits) and, worse, re-padded every code
+ * to one country's length, so a mixed layer copied Vienna's A-1010 as "01010".
+ * The same text pastes straight back into any layer.
+ *
+ * @param codes stored or bare codes
+ * @param country fallback for legacy bare codes that carry no prefix
  */
 export async function copyPostalCodesCSV(
   codes: string[],
@@ -237,11 +244,10 @@ export async function copyPostalCodesCSV(
 ) {
   const copyPromise = async () => {
     const formattedCodes = codes.map((code) => {
-      // If code already has a prefix, strip it and reformat
-      const cleanCode = code.replace(/^(D|DE|A|AT|CH)-?\s*/i, "");
-      return formatPostalCode(cleanCode, country);
+      const detected = detectCountryFromCode(code);
+      return formatWithPrefix(detected.code, detected.country ?? country);
     });
-    const csv = formattedCodes.join(",");
+    const csv = formattedCodes.join(", ");
     await navigator.clipboard.writeText(csv);
     return `${codes.length} Postleitzahlen in Zwischenablage kopiert`;
   };

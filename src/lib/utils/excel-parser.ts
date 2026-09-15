@@ -1,5 +1,7 @@
 import * as XLSX from "xlsx";
 
+import { detectCountryFromCode, formatWithPrefix } from "@/lib/config/countries";
+
 import { normalizePostalCode } from "./postal-code-parser";
 
 export type ParsedRow = Record<string, string | number | null>;
@@ -156,8 +158,8 @@ export function autoDetectColumns(
           return false;
         }
         const str = String(val).trim();
-        // Check if it looks like a German postal code
-        const normalized = str.replace(/^D-?/i, "");
+        // A postal code, bare or with any DACH prefix ("A-1010", "CH-8001").
+        const normalized = normalizePostalCode(str);
         return /^\d{1,5}$/.test(normalized);
       });
 
@@ -206,12 +208,15 @@ export function processImportRows(
 
     const postalCodeStr = String(postalCodeValue).trim();
     const normalized = normalizePostalCode(postalCodeStr);
+    const { country } = detectCountryFromCode(postalCodeStr);
 
-    // Validate German postal code
+    // Validate the digits; the prefix, if any, was checked by the parser.
     const isValid = /^\d{1,5}$/.test(normalized);
 
     processed.push({
-      postalCode: normalized,
+      // Keep the country the sheet named. Sending bare digits made the server
+      // file every code under the area's country, so "A-1010" became "D-01010".
+      postalCode: country && isValid ? formatWithPrefix(normalized, country) : normalized,
       layer: layerValue ? String(layerValue).trim() : undefined,
       isValid,
       error: !isValid ? `Invalid postal code: ${postalCodeStr}` : undefined,

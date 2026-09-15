@@ -59,11 +59,15 @@ export interface MapCommandHandlers {
   onZoomToPostalCode: (code: string) => void;
   onRadiusAroundPostalCode: (code: string) => void;
   /**
-   * Whether a code exists in the loaded dataset at all. Layer membership is not
-   * asked for here — that changes on every edit, and a handler captured in a ref
-   * lags a render behind, so the palette reads membership from mapMeta instead.
+   * The typed code in stored form ("A-1010"), or null when the loaded dataset
+   * does not have it. "1010", "A-1010" and "AT 1010" all resolve, and a bare
+   * four-digit code picks the country that actually has it rather than the
+   * area's — so the palette acts on the right country and shows which one.
+   * Layer membership is not asked for here — that changes on every edit, and a
+   * handler captured in a ref lags a render behind, so the palette reads
+   * membership from mapMeta instead.
    */
-  isPostalCodeKnown: (code: string) => boolean;
+  resolvePostalCode: (code: string) => string | null;
 
   onFitAllLayers: () => void;
   onZoomToLayer: (layerId: number) => void;

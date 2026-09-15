@@ -6,6 +6,8 @@
 
 import type { Feature, MultiPolygon, Polygon } from "geojson";
 
+import { type CountryCode, formatWithPrefix } from "@/lib/config/countries";
+
 /** Maps ISO country code → stored postal code prefix (e.g. DE → "D"). */
 const COUNTRY_TO_PREFIX: Record<string, string> = {
   DE: "D",
@@ -210,3 +212,71 @@ export const EMPTY_FEATURE_COLLECTION = {
   type: "FeatureCollection" as const,
   features: [] as Feature[],
 };
+
+/**
+ * Parse one postal code a person typed or pasted: "86899", "D-86899",
+ * "D 86899", "A-1010", "CH8001". The country is only returned when the token
+ * names one — a bare "8001" could be Swiss or Austrian.
+ */
+export function parsePostalCodeToken(
+  token: string
+): { country: string | null; raw: string } | null {
+  // 1–5 digits: coarse granularities use 1–3 digit codes ("803").
+  const match = /^(?:(D|DE|A|AT|CH)\s*-?\s*)?(\d{1,5})$/i.exec(token.trim());
+  if (!match) {
+    return null;
+  }
+  return {
+    country: match[1] ? (PREFIX_TO_COUNTRY[match[1].toUpperCase()] ?? null) : null,
+    raw: match[2],
+  };
+}
+
+/**
+ * Split free text into postal code tokens. "D-80331, A 1010;CH-8001" and one
+ * code per line both work; a prefix separated from its digits by a space or a
+ * dash stays attached to them.
+ */
+export function splitPostalCodeTokens(text: string): string[] {
+  return text
+    .replace(/\b(D|DE|A|AT|CH)\s*-?\s*(?=\d)/gi, "$1-")
+    .split(/[\s,;]+/)
+    .filter(Boolean);
+}
+
+/**
+ * Resolve typed or pasted codes to the stored form ("D-86899") against the
+ * codes that exist on the map.
+ *
+ * A prefixed token keeps its country. A bare token takes the area's country
+ * when that country has the code, otherwise the one other country that does —
+ * so pasting "1010" into a German area with Austrian codes loaded finds Vienna
+ * instead of inventing "D-01010". Tokens that match nothing are dropped.
+ *
+ * @param availableStored stored-form codes present on the map
+ */
+export function resolveTypedPostalCodes(
+  tokens: readonly string[],
+  availableStored: ReadonlySet<string>,
+  areaCountry: string
+): string[] {
+  const out = new Set<string>();
+  for (const token of tokens) {
+    const parsed = parsePostalCodeToken(token);
+    if (!parsed) {
+      continue;
+    }
+    const countries = parsed.country
+      ? [parsed.country]
+      : [areaCountry, ...["DE", "AT", "CH"].filter((c) => c !== areaCountry)];
+    for (const country of countries) {
+      // Pads to the country's length, so "1067" finds "D-01067".
+      const stored = formatWithPrefix(parsed.raw, country as CountryCode);
+      if (availableStored.has(stored)) {
+        out.add(stored);
+        break;
+      }
+    }
+  }
+  return [...out];
+}

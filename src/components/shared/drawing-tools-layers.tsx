@@ -446,60 +446,6 @@ export const LayerManagementSection = memo(function LayerManagementSection({
   );
   const [bulkGroupPopoverOpen, setBulkGroupPopoverOpen] = useState(false);
 
-  // PLZ range/prefix add state
-  const [prefixInput, setPrefixInput] = useState("");
-  const prefixMatches = useMemo(() => {
-    const raw = prefixInput.trim().replace(/\s/g, "");
-    if (!raw || !allCodesSet || allCodesSet.size === 0) return null;
-    // Support: "80", "8", "80-89", "8-9" (prefix ranges)
-    const rangeMatch = /^(\d{1,4})-(\d{1,4})$/.exec(raw);
-    if (rangeMatch) {
-      const [, fromStr, toStr] = rangeMatch;
-      const len = Math.max(fromStr.length, toStr.length);
-      const from = Number.parseInt(fromStr.padEnd(len, "0"), 10);
-      const to = Number.parseInt(toStr.padEnd(len, "9"), 10);
-      return [...allCodesSet].filter((c) => {
-        const prefix = Number.parseInt(c.slice(0, len), 10);
-        return prefix >= from && prefix <= to;
-      });
-    }
-    // Single prefix
-    const digits = raw.replace(/\D/g, "");
-    if (digits.length < 1 || digits.length > 4) return null;
-    return [...allCodesSet].filter((c) => c.startsWith(digits));
-  }, [prefixInput, allCodesSet]);
-
-  const _handleAddByPrefix = useCallback(async () => {
-    if (!addPostalCodesToLayer || !activeLayerId || !prefixMatches?.length)
-      return;
-    // Filter out already-assigned codes from active layer
-    const activeLayer = optimisticLayersRef.current.find(
-      (l) => l.id === activeLayerId
-    );
-    const existing = new Set(
-      (activeLayer?.postalCodes ?? []).map((pc) => pc.postalCode)
-    );
-    const toAdd = prefixMatches.filter((c) => !existing.has(c));
-    if (toAdd.length === 0) {
-      toast.info("Alle PLZ bereits in dieser Ebene");
-      return;
-    }
-    await addPostalCodesToLayer(activeLayerId, toAdd);
-    toast.success(`${toAdd.length} PLZ hinzugefügt`);
-    setPrefixInput("");
-  }, [addPostalCodesToLayer, activeLayerId, prefixMatches]);
-
-  // Sync prefix matches to map highlight
-  useEffect(() => {
-    if (!onHighlightCodes) return undefined;
-    if (prefixMatches && prefixMatches.length > 0) {
-      onHighlightCodes(new Set(prefixMatches));
-    } else {
-      onHighlightCodes(null);
-    }
-    return () => onHighlightCodes(null);
-  }, [prefixMatches, onHighlightCodes]);
-
   // Layer templates dialog
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 

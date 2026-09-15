@@ -82,7 +82,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { detectCountryFromCode } from "@/lib/config/countries";
+import { detectCountryFromCode, formatWithPrefix } from "@/lib/config/countries";
 import { cn } from "@/lib/utils";
 import { extractRawCode } from "@/lib/utils/postal-code-keys";
 import { copyPostalCodesCSV } from "@/lib/utils/export-utils";
@@ -398,53 +398,64 @@ export const LayerListItem = memo(function LayerListItem({
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
   }, [postalCodes]);
 
-  const existingCodesSet = useMemo(
-    () => new Set(postalCodes.map((pc) => pc.postalCode)),
-    [postalCodes]
-  );
-
   const handleAddRange = () => {
     if (!onAddPlzRange) return;
     const raw = rangeInput.trim();
     if (!raw) return;
-    const currentCodesSet = getAllCodesSet?.();
-    if (!currentCodesSet || currentCodesSet.size === 0) return;
+    // Stored form ("D-80331", "A-1010"), so the country is part of every code.
+    const availableCodes = getAllCodesSet?.();
+    if (!availableCodes || availableCodes.size === 0) return;
 
-    const newCodes: string[] = [];
+    // Existing codes normalised the same way; comparing bare digits against
+    // stored codes never matched, so codes already in the layer were re-added.
+    const existing = new Set(
+      postalCodes.map((pc) => {
+        const detected = detectCountryFromCode(pc.postalCode);
+        return detected.country
+          ? formatWithPrefix(detected.code, detected.country)
+          : pc.postalCode;
+      })
+    );
+    const available = [...availableCodes].map((stored) => ({
+      stored,
+      ...detectCountryFromCode(stored),
+    }));
 
-    for (const part of raw.split(/[,;\s]+/)) {
-      const segment = part.trim();
+    const newCodes = new Set<string>();
+    for (const segment of raw
+      .replace(/\b(D|DE|A|AT|CH)\s*-?\s*(?=\d)/gi, "$1-")
+      .split(/[,;\s]+/)) {
       if (!segment) continue;
-
-      const dashMatch = /^(\d{4,5})-(\d{4,5})$/.exec(segment);
-      if (dashMatch) {
-        const from = Number.parseInt(dashMatch[1], 10);
-        const to = Number.parseInt(dashMatch[2], 10);
-        for (let n = from; n <= to; n++) {
-          const code = n.toString().padStart(dashMatch[1].length, "0");
-          if (currentCodesSet.has(code) && !existingCodesSet.has(code)) {
-            newCodes.push(code);
-          }
-        }
-      } else if (/^\d{2,4}$/.test(segment)) {
-        // prefix match
-        for (const code of currentCodesSet) {
-          if (code.startsWith(segment) && !existingCodesSet.has(code)) {
-            newCodes.push(code);
-          }
-        }
-      } else if (/^\d{5}$/.test(segment) && currentCodesSet.has(segment) && !existingCodesSet.has(segment)) {
-        newCodes.push(segment);
+      // Optional country prefix, then a range, a prefix or an exact code.
+      const match =
+        /^(?:(D|DE|A|AT|CH)-)?(\d{2,5})(?:[-–](\d{4,5}))?$/i.exec(segment);
+      if (!match) continue;
+      const country = match[1]
+        ? detectCountryFromCode(`${match[1]}-${match[2]}`).country
+        : null;
+      const from = match[2];
+      const to = match[3];
+      for (const code of available) {
+        if (country && code.country !== country) continue;
+        if (existing.has(code.stored)) continue;
+        const hit = to
+          ? code.code.length === from.length &&
+            Number(code.code) >= Number(from) &&
+            Number(code.code) <= Number(to)
+          : from.length < code.code.length
+            ? code.code.startsWith(from)
+            : code.code === from;
+        if (hit) newCodes.add(code.stored);
       }
     }
 
-    if (newCodes.length === 0) {
+    if (newCodes.size === 0) {
       toast.warning("Keine passenden PLZ gefunden");
       return;
     }
 
-    onAddPlzRange(layer.id, newCodes);
-    toast.success(`${newCodes.length} PLZ hinzugefügt`);
+    onAddPlzRange(layer.id, [...newCodes]);
+    toast.success(`${newCodes.size} PLZ hinzugefügt`);
     setRangeInput("");
     setRangeInputVisible(false);
   };

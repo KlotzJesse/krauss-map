@@ -54,7 +54,9 @@ import {
 import { createToastCallbacks } from "@/lib/utils/action-state-callbacks/toast-callbacks";
 import { withCallbacks } from "@/lib/utils/action-state-callbacks/with-callbacks";
 import {
+  compositeKeyToStoredCode,
   extractRawCode,
+  resolveTypedPostalCodes,
   storedCodeToCompositeKey,
 } from "@/lib/utils/postal-code-keys";
 import { generateNextColor, isLightColor } from "@/lib/utils/layer-colors";
@@ -986,19 +988,37 @@ export const PostalCodesViewClientWithLayers = memo(
      * A postal code typed into the palette resolves through the index, so the
      * centroid is exact and no geocoding round-trip is needed.
      */
+
+
+    // Every code on the map in stored form, for resolving what was typed.
+    const storedIndexCodes = useMemo(
+      () => new Set(index.keys.map((key) => compositeKeyToStoredCode(key))),
+      [index]
+    );
+    const resolvePostalCode = useCallback(
+      (code: string) =>
+        resolveTypedPostalCodes([code], storedIndexCodes, country ?? "DE")[0] ??
+        null,
+      [storedIndexCodes, country]
+    );
     const centroidFor = useCallback(
       (code: string) =>
-        indexCentroid(index, toCompositePostalCode(code, country)),
-      [index, country]
-    );
-
-    const isPostalCodeKnown = useCallback(
-      (code: string) => index.pos.has(toCompositePostalCode(code, country)),
-      [index, country]
+        indexCentroid(
+          index,
+          toCompositePostalCode(resolvePostalCode(code) ?? code, country)
+        ),
+      [index, country, resolvePostalCode]
     );
 
     useRegisterMapCommands({
-      onAddPostalCode: async (code: string) => {
+      onAddPostalCode: async (typed: string) => {
+        // Stored form, so a bare "1010" typed in a German area goes in as the
+        // Austrian code that exists, not as a made-up "D-01010".
+        const code = resolvePostalCode(typed);
+        if (!code) {
+          toast.error(`PLZ ${typed} gibt es in diesem Datensatz nicht`);
+          return;
+        }
         const targetLayerId = await resolveTargetLayerId();
         if (!targetLayerId) {
           return;
@@ -1006,7 +1026,8 @@ export const PostalCodesViewClientWithLayers = memo(
         await addPostalCodesToLayer(targetLayerId, [code]);
         toast.success(`PLZ ${code} hinzugefügt`);
       },
-      onRemovePostalCode: async (code: string) => {
+      onRemovePostalCode: async (typed: string) => {
+        const code = resolvePostalCode(typed) ?? typed;
         // Remove it from whichever layers hold it, not from the active one.
         // The palette offers "entfernen" when the code is anywhere in the area,
         // so targeting the active layer reported success and removed nothing
@@ -1050,7 +1071,7 @@ export const PostalCodesViewClientWithLayers = memo(
         }
         setRadiusDialog({ open: true, coords: centroid });
       },
-      isPostalCodeKnown,
+      resolvePostalCode,
       onAddressSelect: handleAddressSelect,
       onPreviewSelect: handlePreviewSelect,
       onBoundarySelect: async (postalCodes: string[]) => {

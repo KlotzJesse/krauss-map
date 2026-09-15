@@ -62,6 +62,9 @@ import {
 } from "@/lib/hooks/use-geocode-search";
 import type { AreaSummary } from "@/lib/types/area-types";
 
+/** A postal code query, bare or prefixed: "86899", "D-86899", "A 1010", "CH8001". */
+const POSTAL_CODE_QUERY = /^(?:(?:D|DE|A|AT|CH)\s*-?\s*)?\d{1,5}$/i;
+
 interface CommandPaletteProps {
   areas: AreaSummary[];
   onCreateArea?: () => void;
@@ -96,14 +99,15 @@ export function CommandPalette({
 
   // Address, city and region lookup — only while an area is open, since every
   // result acts on that area's layers.
-  const isPlzLike = /^\d{1,5}$/.test(query.trim());
+  // A postal code, bare or with a country prefix ("D-86899", "A 1010").
+  const isPlzLike = POSTAL_CODE_QUERY.test(query.trim());
   const { results: geocodeResults, isLoading: isGeocoding } = useGeocodeSearch(
     query,
     Boolean(mapMeta) && !isPlzLike
   );
   const resolveBoundary = useBoundaryPostalCodes();
   /** The query read as a postal code, when it is one. */
-  const plzQuery = /^\d{1,5}$/.test(query.trim()) ? query.trim() : null;
+  const plzQuery = POSTAL_CODE_QUERY.test(query.trim()) ? query.trim() : null;
   const metaRef = useRef(mapMeta);
   metaRef.current = mapMeta;
 
@@ -137,7 +141,7 @@ export function CommandPalette({
   // Debounced PLZ search
   useEffect(() => {
     const trimmed = query.trim();
-    if (!/^\d{2,5}$/.test(trimmed)) {
+    if (!/^(?:(?:D|DE|A|AT|CH)\s*-?\s*)?\d{2,5}$/i.test(trimmed)) {
       setPlzMatches([]);
       return undefined;
     }
@@ -213,7 +217,7 @@ export function CommandPalette({
     return [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [areas]);
 
-  const isPlzQuery = /^\d{2,5}$/.test(query.trim());
+  const isPlzQuery = /^(?:(?:D|DE|A|AT|CH)\s*-?\s*)?\d{2,5}$/i.test(query.trim());
 
   /**
    * Which layers already hold the typed code.
@@ -226,12 +230,20 @@ export function CommandPalette({
    */
   const plzInArea = useMemo(() => {
     if (!(plzQuery && mapMeta)) {
-      return { known: false, layers: [] as { id: number; name: string; color: string }[] };
+      return {
+        known: false,
+        code: plzQuery ?? "",
+        layers: [] as { id: number; name: string; color: string }[],
+      };
     }
-    const known = handlersRef.current.isPostalCodeKnown?.(plzQuery) ?? true;
+    const resolver = handlersRef.current.resolvePostalCode;
+    const resolved = resolver ? resolver(plzQuery) : plzQuery;
     return {
-      known,
-      layers: layersContaining(plzQuery, mapMeta.layers).map((layer) => ({
+      known: resolved !== null,
+      // The stored form ("A-1010") once resolved: it is what the actions act
+      // on, and it shows which country a bare four-digit code belongs to.
+      code: resolved ?? plzQuery,
+      layers: layersContaining(resolved ?? plzQuery, mapMeta.layers).map((layer) => ({
         id: layer.id,
         name: layer.name,
         color: layer.color,
@@ -321,7 +333,7 @@ export function CommandPalette({
 
         {mapMeta && plzQuery && (
           <>
-            <CommandGroup heading={`PLZ ${plzQuery}`}>
+            <CommandGroup heading={`PLZ ${plzInArea.code}`}>
               {/* Every value repeats the code, because cmdk filters items by
                   their value — without it a numeric query hides exactly the
                   actions that query is about. */}
@@ -345,12 +357,12 @@ export function CommandPalette({
                         value={`plz ${plzQuery} hinzufügen aktive ebene`}
                         onSelect={() => {
                           runMapAction(() => {
-                            void handlersRef.current.onAddPostalCode?.(plzQuery);
+                            void handlersRef.current.onAddPostalCode?.(plzInArea.code);
                           });
                         }}
                       >
                         <IconPlus className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>PLZ {plzQuery} zur aktiven Ebene hinzufügen</span>
+                        <span>PLZ {plzInArea.code} zur aktiven Ebene hinzufügen</span>
                       </CommandItem>
                     )
                   ) : (
@@ -359,13 +371,13 @@ export function CommandPalette({
                         value={`plz ${plzQuery} entfernen`}
                         onSelect={() => {
                           runMapAction(() => {
-                            void handlersRef.current.onRemovePostalCode?.(plzQuery);
+                            void handlersRef.current.onRemovePostalCode?.(plzInArea.code);
                           });
                         }}
                       >
                         <IconTrash className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="flex-1">
-                          PLZ {plzQuery} aus dem Gebiet entfernen
+                          PLZ {plzInArea.code} aus dem Gebiet entfernen
                         </span>
                         <span className="flex gap-0.5 shrink-0">
                           {plzInArea.layers.slice(0, 3).map((layer) => (
@@ -385,12 +397,12 @@ export function CommandPalette({
                       value={`plz ${plzQuery} vorschau zeigen karte`}
                       onSelect={() => {
                         runMapAction(() => {
-                          handlersRef.current.onPreviewPostalCode?.(plzQuery);
+                          handlersRef.current.onPreviewPostalCode?.(plzInArea.code);
                         });
                       }}
                     >
                       <IconEye className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>PLZ {plzQuery} auf der Karte zeigen</span>
+                      <span>PLZ {plzInArea.code} auf der Karte zeigen</span>
                     </CommandItem>
                   )}
                   {available.has("onZoomToPostalCode") && (
@@ -398,12 +410,12 @@ export function CommandPalette({
                       value={`plz ${plzQuery} zoomen springen`}
                       onSelect={() =>
                         runMapAction(() =>
-                          handlersRef.current.onZoomToPostalCode?.(plzQuery)
+                          handlersRef.current.onZoomToPostalCode?.(plzInArea.code)
                         )
                       }
                     >
                       <IconZoomScan className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>Zu PLZ {plzQuery} zoomen</span>
+                      <span>Zu PLZ {plzInArea.code} zoomen</span>
                     </CommandItem>
                   )}
                   {available.has("onRadiusAroundPostalCode") && (
@@ -412,13 +424,13 @@ export function CommandPalette({
                       onSelect={() =>
                         runMapAction(() =>
                           handlersRef.current.onRadiusAroundPostalCode?.(
-                            plzQuery
+                            plzInArea.code
                           )
                         )
                       }
                     >
                       <IconCircleDashed className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>Umkreis um PLZ {plzQuery}</span>
+                      <span>Umkreis um PLZ {plzInArea.code}</span>
                     </CommandItem>
                   )}
                 </>

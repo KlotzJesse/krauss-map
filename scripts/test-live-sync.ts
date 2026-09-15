@@ -159,6 +159,8 @@ check(
 );
 
 // ---- add by prefix (Ctrl+Shift+P): server-side insert must show up now ----
+const READ_CODES =
+  "[...document.querySelectorAll('[data-layer-row]')].reduce((s, r) => s + Number(r.getAttribute('data-layer-codes')), 0)";
 const panelCodes = () =>
   cdp.evaluate<number>(
     "[...document.querySelectorAll('[data-layer-row]')].reduce((s, r) => s + Number(r.getAttribute('data-layer-codes')), 0)"
@@ -188,6 +190,57 @@ check(
   "add by prefix shows codes",
   prefixShown,
   `${codesBeforePrefix} -> ${await panelCodes()} codes; toasts: ${prefixToasts || "none"}; focus: ${prefixFocus}`
+);
+
+// ---- copy keeps prefixes; pasting it back works ----
+const copied = await js<string>(`
+  ${dismiss}
+  window.__copied = null;
+  navigator.clipboard.writeText = (text) => { window.__copied = text; return Promise.resolve(); };
+  document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true }));
+  for (let i = 0; i < 20 && window.__copied === null; i++) await sleep(150);
+  return window.__copied || '';
+`);
+const copiedTokens = copied.split(/[,\s]+/).filter(Boolean);
+check(
+  "copy keeps country prefix",
+  copiedTokens.length > 0 && copiedTokens.every((t) => /^(D|A|CH)-\d{1,5}$/.test(t)) && copied.includes("D-86899"),
+  copied.slice(0, 80) || "nothing copied"
+);
+
+const codesBeforePaste = await panelCodes();
+await js(`
+  ${dismiss}
+  // One prefixed and one bare code, as "PLZ kopieren" and a spreadsheet give them.
+  const data = new DataTransfer();
+  data.setData('text/plain', 'D-80469, 80538');
+  document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  return true;
+`);
+const pasted = await until(`${READ_CODES} === ${codesBeforePaste + 2}`, 20_000);
+check("paste accepts prefixed codes", pasted, `${codesBeforePaste} -> ${await panelCodes()} codes`);
+
+const codesBeforePalette = await panelCodes();
+const paletteDriven = await js<string>(`
+  ${dismiss}
+  for (let a = 0; a < 3 && !document.querySelector('[cmdk-input]'); a++) {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+    await sleep(700);
+  }
+  ${setValue}
+  setValue(document.querySelector('[cmdk-input]'), 'D-80539');
+  await sleep(1_500);
+  const heading = [...document.querySelectorAll('[cmdk-group-heading]')].map((h) => h.textContent || '').find((t) => t.includes('80539')) || '';
+  const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /hinzuf/i.test(e.textContent || ''));
+  if (!item) return 'no add command; heading: ' + heading;
+  item.click();
+  return 'ok; heading: ' + heading;
+`);
+const paletteAdded = await until(`${READ_CODES} === ${codesBeforePalette + 1}`, 15_000);
+check(
+  "palette takes prefixed code",
+  paletteDriven.startsWith("ok") && paletteAdded,
+  `${codesBeforePalette} -> ${await panelCodes()} (${paletteDriven})`
 );
 
 // ---- create a version: the header badge must follow ----
@@ -317,6 +370,51 @@ const stillThere = await cdp.evaluate<string | null>(
   "(document.querySelector('[data-area-description]') || {}).textContent || null"
 );
 check("cleared description persists", cleared === "ok" && !stillThere, `${cleared}; after reload: ${stillThere ?? "empty"}`);
+
+// ---- granularity upgrade migrates codes (3-stellig -> 5-stellig) ----
+const pickGranularity = (want: string) => js<string>(`
+  ${dismiss}
+  const trigger = [...document.querySelectorAll('[data-slot="select-trigger"], button[role="combobox"]')]
+    .find((b) => /\\d-stellig/.test(b.textContent || ''));
+  if (!trigger) return 'no select';
+  trigger.click();
+  await sleep(700);
+  const option = [...document.querySelectorAll('[role="option"]')].find((o) => (o.textContent || '').includes(${JSON.stringify("__WANT__")}));
+  if (!option) { ${dismiss} return 'no option'; }
+  option.click();
+  await sleep(1_200);
+  // Going coarser drops codes and asks first; this area is throwaway.
+  const sheet = [...document.querySelectorAll('[role="alertdialog"]')].pop();
+  const confirm = sheet && [...sheet.querySelectorAll('button')].find((b) => !/abbrechen/i.test(b.textContent || ''));
+  if (confirm) { confirm.click(); await sleep(1_500); }
+  return 'ok';
+`.replace("__WANT__", want));
+
+const toCoarse = await pickGranularity("3-stellig");
+// The 3-digit index loads after the switch; paste only resolves codes the map
+// has, so retry until it takes.
+let coarseAdded = false;
+for (let attempt = 0; attempt < 8 && !coarseAdded; attempt++) {
+  await sleep(2500);
+  await js(`
+    ${dismiss}
+    const data = new DataTransfer();
+    data.setData('text/plain', 'D-803');
+    document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+    return true;
+  `);
+  coarseAdded = await until(`${READ_CODES} >= 1`, 2500);
+}
+const coarseCodes = await panelCodes();
+check("3-digit code added", toCoarse === "ok" && coarseAdded, `${toCoarse}; ${coarseCodes} codes after pasting D-803`);
+
+const toFine = await pickGranularity("5-stellig");
+const migrated = await until(`${READ_CODES} > ${coarseCodes}`, 30_000);
+check(
+  "upgrade migrates codes",
+  toFine === "ok" && migrated,
+  `${toFine}; ${coarseCodes} -> ${await panelCodes()} codes (D-803 should expand to its 5-digit codes)`
+);
 
 // ---- clean up: delete the throwaway area from the sidebar ----
 const deleted = await deleteArea(areaId);

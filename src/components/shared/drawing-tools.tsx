@@ -104,9 +104,12 @@ import type { Layer, LayerChange } from "@/lib/types/area-types";
 import { executeAction } from "@/lib/utils/action-state-callbacks/execute-action";
 import {
   extractRawCode,
-  rawCodeFromComposite,
+  compositeKeyToStoredCode,
+  resolveTypedPostalCodes,
+  splitPostalCodeTokens,
   storedCodeToCompositeKey,
 } from "@/lib/utils/postal-code-keys";
+import { normalizePostalCode } from "@/lib/utils/normalize-postal-codes";
 import {
   copyPostalCodesCSV,
   downloadLayerCSV,
@@ -2012,11 +2015,18 @@ function DrawingToolsImpl({
     [copyLayerDialog.layerId]
   );
 
-  /** Raw codes ("01067"), used for prefix matching in the layer panel. */
+  /**
+   * Every code on the map, in stored form ("D-01067", "A-1010").
+   *
+   * This used to hold bare digits, which lost the country: Austrian and Swiss
+   * codes are both four digits, and a bare code sent to the server gets the
+   * area's country — so "select all unassigned" in a DACH area filed Vienna's
+   * 1010 as "D-01010", and range/paste input could never tell them apart.
+   */
   const allCodesSet = useMemo<Set<string>>(() => {
     const s = new Set<string>();
     for (const key of availableCodes ?? []) {
-      s.add(rawCodeFromComposite(key));
+      s.add(compositeKeyToStoredCode(key));
     }
     return s;
   }, [availableCodes]);
@@ -2121,9 +2131,13 @@ function DrawingToolsImpl({
     if (!layerId || !addFn || !allCodes || allCodes.size === 0) {
       return;
     }
+    const fallbackCountry = countryRef.current ?? "DE";
     const assignedCodes = new Set(
       currentLayers.flatMap(
-        (l) => l.postalCodes?.map((pc) => extractRawCode(pc.postalCode)) ?? []
+        (l) =>
+          l.postalCodes?.map(
+            (pc) => normalizePostalCode(pc.postalCode, fallbackCountry) ?? pc.postalCode
+          ) ?? []
       )
     );
     const unassigned = [...allCodes].filter((c) => !assignedCodes.has(c));
@@ -2147,10 +2161,7 @@ function DrawingToolsImpl({
       toast.info("Die aktive Ebene enthält keine PLZ");
       return;
     }
-    navigator.clipboard
-      .writeText(codes.join(", "))
-      .then(() => toast.success(`${codes.length} PLZ kopiert`))
-      .catch(() => toast.error("Kopieren fehlgeschlagen"));
+    void copyPostalCodesCSV(codes, countryRef.current ?? "DE");
   }, []);
 
   useRegisterMapCommands({
@@ -2382,12 +2393,17 @@ function DrawingToolsImpl({
         const allCodes = allCodesSetRef.current;
         const currentLayers = layersRef.current;
         if (!layerId || !addFn || !allCodes || allCodes.size === 0) return;
-        // Collect all assigned codes across all layers
-        // allCodes holds raw codes; assignments are stored as "D-01067".
+        // Both sides in stored form ("D-01067"), so an Austrian and a Swiss
+        // code with the same four digits stay distinct.
+        const fallbackCountry = countryRef.current ?? "DE";
         const assignedCodes = new Set(
           currentLayers.flatMap(
             (l) =>
-              l.postalCodes?.map((pc) => extractRawCode(pc.postalCode)) ?? []
+              l.postalCodes?.map(
+                (pc) =>
+                  normalizePostalCode(pc.postalCode, fallbackCountry) ??
+                  pc.postalCode
+              ) ?? []
           )
         );
         const unassigned = [...allCodes].filter((c) => !assignedCodes.has(c));
@@ -2418,23 +2434,32 @@ function DrawingToolsImpl({
           'PLZ-Bereich eingeben (z.B. "80331-80339" oder "80331, 80332, 80339")'
         );
         if (!input) return;
-        // Parse range like 80331-80339 or 80331–80339
-        const rangeMatch = /^(\d{4,5})\s*[-–]\s*(\d{4,5})$/.exec(input.trim());
-        let codes: string[] = [];
+        // Parse a range like 80331-80339, A-1010-1090 or 80331–80339; the
+        // optional prefix picks the country for the whole range.
+        const rangeMatch =
+          /^(?:(D|DE|A|AT|CH)\s*-\s*)?(\d{4,5})\s*[-–]\s*(\d{4,5})$/i.exec(
+            input.trim()
+          );
+        const tokens: string[] = [];
         if (rangeMatch) {
-          const from = parseInt(rangeMatch[1], 10);
-          const to = parseInt(rangeMatch[2], 10);
+          const prefix = rangeMatch[1] ? `${rangeMatch[1]}-` : "";
+          const from = parseInt(rangeMatch[2], 10);
+          const to = parseInt(rangeMatch[3], 10);
           if (from <= to && to - from <= 500) {
             for (let i = from; i <= to; i++) {
-              codes.push(String(i).padStart(rangeMatch[1].length, "0"));
+              tokens.push(
+                `${prefix}${String(i).padStart(rangeMatch[2].length, "0")}`
+              );
             }
           }
         } else {
-          codes = input
-            .split(/[\s,;]+/)
-            .map((s) => s.trim())
-            .filter((s) => /^\d{4,5}$/.test(s));
+          tokens.push(...splitPostalCodeTokens(input));
         }
+        const codes = resolveTypedPostalCodes(
+          tokens,
+          allCodesSetRef.current,
+          countryRef.current ?? "DE"
+        );
         if (codes.length === 0) {
           toast.error("Keine gültigen PLZ gefunden");
           return;
@@ -2519,10 +2544,14 @@ function DrawingToolsImpl({
       const layerId = activeLayerIdRef.current;
       if (!addFn || !layerId) return;
       const text = e.clipboardData?.getData("text") ?? "";
-      const codes = text
-        .split(/[\s,;]+/)
-        .map((s) => s.trim())
-        .filter((s) => /^\d{4,5}$/.test(s));
+      // Accepts what "PLZ kopieren" produces ("D-80331, A-1010") as well as
+      // bare numbers. Only bare digits used to pass, so copying a layer and
+      // pasting it into another did nothing.
+      const codes = resolveTypedPostalCodes(
+        splitPostalCodeTokens(text),
+        allCodesSetRef.current,
+        countryRef.current ?? "DE"
+      );
       if (codes.length === 0) return;
       e.preventDefault();
       void addFn(layerId, codes).then(() => {

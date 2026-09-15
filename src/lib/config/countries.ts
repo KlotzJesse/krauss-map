@@ -154,7 +154,14 @@ export function resolveGranularityForCountry(
 }
 
 /**
- * Format a postal code for display/export with leading zeros.
+ * Format a postal code with the leading zero a spreadsheet may have dropped.
+ *
+ * Only a code one digit short of full length is padded, and only when that
+ * shorter length is not itself a granularity the country uses. A German "1067"
+ * becomes "01067" (Germany has no 4-digit level), but a 3-digit area code
+ * "803" stays "803" — padding it to "00803", as this used to, produced a code
+ * the map does not have, so codes added to a coarse-granularity area never
+ * showed up. Austrian and Swiss 3-digit codes are levels too, so they stay.
  */
 export function formatPostalCodeForCountry(
   code: string,
@@ -162,7 +169,11 @@ export function formatPostalCodeForCountry(
 ): string {
   const config = getCountryConfig(country);
   const clean = code.replace(/\D/g, "");
-  return clean.padStart(config.maxDigits, "0");
+  const oneDigitShort = clean.length === config.maxDigits - 1;
+  if (oneDigitShort && !config.granularityLevels.includes(clean.length)) {
+    return clean.padStart(config.maxDigits, "0");
+  }
+  return clean;
 }
 
 /**

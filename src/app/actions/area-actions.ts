@@ -1778,6 +1778,35 @@ export async function addPostalCodesByPrefixAction(
   }
 }
 
+/**
+ * Stored codes ("D-80331", "A-1010") as (country, bare code) pairs for querying
+ * `postal_codes`, whose `code` column holds bare digits. Legacy bare codes take
+ * the fallback country.
+ */
+function toReferencePairs(
+  codes: readonly string[],
+  fallbackCountry: CountryCode
+): { country: CountryCode; code: string }[] {
+  const pairs = new Map<string, { country: CountryCode; code: string }>();
+  for (const value of codes) {
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    const detected = detectCountryFromCode(trimmed);
+    if (!detected.code) continue;
+    const country = (detected.country ?? fallbackCountry) as CountryCode;
+    const code = formatWithPrefix(detected.code, country).split("-")[1];
+    pairs.set(`${country}:${code}`, { country, code });
+  }
+  return [...pairs.values()];
+}
+
+/** Result rows from `postal_codes` in stored form, so the caller never guesses. */
+function rowsToStoredCodes(rows: readonly Record<string, unknown>[]): string[] {
+  return rows.map((row) =>
+    formatWithPrefix(String(row.code), String(row.country) as CountryCode)
+  );
+}
+
 export async function geoprocessAction(data: {
   mode: "all" | "holes" | "expand";
 
@@ -1789,94 +1818,95 @@ export async function geoprocessAction(data: {
 }): ServerActionResponse<{ resultCodes: string[] }> {
   try {
     const { mode, granularity, selectedCodes, country } = data;
-    const countryFilter = country ? sql` AND country = ${country}` : sql``;
-    const normalizedSelectedCodes = selectedCodes
-      .map((code) => code.trim())
-      .filter((code) => code.length > 0);
-    const selectedCodeList = sql.join(
-      normalizedSelectedCodes.map((code) => sql`${code}`),
-      sql`, `
-    );
 
     if (!mode || !granularity || !Array.isArray(selectedCodes)) {
       return { success: false, error: "Missing required parameters" };
     }
 
-    // Build SQL for geoprocessing
+    const countryFilter = country ? sql` AND country = ${country}` : sql``;
+    // The layer hands over stored codes ("D-80331"), but postal_codes.code is
+    // bare ("80331"). Matching them directly found nothing, so filling holes,
+    // expanding and "fill all" silently did nothing; and the bare codes that
+    // came back lost their country. Match on (country, code) and answer in
+    // stored form.
+    const pairs = toReferencePairs(
+      selectedCodes,
+      (country ?? "DE") as CountryCode
+    );
+    const selectedPairs = sql.join(
+      pairs.map((pair) => sql`(${pair.country}, ${pair.code})`),
+      sql`, `
+    );
 
     let resultCodes: string[] = [];
 
     if (mode === "expand") {
       // Find unselected regions adjacent to selected
 
-      const { rows: expandRows } = normalizedSelectedCodes.length > 0
+      const { rows: expandRows } = pairs.length > 0
         ? await db.execute(
-            sql`SELECT code FROM postal_codes
+            sql`SELECT code, country FROM postal_codes
                 WHERE granularity = ${granularity}${countryFilter}
-                  AND code NOT IN (${selectedCodeList})
+                  AND (country, code) NOT IN (${selectedPairs})
                   AND ST_Touches(
                     geometry,
                     (
                       SELECT ST_Union(geometry) AS geom
                       FROM postal_codes
                       WHERE granularity = ${granularity}${countryFilter}
-                        AND code IN (${selectedCodeList})
+                        AND (country, code) IN (${selectedPairs})
                     )
                   )`
           )
         : await db.execute(
-            sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
+            sql`SELECT code, country FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
           );
 
-      resultCodes = expandRows.map((r) =>
-        String((r as Record<string, unknown>).code)
-      );
+      resultCodes = rowsToStoredCodes(expandRows);
     } else if (mode === "holes") {
       // Use a CTE for the convex hull to avoid recomputation and maximize performance
 
-      if (normalizedSelectedCodes.length > 0) {
+      if (pairs.length > 0) {
         const { rows } = await db.execute(
           sql`WITH hull AS (
             SELECT ST_ConvexHull(ST_Collect(geometry)) AS geom
             FROM postal_codes
             WHERE granularity = ${granularity}${countryFilter}
-              AND code IN (${selectedCodeList})
+              AND (country, code) IN (${selectedPairs})
             )
-            SELECT code FROM postal_codes, hull
+            SELECT code, country FROM postal_codes, hull
             WHERE granularity = ${granularity}${countryFilter}
-              AND code NOT IN (${selectedCodeList})
+              AND (country, code) NOT IN (${selectedPairs})
               AND ST_Within(geometry, hull.geom)`
         );
 
-        resultCodes = rows.map((r: Record<string, unknown>) => String(r.code));
+        resultCodes = rowsToStoredCodes(rows);
       } else {
         resultCodes = [];
       }
     } else if (mode === "all") {
       // Find all unselected regions that intersect the selected union
 
-      const { rows: gapRows } = normalizedSelectedCodes.length > 0
+      const { rows: gapRows } = pairs.length > 0
         ? await db.execute(
-            sql`SELECT code FROM postal_codes
+            sql`SELECT code, country FROM postal_codes
                 WHERE granularity = ${granularity}${countryFilter}
-                  AND code NOT IN (${selectedCodeList})
+                  AND (country, code) NOT IN (${selectedPairs})
                   AND ST_Intersects(
                     geometry,
                     (
                       SELECT ST_Union(geometry) AS geom
                       FROM postal_codes
                       WHERE granularity = ${granularity}${countryFilter}
-                        AND code IN (${selectedCodeList})
+                        AND (country, code) IN (${selectedPairs})
                     )
                   )`
           )
         : await db.execute(
-            sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
+            sql`SELECT code, country FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
           );
 
-      resultCodes = gapRows.map((r) =>
-        String((r as Record<string, unknown>).code)
-      );
+      resultCodes = rowsToStoredCodes(gapRows);
     }
 
     return { success: true, data: { resultCodes } };
@@ -1913,7 +1943,7 @@ export async function radiusSearchAction(data: {
 
     const { rows } = await db.execute(
       sql`
-        SELECT code
+        SELECT code, country
         FROM postal_codes
         WHERE granularity = ${granularity}
         AND ST_DWithin(
@@ -1928,9 +1958,9 @@ export async function radiusSearchAction(data: {
       `
     );
 
-    const postalCodes = rows.map((row) =>
-      (row as { code: string }).code
-    );
+    // In stored form: bare codes were given the area's country on insert, so a
+    // search near the Swiss or Austrian border filed their codes as German.
+    const postalCodes = rowsToStoredCodes(rows);
 
     return { success: true, data: { postalCodes } };
   } catch (error) {
@@ -1962,7 +1992,7 @@ export async function drivingRadiusSearchAction(data: {
 
     const { rows } = await db.execute(
       sql`
-        SELECT code
+        SELECT code, country
         FROM postal_codes
         WHERE granularity = ${granularity}
         AND ST_DWithin(
@@ -1977,9 +2007,9 @@ export async function drivingRadiusSearchAction(data: {
       `
     );
 
-    const postalCodes = rows.map((row) =>
-      (row as { code: string }).code
-    );
+    // In stored form: bare codes were given the area's country on insert, so a
+    // search near the Swiss or Austrian border filed their codes as German.
+    const postalCodes = rowsToStoredCodes(rows);
 
     return { success: true, data: { postalCodes } };
   } catch (error) {
@@ -2958,19 +2988,30 @@ export interface AreaPlzMatch {
 export async function searchAreasByPostalCodeAction(
   postalCode: string
 ): ServerActionResponse<AreaPlzMatch[]> {
-  const trimmed = postalCode.trim();
-  if (!trimmed || !/^\d{2,5}$/.test(trimmed)) {
+  // "86899", or with a country prefix: "D-86899", "A 1010". A prefix narrows
+  // the search to that country; without one a four-digit code could be Swiss
+  // or Austrian, so both are searched.
+  const parsed = /^(?:(D|DE|A|AT|CH)\s*-?\s*)?(\d{2,5})$/i.exec(postalCode.trim());
+  if (!parsed) {
     return { success: false, error: "Ungültige PLZ" };
   }
+  const trimmed = parsed[2];
+  const onlyCountry = parsed[1]
+    ? detectCountryFromCode(`${parsed[1]}-${trimmed}`).country
+    : null;
   try {
     // Codes are stored in composite form ("D-86899", "A-1010", "CH-8001"),
     // with some legacy rows still bare. Matching the raw input only ever hit
     // the bare rows: 86899 returned 1 of its 23 area/layer matches.
     const candidates = [
-      trimmed,
-      ...COUNTRY_CODES.map((c) => `${getCountryConfig(c).prefix}-${trimmed}`),
+      ...(onlyCountry ? [] : [trimmed]),
+      ...COUNTRY_CODES.filter((c) => !onlyCountry || c === onlyCountry).map(
+        (c) => `${getCountryConfig(c).prefix}-${trimmed}`
+      ),
     ];
-    const isExact = trimmed.length === 5;
+    const isExact =
+      trimmed.length ===
+      (onlyCountry ? getCountryConfig(onlyCountry).maxDigits : 5);
     const whereCondition = isExact
       ? inArray(areaLayerPostalCodes.postalCode, candidates)
       : or(

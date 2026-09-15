@@ -5,6 +5,11 @@ import { revalidateTag } from "next/cache";
 
 import { FRESH_AFTER_EDIT } from "../../lib/cache/after-edit";
 
+import {
+  type CountryCode,
+  detectCountryFromCode,
+  formatWithPrefix,
+} from "@/lib/config/countries";
 import { getGranularityLevel } from "@/lib/utils/granularity-utils";
 
 import { db } from "../../lib/db";
@@ -60,6 +65,12 @@ export async function changeAreaGranularityAction(
     let removedPostalCodes = 0;
 
     await db.transaction(async (tx) => {
+      const area = await tx.query.areas.findFirst({
+        where: eq(areas.id, areaId),
+        columns: { country: true },
+      });
+      const areaCountry = (area?.country ?? "DE") as CountryCode;
+
       // Get all layers for this area with their postal codes
 
       const layers = await tx.query.areaLayers.findMany({
@@ -80,22 +91,54 @@ export async function changeAreaGranularityAction(
 
           const currentCodes = layer.postalCodes.map((pc) => pc.postalCode);
 
+          // Stored codes are prefixed ("D-80"); postal_codes.code is bare
+          // ("80331"). Matching the two directly found nothing, so upgrading
+          // granularity left every layer untouched — and would have inserted
+          // bare codes that the CHECK constraint rejects. Match on
+          // (country, bare prefix) and insert in stored form.
+          const prefixes = new Map<string, { country: CountryCode; raw: string }>();
+          for (const stored of currentCodes) {
+            const detected = detectCountryFromCode(stored);
+            if (!detected.code) continue;
+            const country = (detected.country ?? areaCountry) as CountryCode;
+            prefixes.set(`${country}:${detected.code}`, {
+              country,
+              raw: detected.code,
+            });
+          }
+          if (prefixes.size === 0) {
+            continue;
+          }
+
           // Single batch query instead of N+1 per-code queries
           const allMatchingRows = await tx
-            .select({ code: postalCodes.code })
+            .select({
+              id: postalCodes.id,
+              code: postalCodes.code,
+              country: postalCodes.country,
+            })
             .from(postalCodes)
             .where(
               and(
                 eq(postalCodes.granularity, newGranularity),
                 or(
-                  ...currentCodes.map((code) =>
-                    like(postalCodes.code, `${code}%`)
+                  ...[...prefixes.values()].map((prefix) =>
+                    and(
+                      eq(postalCodes.country, prefix.country),
+                      like(postalCodes.code, `${prefix.raw}%`)
+                    )
                   )
                 )
               )
             );
 
-          const expandedCodes = new Set(allMatchingRows.map((r) => r.code));
+          const expandedCodes = new Map<string, number>();
+          for (const row of allMatchingRows) {
+            expandedCodes.set(
+              formatWithPrefix(row.code, row.country as CountryCode),
+              row.id
+            );
+          }
 
           if (expandedCodes.size > 0) {
             // Delete old postal codes for this layer
@@ -111,10 +154,12 @@ export async function changeAreaGranularityAction(
             // Insert new expanded postal codes
 
             await tx.insert(areaLayerPostalCodes).values(
-              [...expandedCodes].map((code) => ({
+              [...expandedCodes].map(([postalCode, postalCodeId]) => ({
                 layerId: layer.id,
 
-                postalCode: code,
+                postalCode,
+
+                postalCodeId,
               }))
             );
 
