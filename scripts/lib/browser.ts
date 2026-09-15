@@ -182,6 +182,12 @@ export class Cdp {
     const cdp = new Cdp(socket);
     await cdp.send("Runtime.enable");
     await cdp.send("Page.enable");
+    // A tab behind another window or tab reports itself hidden, and Chrome then
+    // throttles its timers to about once a minute — every sleep in a run turns
+    // into minutes and the run looks hung. Bring it forward and tell the page
+    // it has focus.
+    await cdp.send("Page.bringToFront");
+    await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: true });
     // Reusing the browser also reuses its HTTP cache, which happily serves the
     // previous build's chunks after a rebuild. Disable it for the session so a
     // run always measures the code that was just built.

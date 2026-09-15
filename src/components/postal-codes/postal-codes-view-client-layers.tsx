@@ -67,9 +67,11 @@ import {
   useRegisterMapCommands,
 } from "@/lib/context/command-palette-context";
 import { useMountOnce } from "@/lib/hooks/use-mount-once";
+import { useRemoteAreaChanges } from "@/lib/sync/remote-area-changes";
 import {
   notifyAreasChanged,
   onAreasRefreshed,
+  useLiveAreaText,
 } from "@/lib/sync/sidebar-data";
 
 const RadiusSearchDialog = dynamic(
@@ -494,7 +496,7 @@ function usePostalCodesLayerActions({
    * redo, version restore, bulk import, merge, split, granularity change. One
    * round trip, and no route re-render, so the map is never torn down.
    */
-  const resyncLayers = useStableCallback(async () => {
+  const resyncLayers = useStableCallback(async (options?: { remote?: boolean }) => {
     if (!areaId) {
       return;
     }
@@ -509,11 +511,15 @@ function usePostalCodesLayerActions({
       })
     );
     committedUndoRedoRef.current = result.data.undoRedo;
-    // A resync is the authoritative answer, so anything still queued locally is
-    // either already reflected in it or was rolled back on the server.
-    pendingMutationsRef.current = [];
+    // Edits still in flight stay applied on top. Dropping them — as this used
+    // to — made a code added a moment earlier vanish until its own request
+    // finished, whenever a resync (another edit's, or another tab's) landed in
+    // between. Re-applying is safe: adding a code twice or removing an absent
+    // one leaves the list unchanged, and a request that fails removes its own
+    // entry from the queue.
     recomputeOptimisticState();
-    notifyAreasChanged();
+    // A re-read caused by someone else's edit is not news to the other tabs.
+    notifyAreasChanged({ broadcast: !options?.remote });
   });
 
   const createFirstLayer = useStableCallback(async (targetAreaId: number) => {
@@ -756,12 +762,14 @@ export const PostalCodesViewClientWithLayers = memo(
       ? use(areaCountriesPromise)
       : [];
     const areaName = areaMeta.name;
+    // The palette names the area; follow a rename made in the sidebar.
+    const liveAreaName = useLiveAreaText(areaId, "name", areaName);
     const areaDescription = areaMeta.description;
     const areaTags = areaTagsPromise ? use(areaTagsPromise) : EMPTY_TAGS;
 
-    // Load only the active area's country/granularity dataset by default.
-    // If the area contains prefixed cross-country postal codes, include those countries too.
-    const areaCountries = useMemo(() => {
+    // The countries the area starts with: its own plus any the server-rendered
+    // layers already hold. Codes added during the session extend this below.
+    const baseCountries = useMemo(() => {
       const countrySet = new Set<CountryCode>();
       for (const areaCountry of areaCountriesFromServer) {
         countrySet.add(areaCountry);
@@ -769,18 +777,8 @@ export const PostalCodesViewClientWithLayers = memo(
       if (country) {
         countrySet.add(country);
       }
-      for (const layer of initialLayers) {
-        for (const postalCodeEntry of layer.postalCodes ?? []) {
-          const detected = detectCountryFromCode(
-            postalCodeEntry.postalCode
-          ).country;
-          if (detected) {
-            countrySet.add(detected);
-          }
-        }
-      }
       return [...countrySet];
-    }, [areaCountriesFromServer, country, initialLayers]);
+    }, [areaCountriesFromServer, country]);
 
     // The area's granularity as last confirmed on this page. It starts as the
     // server's value and is overridden once the user changes it, so the switch
@@ -795,14 +793,6 @@ export const PostalCodesViewClientWithLayers = memo(
       granularityOverride && granularityOverride.areaId === areaId
         ? granularityOverride.granularity
         : defaultGranularity;
-
-    // Codes, representative points, areas and bounds. The outlines arrive
-    // separately as vector tiles, per visible tile rather than all at once.
-    const {
-      index,
-      isLoading: isGeodataLoading,
-      error: indexError,
-    } = usePostalCodeIndex(granularity, areaCountries);
 
     // Read activeLayerId directly from URL state for instant switching
     const { activeLayerId: urlActiveLayerId } = useActiveLayerState();
@@ -833,10 +823,43 @@ export const PostalCodesViewClientWithLayers = memo(
       areaId,
       requestedActiveLayerId: urlActiveLayerId ?? null,
       granularity,
-      countries: areaCountries,
+      countries: baseCountries,
       initialLayers,
       initialUndoRedoStatus,
     });
+
+    // Load the dataset for every country the layers hold right now, not just
+    // the ones the page loaded with. Deriving this from the server-rendered
+    // layers meant importing Austrian codes into a German area saved them but
+    // drew nothing until a reload, because the Austrian index was never fetched.
+    // Keyed by a sorted signature so an ordinary edit does not hand the index
+    // hook a new array and re-run it.
+    const countrySignature = useMemo(() => {
+      const countrySet = new Set<CountryCode>(baseCountries);
+      for (const layer of optimisticLayers) {
+        for (const postalCodeEntry of layer.postalCodes ?? []) {
+          const detected = detectCountryFromCode(
+            postalCodeEntry.postalCode
+          ).country;
+          if (detected) {
+            countrySet.add(detected);
+          }
+        }
+      }
+      return [...countrySet].sort().join(",");
+    }, [baseCountries, optimisticLayers]);
+    const areaCountries = useMemo(
+      () => countrySignature.split(",").filter(Boolean) as CountryCode[],
+      [countrySignature]
+    );
+
+    // Codes, representative points, areas and bounds. The outlines arrive
+    // separately as vector tiles, per visible tile rather than all at once.
+    const {
+      index,
+      isLoading: isGeodataLoading,
+      error: indexError,
+    } = usePostalCodeIndex(granularity, areaCountries);
 
     const handlePreviewSelect = useCallback(
       (
@@ -925,6 +948,12 @@ export const PostalCodesViewClientWithLayers = memo(
       [refreshUndoRedo]
     );
 
+    // Edits made in another tab or by another person: re-read the layers when
+    // the area's fingerprint moves.
+    useRemoteAreaChanges(areaId, () => {
+      void resyncLayers({ remote: true });
+    });
+
     const handleGranularityChange = useCallback(
       (newGranularity: string) => {
         if (newGranularity === granularity) {
@@ -975,12 +1004,12 @@ export const PostalCodesViewClientWithLayers = memo(
       useMemo(
         () => ({
           areaId,
-          areaName: areaName ?? "Gebiet",
+          areaName: liveAreaName ?? areaName ?? "Gebiet",
           granularity,
           layers: optimisticLayers,
           activeLayerId,
         }),
-        [areaId, areaName, granularity, optimisticLayers, activeLayerId]
+        [areaId, areaName, liveAreaName, granularity, optimisticLayers, activeLayerId]
       )
     );
 

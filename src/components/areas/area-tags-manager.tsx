@@ -1,9 +1,12 @@
 "use client";
 
 import { Tag, Plus, Trash2, Pencil, Check, X } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { notifyAreasChanged } from "@/lib/sync/sidebar-data";
+import {
+  notifyAreasChanged,
+  useLiveAreaTagsSignature,
+} from "@/lib/sync/sidebar-data";
 
 import {
   getAllTagsAction,
@@ -35,6 +38,16 @@ const TAG_COLORS = generatePalette(18);
 
 export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
   const [tags, setTags] = useState(initialTags);
+  // Tags assigned from the sidebar (bulk assign/remove) land in the live area
+  // list, not in this component's copy — follow it so the panel is not stale.
+  const liveTagsSignature = useLiveAreaTagsSignature(areaId);
+  useEffect(() => {
+    if (liveTagsSignature !== null) {
+      setTags(
+        JSON.parse(liveTagsSignature) as { id: number; name: string; color: string }[]
+      );
+    }
+  }, [liveTagsSignature]);
   const [allTags, setAllTags] = useState<AreaTagWithCount[]>([]);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");

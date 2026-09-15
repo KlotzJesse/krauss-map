@@ -158,6 +158,12 @@ export async function recordChangeWithTx(
   revalidateTag(`area-${areaId}-undo-redo`, FRESH_AFTER_EDIT);
   revalidateTag(`area-${areaId}-change-history`, FRESH_AFTER_EDIT);
   revalidateTag(`area-${areaId}-version-info`, FRESH_AFTER_EDIT);
+  // A layer's own history dialog reads a cache keyed by that layer, and only
+  // postal-code edits used to clear it — a rename, colour change or moved code
+  // stayed out of the dialog for the cache's lifetime.
+  if (change.entityId) {
+    revalidateTag(`layer-${change.entityId}-history`, FRESH_AFTER_EDIT);
+  }
 
   return changeKey;
 }

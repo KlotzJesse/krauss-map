@@ -264,3 +264,39 @@ export async function getUndoRedoStatusAction(areaId: number) {
     return { success: false as const, error: "Failed to read undo status" };
   }
 }
+
+/**
+ * A fingerprint of everything the open area page shows: layers and their
+ * settings, which codes each holds, undo/redo depth, and the area's own name,
+ * description and granularity.
+ *
+ * Another person editing the same area — or this user in another tab — changes
+ * the database but nothing on this page. The page polls this (a few
+ * milliseconds even for a 13k-code area) and re-reads the layers only when it
+ * moved, so a second editor's work shows up without a reload and without
+ * downloading every code on every tick.
+ */
+export async function getAreaChangeTokenAction(areaId: number) {
+  try {
+    const { rows } = await db.execute<{ token: string }>(sql`
+      select md5(concat_ws('|',
+        (select string_agg(concat_ws(':', al.id, al.name, al.color, al.opacity,
+                  al.is_visible, al.order_index, al.group_name, al.notes), ','
+                  order by al.id)
+           from area_layers al where al.area_id = ${areaId}),
+        (select concat(count(*), ':', sum(hashtext(alpc.layer_id || alpc.postal_code)))
+           from area_layer_postal_codes alpc
+           join area_layers al on al.id = alpc.layer_id
+          where al.area_id = ${areaId}),
+        (select concat(jsonb_array_length(undo_stack), ':', jsonb_array_length(redo_stack))
+           from area_undo_stacks where area_id = ${areaId}),
+        (select concat_ws(':', a.name, a.description, a.granularity, a.is_archived,
+                  a.current_version_number)
+           from areas a where a.id = ${areaId})
+      )) as token`);
+    return { success: true as const, data: rows[0]?.token ?? "" };
+  } catch (error) {
+    console.error("Error reading area change token:", error);
+    return { success: false as const, error: "Failed to read change token" };
+  }
+}

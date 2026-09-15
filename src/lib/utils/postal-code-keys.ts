@@ -261,9 +261,24 @@ export function resolveTypedPostalCodes(
   areaCountry: string
 ): string[] {
   const out = new Set<string>();
+  // Countries the map has codes for. A prefixed code for a country that is not
+  // loaded cannot be checked here, so it is trusted as typed — the page then
+  // loads that country's data and draws it. Without this, "A-1010" pasted into
+  // a German area was silently dropped.
+  const loadedCountries = new Set<string>();
+  for (const stored of availableStored) {
+    const composite = storedCodeToCompositeKey(stored);
+    if (composite) {
+      loadedCountries.add(composite.slice(0, composite.indexOf(":")));
+    }
+  }
   for (const token of tokens) {
     const parsed = parsePostalCodeToken(token);
     if (!parsed) {
+      continue;
+    }
+    if (parsed.country && !loadedCountries.has(parsed.country)) {
+      out.add(formatWithPrefix(parsed.raw, parsed.country as CountryCode));
       continue;
     }
     const countries = parsed.country

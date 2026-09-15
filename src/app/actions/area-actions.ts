@@ -13,7 +13,11 @@ import {
   getCountryConfig,
 } from "../../lib/config/countries";
 import { db } from "../../lib/db";
-import { readAreas, readRecentActivity } from "../../lib/db/data-functions";
+import {
+  readAreas,
+  readLayerRecentChanges,
+  readRecentActivity,
+} from "../../lib/db/data-functions";
 import {
   areas,
   areaLayers,
@@ -3125,9 +3129,7 @@ export async function listAreasForCopyAction(): ServerActionResponse<
 export async function getLayerHistoryAction(layerId: number) {
   "use server";
   try {
-    const { getLayerRecentChanges } =
-      await import("../../lib/db/data-functions");
-    const rows = await getLayerRecentChanges(layerId, 10);
+    const rows = await readLayerRecentChanges(layerId, 10);
     return { success: true as const, data: rows };
   } catch (err) {
     return { success: false as const, error: String(err) };

@@ -243,6 +243,132 @@ check(
   `${codesBeforePalette} -> ${await panelCodes()} (${paletteDriven})`
 );
 
+// ---- a locked layer refuses writes, even from paths outside the panel ----
+const lockToggle = (label: string) => js<string>(`
+  ${dismiss}
+  const row = document.querySelector('[data-layer-active="true"]');
+  if (!row) return 'no active row';
+  const box = row.getBoundingClientRect();
+  row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: box.left + 30, clientY: box.top + 8 }));
+  await sleep(700);
+  const item = [...document.querySelectorAll('[role="menuitem"]')].find((e) => (e.textContent || '').trim() === ${JSON.stringify("__LABEL__")});
+  if (!item) { ${dismiss} return 'no menu item'; }
+  item.click();
+  await sleep(500);
+  return 'ok';
+`.replace("__LABEL__", label));
+const locked = await lockToggle("Sperren");
+const codesBeforeLockedPaste = await panelCodes();
+await js(`
+  ${dismiss}
+  const data = new DataTransfer();
+  data.setData('text/plain', 'D-80637');
+  document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  return true;
+`);
+await sleep(3000);
+const lockedWarned = await cdp.evaluate<boolean>(
+  "[...document.querySelectorAll('[data-sonner-toast]')].some((t) => /gesperrt/.test(t.textContent || ''))"
+);
+const codesAfterLockedPaste = await panelCodes();
+check(
+  "lock blocks paste",
+  locked === "ok" && lockedWarned && codesAfterLockedPaste === codesBeforeLockedPaste,
+  `${locked}; warned=${lockedWarned}; ${codesBeforeLockedPaste} -> ${codesAfterLockedPaste}`
+);
+await lockToggle("Entsperren");
+
+// ---- a code from another country draws without a reload ----
+const findMapInstance = `
+  const isMap = (v) => v && typeof v === 'object' && typeof v.getStyle === 'function' && typeof v.getFeatureState === 'function';
+  const unwrap = (v) => {
+    if (!v || typeof v !== 'object') return null;
+    if (isMap(v)) return v;
+    if (typeof v.getMap === 'function') { try { const m = v.getMap(); if (isMap(m)) return m; } catch (e) {} }
+    if (v.current) return unwrap(v.current);
+    if (v.map) return unwrap(v.map);
+    return null;
+  };
+  let map = null;
+  const start = document.querySelector('.maplibregl-map') || document.querySelector('canvas');
+  for (let el = start; el && !map; el = el.parentElement) {
+    const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
+    for (let f = key ? el[key] : null, i = 0; f && i < 120 && !map; f = f.return, i++) {
+      for (let h = f.memoizedState, n = 0; h && n < 80 && !map; h = h.next, n++) {
+        map = unwrap(h.memoizedState) || unwrap(h.memoizedState && h.memoizedState.current);
+      }
+      map = map || unwrap(f.memoizedProps && f.memoizedProps.value) || unwrap(f.stateNode);
+    }
+  }`;
+const codesBeforeForeign = await panelCodes();
+await js(`
+  ${dismiss}
+  const data = new DataTransfer();
+  data.setData('text/plain', 'A-1010');
+  document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  return true;
+`);
+const foreignAdded = await until(`${READ_CODES} === ${codesBeforeForeign + 1}`, 15_000);
+let foreignDrawn = false;
+for (let attempt = 0; attempt < 20 && !foreignDrawn; attempt++) {
+  await sleep(1500);
+  foreignDrawn = await js<boolean>(`
+    ${findMapInstance}
+    if (!map) return false;
+    const state = map.getFeatureState({ source: 'postal-codes', sourceLayer: 'plz', id: 'AT:1010' });
+    return Boolean(state && state.fill);
+  `);
+}
+check(
+  "foreign code draws live",
+  foreignAdded && foreignDrawn,
+  `added=${foreignAdded}; AT:1010 styled on the map=${foreignDrawn}`
+);
+
+// ---- someone else's edit shows up without a reload ----
+// Written straight to the database, the way another person's session would
+// land: nothing in this tab knows about it.
+const activeLayerId = await cdp.evaluate<number>(
+  "Number((document.querySelector('[data-layer-active=\"true\"]') || {}).getAttribute ? document.querySelector('[data-layer-active=\"true\"]').getAttribute('data-layer-row') : 0)"
+);
+const codesBeforeRemote = await panelCodes();
+const { db } = await import("../src/lib/db");
+const { sql } = await import("drizzle-orm");
+await db.execute(
+  sql`insert into area_layer_postal_codes (layer_id, postal_code) values (${activeLayerId}, 'D-80995') on conflict do nothing`
+);
+const remoteShown = await until(`${READ_CODES} === ${codesBeforeRemote + 1}`, 30_000);
+check(
+  "other user's edit shows",
+  activeLayerId > 0 && remoteShown,
+  `layer ${activeLayerId}: ${codesBeforeRemote} -> ${await panelCodes()} codes within 30s`
+);
+
+// ---- an edit in another tab shows up here ----
+const second = await Cdp.attach(`${BASE}/postal-codes/${areaId}`, { tab: "live-sync-second" });
+await second.waitFor("document.querySelectorAll('[data-layer-row]').length > 0", 120_000);
+await sleep(2500);
+// A tab behind another one reports itself hidden and skips checks until it is
+// looked at again; pretend the first tab is still in view.
+await cdp.evaluate("Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' }), true");
+const codesBeforeOtherTab = await panelCodes();
+await second.evaluate(`(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const data = new DataTransfer();
+  data.setData('text/plain', 'D-80997');
+  document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  await sleep(500);
+  return true;
+})()`);
+const otherTabShown = await until(`${READ_CODES} === ${codesBeforeOtherTab + 1}`, 15_000);
+check(
+  "other tab's edit shows",
+  otherTabShown,
+  `${codesBeforeOtherTab} -> ${await panelCodes()} codes`
+);
+await second.send("Page.close", {}).catch(() => undefined);
+second.detach();
+
 // ---- create a version: the header badge must follow ----
 const badge = () =>
   cdp.evaluate<number>(

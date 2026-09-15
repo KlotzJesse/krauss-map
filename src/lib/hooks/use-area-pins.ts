@@ -30,14 +30,29 @@ export function useAreaPins() {
   // pinnedRef always reflects the latest Set so stable isPinned reads current state
   const pinnedRef = useRef<Set<number>>(new Set());
 
-  // Load from localStorage after hydration to avoid SSR mismatch
+  // Load from localStorage after hydration to avoid SSR mismatch, and follow
+  // pins changed in another tab — the storage event only fires there.
   useEffect(() => {
+    const load = () => {
+      const pins = readPins();
+      pinnedRef.current = pins;
+      setPinnedIds(pins);
+    };
     const pins = readPins();
     pinnedRef.current = pins;
     // Only trigger a re-render if there are actually pinned items to show
     if (pins.size > 0) {
       setPinnedIds(pins);
     }
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) {
+        load();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   // Stable reference — reads from ref, never changes identity between renders

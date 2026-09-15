@@ -3,7 +3,7 @@
 import { IconDashboard, IconHistory, IconMapPin2 } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { CreateAreaDialog } from "@/components/areas/create-area-dialog";
@@ -19,7 +19,11 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import type { RecentActivityItem } from "@/lib/db/data-functions";
-import { useLiveSidebarData } from "@/lib/sync/sidebar-data";
+import {
+  onAreasRefreshed,
+  refreshOnReturn,
+  useLiveSidebarData,
+} from "@/lib/sync/sidebar-data";
 import type { AreaSummary } from "@/lib/types/area-types";
 
 const NavAreas = dynamic(() =>
@@ -71,6 +75,24 @@ export function AppSidebarClient({
   const recentActivity = live?.recentActivity ?? serverRecentActivity;
   const [createAreaDialogOpen, setCreateAreaDialogOpen] = React.useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Pages without a map — the overview's stats, area list and activity, the
+  // changelog — are server-rendered and nothing else updates them after an
+  // edit in the sidebar. Re-rendering those routes is cheap and safe; the one
+  // route that must never refresh is an open area, where it remounts the map.
+  const onMapRoute = /^\/postal-codes\/\d+/.test(pathname ?? "");
+  // Catch up on other people's edits when the tab comes back into view.
+  React.useEffect(() => refreshOnReturn(), []);
+
+  React.useEffect(() => {
+    if (onMapRoute) {
+      return undefined;
+    }
+    return onAreasRefreshed(() => {
+      router.refresh();
+    });
+  }, [onMapRoute, router]);
   const isPostalCodesRoute = pathname?.startsWith("/postal-codes/") ?? false;
   const currentAreaId =
     currentAreaIdProp ??

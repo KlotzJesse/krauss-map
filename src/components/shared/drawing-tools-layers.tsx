@@ -278,7 +278,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
   onHighlightCodes,
   handleExportLayerCSV,
 }: LayerManagementSectionProps) {
-  const { isLocked, toggleLock } = useLockedLayers(areaId);
+  const { isLocked, toggleLock, lockedLayerIds } = useLockedLayers(areaId);
 
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
   const _handleOpenConflicts = useCallback(
@@ -1050,6 +1050,9 @@ export const LayerManagementSection = memo(function LayerManagementSection({
       selectedIds,
       toggleSelect,
       isLocked,
+      // isLocked is a stable reader, so the props would never notice a lock
+      // being toggled; the set itself changes identity when one is.
+      lockedLayerIds,
       toggleLock,
       onPreviewPostalCode,
       onZoomToLayer,

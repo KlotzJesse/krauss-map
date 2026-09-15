@@ -556,6 +556,15 @@ export async function getLayerRecentChanges(layerId: number, limit = 10) {
   "use cache";
   cacheLife("minutes");
   cacheTag(`layer-${layerId}-history`);
+  return await readLayerRecentChanges(layerId, limit);
+}
+
+/**
+ * A layer's recent changes straight from the database. The history dialog
+ * opens on a click, often right after the edit it should show; the cached read
+ * can still be inside its stale window then. See readAreas.
+ */
+export async function readLayerRecentChanges(layerId: number, limit = 10) {
   try {
     return await db
       .select({

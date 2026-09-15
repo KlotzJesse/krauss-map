@@ -41,11 +41,7 @@ async function refresh(): Promise<void> {
   }
 }
 
-/** Something changed that the sidebar or header may show; re-read soon. */
-export function notifyAreasChanged(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
+function scheduleRefresh(): void {
   if (timer) {
     clearTimeout(timer);
   }
@@ -53,6 +49,89 @@ export function notifyAreasChanged(): void {
     timer = null;
     void refresh();
   }, SETTLE_MS);
+}
+
+/**
+ * Tabs of this app tell each other about edits. Without it a second tab — the
+ * same user comparing two areas, say — showed stale counts and layers until it
+ * was reloaded, because every refresh here is triggered by an edit in the same
+ * tab.
+ */
+const CHANNEL_NAME = "krauss-map-sync";
+let channel: BroadcastChannel | null = null;
+const remoteListeners = new Set<() => void>();
+
+function getChannel(): BroadcastChannel | null {
+  if (channel || typeof BroadcastChannel === "undefined") {
+    return channel;
+  }
+  channel = new BroadcastChannel(CHANNEL_NAME);
+  channel.addEventListener("message", () => {
+    // Refresh here without broadcasting again, or two tabs would echo forever.
+    scheduleRefresh();
+    for (const listener of remoteListeners) {
+      listener();
+    }
+  });
+  return channel;
+}
+
+/**
+ * Something changed that the sidebar or header may show; re-read soon.
+ *
+ * Pass `broadcast: false` when the change came from another tab in the first
+ * place, so tabs do not bounce the same edit back and forth.
+ */
+export function notifyAreasChanged(options: { broadcast?: boolean } = {}): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  scheduleRefresh();
+  if (options.broadcast !== false) {
+    getChannel()?.postMessage({ type: "areas-changed" });
+  }
+}
+
+/**
+ * Run `listener` when another tab reports an edit. The open area page uses it
+ * to check whether its own area was the one that changed.
+ */
+export function onRemoteAreasChanged(listener: () => void): () => void {
+  getChannel();
+  remoteListeners.add(listener);
+  return () => {
+    remoteListeners.delete(listener);
+  };
+}
+
+let lastFocusRefresh = 0;
+/**
+ * Re-read when the tab comes back into view. Edits by other people never pass
+ * through this tab at all; returning to it is the natural moment to catch up.
+ * Throttled so switching windows back and forth does not hammer the server.
+ */
+export function refreshOnReturn(): () => void {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+  getChannel();
+  const onReturn = () => {
+    if (document.visibilityState !== "visible") {
+      return;
+    }
+    const now = Date.now();
+    if (now - lastFocusRefresh < 15_000) {
+      return;
+    }
+    lastFocusRefresh = now;
+    scheduleRefresh();
+  };
+  document.addEventListener("visibilitychange", onReturn);
+  window.addEventListener("focus", onReturn);
+  return () => {
+    document.removeEventListener("visibilitychange", onReturn);
+    window.removeEventListener("focus", onReturn);
+  };
 }
 
 function subscribe(listener: () => void): () => void {
@@ -88,6 +167,23 @@ export function useLiveAreaText(
       return area ? (area[field] ?? "") : fallback;
     },
     () => fallback
+  );
+}
+
+/**
+ * One area's tags from the live list, as a JSON signature (stable while the
+ * tags are unchanged), or null until there is a live copy.
+ */
+export function useLiveAreaTagsSignature(
+  areaId: number | null | undefined
+): string | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => {
+      const area = latest?.areas.find((a) => a.id === areaId);
+      return area ? JSON.stringify(area.tags ?? []) : null;
+    },
+    () => null
   );
 }
 
