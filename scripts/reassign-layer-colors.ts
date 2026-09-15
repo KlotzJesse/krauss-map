@@ -57,4 +57,4 @@ async function reassignLayerColors() {
   }
 }
 
-reassignLayerColors();
+void reassignLayerColors();

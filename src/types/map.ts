@@ -1,3 +1,1 @@
-import type { Map as MapLibreMap } from "maplibre-gl";
-
-export type { MapLibreMap };
+export type { Map as MapLibreMap } from "maplibre-gl";

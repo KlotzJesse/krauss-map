@@ -66,7 +66,9 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
 
   // Close on outside click
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return undefined;
+    }
     const handler = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setOpen(false);
@@ -76,7 +78,7 @@ export function MapBookmarks({ getCurrentView, onJumpTo }: MapBookmarksProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const addBookmark = useCallback(() => {
+  const addBookmark = useCallback((): void => {
     const view = currentView ?? getCurrentView();
     const name = newName.trim();
     setIsAdding(false);

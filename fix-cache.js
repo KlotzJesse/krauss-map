@@ -10,10 +10,7 @@ for (const file of files) {
   content = content.replace(/\\s*revalidatePath,\\s*/g, " ");
   content = content.replace(/revalidatePath,\\s*/g, "");
   content = content.replace(
-    new RegExp(
-      'import\\\\s*{\\\\s*revalidatePath\\\\s*}\\\\s*from\\\\s*"next/cache";\\\\n?',
-      "g"
-    ),
+    /import\s*{\s*revalidatePath\s*}\s*from\s*"next\/cache";\n?/g,
     ""
   );
   content = content.replace(/revalidatePath\\([^)]+\\);?\\s*\\n/g, "");

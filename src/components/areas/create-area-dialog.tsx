@@ -117,7 +117,9 @@ export function CreateAreaDialog({
               <Label htmlFor="granularity">PLZ-Granularität</Label>
               <Select
                 value={granularity}
-                onValueChange={(val) => val && setGranularity(val)}
+                onValueChange={(val) => {
+                  if (val) setGranularity(val);
+                }}
                 items={Object.fromEntries(
                   ALL_GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
                 )}

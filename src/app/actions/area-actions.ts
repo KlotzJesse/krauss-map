@@ -391,7 +391,7 @@ export async function exportAreaDataAction(
 
 export async function importAreaFromDataAction(
   jsonData: string,
-  createdBy?: string
+  _createdBy?: string
 ): ServerActionResponse<{ areaId: number }> {
 
   try {
@@ -504,7 +504,7 @@ export async function importAreaFromDataAction(
     if (!newAreaId) throw new Error("Area creation failed");
 
     revalidateTag("areas", FRESH_AFTER_EDIT);
-    revalidateTag(`area-${newAreaId}`, FRESH_AFTER_EDIT);
+    revalidateTag(`area-${String(newAreaId)}`, FRESH_AFTER_EDIT);
     revalidateTag("version-info", FRESH_AFTER_EDIT);
 
     return { success: true as const, data: { areaId: newAreaId } };
@@ -1791,7 +1791,7 @@ export async function geoprocessAction(data: {
     const { mode, granularity, selectedCodes, country } = data;
     const countryFilter = country ? sql` AND country = ${country}` : sql``;
     const normalizedSelectedCodes = selectedCodes
-      .map((code) => String(code).trim())
+      .map((code) => code.trim())
       .filter((code) => code.length > 0);
     const selectedCodeList = sql.join(
       normalizedSelectedCodes.map((code) => sql`${code}`),
@@ -1809,35 +1809,27 @@ export async function geoprocessAction(data: {
     if (mode === "expand") {
       // Find unselected regions adjacent to selected
 
-      let expandRows = [];
-
-      if (normalizedSelectedCodes.length > 0) {
-        const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes
-              WHERE granularity = ${granularity}${countryFilter}
-                AND code NOT IN (${selectedCodeList})
-                AND ST_Touches(
-                  geometry,
-                  (
-                    SELECT ST_Union(geometry) AS geom
-                    FROM postal_codes
-                    WHERE granularity = ${granularity}${countryFilter}
-                      AND code IN (${selectedCodeList})
-                  )
-                )`
-        );
-
-        expandRows = rows;
-      } else {
-        const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
-        );
-
-        expandRows = rows;
-      }
+      const { rows: expandRows } = normalizedSelectedCodes.length > 0
+        ? await db.execute(
+            sql`SELECT code FROM postal_codes
+                WHERE granularity = ${granularity}${countryFilter}
+                  AND code NOT IN (${selectedCodeList})
+                  AND ST_Touches(
+                    geometry,
+                    (
+                      SELECT ST_Union(geometry) AS geom
+                      FROM postal_codes
+                      WHERE granularity = ${granularity}${countryFilter}
+                        AND code IN (${selectedCodeList})
+                    )
+                  )`
+          )
+        : await db.execute(
+            sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
+          );
 
       resultCodes = expandRows.map((r) =>
-        String((r as Record<string, unknown>)["code"])
+        String((r as Record<string, unknown>).code)
       );
     } else if (mode === "holes") {
       // Use a CTE for the convex hull to avoid recomputation and maximize performance
@@ -1863,35 +1855,27 @@ export async function geoprocessAction(data: {
     } else if (mode === "all") {
       // Find all unselected regions that intersect the selected union
 
-      let gapRows = [];
-
-      if (normalizedSelectedCodes.length > 0) {
-        const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes
-              WHERE granularity = ${granularity}${countryFilter}
-                AND code NOT IN (${selectedCodeList})
-                AND ST_Intersects(
-                  geometry,
-                  (
-                    SELECT ST_Union(geometry) AS geom
-                    FROM postal_codes
-                    WHERE granularity = ${granularity}${countryFilter}
-                      AND code IN (${selectedCodeList})
-                  )
-                )`
-        );
-
-        gapRows = rows;
-      } else {
-        const { rows } = await db.execute(
-          sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
-        );
-
-        gapRows = rows;
-      }
+      const { rows: gapRows } = normalizedSelectedCodes.length > 0
+        ? await db.execute(
+            sql`SELECT code FROM postal_codes
+                WHERE granularity = ${granularity}${countryFilter}
+                  AND code NOT IN (${selectedCodeList})
+                  AND ST_Intersects(
+                    geometry,
+                    (
+                      SELECT ST_Union(geometry) AS geom
+                      FROM postal_codes
+                      WHERE granularity = ${granularity}${countryFilter}
+                        AND code IN (${selectedCodeList})
+                    )
+                  )`
+          )
+        : await db.execute(
+            sql`SELECT code FROM postal_codes WHERE granularity = ${granularity}${countryFilter}`
+          );
 
       resultCodes = gapRows.map((r) =>
-        String((r as Record<string, unknown>)["code"])
+        String((r as Record<string, unknown>).code)
       );
     }
 
@@ -1945,7 +1929,7 @@ export async function radiusSearchAction(data: {
     );
 
     const postalCodes = rows.map((row) =>
-      String((row as { code: string }).code)
+      (row as { code: string }).code
     );
 
     return { success: true, data: { postalCodes } };
@@ -1994,7 +1978,7 @@ export async function drivingRadiusSearchAction(data: {
     );
 
     const postalCodes = rows.map((row) =>
-      String((row as { code: string }).code)
+      (row as { code: string }).code
     );
 
     return { success: true, data: { postalCodes } };
@@ -2445,7 +2429,7 @@ export async function saveLayerTemplateAction(
     const templateLayers = layers.map((l) => ({
       name: l.name,
       color: l.color,
-      opacity: Number(l.opacity ?? 0.7),
+      opacity: l.opacity ?? 0.7,
       orderIndex: l.orderIndex,
       notes: l.notes ?? null,
     }));
@@ -2727,16 +2711,16 @@ export async function getAreaComparisonAction(
     const aData: AreaComparisonData = {
       id: Number(rowA.id),
       name: String(rowA.name),
-      country: rowA.country ? String(rowA.country) : null,
-      granularity: rowA.granularity ? String(rowA.granularity) : null,
+      country: rowA.country ? (rowA.country as string) : null,
+      granularity: rowA.granularity ? (rowA.granularity as string) : null,
       layers: (rowA.layers as AreaComparisonLayer[]) ?? [],
       totalPlz: Number(rowA.totalPlz ?? 0),
     };
     const bData: AreaComparisonData = {
       id: Number(rowB.id),
       name: String(rowB.name),
-      country: rowB.country ? String(rowB.country) : null,
-      granularity: rowB.granularity ? String(rowB.granularity) : null,
+      country: rowB.country ? (rowB.country as string) : null,
+      granularity: rowB.granularity ? (rowB.granularity as string) : null,
       layers: (rowB.layers as AreaComparisonLayer[]) ?? [],
       totalPlz: Number(rowB.totalPlz ?? 0),
     };

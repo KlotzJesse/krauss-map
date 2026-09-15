@@ -699,7 +699,7 @@ export const NavAreas = memo(function NavAreas({
 
   // Close context menu on scroll or outside click
   useEffect(() => {
-    if (!contextMenu) return;
+    if (!contextMenu) return undefined;
     const handleClose = () => setContextMenu(null);
     document.addEventListener("scroll", handleClose, true);
     document.addEventListener("mousedown", handleClose);

@@ -105,10 +105,7 @@ function hexColorsAreSimilar(
     const clean = h.replace("#", "");
     const n = Number.parseInt(
       clean.length === 3
-        ? clean
-            .split("")
-            .map((c) => c + c)
-            .join("")
+        ? [...clean].map((c) => c + c).join("")
         : clean,
       16
     );
@@ -116,9 +113,7 @@ function hexColorsAreSimilar(
   };
   const [r1, g1, b1] = parse(hex1);
   const [r2, g2, b2] = parse(hex2);
-  return (
-    Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2) < threshold
-  );
+  return Math.hypot(r1 - r2, g1 - g2, b1 - b2) < threshold;
 }
 
 // ---------------------------------------------------------------------------
@@ -227,10 +222,10 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
     secondaryFillColor = secondaryEntries[0].color;
   } else {
     const n = secondaryEntries.length;
-    let sr = 0,
-      sg = 0,
-      sb = 0,
-      sa = 0;
+    let sr = 0;
+    let sg = 0;
+    let sb = 0;
+    let sa = 0;
     for (const e of secondaryEntries) {
       sr += e.color[0];
       sg += e.color[1];
@@ -317,7 +312,7 @@ function buildResolvedStyleMap(
         existing.lineWeighted[3] + lineColor[3] * weight,
       ];
       existing.weightSum += weight;
-      existing.hasActive = existing.hasActive || isActive;
+      existing.hasActive ||= isActive;
       existing.count += 1;
       existing.layerColors.push(layer.color);
       existing.layerFillEntries.push({ color: fillColor, isActive });
@@ -376,6 +371,8 @@ self.onmessage = (
     featureIndexKeysSet
   );
 
+  // A worker's postMessage takes (message, transfer) — there is no target
+  // origin to pass. The lint rule asking for one is about window.postMessage.
   self.postMessage({
     requestId,
     styleEntries: [...result.map.entries()],

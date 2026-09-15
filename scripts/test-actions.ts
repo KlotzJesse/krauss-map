@@ -1,5 +1,3 @@
-export {};
-
 /**
  * Exercises every mutating action on a test area and asserts three things about
  * each one:
@@ -44,7 +42,7 @@ if (claimed !== RUN_ID) {
 
 const ready = await cdp.waitFor(
   "Boolean(document.querySelector('canvas') && document.querySelector('[aria-label=\"Kartentools-Panel\"]'))",
-  120000
+  120_000
 );
 console.log("attached, map ready:", ready);
 if (!ready) {
@@ -209,9 +207,11 @@ async function runAction(
         const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         ${script}
       })()`),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("action timed out")), 25000)
-      ),
+      new Promise((_resolve, reject) => {
+        setTimeout(() => {
+          reject(new Error("action timed out"));
+        }, 25_000);
+      }),
     ])) as Record<string, unknown>;
   } catch (error) {
     results.push({ name, ok: false, detail: `threw: ${String(error).slice(0, 120)}` });
@@ -265,23 +265,17 @@ async function runAction(
     name,
     ok: stable && driven && complaint === null,
     detail:
-      `${stable ? "stable" : "UNSTABLE"} ${driven ? "driven" : "NOT-DRIVEN"} ` +
-      `${complaint === null ? "updated" : "STALE-UI"} ` +
-      `remount=${verdict.remounted} canvasGone=${verdict.blankCanvas} panelGone=${verdict.blankPanel} ` +
-      `mapBlank=${verdict.blankMap} styleReloads=${verdict.styleLoads} ` +
-      `layers ${layersBefore.length}->${layersAfter.length} ` +
-      (complaint === null ? "" : `— ${complaint} `) +
-      `${JSON.stringify(outcome).slice(0, 90)}`,
+      `${stable ? "stable" : "UNSTABLE"} ${driven ? "driven" : "NOT-DRIVEN"} ${complaint === null ? "updated" : "STALE-UI"} remount=${String(verdict.remounted)} canvasGone=${String(verdict.blankCanvas)} panelGone=${String(verdict.blankPanel)} mapBlank=${String(verdict.blankMap)} styleReloads=${String(verdict.styleLoads)} layers ${layersBefore.length}->${layersAfter.length} ${complaint === null ? "" : `— ${complaint} `}${JSON.stringify(outcome).slice(0, 90)}`,
   });
 
   mark("verdict");
-  const last = results[results.length - 1];
-  console.log(last.ok ? "PASS" : `FAIL
-      ${last.detail}`);
+  const last = results.at(-1);
+  console.log(last && last.ok ? "PASS" : `FAIL
+      ${last?.detail}`);
   await cdp.screenshot(`${SHOT_DIR}\\${name.replace(/[^a-z0-9]+/gi, "-")}.jpg`);
 }
 
-const byLabel = (t: string) =>
+const _byLabel = (t: string) =>
   `[...document.querySelectorAll('button')].find((b) => ((b.getAttribute('aria-label')||b.title||'')).indexOf(${JSON.stringify(t)}) === 0)`;
 
 const dismissDialogs = `
@@ -1063,7 +1057,7 @@ await runAction(
   return { ok: true, text, shown };
 `,
   (_before, _after, outcome) => {
-    descriptionText = String(outcome.text ?? "");
+    descriptionText = typeof outcome.text === "string" ? outcome.text : "";
     return outcome.shown === true
       ? null
       : `description "${descriptionText}" not shown after saving`;
@@ -1127,7 +1121,7 @@ await runAction(
   "create-version",
   createVersionScript,
   (_before, _after, outcome) => {
-    versionName = String(outcome.name ?? "");
+    versionName = typeof outcome.name === "string" ? outcome.name : "";
     if (Number(outcome.after) !== Number(outcome.before) + 1) {
       return `history lists ${String(outcome.after)} versions, expected ${Number(outcome.before) + 1}`;
     }
@@ -1138,7 +1132,7 @@ await runAction(
       return "no [data-version-badge] in the header";
     }
     if (outcome.badgeAfter === outcome.badgeBefore) {
-      return `header version badge still shows ${String(outcome.badgeAfter)}`;
+      return `header version badge still shows ${typeof outcome.badgeAfter === "string" ? outcome.badgeAfter : ""}`;
     }
     return null;
   },
@@ -1168,7 +1162,7 @@ await runAction(
   return { ok: true, name };
 `,
   (before, after, outcome) => {
-    markerName = String(outcome.name ?? "");
+    markerName = typeof outcome.name === "string" ? outcome.name : "";
     return after.some((r) => r.name === markerName) && after.length === before.length + 1
       ? null
       : `marker layer "${markerName}" did not appear`;
@@ -1282,14 +1276,14 @@ try {
   await cdp.send("Page.reload", {});
   await cdp.waitFor(
     "document.querySelectorAll('[data-layer-row]').length > 0",
-    180000
+    180_000
   );
   await sleep(2500);
   const afterReload = await readLayers();
   const consistent = fingerprint(beforeReload) === fingerprint(afterReload);
   if (descriptionText) {
     const persisted = await cdp.evaluate<boolean>(
-      `(document.querySelector('[title="Beschreibung bearbeiten"]')?.textContent || '').indexOf(${JSON.stringify(descriptionText)}) !== -1`
+      `(document.querySelector('[title="Beschreibung bearbeiten"]')?.textContent || '').includes(${JSON.stringify(descriptionText)})`
     );
     results.push({
       name: "description-persisted",
@@ -1368,7 +1362,7 @@ results.push({
         ? `stable driven updated — area ${tmpAreaId} in the sidebar without a reload`
         : `STALE-UI — area ${tmpAreaId} created but not listed in the sidebar`,
 });
-console.log(`  create-area-listed-live ... ${results[results.length - 1].ok ? "PASS" : "FAIL"}`);
+console.log(`  create-area-listed-live ... ${results.at(-1)?.ok ? "PASS" : "FAIL"}`);
 
 if (tmpAreaId > 0) {
   await cdp.evaluate("window.__probe && window.__probe.reset()");
@@ -1398,8 +1392,8 @@ if (tmpAreaId > 0) {
     return { ok: true, from, want, now: now.trim(), asked };
   `,
     (_before, _after, outcome) => {
-      granularityWanted = String(outcome.want ?? "");
-      return String(outcome.now).indexOf(granularityWanted) !== -1
+      granularityWanted = (typeof outcome.want === "string" ? outcome.want : "");
+      return String(outcome.now).includes(granularityWanted)
         ? null
         : `selector shows "${String(outcome.now)}", expected "${granularityWanted}"`;
     },
@@ -1408,12 +1402,12 @@ if (tmpAreaId > 0) {
 
   const wanted = granularityWanted;
   await cdp.send("Page.reload", {});
-  await cdp.waitFor("Boolean(document.querySelector('[aria-label=\"Kartentools-Panel\"]'))", 180000);
+  await cdp.waitFor("Boolean(document.querySelector('[aria-label=\"Kartentools-Panel\"]'))", 180_000);
   await sleep(3000);
   const afterReload = await cdp.evaluate<string>(
     `(([...document.querySelectorAll('[data-slot="select-trigger"], button[role="combobox"]')].find((b) => /\\d-stellig/.test(b.textContent || '')) || {}).textContent || '').trim()`
   );
-  const persisted = wanted !== "" && afterReload.indexOf(wanted) !== -1;
+  const persisted = wanted !== "" && afterReload.includes(wanted);
   results.push({
     name: "granularity-persisted",
     ok: persisted,
@@ -1458,13 +1452,13 @@ if (tmpAreaId > 0) {
           ? "stable driven updated — gone from the sidebar without a reload"
           : "STALE-UI — deleted but still listed in the sidebar",
   });
-  console.log(`  delete-area-unlisted-live ... ${results[results.length - 1].ok ? "PASS" : "FAIL"}`);
+  console.log(`  delete-area-unlisted-live ... ${results.at(-1)?.ok ? "PASS" : "FAIL"}`);
 }
 
 // Coming back to an area you edited must show the edit, not a cached copy of
 // the page from before it.
 await cdp.send("Page.navigate", { url: URL_TO_OPEN });
-await cdp.waitFor("document.querySelectorAll('[data-layer-row]').length > 0", 180000);
+await cdp.waitFor("document.querySelectorAll('[data-layer-row]').length > 0", 180_000);
 await sleep(2500);
 if (descriptionText) {
   const fresh = await cdp.evaluate<boolean>(
@@ -1506,7 +1500,7 @@ console.log(`\\n${results.length - failed}/${results.length} passed`);
 const errors = Cdp.consoleEvents.slice(-8).map((e) => e.text);
 if (errors.length > 0) {
   console.log("\\nconsole:");
-  for (const e of errors) console.log("  " + e);
+  for (const e of errors) console.log(`  ${e}`);
 }
 
 await cdp.evaluate("delete window.__actionRun");

@@ -73,6 +73,7 @@ export function reduceLayerChange(layers: Layer[], change: LayerChange): Layer[]
     case "replace":
       return change.layers;
   }
+  return layers;
 }
 
 export type AreaWithLayers = Area & {

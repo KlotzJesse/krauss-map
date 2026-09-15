@@ -28,9 +28,11 @@ export function useUndoRedo(
 ) {
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const canUndo = initialStatus?.canUndo;
+  const canRedo = initialStatus?.canRedo;
 
   const undo = useCallback(async () => {
-    if (!areaId || !initialStatus?.canUndo || isLoading) {
+    if (!areaId || !canUndo || isLoading) {
       return;
     }
 
@@ -56,14 +58,15 @@ export function useUndoRedo(
           },
           error: "Fehler beim Rückgängigmachen",
         });
-      } finally {
-        setIsLoading(false);
+      } catch {
+        // Error handled by executeAction callback
       }
+      setIsLoading(false);
     });
-  }, [areaId, initialStatus?.canUndo, isLoading, onStatusUpdate, options]);
+  }, [areaId, canUndo, isLoading, onStatusUpdate, options]);
 
   const redo = useCallback(async () => {
-    if (!areaId || !initialStatus?.canRedo || isLoading) {
+    if (!areaId || !canRedo || isLoading) {
       return;
     }
 
@@ -89,11 +92,12 @@ export function useUndoRedo(
           },
           error: "Fehler beim Wiederherstellen",
         });
-      } finally {
-        setIsLoading(false);
+      } catch {
+        // Error handled by executeAction callback
       }
+      setIsLoading(false);
     });
-  }, [areaId, initialStatus?.canRedo, isLoading, onStatusUpdate, options]);
+  }, [areaId, canRedo, isLoading, onStatusUpdate, options]);
 
   // No keyboard shortcuts here on purpose. The toolbar that owns these buttons
   // binds Ctrl+Z itself and skips the shortcut while a text field has focus;

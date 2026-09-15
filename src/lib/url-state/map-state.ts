@@ -1,5 +1,5 @@
 import { useQueryState } from "nuqs";
-import { useEffect, useMemo, useReducer, useRef } from "react";
+import { useEffect, useMemo, useReducer } from "react";
 
 import { DACH_CENTER, DACH_ZOOM } from "../config/countries";
 import { useStableCallback } from "../hooks/use-stable-callback";
@@ -37,16 +37,10 @@ export function useMapView() {
   const parsedLng = parsed.center[0];
   const parsedLat = parsed.center[1];
 
-  const prevCenterRef = useRef<[number, number]>([parsedLng, parsedLat]);
-  const stableCenter = useMemo(() => {
-    const [prevLng, prevLat] = prevCenterRef.current;
-    if (parsedLng === prevLng && parsedLat === prevLat) {
-      return prevCenterRef.current;
-    }
-    const next: [number, number] = [parsedLng, parsedLat];
-    prevCenterRef.current = next;
-    return next;
-  }, [parsedLng, parsedLat]);
+  const stableCenter = useMemo(
+    () => [parsedLng, parsedLat] as [number, number],
+    [parsedLng, parsedLat]
+  );
 
   const setMapView = useStableCallback(
     (view: { center: [number, number]; zoom: number }) => {

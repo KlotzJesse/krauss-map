@@ -206,7 +206,7 @@ export function StatsSection({
                           `${l.name};${l.color};${l.count};${total > 0 ? ((l.count / total) * 100).toFixed(1) : "0.0"};${l.minCode};${l.maxCode};"${(l.notes ?? "").replace(/"/g, '""')}"`
                       );
                       const csv = [header, ...rows].join("\n");
-                      const blob = new Blob(["﻿" + csv], {
+                      const blob = new Blob([`﻿${csv}`], {
                         type: "text/csv;charset=utf-8;",
                       });
                       const url = URL.createObjectURL(blob);

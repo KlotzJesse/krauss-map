@@ -70,7 +70,7 @@ export async function bulkImportPostalCodesAndLayers(
       currentCreatedLayers: number,
       currentUpdatedLayers: number
     ) =>
-      db.transaction(async (tx) => {
+      await db.transaction(async (tx) => {
         let txLayerId: number;
         let addedPostalCodes = 0;
         let isNewLayer = false;

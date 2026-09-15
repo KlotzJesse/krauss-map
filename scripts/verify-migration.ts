@@ -24,9 +24,9 @@ async function verify() {
   `);
   console.log("New columns:");
   for (const c of cols) {
-    const col = c as any;
+    const col = c as { table_name: string; column_name: string; data_type: string; column_default: unknown; is_nullable: string };
     console.log(
-      `  ${col.table_name}.${col.column_name}: ${col.data_type} default=${col.column_default} nullable=${col.is_nullable}`
+      `  ${col.table_name}.${col.column_name}: ${col.data_type} default=${String(col.column_default)} nullable=${col.is_nullable}`
     );
   }
 
@@ -39,7 +39,7 @@ async function verify() {
   `);
   console.log("\nCountry/FK constraints:");
   for (const c of constraints) {
-    const con = c as any;
+    const con = c as { table_name: string; conname: string; contype: string };
     console.log(
       `  ${con.table_name}: ${con.conname} (${con.contype === "u" ? "UNIQUE" : con.contype === "f" ? "FK" : con.contype})`
     );
@@ -62,10 +62,10 @@ async function verify() {
     sql`SELECT COUNT(*) as cnt FROM areas WHERE country = 'DE'`
   );
   console.log(`\nData verification:`);
-  console.log(`  postal_codes (country=DE): ${(pc as any).cnt}`);
-  console.log(`  states (country=DE): ${(st as any).cnt}`);
-  console.log(`  areas (country=DE): ${(ar as any).cnt}`);
+  console.log(`  postal_codes (country=DE): ${(pc as { cnt: number }).cnt}`);
+  console.log(`  states (country=DE): ${(st as { cnt: number }).cnt}`);
+  console.log(`  areas (country=DE): ${(ar as { cnt: number }).cnt}`);
 
   process.exit(0);
 }
-verify();
+void verify();

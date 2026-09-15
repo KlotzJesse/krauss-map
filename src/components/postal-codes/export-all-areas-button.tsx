@@ -33,7 +33,9 @@ export function ExportAllAreasButton() {
     <Button
       variant="outline"
       size="sm"
-      onClick={handleExport}
+      onClick={() => {
+        void handleExport();
+      }}
       disabled={loading}
       className="gap-1.5 text-xs h-8"
     >

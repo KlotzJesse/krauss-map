@@ -200,10 +200,10 @@ function blendAccumulator(acc: StyleAccumulator): ResolvedStyle {
     secondaryFillColor = secondaryEntries[0].color;
   } else {
     const n = secondaryEntries.length;
-    let sr = 0,
-      sg = 0,
-      sb = 0,
-      sa = 0;
+    let sr = 0;
+    let sg = 0;
+    let sb = 0;
+    let sa = 0;
     for (const e of secondaryEntries) {
       sr += e.color[0];
       sg += e.color[1];
@@ -298,7 +298,7 @@ function buildResolvedStyleMap(
         existing.lineWeighted[3] + lineColor[3] * weight,
       ];
       existing.weightSum += weight;
-      existing.hasActive = existing.hasActive || isActive;
+      existing.hasActive ||= isActive;
       existing.count += 1;
       existing.layerColors.push(layer.color);
       existing.layerFillEntries.push({ color: fillColor, isActive });
@@ -474,7 +474,9 @@ export function usePostalStyleState({
   const workerRequestIdRef = useRef(0);
   const lastAppliedWorkerRequestIdRef = useRef(0);
   useEffect(() => {
-    if (typeof Worker === "undefined") return; // SSR guard
+    if (typeof Worker === "undefined") {
+      return undefined;
+    }
     const worker = new Worker(
       new URL("../workers/resolve-styles.worker.ts", import.meta.url)
     );
@@ -656,6 +658,8 @@ export function usePostalStyleState({
       }
     }
     return false;
+    // resolvedStylesVersion stands in for the contents of resolvedStylesRef;
+    // without it this memo keeps the styles from before the worker answered.
   }, [hasMultiLayerCodes, multiLayerCodes, resolvedStylesVersion]);
 
   // Preview code — resolved to the canonical composite key so the tile filter
@@ -752,16 +756,18 @@ export function usePostalStyleState({
       }
       if (stateEl) {
         const stateName =
-          entry?.[3] != null ? (meta?.states[entry[3]] ?? null) : null;
+          entry?.[3] !== null && entry?.[3] !== undefined
+            ? (meta?.states[entry[3]] ?? null)
+            : null;
         stateEl.textContent = stateName ?? "";
         stateEl.style.display = stateName ? "block" : "none";
       }
       if (statsEl) {
         const bits: string[] = [];
-        if (entry?.[1] != null) {
+        if (entry?.[1] !== null && entry?.[1] !== undefined) {
           bits.push(`${entry[1].toLocaleString("de-DE")} Einw.`);
         }
-        if (entry?.[2] != null) {
+        if (entry?.[2] !== null && entry?.[2] !== undefined) {
           bits.push(`${entry[2].toLocaleString("de-DE")} km²`);
         }
         statsEl.textContent = bits.join(" · ");
@@ -786,9 +792,9 @@ export function usePostalStyleState({
           const name = document.createElement("span");
           name.className = "text-muted-foreground truncate max-w-[140px]";
           name.textContent = l.name;
-          row.appendChild(dot);
-          row.appendChild(name);
-          layersEl.appendChild(row);
+          row.append(dot);
+          row.append(name);
+          layersEl.append(row);
         }
       }
       lastTooltipCodeRef.current = code;
@@ -813,13 +819,15 @@ export function usePostalStyleState({
   // geometry fetch or the initial render.
   useEffect(() => {
     if (!granularity) {
-      return;
+      return undefined;
     }
     const w = window as typeof window & {
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
-    const warm = () => loadPostalMeta(granularity, country ?? "DE");
+    const warm = (): void => {
+      loadPostalMeta(granularity, country ?? "DE");
+    };
     if (w.requestIdleCallback) {
       const id = w.requestIdleCallback(warm, { timeout: 4000 });
       return () => w.cancelIdleCallback?.(id);

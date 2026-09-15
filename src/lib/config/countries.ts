@@ -214,7 +214,7 @@ export function detectCountryFromCode(input: string): {
   const trimmed = input.trim();
 
   // Try to match country prefix patterns: D-xxxxx, A-xxxx, CH-xxxx, AT-xxxx
-  const prefixMatch = trimmed.match(/^(D|DE|A|AT|CH)-?\s*(\d+)$/i);
+  const prefixMatch = /^(D|DE|A|AT|CH)-?\s*(\d+)$/i.exec(trimmed);
   if (prefixMatch) {
     const prefix = prefixMatch[1].toUpperCase();
     const code = prefixMatch[2];

@@ -125,22 +125,23 @@ export function useGeocodeSearch(query: string, enabled = true) {
     const requestId = ++requestIdRef.current;
 
     if (!enabled || trimmed.length < 2) {
-      setResults([]);
-      setIsLoading(false);
-      return;
+      if (results.length > 0 || isLoading) {
+        setResults([]);
+        setIsLoading(false);
+      }
+      return () => {};
     }
 
     setIsLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const response = await geocodeSearchAction({
-          query: trimmed,
-          // Only ask for postal codes when the query looks like a street
-          // address; a bare city name matches far more without it.
-          includePostalCode: /\d/.test(trimmed),
-          limit: 8,
-          enhancedSearch: true,
-        });
+    const timer = setTimeout(() => {
+      void geocodeSearchAction({
+        query: trimmed,
+        // Only ask for postal codes when the query looks like a street
+        // address; a bare city name matches far more without it.
+        includePostalCode: /\d/.test(trimmed),
+        limit: 8,
+        enhancedSearch: true,
+      }).then((response) => {
         if (requestId !== requestIdRef.current) {
           return;
         }
@@ -149,20 +150,18 @@ export function useGeocodeSearch(query: string, enabled = true) {
             ? ((response.data.results ?? []) as GeocodeResult[])
             : []
         );
-      } catch (error) {
+        setIsLoading(false);
+      }).catch((error: unknown) => {
         if (requestId === requestIdRef.current) {
           console.error("Geocoding failed:", error);
           setResults([]);
-        }
-      } finally {
-        if (requestId === requestIdRef.current) {
           setIsLoading(false);
         }
-      }
+      });
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query, enabled]);
+  }, [query, enabled, results.length, isLoading]);
 
   return { results, isLoading };
 }

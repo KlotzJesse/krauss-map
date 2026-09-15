@@ -25,49 +25,52 @@ export function useLayerMerge({
       targetLayerId: number,
       mergeStrategy: "union" | "keep-target" | "keep-source" = "union"
     ) => {
+      const targetLayer = layers.find((l) => l.id === targetLayerId);
+      if (!targetLayer) {
+        toast.error("Fehler beim Zusammenführen: Target layer not found");
+        throw new Error("Target layer not found");
+      }
+
+      const sourceLayers = layers.filter((l) =>
+        sourceLayerIds.includes(l.id)
+      );
+      if (sourceLayers.length === 0) {
+        toast.error("Fehler beim Zusammenführen: No source layers found");
+        throw new Error("No source layers found");
+      }
+
+      // Get all postal codes from source layers
+      const sourcePostalCodes = sourceLayers.flatMap(
+        (l) => l.postalCodes?.map((pc) => pc.postalCode) || []
+      );
+
+      const targetPostalCodes =
+        targetLayer.postalCodes?.map((pc) => pc.postalCode) || [];
+
+      let mergedPostalCodes: string[];
+
+      switch (mergeStrategy) {
+        case "union": {
+          // Combine all unique postal codes
+          mergedPostalCodes = [
+            ...new Set([...targetPostalCodes, ...sourcePostalCodes]),
+          ];
+          break;
+        }
+        case "keep-target": {
+          // Only keep target postal codes (ignore source)
+          mergedPostalCodes = targetPostalCodes;
+          break;
+        }
+        case "keep-source": {
+          // Replace target with source postal codes
+          mergedPostalCodes = [...new Set(sourcePostalCodes)];
+          break;
+        }
+      }
+
+      let errorToThrow: Error | null = null;
       try {
-        const targetLayer = layers.find((l) => l.id === targetLayerId);
-        if (!targetLayer) {
-          throw new Error("Target layer not found");
-        }
-
-        const sourceLayers = layers.filter((l) =>
-          sourceLayerIds.includes(l.id)
-        );
-        if (sourceLayers.length === 0) {
-          throw new Error("No source layers found");
-        }
-
-        // Get all postal codes from source layers
-        const sourcePostalCodes = sourceLayers.flatMap(
-          (l) => l.postalCodes?.map((pc) => pc.postalCode) || []
-        );
-
-        const targetPostalCodes =
-          targetLayer.postalCodes?.map((pc) => pc.postalCode) || [];
-
-        let mergedPostalCodes: string[];
-
-        switch (mergeStrategy) {
-          case "union": {
-            // Combine all unique postal codes
-            mergedPostalCodes = [
-              ...new Set([...targetPostalCodes, ...sourcePostalCodes]),
-            ];
-            break;
-          }
-          case "keep-target": {
-            // Only keep target postal codes (ignore source)
-            mergedPostalCodes = targetPostalCodes;
-            break;
-          }
-          case "keep-source": {
-            // Replace target with source postal codes
-            mergedPostalCodes = [...new Set(sourcePostalCodes)];
-            break;
-          }
-        }
-
         const mergeResult = await mergeLayersAction(
           areaId,
           targetLayerId,
@@ -75,21 +78,25 @@ export function useLayerMerge({
           mergedPostalCodes
         );
         if (!mergeResult.success) {
-          throw new Error(mergeResult.error ?? "Layer merge failed");
+          errorToThrow = new Error(mergeResult.error ?? "Layer merge failed");
+        } else {
+          toast.success(
+            `${sourceLayers.length} Layer in "${targetLayer.name}" zusammengeführt`
+          );
+          onLayerUpdate?.();
+          return mergedPostalCodes;
         }
-
-        toast.success(
-          `${sourceLayers.length} Layer in "${targetLayer.name}" zusammengeführt`
-        );
-        onLayerUpdate?.();
-
-        return mergedPostalCodes;
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
         toast.error(`Fehler beim Zusammenführen: ${errorMessage}`);
-        throw error;
+        errorToThrow = error as Error;
       }
+      if (errorToThrow) {
+        toast.error(`Fehler beim Zusammenführen: ${errorToThrow.message}`);
+        throw errorToThrow;
+      }
+      return [];
     },
     [layers, areaId, onLayerUpdate]
   );
@@ -100,18 +107,20 @@ export function useLayerMerge({
       newLayerName: string,
       postalCodes: string[]
     ) => {
+      const sourceLayer = layers.find((l) => l.id === sourceLayerId);
+      if (!sourceLayer) {
+        toast.error("Fehler beim Aufteilen: Source layer not found");
+        throw new Error("Source layer not found");
+      }
+
+      // Remove postal codes from source layer
+      const remainingCodes =
+        sourceLayer.postalCodes
+          ?.map((pc) => pc.postalCode)
+          .filter((code) => !postalCodes.includes(code)) || [];
+
+      let errorToThrow: Error | null = null;
       try {
-        const sourceLayer = layers.find((l) => l.id === sourceLayerId);
-        if (!sourceLayer) {
-          throw new Error("Source layer not found");
-        }
-
-        // Remove postal codes from source layer
-        const remainingCodes =
-          sourceLayer.postalCodes
-            ?.map((pc) => pc.postalCode)
-            .filter((code) => !postalCodes.includes(code)) || [];
-
         await updateLayerAction(areaId, sourceLayerId, {
           postalCodes: remainingCodes,
         });
@@ -124,8 +133,10 @@ export function useLayerMerge({
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
         toast.error(`Fehler beim Aufteilen: ${errorMessage}`);
-        throw error;
+        errorToThrow = error as Error;
       }
+      if (errorToThrow) throw errorToThrow;
+      return { remainingCodes: [], splitCodes: [] };
     },
     [layers, areaId]
   );

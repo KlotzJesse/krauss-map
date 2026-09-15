@@ -49,7 +49,7 @@ export const createToastCallbacks = (
         ([field, fieldMessages]) => {
           if (fieldMessages && Array.isArray(fieldMessages)) {
             fieldMessages.forEach((msg: unknown) => {
-              toast.error(`${field}: ${msg}`);
+              toast.error(`${field}: ${String(msg)}`);
             });
           }
         }

@@ -45,7 +45,7 @@ export function useCountryShapesData(
     if (cached) {
       setData(cached);
       setError(null);
-      return;
+      return () => {};
     }
 
     let cancelled = false;
@@ -94,7 +94,7 @@ export function useCountryShapesData(
         countryShapesCache.set(cacheKey, merged);
         countryShapesInflight.delete(cacheKey);
         return merged;
-      })().catch((error) => {
+      })().catch((error: unknown) => {
         countryShapesInflight.delete(cacheKey);
         throw error;
       });
@@ -108,7 +108,7 @@ export function useCountryShapesData(
           setError(null);
         }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (!cancelled) {
           console.error("Country shapes fetch failed:", error);
           setError(

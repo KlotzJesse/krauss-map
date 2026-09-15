@@ -121,14 +121,12 @@ export function findPostalCodeMatches(
     // Exact match first — O(1)
     if (searchSet.has(inputCode)) {
       matchedCodes.push(inputCode);
-    } else if (inputCode.length < 5) {
+    } else if (inputCode.length < 5 && effectiveCountry !== null) {
       // Prefix expansion within the same country scope only.
       // Without a country filter, skip prefix expansion for codes ≤4 digits to
       // avoid a 4-digit AT/CH code matching German 5-digit codes.
-      if (effectiveCountry !== null) {
-        for (const code of searchSet) {
-          if (code.startsWith(inputCode)) matchedCodes.push(code);
-        }
+      for (const code of searchSet) {
+        if (code.startsWith(inputCode)) matchedCodes.push(code);
       }
       // If no country is resolved and the code is short, skip prefix expansion
       // — the caller should set defaultCountry before calling this function.

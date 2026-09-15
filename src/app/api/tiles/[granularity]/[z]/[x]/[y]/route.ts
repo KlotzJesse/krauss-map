@@ -15,7 +15,7 @@ const VALID_GRANULARITIES = new Set([
 const MAX_ZOOM = 12;
 
 /** Web Mercator circumference in metres — one tile at z0. */
-const WORLD_METRES = 40_075_016.685_578_5;
+const WORLD_METRES = 40_075_016.6855785;
 
 /**
  * Tile extent by zoom. The whole country sits in four z5 tiles, where 4096

@@ -1,5 +1,3 @@
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-
 import type { CountryCode } from "@/lib/config/countries";
 import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { VersionSummary, ChangeSummary } from "@/lib/schema/schema";

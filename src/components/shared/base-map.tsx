@@ -78,14 +78,12 @@ import {
   useSetMapCenterZoom,
 } from "@/lib/url-state/map-state";
 import { cn } from "@/lib/utils";
-import { resolveFeatureKey } from "@/lib/utils/postal-code-keys";
 import type {
   BaseMapProps,
   MapErrorMessageProps,
   ToggleButtonProps,
 } from "@/types/base-map";
 
-import { Button } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -424,7 +422,7 @@ const MapInner = memo(function MapInner({
 
   // Close reassign popup on ESC
   useEffect(() => {
-    if (!reassignPopup) return;
+    if (!reassignPopup) return undefined;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setReassignPopup(null);
     };
@@ -441,14 +439,14 @@ const MapInner = memo(function MapInner({
   // Get raw MapLibre instance for TerraDraw and labels
   useEffect(() => {
     if (!mapRef) {
-      return;
+      return undefined;
     }
     let raw: MapLibreMap;
     try {
       raw = mapRef.getMap();
     } catch {
       // Map may have been removed during navigation
-      return;
+      return undefined;
     }
     rawMapRef.current = raw;
     mapCanvasRef.current = raw.getCanvas();
@@ -482,7 +480,7 @@ const MapInner = memo(function MapInner({
     const map = rawMapRef.current;
     const canvas = mapCanvasRef.current;
     if (!isMapLoaded || !map || !canvas) {
-      return;
+      return undefined;
     }
 
     const handleMouseDown = (event: MouseEvent) => {
@@ -601,7 +599,7 @@ const MapInner = memo(function MapInner({
   clearHoverRef.current = clearHover;
   useEffect(() => {
     const map = rawMapRef.current;
-    if (!isMapLoaded || !map) return;
+    if (!isMapLoaded || !map) return undefined;
     const onStart = () => {
       isMapInteractingRef.current = true;
       clearHoverRef.current();
@@ -666,10 +664,10 @@ const MapInner = memo(function MapInner({
     );
     if (allCodes.size === 0) return;
 
-    let minLng = Infinity,
-      maxLng = -Infinity,
-      minLat = Infinity,
-      maxLat = -Infinity;
+    let minLng = Infinity;
+    let maxLng = -Infinity;
+    let minLat = Infinity;
+    let maxLat = -Infinity;
     let found = false;
 
     for (const code of allCodes) {
@@ -741,7 +739,7 @@ const MapInner = memo(function MapInner({
 
   // M key: cycle map style
   useEffect(() => {
-    if (!onCycleMapStyle) return;
+    if (!onCycleMapStyle) return undefined;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "m" && e.key !== "M") return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -825,9 +823,8 @@ const MapInner = memo(function MapInner({
         <Activity
           mode={interactions.isDrawingToolsVisible ? "visible" : "hidden"}
         >
-          <div
+          <section
             className="flex flex-col h-full"
-            role="region"
             aria-label="Kartentools-Panel"
           >
             <DrawingToolsErrorBoundary>
@@ -868,13 +865,13 @@ const MapInner = memo(function MapInner({
                 />
               </Suspense>
             </DrawingToolsErrorBoundary>
-          </div>
+          </section>
         </Activity>
 
         <Activity
           mode={!interactions.isDrawingToolsVisible ? "visible" : "hidden"}
         >
-          <div role="region" aria-label="Kartentools-Panel">
+          <section aria-label="Kartentools-Panel">
             <ToggleButton
               onClick={handleShowTools}
               title="Kartentools anzeigen"
@@ -882,7 +879,7 @@ const MapInner = memo(function MapInner({
             >
               <PanelLeftOpen className="h-4 w-4" />
             </ToggleButton>
-          </div>
+          </section>
         </Activity>
 
         {/* Map toolbar — flush right of card/collapse button */}
@@ -1250,7 +1247,7 @@ const BaseMapComponent = ({
   removePostalCodesFromLayer,
   onLayerChange,
   onResyncLayers,
-  isViewingVersion = false,
+  isViewingVersion,
   versionId,
   versions,
   changes,
@@ -1360,10 +1357,9 @@ const BaseMapComponent = ({
 
   return (
     <MapErrorBoundary resetKeys={[areaId]}>
-      <div
+      <section
         className="relative w-full h-full"
         style={MAP_CONTAINER_STYLE}
-        role="region"
         aria-label="Interaktive Karte"
       >
         <MapRecoveryBoundary>
@@ -1427,7 +1423,7 @@ const BaseMapComponent = ({
             />
           </Map>
         </MapRecoveryBoundary>
-      </div>
+      </section>
     </MapErrorBoundary>
   );
 };

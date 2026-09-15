@@ -70,7 +70,7 @@ export async function mergeLayersAction(
     }
 
     const targetExistingCodes = new Set(
-      target.postalCodes?.map((pc) => pc.postalCode) ?? []
+      target.postalCodes.map((pc) => pc.postalCode)
     );
     const codesToAdd = (source.postalCodes ?? [])
       .map((pc) => pc.postalCode)

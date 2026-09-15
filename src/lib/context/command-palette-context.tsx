@@ -237,11 +237,16 @@ export function usePublishMapMeta(meta: MapCommandMeta | null): void {
         .join(",")}`
     : null;
 
+  // Store latest meta in a ref to access it in the effect without adding it to dependencies
+  // `serialized` captures all the parts of `meta` the palette renders, so new object identity
+  // with identical contents does not trigger unnecessary updates
+  const metaRef = useRef(meta);
   useEffect(() => {
-    setMapMeta(meta);
-    // `serialized` stands in for the parts of `meta` the palette renders, so a
-    // new array identity with identical contents does not churn state.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    metaRef.current = meta;
+  }, [meta]);
+
+  useEffect(() => {
+    setMapMeta(metaRef.current);
   }, [serialized, setMapMeta]);
 
   // Clearing belongs on unmount only. Returning the cleanup from the effect

@@ -121,7 +121,7 @@ export function exportLayersPDF(
 
     // Generate and download PDF
     const pdfDocGenerator = pdfMake.default.createPdf(docDefinition);
-    pdfDocGenerator.download(filename);
+    void pdfDocGenerator.download(filename);
 
     const totalCodes = layers.reduce(
       (sum, layer) => sum + layer.postalCodes.length,
@@ -219,7 +219,7 @@ export async function exportLayersXLSX(
     return `${totalCodes} Postleitzahlen in ${layers.length} Ebenen als XLSX exportiert`;
   };
 
-  return executeAction(exportPromise(), {
+  return await executeAction(exportPromise(), {
     loading: `📊 Exportiere Ebenen...`,
     success: (message: string) => message,
     error: "XLSX-Export fehlgeschlagen",
@@ -246,7 +246,7 @@ export async function copyPostalCodesCSV(
     return `${codes.length} Postleitzahlen in Zwischenablage kopiert`;
   };
 
-  return executeAction(copyPromise(), {
+  return await executeAction(copyPromise(), {
     loading: `📋 Kopiere ${codes.length} Postleitzahlen...`,
     success: (message: string) => message,
     error: "Kopieren in Zwischenablage fehlgeschlagen",
@@ -286,7 +286,7 @@ export async function downloadLayerCSV(
     return `${postalCodes.length} PLZ als CSV heruntergeladen`;
   };
 
-  return executeAction(downloadPromise(), {
+  return await executeAction(downloadPromise(), {
     loading: `📥 Exportiere Layer...`,
     success: (msg: string) => msg,
     error: "CSV-Export fehlgeschlagen",
@@ -356,7 +356,7 @@ export async function exportAllAreasXLSX(
     return `${totalCodes} PLZ in ${byArea.size} Gebieten exportiert`;
   };
 
-  return executeAction(exportPromise(), {
+  return await executeAction(exportPromise(), {
     loading: "📊 Exportiere alle Gebiete...",
     success: (msg: string) => msg,
     error: "Gesamt-Export fehlgeschlagen",

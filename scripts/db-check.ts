@@ -7,7 +7,7 @@ async function check() {
     const {
       rows: [ver],
     } = await db.execute(sql`SELECT version()`);
-    console.log("DB connected:", (ver as any).version?.slice(0, 60));
+    console.log("DB connected:", (ver as { version?: string }).version?.slice(0, 60));
 
     const counts = await Promise.all([
       db.execute(
@@ -23,14 +23,14 @@ async function check() {
 
     console.log("\n=== Postal Codes by Granularity ===");
     for (const row of counts[0].rows) {
-      console.log(`  ${(row as any).granularity}: ${(row as any).cnt}`);
+      console.log(`  ${(row as { granularity: string; cnt: number }).granularity}: ${(row as { granularity: string; cnt: number }).cnt}`);
     }
-    console.log(`\nStates: ${(counts[1].rows[0] as any).cnt}`);
-    console.log(`Areas: ${(counts[2].rows[0] as any).cnt}`);
-    console.log(`Layers: ${(counts[3].rows[0] as any).cnt}`);
-    console.log(`Layer Postal Codes: ${(counts[4].rows[0] as any).cnt}`);
-    console.log(`Versions: ${(counts[5].rows[0] as any).cnt}`);
-    console.log(`Changes: ${(counts[6].rows[0] as any).cnt}`);
+    console.log(`\nStates: ${(counts[1].rows[0] as { cnt: number }).cnt}`);
+    console.log(`Areas: ${(counts[2].rows[0] as { cnt: number }).cnt}`);
+    console.log(`Layers: ${(counts[3].rows[0] as { cnt: number }).cnt}`);
+    console.log(`Layer Postal Codes: ${(counts[4].rows[0] as { cnt: number }).cnt}`);
+    console.log(`Versions: ${(counts[5].rows[0] as { cnt: number }).cnt}`);
+    console.log(`Changes: ${(counts[6].rows[0] as { cnt: number }).cnt}`);
 
     // Sample some postal codes to see format
     const { rows: samples } = await db.execute(sql`
@@ -39,7 +39,7 @@ async function check() {
       ORDER BY code LIMIT 10
     `);
     console.log("\n=== Sample 5-digit codes ===");
-    for (const s of samples) console.log(`  ${(s as any).code}`);
+    for (const s of samples) console.log(`  ${(s as { code: string }).code}`);
 
     // Check unique constraints
     const { rows: constraints } = await db.execute(sql`
@@ -54,7 +54,7 @@ async function check() {
     `);
     console.log("\n=== Constraints ===");
     for (const c of constraints) {
-      const r = c as any;
+      const r = c as { constraint_type: string; constraint_name: string; columns: string };
       console.log(
         `  ${r.constraint_type}: ${r.constraint_name} (${r.columns})`
       );
@@ -71,13 +71,13 @@ async function check() {
     console.log("\n=== Schema ===");
     let t = "";
     for (const c of cols) {
-      const r = c as any;
+      const r = c as { table_name: string; column_name: string; data_type: string; column_default?: string };
       if (r.table_name !== t) {
         console.log(`\n${r.table_name}:`);
         t = r.table_name;
       }
       console.log(
-        `  ${r.column_name} (${r.data_type}${r.column_default ? ", default=" + r.column_default.slice(0, 30) : ""})`
+        `  ${r.column_name} (${r.data_type}${r.column_default ? `, default=${r.column_default.slice(0, 30)}` : ""})`
       );
     }
   } catch (e) {
@@ -85,4 +85,4 @@ async function check() {
   }
   process.exit(0);
 }
-check();
+void check();

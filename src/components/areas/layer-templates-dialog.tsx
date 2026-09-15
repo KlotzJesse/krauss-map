@@ -85,7 +85,7 @@ export function LayerTemplatesDialog({
   }, []);
 
   useEffect(() => {
-    if (open) loadTemplates();
+    if (open) void loadTemplates();
   }, [open, loadTemplates]);
 
   const handleSave = () => {

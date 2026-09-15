@@ -119,7 +119,7 @@ export function BulkImportDialog({
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: (files) => void onDrop(files),
     accept: {
       "text/csv": [".csv"],
       "application/vnd.ms-excel": [".xls"],
@@ -463,7 +463,7 @@ export function BulkImportDialog({
             </Button>
             {fileData && (
               <Button
-                onClick={handleImport}
+                onClick={() => void handleImport()}
                 disabled={
                   !stats ||
                   stats.validRows === 0 ||

@@ -384,10 +384,8 @@ export const AreaListItem = memo(
       return false;
     }
     // Only compare edit props when actually editing
-    if (next.isEditing) {
-      if (prev.editingAreaName !== next.editingAreaName) {
-        return false;
-      }
+    if (next.isEditing && prev.editingAreaName !== next.editingAreaName) {
+      return false;
     }
     // Callbacks use useCallback in parent — skip identity checks since
     // handleConfirmRename depends on editingAreaName/areas which change frequently.

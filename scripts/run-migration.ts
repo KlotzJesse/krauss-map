@@ -104,14 +104,14 @@ async function migrate() {
     sql`SELECT COUNT(*) as cnt FROM areas WHERE country = 'DE'`
   );
   console.log(`\nVerification:`);
-  console.log(`  postal_codes with country=DE: ${(pc as any).cnt}`);
-  console.log(`  states with country=DE: ${(st as any).cnt}`);
-  console.log(`  areas with country=DE: ${(ar as any).cnt}`);
+  console.log(`  postal_codes with country=DE: ${(pc as { cnt: number }).cnt}`);
+  console.log(`  states with country=DE: ${(st as { cnt: number }).cnt}`);
+  console.log(`  areas with country=DE: ${(ar as { cnt: number }).cnt}`);
 
   console.log("\n✅ Migration 0010 complete!");
   process.exit(0);
 }
-migrate().catch((e) => {
+migrate().catch((e: unknown) => {
   console.error(e);
   process.exit(1);
 });

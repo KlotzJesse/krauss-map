@@ -96,7 +96,7 @@ function decode(wires: IndexWire[]): PostalCodeIndex {
     total += wire.codes.length;
   }
 
-  const keys: string[] = new Array(total);
+  const keys: string[] = Array.from({ length: total });
   const pos = new Map<string, number>();
   const cen = new Float64Array(total * 2);
   const area = new Float64Array(total);
@@ -169,7 +169,7 @@ export function usePostalCodeIndex(
       setIndex(cached);
       setIsLoading(false);
       setError(null);
-      return;
+      return () => {};
     }
 
     let cancelled = false;
@@ -206,7 +206,7 @@ export function usePostalCodeIndex(
 
         const decoded = decode(wires);
         indexCache.set(cacheKey, decoded);
-        idbSet(cacheKey, wires);
+        void idbSet(cacheKey, wires);
         return decoded;
       })();
 
@@ -223,7 +223,7 @@ export function usePostalCodeIndex(
           setError(null);
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         inflight.delete(cacheKey);
         if (!cancelled) {
           console.error("Postal code index fetch failed:", err);

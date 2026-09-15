@@ -15,7 +15,7 @@
  *   bun scripts/import-geodata.ts --country=DE|AT|CH|ALL [--dry-run] [--skip-coarse]
  */
 import * as fs from "node:fs";
-import * as path from "node:path";
+import path from "node:path";
 
 import { sql } from "drizzle-orm";
 
@@ -74,7 +74,7 @@ function log(msg: string) {
 async function fetchJson(url: string): Promise<unknown> {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${url}`);
-  return resp.json();
+  return await resp.json();
 }
 
 async function downloadBuffer(url: string): Promise<Buffer> {
@@ -205,7 +205,7 @@ async function fetchAT(): Promise<number> {
   const jsonFile = fs.readdirSync(extractDir).find((f) => f.endsWith(".json"));
   if (!jsonFile) throw new Error("No JSON file found in AT zip");
   const data = JSON.parse(
-    fs.readFileSync(path.join(extractDir, jsonFile), "utf8")
+    fs.readFileSync(path.join(extractDir, jsonFile), "utf-8")
   ) as { features: ATFeature[] };
 
   log(`  Parsed ${data.features.length} Gemeinde features`);
@@ -346,7 +346,7 @@ async function fetchCH(): Promise<number> {
     featureCount++;
 
     const props = result.value.properties as Record<string, unknown>;
-    const code = String(props.ZIP4 ?? "");
+    const code = String((props.ZIP4 as string | number | undefined) ?? "");
     if (!code || code === "undefined") continue;
 
     // Geometry is in EPSG:2056 — insert as-is, PostGIS will reproject
@@ -356,7 +356,7 @@ async function fetchCH(): Promise<number> {
     });
 
     if (rawBatch.length >= BATCH_SIZE) {
-      await insertCHRawBatch(rawBatch.splice(0, rawBatch.length));
+      await insertCHRawBatch(rawBatch.splice(0));
     }
   }
 
@@ -424,7 +424,7 @@ async function insertStagingBatch(
 
   const values = features
     .map((f) => {
-      const code = String(f.properties?.code ?? "");
+      const code = String((f.properties?.code as string | number | undefined) ?? "");
       const geojson = JSON.stringify(f.geometry).replace(/'/g, "''");
       return `('${code}', '${country}', '${granularity}', ST_SetSRID(ST_GeomFromGeoJSON('${geojson}'), 4326), '{}', 'postdirekt-2026')`;
     })
@@ -629,7 +629,7 @@ async function main() {
         );
         for (const row of rows) {
           const r = row as Record<string, unknown>;
-          log(`  ${r.granularity}: ${r.count}`);
+          log(`  ${String(r.granularity)}: ${String(r.count)}`);
         }
       } else {
         const { upserted, deactivated } = await mergeStagingToLive(country);
@@ -648,7 +648,7 @@ async function main() {
     `);
     for (const row of finalCounts) {
       const r = row as Record<string, unknown>;
-      log(`  ${r.country} ${r.granularity}: ${r.count}`);
+      log(`  ${String(r.country)} ${String(r.granularity)}: ${String(r.count)}`);
     }
 
     // 6. Cleanup
@@ -657,7 +657,7 @@ async function main() {
 
     log("\n✅ Import complete!");
   } catch (error) {
-    log(`\n❌ Import failed: ${error}`);
+    log(`\n❌ Import failed: ${String(error)}`);
     // Cleanup on error
     try {
       await dropStagingTable();
@@ -672,4 +672,4 @@ async function main() {
   process.exit(0);
 }
 
-main();
+void main();

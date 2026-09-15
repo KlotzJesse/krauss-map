@@ -165,7 +165,7 @@ async function main(): Promise<void> {
   log("\n✅ Country shapes import complete");
 }
 
-main().catch((error) => {
+main().catch((error: unknown) => {
   console.error(error);
   process.exit(1);
 });

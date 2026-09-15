@@ -12,11 +12,6 @@
 
 import { sql } from "drizzle-orm";
 
-import {
-  detectCountryFromCode,
-  formatWithPrefix,
-} from "../lib/config/countries";
-import type { CountryCode } from "../lib/config/countries";
 import { db } from "../lib/db";
 
 async function main() {
@@ -129,7 +124,7 @@ async function main() {
         WHERE postal_code = ${numeric_code}
       `);
 
-      deletedCount += (deleteResult.rowCount as number) ?? 0;
+      deletedCount += deleteResult.rowCount ?? 0;
       mergedCount++;
     }
   }
@@ -183,7 +178,7 @@ async function main() {
   console.log("\n✨ Done!");
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error("Error:", err);
   process.exit(1);
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useInsertionEffect } from "react";
 
 import { useStableCallback } from "./use-stable-callback";
 
@@ -36,7 +36,9 @@ export function useLockedLayers(areaId: number | string) {
   );
   // Ref for stable isLocked reads without recreating the callback
   const lockedRef = useRef(lockedLayerIds);
-  lockedRef.current = lockedLayerIds;
+  useInsertionEffect(() => {
+    lockedRef.current = lockedLayerIds;
+  });
 
   // Sync from storage when areaId changes, skip the initial mount
   // (the useState initializer already read from storage on mount)

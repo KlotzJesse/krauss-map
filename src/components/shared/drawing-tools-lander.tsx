@@ -95,6 +95,10 @@ export function LänderSection({
       } else {
         toast.error(result.error ?? "Fehler beim Entfernen");
       }
+    } catch {
+      // The action reports its own failures in `result`; this only catches a
+      // request that never completed (offline, server restart).
+      toast.error("Fehler beim Entfernen");
     } finally {
       setIsRemoving(false);
       setConfirmCountry(null);
@@ -192,9 +196,9 @@ export function LänderSection({
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
               disabled={isRemoving}
-              onClick={() =>
-                confirmCountry && handleRemoveCountry(confirmCountry)
-              }
+              onClick={() => {
+                if (confirmCountry) void handleRemoveCountry(confirmCountry);
+              }}
             >
               {isRemoving ? "Wird entfernt…" : "Entfernen"}
             </AlertDialogAction>

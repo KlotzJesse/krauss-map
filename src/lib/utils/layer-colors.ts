@@ -8,9 +8,9 @@
 /** Returns true if the hex color is "light" (needs dark text for contrast). */
 export function isLightColor(hex: string): boolean {
   const c = hex.replace("#", "");
-  const r = Number.parseInt(c.substring(0, 2), 16);
-  const g = Number.parseInt(c.substring(2, 4), 16);
-  const b = Number.parseInt(c.substring(4, 6), 16);
+  const r = Number.parseInt(c.slice(0, 2), 16);
+  const g = Number.parseInt(c.slice(2, 4), 16);
+  const b = Number.parseInt(c.slice(4, 6), 16);
   return (r * 299 + g * 587 + b * 114) / 1000 > 150;
 }
 
@@ -182,7 +182,7 @@ export function hashGroupColor(groupName: string): string {
   // Simple DJB2-style hash
   let hash = 5381;
   for (let i = 0; i < groupName.length; i++) {
-    hash = (hash * 33) ^ groupName.charCodeAt(i);
+    hash = (hash * 33) ^ (groupName.codePointAt(i) ?? 0);
   }
   // Map to a spread of visually distinct hues — keep away from gray/near-white
   const hue = Math.abs(hash) % 360;

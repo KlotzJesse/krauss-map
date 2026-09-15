@@ -54,10 +54,7 @@ export function hexColorsAreSimilar(
     const clean = h.replace("#", "");
     const n = Number.parseInt(
       clean.length === 3
-        ? clean
-            .split("")
-            .map((c) => c + c)
-            .join("")
+        ? [...clean].map((c) => c + c).join("")
         : clean,
       16
     );
@@ -65,9 +62,7 @@ export function hexColorsAreSimilar(
   };
   const [r1, g1, b1] = parse(hex1);
   const [r2, g2, b2] = parse(hex2);
-  return (
-    Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2) < threshold
-  );
+  return Math.hypot(r1 - r2, g1 - g2, b1 - b2) < threshold;
 }
 
 /**

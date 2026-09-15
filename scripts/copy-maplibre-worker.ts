@@ -18,12 +18,11 @@
  * can never drift from the installed maplibre-gl version.
  */
 import { copyFileSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import path from "node:path";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const from = join(root, "node_modules", "maplibre-gl", "dist");
-const to = join(root, "public", "maplibre");
+const root = path.join(import.meta.dirname, "..");
+const from = path.join(root, "node_modules", "maplibre-gl", "dist");
+const to = path.join(root, "public", "maplibre");
 
 // The worker imports "./maplibre-gl-shared.mjs" relatively, so both files have
 // to land in the same directory.
@@ -31,11 +30,11 @@ const files = ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"];
 
 mkdirSync(to, { recursive: true });
 for (const file of files) {
-  copyFileSync(join(from, file), join(to, file));
+  copyFileSync(path.join(from, file), path.join(to, file));
 }
 
 const version = (
-  await import(join(root, "node_modules", "maplibre-gl", "package.json"), {
+  await import(path.join(root, "node_modules", "maplibre-gl", "package.json"), {
     with: { type: "json" },
   })
 ).default.version;

@@ -1,4 +1,4 @@
-import * as fs from "fs";
+import * as fs from "node:fs";
 
 import { sql } from "drizzle-orm";
 
@@ -32,8 +32,9 @@ async function backup() {
       const file = `${backupDir}/${table}.json`;
       fs.writeFileSync(file, JSON.stringify(rows, null, 2));
       console.log(`✅ ${table}: ${rows.length} rows → ${file}`);
-    } catch (e: any) {
-      console.error(`❌ ${table}: ${e.message}`);
+    } catch (e: unknown) {
+      const err = e as Error;
+      console.error(`❌ ${table}: ${err.message}`);
     }
   }
 
@@ -53,4 +54,4 @@ async function backup() {
   console.log(`\nBackup complete: ${backupDir}`);
   process.exit(0);
 }
-backup();
+void backup();

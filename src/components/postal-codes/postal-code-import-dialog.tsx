@@ -51,13 +51,13 @@ interface PostalCodeImportDialogProps {
    * (e.g. no active layer selected) so the dialog can stay open and stay
    * silent instead of claiming success.
    */
-  onImport: (postalCodes: string[]) => void | Promise<boolean | void>;
+  onImport: (postalCodes: string[]) => Promise<boolean | undefined> | undefined;
   areaId?: number; // Optional for bulk import
   /**
    * Called after a bulk import, which creates and fills layers server-side.
    * The client cannot predict the result, so it re-reads the layer list.
    */
-  onLayersChanged?: () => void | Promise<void>;
+  onLayersChanged?: () => Promise<void> | undefined;
 }
 
 export function PostalCodeImportDialog({
@@ -388,7 +388,7 @@ Trennzeichen: Komma, Semikolon, Leerzeichen, neue Zeile`}
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
-            <Button onClick={handleImport} disabled={stats.uniqueMatches === 0}>
+            <Button onClick={() => void handleImport()} disabled={stats.uniqueMatches === 0}>
               {`${stats.uniqueMatches} PLZ importieren`}
             </Button>
           </div>

@@ -50,7 +50,7 @@ export function CopyLayerToAreaDialog({
     if (!open) return;
     setLayerName(`${sourceLayerName} (Kopie)`);
     setTargetAreaId("");
-    listAreasForCopyAction().then((res) => {
+    void listAreasForCopyAction().then((res) => {
       if (res.success && res.data) {
         setAvailableAreas(res.data.filter((a) => a.id !== currentAreaId));
       }

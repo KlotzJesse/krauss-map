@@ -9,7 +9,7 @@ import type {
   MapMouseEvent,
 } from "maplibre-gl";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useInsertionEffect } from "react";
 import type { RefObject } from "react";
 
 import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
@@ -207,11 +207,14 @@ export function useMapPostalLayers({
   const needsDup3Ref = useRef(false);
   const needsPreviewRef = useRef(false);
   const needsConflictRef = useRef(false);
-  needsDupRef.current = multiLayerCodes.size > 0;
-  needsDup3Ref.current = state.hasThreePlusLayerCodes;
-  needsPreviewRef.current = previewCodes !== null;
-  needsConflictRef.current =
-    normalizedHighlightedCodes !== null && normalizedHighlightedCodes.size > 0;
+
+  useInsertionEffect(() => {
+    needsDupRef.current = multiLayerCodes.size > 0;
+    needsDup3Ref.current = state.hasThreePlusLayerCodes;
+    needsPreviewRef.current = previewCodes !== null;
+    needsConflictRef.current =
+      normalizedHighlightedCodes !== null && normalizedHighlightedCodes.size > 0;
+  });
 
   /** Pattern images added to the map, so they are only created once each. */
   const patternsRef = useRef<Set<string>>(new Set());
@@ -440,7 +443,7 @@ export function useMapPostalLayers({
   // a recycled map, which re-applies the style with diffing off.
   useEffect(() => {
     if (!(map && isMapLoaded)) {
-      return;
+      return undefined;
     }
     const ensureInstalled = () => {
       if (map.getSource(SOURCE_ID)) {
@@ -661,7 +664,7 @@ export function useMapPostalLayers({
       }
     }
 
-    for (const id of [...filters.keys()]) {
+    for (const id of filters.keys()) {
       const name = id.slice(STRIPE_LAYER_PREFIX.length);
       if (!patternGroups.has(name)) {
         if (map.getLayer(id)) {
@@ -776,8 +779,8 @@ export function useMapPostalLayers({
   );
 
   useEffect(() => {
-    if (!(map && isMapLoaded)) {
-      return;
+    if (!map || !isMapLoaded) {
+      return undefined;
     }
     map.on("mousemove", "pc-fill", handleMove);
     map.on("mouseleave", "pc-fill", handleLeave);
@@ -799,8 +802,8 @@ export function useMapPostalLayers({
 
   // Remove everything this hook added when it goes away, so switching renderer
   // or unmounting the map does not leave orphaned layers behind.
-  useEffect(() => {
-    return () => {
+  useEffect(() => 
+    () => {
       if (!map || !map.style) {
         return;
       }
@@ -819,8 +822,8 @@ export function useMapPostalLayers({
           map.removeSource(id);
         }
       }
-    };
-  }, [map]);
+    }
+  , [map]);
 
   return { unassignedCount, clearHover: handleLeave } as const;
 }

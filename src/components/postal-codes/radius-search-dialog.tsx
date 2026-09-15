@@ -255,7 +255,9 @@ export function RadiusSearchDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
-            <Button onClick={handleConfirm} disabled={isRunning || !coords}>
+            <Button onClick={() => {
+              void handleConfirm();
+            }} disabled={isRunning || !coords}>
               {radiusInput}
               {unit} {modeLabel(searchMode)} auswählen
             </Button>

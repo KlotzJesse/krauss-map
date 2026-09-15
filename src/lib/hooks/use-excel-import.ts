@@ -36,29 +36,6 @@ export function useExcelImport() {
   });
   const [isProcessing, startProcessing] = useTransition();
 
-  const loadFile = useStableCallback(async (file: File) => {
-    setState((prev) => ({ ...prev, error: null }));
-
-    try {
-      const fileData = await parseSpreadsheetFile(file);
-      const columnMapping = autoDetectColumns(fileData.headers, fileData.rows);
-
-      startProcessing(() => {
-        setState((prev) => ({
-          ...prev,
-          fileData,
-          columnMapping,
-        }));
-        processData(fileData, columnMapping);
-      });
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        error: error instanceof Error ? error.message : "Failed to parse file",
-      }));
-    }
-  });
-
   const processData = useCallback(
     (fileData: ParsedFileData, mapping: ColumnMapping) => {
       try {
@@ -82,6 +59,29 @@ export function useExcelImport() {
     },
     []
   );
+
+  const loadFile = useStableCallback(async (file: File) => {
+    setState((prev) => ({ ...prev, error: null }));
+
+    try {
+      const fileData = await parseSpreadsheetFile(file);
+      const columnMapping = autoDetectColumns(fileData.headers, fileData.rows);
+
+      startProcessing(() => {
+        setState((prev) => ({
+          ...prev,
+          fileData,
+          columnMapping,
+        }));
+        processData(fileData, columnMapping);
+      });
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        error: error instanceof Error ? error.message : "Failed to parse file",
+      }));
+    }
+  });
 
   const updateColumnMapping = useStableCallback(
     (mapping: Partial<ColumnMapping>) => {

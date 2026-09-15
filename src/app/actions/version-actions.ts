@@ -6,7 +6,11 @@ import { revalidateTag } from "next/cache";
 import { FRESH_AFTER_EDIT } from "../../lib/cache/after-edit";
 
 import { db } from "../../lib/db";
-import { readVersionIndicatorInfo } from "../../lib/db/data-functions";
+import {
+  readVersionIndicatorInfo,
+  getChangeSummaries,
+  getVersionSummaries,
+} from "../../lib/db/data-functions";
 import {
   areaVersions,
   areas,
@@ -14,10 +18,6 @@ import {
   areaLayerPostalCodes,
   areaChanges,
 } from "../../lib/schema/schema";
-import {
-  getChangeSummaries,
-  getVersionSummaries,
-} from "../../lib/db/data-functions";
 import { clearUndoRedoStacksAction } from "./change-tracking-actions";
 
 type ServerActionResponse<T = void> = Promise<{

@@ -54,7 +54,7 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
   const handleOpen = (open: boolean) => {
     setPopoverOpen(open);
     if (open) {
-      loadAllTags();
+      void loadAllTags();
     } else {
       setEditingTagId(null);
     }
@@ -96,7 +96,7 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
       const res = await createTagAction(trimmed, newTagColor);
       if (res.success && res.data) {
         await loadAllTags();
-        await handleAssign(res.data);
+        handleAssign(res.data);
         setNewTagName("");
         toast.success(`Tag „${trimmed}" erstellt`);
       } else {
@@ -242,7 +242,9 @@ export function AreaTagsManager({ areaId, initialTags }: AreaTagsManagerProps) {
                         <>
                           <button
                             type="button"
-                            onClick={() => !isAssigned && handleAssign(tag)}
+                            onClick={() => {
+                              if (!isAssigned) handleAssign(tag);
+                            }}
                             className={
                               isAssigned ? "cursor-default" : "cursor-pointer"
                             }

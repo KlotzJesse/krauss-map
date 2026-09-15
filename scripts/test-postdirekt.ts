@@ -1,5 +1,8 @@
-// Enumerate all PLZ polygons from postdirekt geocodes endpoint
 export {};
+
+// Enumerate all PLZ polygons from postdirekt geocodes endpoint
+
+
 const results: { prefix: string; count: number }[] = [];
 let total = 0;
 const allCodes = new Set<string>();

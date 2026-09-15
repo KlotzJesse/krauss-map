@@ -6,7 +6,7 @@ async function compare() {
   const { rows } = await db.execute(
     sql`SELECT code FROM postal_codes WHERE granularity = '5digit' ORDER BY code`
   );
-  const dbCodes = new Set(rows.map((r: any) => r.code));
+  const dbCodes = new Set(rows.map((r: Record<string, unknown>) => (r as { code: string }).code));
 
   const pdCodes = new Set<string>();
   const prefixes = Array.from({ length: 100 }, (_, i) =>
@@ -26,7 +26,7 @@ async function compare() {
           if (!text) return [];
           const data = JSON.parse(text);
           return (data.features ?? [])
-            .map((f: any) => f.properties?.code)
+            .map((f: { properties?: { code?: string } }) => f.properties?.code)
             .filter(Boolean) as string[];
         } catch {
           return [];
@@ -36,8 +36,8 @@ async function compare() {
     for (const codes of results) for (const c of codes) pdCodes.add(c);
   }
 
-  const onlyInDb = [...dbCodes].filter((c) => !pdCodes.has(c)).sort();
-  const onlyInPd = [...pdCodes].filter((c) => !dbCodes.has(c)).sort();
+  const onlyInDb = [...dbCodes].filter((c) => !pdCodes.has(c)).sort((a, b) => a.localeCompare(b));
+  const onlyInPd = [...pdCodes].filter((c) => !dbCodes.has(c)).sort((a, b) => a.localeCompare(b));
 
   console.log(`DB: ${dbCodes.size} | PostDirekt: ${pdCodes.size}`);
   console.log(`\nOnly in DB (${onlyInDb.length}): ${onlyInDb.join(", ")}`);
@@ -47,4 +47,4 @@ async function compare() {
 
   process.exit(0);
 }
-compare();
+void compare();

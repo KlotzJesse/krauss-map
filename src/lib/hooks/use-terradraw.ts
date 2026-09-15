@@ -85,7 +85,7 @@ export function useTerraDraw({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded || !isRequested || isInitializedRef.current) {
-      return;
+      return undefined;
     }
     // Claim the slot before awaiting, so a second mode change during the import
     // cannot start a second engine on the same map.
@@ -216,7 +216,7 @@ export function useTerraDraw({
       setIsReady(true);
     };
 
-    init().catch((error) => {
+    init().catch((error: unknown) => {
       console.error("[TerraDraw] Failed to initialize TerraDraw:", error);
       isInitializedRef.current = false;
     });

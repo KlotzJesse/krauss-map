@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { toast } from "sonner";
 
 import {
   createVersionAction,
@@ -33,7 +32,7 @@ interface AreaVersion {
 
 export function useVersionHistory(areaId: number) {
   const createVersion = useCallback(
-    async (data: {
+    (data: {
       name?: string;
       description?: string;
       changesSummary?: string;

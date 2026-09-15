@@ -18,7 +18,7 @@ const PROFILE =
     ? `${process.env.TEMP ?? "."}\\krauss-debug-chrome`
     : `${process.env.TEMP ?? "."}\\krauss-debug-chrome-${DEBUG_PORT}`;
 
-export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface TargetInfo {
   id: string;
@@ -92,7 +92,7 @@ async function privateTab(name: string): Promise<TargetInfo> {
   const idFile = `${PROFILE}-tab-${name}.id`;
   const targets = await listTargets();
   if (existsSync(idFile)) {
-    const id = readFileSync(idFile, "utf8").trim();
+    const id = readFileSync(idFile, "utf-8").trim();
     const known = targets.find((t) => t.id === id && t.type === "page");
     if (known) {
       return known;
@@ -110,12 +110,14 @@ async function privateTab(name: string): Promise<TargetInfo> {
 export class Cdp {
   static consoleEvents: { text: string }[] = [];
   private nextId = 1;
-  private pending = new Map<
+  private readonly pending = new Map<
     number,
     { resolve: (v: Record<string, unknown>) => void; reject: (e: Error) => void }
   >();
+  private readonly socket: WebSocket;
 
-  private constructor(private socket: WebSocket) {
+  private constructor(socket: WebSocket) {
+    this.socket = socket;
     socket.addEventListener("message", (event) => {
       const msg = JSON.parse(String(event.data)) as {
         id?: number;
@@ -136,7 +138,12 @@ export class Cdp {
             | { text?: string; exception?: { description?: string } }
             | undefined;
           const text =
-            args.map((a) => String(a.value ?? a.description ?? "")).join(" ") ||
+            args.map((a) => {
+              const val = a.value ?? a.description ?? "";
+              if (typeof val === "string") return val;
+              if (val === "") return "";
+              return JSON.stringify(val);
+            }).join(" ") ||
             details?.exception?.description ||
             details?.text ||
             "";
@@ -194,7 +201,7 @@ export class Cdp {
     return cdp;
   }
 
-  send(method: string, params: Record<string, unknown> = {}) {
+  send(method: string, params: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
     const id = this.nextId++;
     return new Promise<Record<string, unknown>>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
@@ -232,7 +239,7 @@ export class Cdp {
 
   async waitFor(
     expression: string,
-    timeoutMs = 60000,
+    timeoutMs = 60_000,
     intervalMs = 500
   ): Promise<boolean> {
     const deadline = Date.now() + timeoutMs;

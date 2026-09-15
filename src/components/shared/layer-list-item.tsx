@@ -284,6 +284,8 @@ function LayerColorPickerContent({
 }
 
 const PLZ_RENDER_LIMIT = 100;
+const EMPTY_LAYERS: { id: number; name: string; color: string }[] = [];
+const EMPTY_GROUPS: string[] = [];
 
 export const LayerListItem = memo(function LayerListItem({
   layer,
@@ -306,7 +308,7 @@ export const LayerListItem = memo(function LayerListItem({
   onSoloLayer,
   onRemovePostalCode,
   onMovePlz,
-  otherLayers = [],
+  otherLayers = EMPTY_LAYERS,
   onImportCSV,
   onNotesChange,
   isSelected,
@@ -326,7 +328,7 @@ export const LayerListItem = memo(function LayerListItem({
   onSplitLayer,
   onCompareLayer,
   onSetGroup,
-  existingGroups = [],
+  existingGroups = EMPTY_GROUPS,
   onCopyToArea,
   onMergeLayer,
   maxLayerPLZ,
@@ -334,7 +336,6 @@ export const LayerListItem = memo(function LayerListItem({
 }: LayerListItemProps) {
   const isOptimistic = layer.id > 1_000_000_000;
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [splitPopoverOpen, setSplitPopoverOpen] = useState(false);
   const [groupPopoverOpen, setGroupPopoverOpen] = useState(false);
   const [newGroupInput, setNewGroupInput] = useState("");
   const [codesExpanded, setCodesExpanded] = useState(false);
@@ -367,29 +368,19 @@ export const LayerListItem = memo(function LayerListItem({
     try {
       const res = await getLayerHistoryAction(layer.id);
       if (res.success) setHistoryItems(res.data);
+    } catch {
+      // A request that never completed; the action reports its own failures.
+      toast.error("Änderungshistorie konnte nicht geladen werden");
     } finally {
       setHistoryLoading(false);
     }
   }, [layer.id]);
   const isVisible = layer.isVisible !== "false";
   const currentOpacity = layer.opacity ?? 70;
-  const rawPostalCodes = layer.postalCodes ?? [];
-  // Stabilize reference: only update when actual content changes (not just parent re-render)
-  const postalCodesRef = useRef(rawPostalCodes);
-  if (rawPostalCodes !== postalCodesRef.current) {
-    const prev = postalCodesRef.current;
-    const mid = Math.floor(rawPostalCodes.length / 2);
-    if (
-      rawPostalCodes.length !== prev.length ||
-      rawPostalCodes[0]?.postalCode !== prev[0]?.postalCode ||
-      rawPostalCodes[mid]?.postalCode !== prev[mid]?.postalCode ||
-      rawPostalCodes[rawPostalCodes.length - 1]?.postalCode !==
-        prev[rawPostalCodes.length - 1]?.postalCode
-    ) {
-      postalCodesRef.current = rawPostalCodes;
-    }
-  }
-  const postalCodes = postalCodesRef.current;
+  const postalCodes = useMemo(
+    () => layer.postalCodes ?? [],
+    [layer.postalCodes]
+  );
 
   const filteredCodes = useMemo(() => {
     const q = codeSearch.trim();
@@ -442,10 +433,8 @@ export const LayerListItem = memo(function LayerListItem({
             newCodes.push(code);
           }
         }
-      } else if (/^\d{5}$/.test(segment)) {
-        if (currentCodesSet.has(segment) && !existingCodesSet.has(segment)) {
-          newCodes.push(segment);
-        }
+      } else if (/^\d{5}$/.test(segment) && currentCodesSet.has(segment) && !existingCodesSet.has(segment)) {
+        newCodes.push(segment);
       }
     }
 
@@ -586,6 +575,7 @@ export const LayerListItem = memo(function LayerListItem({
                         className="w-3 h-3 rounded-sm shrink-0 border border-border hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
                         style={{ backgroundColor: layer.color }}
                         title="Farbe ändern"
+                        aria-label="Farbe ändern"
                         onClick={(e) => e.stopPropagation()}
                       />
                     }
@@ -983,7 +973,7 @@ export const LayerListItem = memo(function LayerListItem({
                     )}
                     <DropdownMenuItem
                       onClick={() => {
-                        loadHistory();
+                        void loadHistory();
                         setHistoryOpen(true);
                       }}
                     >
@@ -1197,7 +1187,7 @@ export const LayerListItem = memo(function LayerListItem({
                 ) : null}
               </Tooltip>
             )}
-            {maxLayerPLZ != null && maxLayerPLZ > 0 && (
+            {maxLayerPLZ !== null && maxLayerPLZ !== undefined && maxLayerPLZ > 0 && (
               <div
                 className="absolute bottom-0 left-0 right-0 h-[2px] rounded-b overflow-hidden"
                 aria-hidden
@@ -1637,7 +1627,7 @@ export const LayerListItem = memo(function LayerListItem({
         )}
         <ContextMenuItem
           onClick={() => {
-            loadHistory();
+            void loadHistory();
             setHistoryOpen(true);
           }}
         >

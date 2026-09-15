@@ -16,5 +16,5 @@ export function LiveAreaTitle({
   areaId: number;
   fallback: string;
 }) {
-  return <>{useLiveAreaText(areaId, "name", fallback) || fallback}</>;
+  return useLiveAreaText(areaId, "name", fallback) || fallback;
 }

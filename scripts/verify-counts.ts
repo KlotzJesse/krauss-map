@@ -9,7 +9,7 @@ async function verify() {
   } = await db.execute(
     sql`SELECT COUNT(*) as cnt FROM postal_codes WHERE granularity = '5digit'`
   );
-  console.log(`Our 5-digit DE codes: ${(r1 as any).cnt}`);
+  console.log(`Our 5-digit DE codes: ${(r1 as { cnt: number }).cnt}`);
 
   // Check some edge cases - codes that start with 0 (leading zeros)
   const {
@@ -17,7 +17,7 @@ async function verify() {
   } = await db.execute(
     sql`SELECT COUNT(*) as cnt FROM postal_codes WHERE granularity = '5digit' AND code LIKE '0%'`
   );
-  console.log(`Codes starting with 0: ${(r2 as any).cnt}`);
+  console.log(`Codes starting with 0: ${(r2 as { cnt: number }).cnt}`);
 
   // Min/max codes
   const {
@@ -25,7 +25,7 @@ async function verify() {
   } = await db.execute(
     sql`SELECT MIN(code) as mn, MAX(code) as mx FROM postal_codes WHERE granularity = '5digit'`
   );
-  console.log(`Range: ${(r3 as any).mn} - ${(r3 as any).mx}`);
+  console.log(`Range: ${(r3 as { mn: string; mx: string }).mn} - ${(r3 as { mn: string; mx: string }).mx}`);
 
   // Check if any code has length != 5
   const {
@@ -33,7 +33,7 @@ async function verify() {
   } = await db.execute(
     sql`SELECT COUNT(*) as cnt FROM postal_codes WHERE granularity = '5digit' AND LENGTH(code) != 5`
   );
-  console.log(`Non-5-char codes: ${(r4 as any).cnt}`);
+  console.log(`Non-5-char codes: ${(r4 as { cnt: number }).cnt}`);
 
   // Summary of all granularities
   const { rows: grains } = await db.execute(sql`
@@ -45,7 +45,7 @@ async function verify() {
   `);
   console.log("\nAll granularities:");
   for (const g of grains) {
-    const r = g as any;
+    const r = g as { granularity: string; cnt: number; min_code: string; max_code: string; min_len: number; max_len: number };
     console.log(
       `  ${r.granularity}: ${r.cnt} codes (${r.min_code}–${r.max_code}, len ${r.min_len}–${r.max_len})`
     );
@@ -57,8 +57,8 @@ async function verify() {
   );
   console.log(`\nStates (${statesList.length}):`);
   for (const s of statesList)
-    console.log(`  ${(s as any).code}: ${(s as any).name}`);
+    console.log(`  ${(s as { code: string; name: string }).code}: ${(s as { code: string; name: string }).name}`);
 
   process.exit(0);
 }
-verify();
+void verify();

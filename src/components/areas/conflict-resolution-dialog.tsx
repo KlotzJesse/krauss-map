@@ -423,7 +423,7 @@ export function ConflictResolutionPanel({
                           layers={layers}
                           disabled={resolving}
                           onResolve={(targetLayerId) =>
-                            handleBatchResolve(
+                            void handleBatchResolve(
                               targetLayerId,
                               new Set(group.postalCodes)
                             )
@@ -488,7 +488,7 @@ export function ConflictResolutionPanel({
                     variant="secondary"
                     size="sm"
                     className="h-6 text-xs"
-                    onClick={handleAutoResolve}
+                    onClick={() => void handleAutoResolve()}
                     disabled={resolving || isDetecting}
                   />
                 }
@@ -512,7 +512,7 @@ export function ConflictResolutionPanel({
                       variant="secondary"
                       size="sm"
                       className="h-6 text-xs"
-                      onClick={handleAutoResolveActiveLayer}
+                      onClick={() => void handleAutoResolveActiveLayer()}
                       disabled={resolving || isDetecting}
                     />
                   }
@@ -532,7 +532,7 @@ export function ConflictResolutionPanel({
               layers={layers}
               disabled={resolving}
               onResolve={(targetLayerId) =>
-                handleBatchResolve(targetLayerId, selectedCodes)
+                void handleBatchResolve(targetLayerId, selectedCodes)
               }
             />
           </Activity>

@@ -62,7 +62,7 @@ export function useConvertRadiusToGeographic(
       try {
         const zoom = mapRef.current.getZoom();
         const metersPerPixel =
-          (156_543.033_92 * Math.cos((center[1] * Math.PI) / 180)) / 2 ** zoom;
+          (156_543.03392 * Math.cos((center[1] * Math.PI) / 180)) / 2 ** zoom;
         const geographicRadiusMeters = pixelRadius * metersPerPixel;
         const geographicRadiusDegrees = geographicRadiusMeters / 111_320;
         return geographicRadiusDegrees;

@@ -18,14 +18,13 @@ import {
   areaVersions,
   areaChanges,
   areaUndoStacks,
-  postalCodes,
 } from "../schema/schema";
 
 export async function getAreas() {
   "use cache";
   cacheLife("minutes");
   cacheTag("areas");
-  return readAreas();
+  return await readAreas();
 }
 
 /**
@@ -417,7 +416,7 @@ export async function getVersionIndicatorInfo(
   "use cache";
   cacheLife("minutes");
   cacheTag("version-info", `area-${areaId}-version-info`);
-  return readVersionIndicatorInfo(areaId, versionId);
+  return await readVersionIndicatorInfo(areaId, versionId);
 }
 
 /** The header's version badge data, bypassing the cache; see readAreas. */
@@ -505,8 +504,10 @@ export async function getChangeSummaries(
         columns: { areaId: true, versionNumber: true },
       });
       if (version) {
-        conditions.push(eq(areaChanges.versionAreaId, version.areaId));
-        conditions.push(eq(areaChanges.versionNumber, version.versionNumber));
+        conditions.push(
+          eq(areaChanges.versionAreaId, version.areaId),
+          eq(areaChanges.versionNumber, version.versionNumber)
+        );
       }
     }
 
@@ -634,7 +635,7 @@ export async function getRecentActivity(
   "use cache";
   cacheLife("minutes");
   cacheTag("recent-activity");
-  return readRecentActivity(limit);
+  return await readRecentActivity(limit);
 }
 
 /** Recent activity straight from the database; see {@link readAreas}. */
@@ -718,12 +719,6 @@ export async function getGlobalChangelog(options?: {
   const offset = options?.offset ?? 0;
 
   try {
-    const whereClause = sql`
-      ${options?.includeUndone ? sql`` : sql`ac.is_undone = 'false'`}
-      ${options?.areaId ? sql`AND ac.area_id = ${options.areaId}` : sql``}
-      ${options?.changeType ? sql`AND ac.change_type = ${options.changeType}` : sql``}
-    `;
-
     const [itemsResult, countResult] = await Promise.all([
       db.execute(sql`
         SELECT

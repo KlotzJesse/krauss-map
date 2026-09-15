@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import * as path from "node:path";
+import path from "node:path";
 
 import { sql } from "drizzle-orm";
 
@@ -28,7 +28,7 @@ async function importATStates() {
     .find((f: string) => f.endsWith(".json"));
   if (!jsonFile) throw new Error("No JSON file found");
   const data = JSON.parse(
-    fs.readFileSync(path.join(extractDir, jsonFile), "utf8")
+    fs.readFileSync(path.join(extractDir, jsonFile), "utf-8")
   );
 
   // Group features by first digit of iso (Bundesland)
@@ -196,4 +196,4 @@ async function main() {
   process.exit(0);
 }
 
-main();
+void main();

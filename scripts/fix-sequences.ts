@@ -44,4 +44,4 @@ async function fixSequences() {
   }
 }
 
-fixSequences();
+void fixSequences();

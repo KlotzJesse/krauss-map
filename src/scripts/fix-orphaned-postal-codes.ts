@@ -65,7 +65,7 @@ async function main() {
         WHERE postal_code = ${row.postal_code}
           AND layer_id = ${row.layer_id}
       `);
-      deleteCount += (deleteResult.rowCount as number) ?? 0;
+      deleteCount += deleteResult.rowCount ?? 0;
     }
     console.log(`     ✅ Deleted ${deleteCount} orphaned entries\n`);
   } else {
@@ -115,7 +115,7 @@ async function main() {
   console.log(`   - Deleted ${deleteCount} orphaned entries\n`);
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error("Error:", err);
   process.exit(1);
 });

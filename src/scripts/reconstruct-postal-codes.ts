@@ -56,7 +56,7 @@ async function main() {
 
       // --- Step 1: Load the most recent snapshot that has postal codes ---
       const { rows: snapshots } = await client.query<{
-        version_number: number; snapshot: any; created_at: string;
+        version_number: number; snapshot: unknown; created_at: string;
       }>(
         `SELECT version_number, snapshot, created_at
          FROM area_versions
@@ -73,14 +73,15 @@ async function main() {
         const { version_number, snapshot } = snapshots[0];
         snapshotVersion = version_number;
 
-        const snapshotLayers: Array<{ id: number; postalCodes: string[] }> =
-          snapshot.layers ?? [];
+        // Snapshots written by older versions hold some codes as numbers.
+        const snapshotLayers: Array<{ id: number; postalCodes: (string | number)[] }> =
+          (snapshot as { layers?: Array<{ id: number; postalCodes: (string | number)[] }> })?.layers ?? [];
 
         for (const sl of snapshotLayers) {
           if (!layerIds.has(sl.id)) continue; // layer was deleted
           const codes = layerCodes.get(sl.id)!;
           for (const raw of sl.postalCodes ?? []) {
-            codes.add(normalizeCode(raw, countryPrefix));
+            codes.add(normalizeCode(String(raw), countryPrefix));
           }
         }
 
@@ -94,7 +95,7 @@ async function main() {
       // Changes with version_number >= snapshotVersion (the snapshot is the state
       // AT THE START of snapshotVersion, so we apply all changes for that version too)
       const { rows: changes } = await client.query<{
-        change_type: string; change_data: any; sequence_number: number; version_number: number;
+        change_type: string; change_data: unknown; sequence_number: number; version_number: number;
       }>(
         `SELECT change_type, change_data, sequence_number, version_number
          FROM area_changes
@@ -107,10 +108,15 @@ async function main() {
       );
 
       for (const change of changes) {
-        const data = change.change_data;
+        const data = change.change_data as {
+          layerId?: number;
+          layerIds?: number[];
+          // Older change rows stored some codes as numbers.
+          postalCodes?: (string | number)[];
+        };
 
         if (change.change_type === "add_postal_codes") {
-          const layerId = data.layerId as number;
+          const layerId = data.layerId!;
           if (!layerCodes.has(layerId)) continue;
           const codes = layerCodes.get(layerId)!;
           for (const raw of data.postalCodes ?? []) {
@@ -146,7 +152,7 @@ async function main() {
 
         // Batch insert
         const values: string[] = [];
-        const params: any[] = [];
+        const params: unknown[] = [];
         let idx = 1;
         for (const code of codes) {
           values.push(`($${idx}, $${idx + 1})`);
@@ -190,7 +196,7 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error("Fatal:", e.message, e.detail ?? "");
+main().catch((e: unknown) => {
+  console.error("Fatal:", e instanceof Error ? e.message : String(e));
   process.exit(1);
 });

@@ -23,10 +23,10 @@ export function useMountOnce(open: boolean): boolean {
   const [mounted, setMounted] = useState(open);
 
   useEffect(() => {
-    if (open) {
+    if (open && !mounted) {
       setMounted(true);
     }
-  }, [open]);
+  }, [open, mounted]);
 
   return mounted;
 }

@@ -298,7 +298,9 @@ export function GranularitySelector({
           </span>
           <Select
             value={optimisticGranularity}
-            onValueChange={(val) => val && handleGranularitySelect(val)}
+            onValueChange={(val) => {
+              if (val) handleGranularitySelect(val);
+            }}
             disabled={isPending}
             items={Object.fromEntries(
               ALL_GRANULARITY_OPTIONS.map((opt) => [opt.value, opt.label])
@@ -425,7 +427,7 @@ export function GranularitySelector({
                 Abbrechen
               </AlertDialogCancel>
               <AlertDialogAction
-                onClick={handleConfirmChange}
+                onClick={() => void handleConfirmChange()}
                 variant="destructive"
               >
                 Trotzdem wechseln

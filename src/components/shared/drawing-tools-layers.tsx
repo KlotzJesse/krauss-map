@@ -43,15 +43,13 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { memo } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useInsertionEffect } from "react";
 import type { Dispatch, RefObject } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
   fixDuplicateCodeAction,
   fixDuplicateWithLayerAction,
-  addPostalCodesByPrefixAction,
 } from "@/app/actions/area-actions";
 import { LayerTemplatesDialog } from "@/components/areas/layer-templates-dialog";
 import { LayerListItem } from "@/components/shared/layer-list-item";
@@ -104,7 +102,7 @@ import {
   detectCountryFromCode,
   formatWithPrefix,
 } from "@/lib/config/countries";
-import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
+import type { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import { useLockedLayers } from "@/lib/hooks/use-locked-layers";
 import { useStableCallback } from "@/lib/hooks/use-stable-callback";
 import type { Layer } from "@/lib/types/area-types";
@@ -115,11 +113,10 @@ import {
 import {
   COLOR_THEMES,
   hashGroupColor,
-  reassignAllColors,
 } from "@/lib/utils/layer-colors";
 
-import type { DrawingToolsProps } from "./drawing-tools";
 import type {
+  DrawingToolsProps,
   DrawingToolsUIState,
   DrawingToolsUIAction,
 } from "./drawing-tools";
@@ -284,7 +281,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
   const { isLocked, toggleLock } = useLockedLayers(areaId);
 
   // Stabilize dispatch callbacks to prevent Button/TooltipTrigger re-renders
-  const handleOpenConflicts = useCallback(
+  const _handleOpenConflicts = useCallback(
     () => onOpenConflicts?.(),
     [onOpenConflicts]
   );
@@ -316,6 +313,20 @@ export const LayerManagementSection = memo(function LayerManagementSection({
     },
     [dispatchUI]
   );
+
+  // CSV import dialog state — needed early for guardedImportCSV
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importTargetLayerId, setImportTargetLayerId] = useState<number | null>(
+    null
+  );
+  const [importText, setImportText] = useState("");
+  const [importPending, setImportPending] = useState(false);
+
+  const openImportDialog = useCallback((layerId: number) => {
+    setImportTargetLayerId(layerId);
+    setImportText("");
+    setImportDialogOpen(true);
+  }, []);
 
   // Lock-guarded wrappers — no-op when the target layer is locked
   const guardedRemovePostalCode = useStableCallback(
@@ -355,7 +366,9 @@ export const LayerManagementSection = memo(function LayerManagementSection({
   >("default");
 
   const optimisticLayersRef = useRef(optimisticLayers);
-  optimisticLayersRef.current = optimisticLayers;
+  useInsertionEffect(() => {
+    optimisticLayersRef.current = optimisticLayers;
+  });
 
   const [showDuplicates, setShowDuplicates] = useState(false);
   const filteredLayers = useMemo(() => {
@@ -380,26 +393,10 @@ export const LayerManagementSection = memo(function LayerManagementSection({
   const isDragDisabled = !!layerSearch.trim() || layerSortMode !== "default";
 
   // PLZ quick-find: search which layer(s) contain a given code
-  const [plzFindQuery, setPlzFindQuery] = useState("");
+  const [plzFindQuery, _setPlzFindQuery] = useState("");
   const internalPlzFindInputRef = useRef<HTMLInputElement | null>(null);
-  const plzFindInputRef = externalPlzFindInputRef ?? internalPlzFindInputRef;
   const internalNewLayerInputRef = useRef<HTMLInputElement | null>(null);
   const newLayerInputRef = externalNewLayerInputRef ?? internalNewLayerInputRef;
-  const plzFindResults = useMemo(() => {
-    const q = plzFindQuery.trim().replace(/\D/g, "");
-    if (q.length < 2) return null;
-    return optimisticLayers
-      .filter((l) => l.postalCodes?.some((pc) => pc.postalCode.startsWith(q)))
-      .map((l) => ({
-        id: l.id,
-        name: l.name,
-        color: l.color,
-        matchingCodes: (l.postalCodes ?? [])
-          .filter((pc) => pc.postalCode.startsWith(q))
-          .map((pc) => pc.postalCode)
-          .slice(0, 5),
-      }));
-  }, [plzFindQuery, optimisticLayers]);
 
   // Bulk select state
   const [selectMode, setSelectMode] = useState(false);
@@ -449,21 +446,13 @@ export const LayerManagementSection = memo(function LayerManagementSection({
   );
   const [bulkGroupPopoverOpen, setBulkGroupPopoverOpen] = useState(false);
 
-  // CSV import dialog state
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importTargetLayerId, setImportTargetLayerId] = useState<number | null>(
-    null
-  );
-  const [importText, setImportText] = useState("");
-  const [importPending, setImportPending] = useState(false);
-
   // PLZ range/prefix add state
   const [prefixInput, setPrefixInput] = useState("");
   const prefixMatches = useMemo(() => {
     const raw = prefixInput.trim().replace(/\s/g, "");
     if (!raw || !allCodesSet || allCodesSet.size === 0) return null;
     // Support: "80", "8", "80-89", "8-9" (prefix ranges)
-    const rangeMatch = raw.match(/^(\d{1,4})-(\d{1,4})$/);
+    const rangeMatch = /^(\d{1,4})-(\d{1,4})$/.exec(raw);
     if (rangeMatch) {
       const [, fromStr, toStr] = rangeMatch;
       const len = Math.max(fromStr.length, toStr.length);
@@ -480,7 +469,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
     return [...allCodesSet].filter((c) => c.startsWith(digits));
   }, [prefixInput, allCodesSet]);
 
-  const handleAddByPrefix = useCallback(async () => {
+  const _handleAddByPrefix = useCallback(async () => {
     if (!addPostalCodesToLayer || !activeLayerId || !prefixMatches?.length)
       return;
     // Filter out already-assigned codes from active layer
@@ -488,7 +477,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
       (l) => l.id === activeLayerId
     );
     const existing = new Set(
-      activeLayer?.postalCodes?.map((pc) => pc.postalCode) ?? []
+      (activeLayer?.postalCodes ?? []).map((pc) => pc.postalCode)
     );
     const toAdd = prefixMatches.filter((c) => !existing.has(c));
     if (toAdd.length === 0) {
@@ -502,7 +491,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
 
   // Sync prefix matches to map highlight
   useEffect(() => {
-    if (!onHighlightCodes) return;
+    if (!onHighlightCodes) return undefined;
     if (prefixMatches && prefixMatches.length > 0) {
       onHighlightCodes(new Set(prefixMatches));
     } else {
@@ -671,12 +660,6 @@ export const LayerManagementSection = memo(function LayerManagementSection({
     [optimisticLayers]
   );
 
-  const openImportDialog = useCallback((layerId: number) => {
-    setImportTargetLayerId(layerId);
-    setImportText("");
-    setImportDialogOpen(true);
-  }, []);
-
   const handleImportCSV = useCallback(async () => {
     if (!addPostalCodesToLayer || !importTargetLayerId) return;
     const codes = importText
@@ -713,9 +696,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const raw = String(ev.target?.result ?? "");
+      void file.text().then((raw) => {
         // Detect GeoJSON: extract postal code properties
         const isJsonFile =
           file.name.endsWith(".json") || file.name.endsWith(".geojson");
@@ -735,14 +716,15 @@ export const LayerManagementSection = memo(function LayerManagementSection({
               const codes = features
                 .map((f) => {
                   const p = f.properties ?? {};
-                  const rawVal =
-                    p.postal_code ??
+                  // GeoJSON exports often store postal codes as numbers
+                  // (80331, not "80331"), so convert before trimming.
+                  const rawVal = (p.postal_code ??
                     p.postcode ??
                     p.plz ??
                     p.PLZ ??
                     p.code ??
                     p.zip ??
-                    "";
+                    "") as string | number;
                   const s = String(rawVal).trim();
                   const detected = detectCountryFromCode(s);
                   if (detected.country)
@@ -765,8 +747,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
           }
         }
         setImportText((prev) => (prev ? `${prev}\n${raw}` : raw));
-      };
-      reader.readAsText(file);
+      });
       e.target.value = "";
     },
     []
@@ -879,7 +860,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
   );
 
   // Per-layer duplicate postal code counts + overall stats
-  const { duplicateCountByLayer, duplicateCodeMap, layerStats } =
+  const { duplicateCountByLayer, duplicateCodeMap, layerStats: _layerStats } =
     useMemo(() => {
       const counts = new Map<number, number>();
       const codeToLayers = new Map<string, number[]>();
@@ -1519,8 +1500,8 @@ export const LayerManagementSection = memo(function LayerManagementSection({
                 }}
               />
               <Button
-                onClick={async () => {
-                  await handleCreateLayer();
+                onClick={() => {
+                  handleCreateLayer();
                   setShowNewLayerInput(false);
                 }}
                 disabled={!form.newLayerName.trim() || form.isCreating}
@@ -1748,7 +1729,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
                                       type="button"
                                       className="px-1 rounded text-[9px] font-medium border border-transparent hover:border-current transition-all hover:scale-105"
                                       style={{
-                                        backgroundColor: l.color + "33",
+                                        backgroundColor: `${l.color  }33`,
                                         color: l.color,
                                       }}
                                       onClick={async () => {
@@ -1835,7 +1816,7 @@ export const LayerManagementSection = memo(function LayerManagementSection({
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                handleImportCSV();
+                void handleImportCSV();
               }}
               disabled={importPending || !importText.trim()}
             >

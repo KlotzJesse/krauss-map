@@ -34,6 +34,8 @@ const RecentActivityFeed = dynamic(() =>
   }))
 );
 
+const EMPTY_ACTIVITY: RecentActivityItem[] = [];
+
 const data = {
   navMain: [
     {
@@ -58,7 +60,7 @@ interface AppSidebarClientProps extends React.ComponentProps<typeof Sidebar> {
 
 export function AppSidebarClient({
   areas: serverAreas,
-  recentActivity: serverRecentActivity = [],
+  recentActivity: serverRecentActivity = EMPTY_ACTIVITY,
   currentAreaId: currentAreaIdProp,
   onAreaSelect,
   ...props
@@ -73,14 +75,14 @@ export function AppSidebarClient({
   const currentAreaId =
     currentAreaIdProp ??
     (pathname
-      ? Number(pathname.match(/\/postal-codes\/(\d+)/)?.[1]) || null
+      ? Number((/\/postal-codes\/(\d+)/.exec(pathname))?.[1]) || null
       : null);
   const [isSidebarDataMounted, setIsSidebarDataMounted] = React.useState(false);
 
   React.useEffect(() => {
     if (!isPostalCodesRoute) {
       setIsSidebarDataMounted(true);
-      return;
+      return undefined;
     }
     // On a map route the area list used to stay behind a manual "Gebiete
     // laden" button because getAreas() cost ~4.5s. That query is now ~0.3s,
@@ -91,12 +93,19 @@ export function AppSidebarClient({
       cancelIdleCallback?: (id: number) => void;
     };
     const mount = () => setIsSidebarDataMounted(true);
+    let cleanup: (() => void) | undefined;
     if (w.requestIdleCallback) {
       const id = w.requestIdleCallback(mount, { timeout: 3000 });
-      return () => w.cancelIdleCallback?.(id);
+      cleanup = () => {
+        w.cancelIdleCallback?.(id);
+      };
+    } else {
+      const id = window.setTimeout(mount, 1500);
+      cleanup = () => {
+        window.clearTimeout(id);
+      };
     }
-    const id = window.setTimeout(mount, 1500);
-    return () => window.clearTimeout(id);
+    return cleanup;
   }, [isPostalCodesRoute]);
 
   const handleCreateArea = React.useCallback(() => {

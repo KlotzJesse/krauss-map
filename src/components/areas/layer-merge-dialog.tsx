@@ -246,7 +246,9 @@ export function LayerMergeDialog({
               <Label>Ziel-Layer (behält Name und Farbe)</Label>
               <Select
                 value={targetLayerId}
-                onValueChange={(val) => val && setTargetLayerId(val)}
+                onValueChange={(val) => {
+                  if (val) setTargetLayerId(val);
+                }}
                 items={Object.fromEntries(
                   [...selectedLayers].map((id) => [
                     id,
@@ -289,10 +291,9 @@ export function LayerMergeDialog({
               <Label>Strategie</Label>
               <Select
                 value={strategy}
-                onValueChange={(val) =>
-                  val &&
-                  setStrategy(val as "union" | "keep-target" | "keep-source")
-                }
+                onValueChange={(val) => {
+                  if (val) setStrategy(val as "union" | "keep-target" | "keep-source");
+                }}
                 items={{
                   union: "Vereinigung (Union)",
                   "keep-target": "Ziel behalten",
@@ -365,7 +366,7 @@ export function LayerMergeDialog({
             Abbrechen
           </Button>
           <Button
-            onClick={handleMerge}
+            onClick={() => void handleMerge()}
             disabled={selectedLayers.size < 2 || !targetLayerId || isMerging}
           >
             {isMerging ? "Zusammenführen..." : "Gebiete zusammenführen"}

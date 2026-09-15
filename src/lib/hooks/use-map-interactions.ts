@@ -11,7 +11,6 @@ import { useTerraDraw } from "@/lib/hooks/use-terradraw";
 import type { SelectAreaLayers } from "@/lib/schema/schema";
 import {
   extractRawCode,
-  getFeatureStoredCode,
   storedCodeToCompositeKey,
 } from "@/lib/utils/postal-code-keys";
 
@@ -206,7 +205,7 @@ export function useMapInteractions({
 
       const codeExists =
         existingCodesSet.has(storedCode) ||
-        Array.from(existingCodesSet).some(
+        [...existingCodesSet].some(
           (code) => arePostalCodesEquivalent(code, storedCode)
         );
 

@@ -33,15 +33,14 @@ export function LiveVersionBadge({
   const live = useLiveSidebarData();
 
   useEffect(() => {
-    if (!live) {
-      return;
-    }
     let cancelled = false;
-    void getVersionIndicatorInfoAction(areaId).then((result) => {
-      if (!cancelled && result.success && result.data) {
-        setInfo(result.data);
-      }
-    });
+    if (live) {
+      void getVersionIndicatorInfoAction(areaId).then((result) => {
+        if (!cancelled && result.success && result.data) {
+          setInfo(result.data);
+        }
+      });
+    }
     return () => {
       cancelled = true;
     };

@@ -77,7 +77,11 @@ export async function parseSpreadsheetFile(
       headers.forEach((header, idx) => {
         const value = (row as unknown[])[idx];
         rowObj[header] =
-          value === null || value === undefined ? null : String(value).trim();
+          value === null || value === undefined
+            ? null
+            : // Spreadsheet cells are often numbers (a postal code column
+              // typed as numeric), so convert before trimming.
+              (typeof value === "string" ? value : String(value as number)).trim();
       });
       return rowObj;
     })
@@ -109,7 +113,7 @@ function detectHeaders(data: unknown[][]): boolean {
     (cell) =>
       typeof cell === "string" &&
       cell.trim().length > 0 &&
-      !/^\d+$/.test(String(cell))
+      !/^\d+$/.test(cell)
   );
 
   const secondRowHasNumbers = secondRow.some(

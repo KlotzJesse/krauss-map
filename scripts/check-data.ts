@@ -35,4 +35,4 @@ async function checkData() {
   }
 }
 
-checkData();
+void checkData();

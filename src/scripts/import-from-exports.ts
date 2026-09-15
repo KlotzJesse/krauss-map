@@ -5,9 +5,9 @@
  */
 
 import "dotenv/config";
-import XLSX from "xlsx";
-import * as path from "path";
-import * as fs from "fs";
+import { readFile, utils } from "xlsx";
+import path from "node:path";
+import * as fs from "node:fs";
 import { Pool } from "pg";
 
 interface ExportFile {
@@ -90,7 +90,7 @@ async function main() {
       }
 
       console.log(`\n📂 Processing: ${file} (area ${areaId} '${areaName}')`);
-      const wb = XLSX.readFile(filePath);
+      const wb = readFile(filePath);
       const areaLayers = layerLookup.get(areaId);
 
       let areaInserted = 0;
@@ -118,7 +118,7 @@ async function main() {
         }
 
         // Read data from sheet
-        const data = XLSX.utils.sheet_to_json(ws, {
+        const data = utils.sheet_to_json(ws, {
           header: 1,
           raw: false,
         }) as unknown as string[][];
@@ -155,7 +155,7 @@ async function main() {
 
         // Insert
         const values: string[] = [];
-        const params: any[] = [];
+        const params: unknown[] = [];
         let idx = 1;
         for (const code of codes) {
           values.push(`($${idx}, $${idx + 1})`);
@@ -196,7 +196,7 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error("Fatal:", e.message);
+main().catch((e: unknown) => {
+  console.error("Fatal:", e instanceof Error ? e.message : String(e));
   process.exit(1);
 });

@@ -1,75 +1,27 @@
 "use client";
 
-import {
-  DndContext,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import type { DragEndEvent } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import type { Route } from "next";
+import type { CountryCode } from "@/lib/config/countries";
 import { useRouter } from "next/navigation";
 import {
-  restrictToParentElement,
-  restrictToVerticalAxis,
-} from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import {
   IconAlertTriangle,
-  IconChevronDown,
-  IconClock,
-  IconDeviceFloppy,
-  IconDots,
-  IconGitMerge,
   IconHistory,
-  IconLayoutColumns,
-  IconPlus,
 } from "@tabler/icons-react";
 import {
-  ArrowDownUp,
-  CheckSquare,
-  ChevronDown,
-  ChevronUp,
   Download,
-  Eye,
-  EyeOff,
   FileArchive,
   FileJson,
   FileSpreadsheet,
   FileText,
-  Folder,
   HelpCircle,
-  MapPin,
-  Palette,
   Redo2,
-  Search,
-  Square,
-  Trash2,
   Undo2,
   Upload,
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { memo } from "react";
-import type { Dispatch, RefObject } from "react";
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useOptimistic,
-  useReducer,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { Suspense, memo, useCallback, useEffect, useMemo, useOptimistic, useReducer, useRef, useState, useTransition, type Dispatch, useInsertionEffect } from "react";
 import { toast } from "sonner";
 
 import {
@@ -82,8 +34,6 @@ import {
   exportAreaGeoJSONAction,
   exportAreaDataAction,
   importAreaFromDataAction,
-  fixDuplicateCodeAction,
-  fixDuplicateWithLayerAction,
   addPostalCodesByPrefixAction,
   splitLayerAction,
 } from "@/app/actions/area-actions";
@@ -93,13 +43,10 @@ import {
 } from "@/app/actions/change-tracking-actions";
 import {
   batchUpdateVisibilityAction,
-  mergeLayersAction,
-  removePostalCodesByCountryAction,
 } from "@/app/actions/layer-actions";
 import { AreaTagsManager } from "@/components/areas/area-tags-manager";
 import { DrawingActionsSection } from "@/components/shared/drawing-actions-section";
 import { GranularitySelector } from "@/components/shared/granularity-selector";
-import { LayerListItem } from "@/components/shared/layer-list-item";
 import { PendingRegionsSection } from "@/components/shared/pending-regions-section";
 import {
   AlertDialog,
@@ -112,7 +59,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -120,11 +66,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -139,17 +80,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -157,11 +89,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  type CountryCode,
-  detectCountryFromCode,
-  formatWithPrefix,
-} from "@/lib/config/countries";
 import { useLayerFormState } from "@/lib/hooks/use-layer-form-state";
 import { useRegisterMapCommands } from "@/lib/context/command-palette-context";
 import { useMountOnce } from "@/lib/hooks/use-mount-once";
@@ -187,17 +114,11 @@ import {
   exportLayersXLSX,
 } from "@/lib/utils/export-utils";
 import {
-  COLOR_THEMES,
   generateNextColor,
-  hashGroupColor,
   reassignAllColors,
 } from "@/lib/utils/layer-colors";
 
 const EMPTY_ARRAY: never[] = [];
-
-// Stable DnD config — defined outside components to avoid re-renders on each render cycle
-const DND_MODIFIERS = [restrictToVerticalAxis, restrictToParentElement];
-const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 5 } };
 
 // Lazy-load dialog components — only fetched when users open them
 const CreateVersionDialog = dynamic(
@@ -271,7 +192,7 @@ export interface DrawingToolsProps {
 
   granularity?: string;
 
-  country?: import("@/lib/config/countries").CountryCode;
+  country?: CountryCode;
 
   onGranularityChange?: (granularity: string) => void;
 
@@ -502,8 +423,6 @@ async function fillRegions(
             : "eine Ebene";
 
       return `${count} Region${count === 1 ? "" : "en"} gefüllt (${modeText})`;
-    } catch (error) {
-      throw error;
     } finally {
       setIsFilling(false);
     }
@@ -590,7 +509,9 @@ function useDrawingToolsActions({
   // in their dep array (which would recreate them on every layer change,
   // defeating memo() on LayerListItem and LayerManagementSection).
   const optimisticLayersRef = useRef(optimisticLayers);
-  optimisticLayersRef.current = optimisticLayers;
+  useInsertionEffect(() => {
+    optimisticLayersRef.current = optimisticLayers;
+  });
 
   const [_isPending, startTransition] = useTransition();
 
@@ -645,13 +566,13 @@ function useDrawingToolsActions({
     dispatchUI({ type: "AUTO_OPEN_REGIONS" });
   }
 
-  const createLayer = async (data: {
+  const createLayer = useStableCallback(async (data: {
     name: string;
     color: string;
     orderIndex: number;
   }) => {
     if (!areaId) {
-      return;
+      return undefined;
     }
     const result = await createLayerAction(areaId, {
       name: data.name,
@@ -675,9 +596,9 @@ function useDrawingToolsActions({
       return result.data;
     }
     throw new Error(result.error);
-  };
+  });
 
-  const updateLayer = async (
+  const updateLayer = useStableCallback(async (
     layerId: number,
     data: Record<string, unknown>
   ) => {
@@ -694,9 +615,9 @@ function useDrawingToolsActions({
     } else {
       throw new Error(result.error);
     }
-  };
+  });
 
-  const deleteLayer = async (layerId: number) => {
+  const deleteLayer = useStableCallback(async (layerId: number) => {
     if (!areaId) {
       return;
     }
@@ -717,7 +638,7 @@ function useDrawingToolsActions({
     } else {
       throw new Error(result.error);
     }
-  };
+  });
 
   const handleAddPendingToLayer = async () => {
     if (
@@ -902,7 +823,7 @@ function useDrawingToolsActions({
     toast.success(`${layersWithCodes.length} Ebenen als ZIP exportiert`);
   }, [areaName, areaId]);
 
-  const handleCreateLayer = useCallback(async () => {
+  const handleCreateLayer = useCallback(() => {
     if (!form.newLayerName.trim()) {
       return;
     }
@@ -943,6 +864,7 @@ function useDrawingToolsActions({
       );
     });
   }, [
+    createLayer,
     form.newLayerName,
     areaId,
     dispatchForm,
@@ -952,7 +874,7 @@ function useDrawingToolsActions({
   ]);
 
   const handleColorChange = useCallback(
-    async (layerId: number, color: string) => {
+    (layerId: number, color: string) => {
       startTransition(async () => {
         updateOptimisticLayers({
           type: "update",
@@ -966,7 +888,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers]
+    [startTransition, updateOptimisticLayers, updateLayer]
   );
 
   const handleOpacityChange = useCallback(
@@ -986,7 +908,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers]
+    [startTransition, updateOptimisticLayers, updateLayer]
   );
 
   const handleToggleVisibility = useCallback(
@@ -1014,7 +936,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers, areaId, onResyncLayers]
+    [startTransition, updateOptimisticLayers, areaId, onLayerChange]
   );
 
   const handleSoloLayer = useCallback(
@@ -1048,7 +970,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers, areaId, onResyncLayers]
+    [startTransition, updateOptimisticLayers, areaId, onLayerChange]
   );
 
   const handleShowAllLayers = useCallback(() => {
@@ -1078,7 +1000,7 @@ function useDrawingToolsActions({
         }
       }
     });
-  }, [startTransition, updateOptimisticLayers, areaId, onResyncLayers]);
+  }, [startTransition, updateOptimisticLayers, areaId, onLayerChange]);
 
   const handleDeleteLayer = useCallback(
     (layerId: number) => {
@@ -1087,7 +1009,7 @@ function useDrawingToolsActions({
     [dispatchForm]
   );
 
-  const confirmDeleteLayer = useCallback(async () => {
+  const confirmDeleteLayer = useCallback(() => {
     if (!form.layerToDelete) {
       return;
     }
@@ -1106,6 +1028,7 @@ function useDrawingToolsActions({
       }
     });
   }, [
+    deleteLayer,
     form.layerToDelete,
     startTransition,
     updateOptimisticLayers,
@@ -1137,7 +1060,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers, dispatchForm]
+    [startTransition, updateOptimisticLayers, dispatchForm, updateLayer]
   );
 
   const handleFillHoles = () => {
@@ -1145,7 +1068,7 @@ function useDrawingToolsActions({
       (l) => l.id === activeLayerId
     );
     if (availableCodes && activeLayer) {
-      fillRegions(
+      void fillRegions(
         "holes",
         activeLayer,
         addPostalCodesToLayer ?? (async () => {}),
@@ -1174,7 +1097,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers, onResyncLayers]
+    [startTransition, updateOptimisticLayers, onResyncLayers, updateLayer]
   );
 
   const handleReorderLayers = useCallback(
@@ -1205,7 +1128,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers, onResyncLayers]
+    [startTransition, updateOptimisticLayers, onResyncLayers, updateLayer]
   );
 
   const handleSortByCount = useCallback(() => {
@@ -1227,7 +1150,7 @@ function useDrawingToolsActions({
         toast.error("Fehler beim Sortieren");
       }
     });
-  }, [startTransition, updateOptimisticLayers, onResyncLayers]);
+  }, [startTransition, updateOptimisticLayers, onResyncLayers, updateLayer]);
 
   const handleRemovePostalCodeFromLayer = useStableCallback(
     (layerId: number, postalCode: string) => {
@@ -1325,7 +1248,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers]
+    [startTransition, updateOptimisticLayers, updateLayer]
   );
 
   const handleSetLayerGroup = useCallback(
@@ -1343,7 +1266,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers]
+    [startTransition, updateOptimisticLayers, updateLayer]
   );
 
   const handleBulkMovePlz = useStableCallback(
@@ -1370,7 +1293,7 @@ function useDrawingToolsActions({
           },
         });
         const existingTarget = new Set(
-          toLayer.postalCodes?.map((pc) => pc.postalCode) ?? []
+          (toLayer.postalCodes ?? []).map((pc) => pc.postalCode)
         );
         const newForTarget = codes.filter((c) => !existingTarget.has(c));
         updateOptimisticLayers({
@@ -1437,7 +1360,7 @@ function useDrawingToolsActions({
         }
       });
     },
-    [startTransition, updateOptimisticLayers]
+    [startTransition, updateOptimisticLayers, deleteLayer]
   );
 
   const handleBulkVisibility = useCallback(
@@ -1797,13 +1720,13 @@ function DrawingToolsImpl({
   isViewingVersion = false,
   isLayerSwitchPending = false,
   country,
-  versions = EMPTY_ARRAY,
-  changes = EMPTY_ARRAY,
+  versions,
+  changes,
   onOpenConflicts,
   undoRedoStatus,
   onPreviewPostalCode,
   onZoomToLayer,
-  onHighlightCodes,
+  onHighlightCodes: _onHighlightCodes,
 }: DrawingToolsProps) {
   const router = useRouter();
   const { isLocked: isLayerLocked } = useLockedLayers(areaId ?? 0);
@@ -2079,6 +2002,8 @@ function DrawingToolsImpl({
         const res = await copyLayerToAreaAction(layerId, targetAreaId, newName);
         if (res.success) {
           toast.success("Ebene erfolgreich kopiert");
+          // The target area's code and layer counts in the sidebar.
+          notifyAreasChanged();
         } else {
           toast.error(res.error ?? "Kopieren fehlgeschlagen");
         }
@@ -2129,39 +2054,45 @@ function DrawingToolsImpl({
   }, [availableCodes, optimisticLayers]);
 
   const layersRef = useRef(layers);
-  layersRef.current = layers;
   const activeLayerIdRef = useRef(activeLayerId);
-  activeLayerIdRef.current = activeLayerId;
   const onLayerSelectRef = useRef(onLayerSelect);
-  onLayerSelectRef.current = onLayerSelect;
   const guardedAddRef = useRef(guardedAddPostalCodesToLayer);
-  guardedAddRef.current = guardedAddPostalCodesToLayer;
   const dispatchUIRef = useRef(dispatchUI);
-  dispatchUIRef.current = dispatchUI;
   const onZoomToLayerRef = useRef(onZoomToLayer);
-  onZoomToLayerRef.current = onZoomToLayer;
   const plzFindInputRef = useRef<HTMLInputElement | null>(null);
   const newLayerInputRef = useRef<HTMLInputElement | null>(null);
   const showNewLayerInputRef = useRef<((show: boolean) => void) | null>(null);
   const handleDuplicateLayerRef = useRef(handleDuplicateLayer);
-  handleDuplicateLayerRef.current = handleDuplicateLayer;
   const handleToggleVisibilityRef = useRef(handleToggleVisibility);
-  handleToggleVisibilityRef.current = handleToggleVisibility;
   const handleDeleteLayerRef = useRef(handleDeleteLayer);
-  handleDeleteLayerRef.current = handleDeleteLayer;
   const handleSoloLayerRef = useRef(handleSoloLayer);
-  handleSoloLayerRef.current = handleSoloLayer;
   const handleShowAllLayersRef = useRef(handleShowAllLayers);
-  handleShowAllLayersRef.current = handleShowAllLayers;
   const countryRef = useRef(country);
-  countryRef.current = country;
   const areaIdRef = useRef(areaId);
-  areaIdRef.current = areaId;
+  const onResyncLayersRef = useRef(onResyncLayers);
   const allCodesSetRef = useRef(allCodesSet);
-  allCodesSetRef.current = allCodesSet;
-  const getAllCodesSet = useCallback(() => allCodesSetRef.current, []);
   const dispatchFormRef = useRef(dispatchForm);
-  dispatchFormRef.current = dispatchForm;
+
+  useInsertionEffect(() => {
+    layersRef.current = layers;
+    activeLayerIdRef.current = activeLayerId;
+    onLayerSelectRef.current = onLayerSelect;
+    guardedAddRef.current = guardedAddPostalCodesToLayer;
+    dispatchUIRef.current = dispatchUI;
+    onZoomToLayerRef.current = onZoomToLayer;
+    handleDuplicateLayerRef.current = handleDuplicateLayer;
+    handleToggleVisibilityRef.current = handleToggleVisibility;
+    handleDeleteLayerRef.current = handleDeleteLayer;
+    handleSoloLayerRef.current = handleSoloLayer;
+    handleShowAllLayersRef.current = handleShowAllLayers;
+    countryRef.current = country;
+    areaIdRef.current = areaId;
+    onResyncLayersRef.current = onResyncLayers;
+    allCodesSetRef.current = allCodesSet;
+    dispatchFormRef.current = dispatchForm;
+  });
+
+  const getAllCodesSet = useCallback(() => allCodesSetRef.current, []);
 
   const handleOpenKeyboardHelp = useCallback(
     () => dispatchUI({ type: "OPEN_KEYBOARD_HELP" }),
@@ -2200,7 +2131,7 @@ function DrawingToolsImpl({
       toast.info("Alle sichtbaren PLZ sind bereits zugewiesen");
       return;
     }
-    addFn(layerId, unassigned).then(() => {
+    void addFn(layerId, unassigned).then(() => {
       toast.success(
         `${unassigned.length} nicht zugewiesene PLZ zum aktiven Layer hinzugefügt`
       );
@@ -2253,7 +2184,7 @@ function DrawingToolsImpl({
     onClearDrawings: handleClearAllWithToast,
     onOpenVersionHistory: () => dispatchUI({ type: "OPEN_HISTORY" }),
     onCreateVersion: () => dispatchUI({ type: "OPEN_VERSION" }),
-    onExportExcel: handleExportExcel,
+    onExportExcel: () => { void handleExportExcel(); },
     ...(onOpenConflicts ? { onOpenConflicts: handleOpenConflicts } : {}),
   });
 
@@ -2403,7 +2334,7 @@ function DrawingToolsImpl({
         if (!activeLayer?.postalCodes?.length) return;
         e.preventDefault();
         const codes = activeLayer.postalCodes.map((pc) => pc.postalCode);
-        copyPostalCodesCSV(codes, countryRef.current ?? "DE");
+        void copyPostalCodesCSV(codes, countryRef.current ?? "DE");
         return;
       }
 
@@ -2464,7 +2395,7 @@ function DrawingToolsImpl({
           toast.info("Alle sichtbaren PLZ sind bereits zugewiesen");
           return;
         }
-        addFn(layerId, unassigned).then(() => {
+        void addFn(layerId, unassigned).then(() => {
           toast.success(
             `${unassigned.length} nicht zugewiesene PLZ zum aktiven Layer hinzugefügt`
           );
@@ -2508,7 +2439,7 @@ function DrawingToolsImpl({
           toast.error("Keine gültigen PLZ gefunden");
           return;
         }
-        addFn(layerId, codes).then(() => {
+        void addFn(layerId, codes).then(() => {
           toast.success(`${codes.length} PLZ aus Bereich eingefügt`);
         });
         return;
@@ -2535,7 +2466,7 @@ function DrawingToolsImpl({
           return;
         }
         const toastId = toast.loading(`Füge PLZ mit Präfix "${prefix}" hinzu…`);
-        addPostalCodesByPrefixAction(currentAreaId, layerId, prefix).then(
+        void addPostalCodesByPrefixAction(currentAreaId, layerId, prefix).then(
           (res) => {
             toast.dismiss(toastId);
             if (!res.success) {
@@ -2546,6 +2477,9 @@ function DrawingToolsImpl({
               toast.success(
                 `${res.data?.count} PLZ mit Präfix "${prefix}" eingefügt`
               );
+              // The codes were inserted server-side; re-read so they show up
+              // on the map and in the panel now rather than after a reload.
+              void onResyncLayersRef.current?.();
             }
           }
         );
@@ -2591,7 +2525,7 @@ function DrawingToolsImpl({
         .filter((s) => /^\d{4,5}$/.test(s));
       if (codes.length === 0) return;
       e.preventDefault();
-      addFn(layerId, codes).then(() => {
+      void addFn(layerId, codes).then(() => {
         toast.success(`${codes.length} PLZ eingefügt`);
       });
     };
@@ -2615,6 +2549,8 @@ function DrawingToolsImpl({
       toast.dismiss(toastId);
       if (result?.success) {
         toast.success("Gebiet importiert");
+        // The new area belongs in the sidebar before we navigate to it.
+        notifyAreasChanged();
         // Navigate here rather than redirect()ing from the action, so this
         // toast is not held open by the destination page's render.
         if (result.data?.areaId) {
@@ -2651,11 +2587,11 @@ function DrawingToolsImpl({
                 autoFocus
                 value={descDraft}
                 onChange={(e) => setDescDraft(e.target.value)}
-                onBlur={handleDescriptionSave}
+                onBlur={() => { void handleDescriptionSave(); }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    handleDescriptionSave();
+                    void handleDescriptionSave();
                   }
                   if (e.key === "Escape") {
                     setDescEditing(false);
@@ -2765,35 +2701,35 @@ function DrawingToolsImpl({
                   </DropdownMenuLabel>
                   <DropdownMenuItem
                     className="text-xs gap-2"
-                    onClick={handleExportExcel}
+                    onClick={() => { void handleExportExcel(); }}
                   >
                     <FileSpreadsheet className="h-3.5 w-3.5 text-muted-foreground" />
                     Excel (.xlsx)
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-xs gap-2"
-                    onClick={handleExportPDF}
+                    onClick={() => { void handleExportPDF(); }}
                   >
                     <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                     PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-xs gap-2"
-                    onClick={handleExportGeoJSON}
+                    onClick={() => { void handleExportGeoJSON(); }}
                   >
                     <FileJson className="h-3.5 w-3.5 text-muted-foreground" />
                     GeoJSON (mit Geometrien)
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-xs gap-2"
-                    onClick={handleExportData}
+                    onClick={() => { void handleExportData(); }}
                   >
                     <FileJson className="h-3.5 w-3.5 text-muted-foreground" />
                     JSON (Backup)
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-xs gap-2"
-                    onClick={handleExportZip}
+                    onClick={() => { void handleExportZip(); }}
                   >
                     <FileArchive className="h-3.5 w-3.5 text-muted-foreground" />
                     ZIP (alle Ebenen als CSV)
@@ -2806,7 +2742,7 @@ function DrawingToolsImpl({
                   </DropdownMenuLabel>
                   <DropdownMenuItem
                     className="text-xs gap-2"
-                    onClick={handleTriggerImportData}
+                    onClick={() => { handleTriggerImportData(); }}
                   >
                     <Upload className="h-3.5 w-3.5 text-muted-foreground" />
                     Gebiet aus JSON importieren
@@ -2903,7 +2839,7 @@ function DrawingToolsImpl({
             isLayerSwitchPending={isLayerSwitchPending}
             onLayerSelect={onLayerSelect}
             handleCreateLayer={handleCreateLayer}
-            handleRenameLayer={handleRenameLayer}
+            handleRenameLayer={(layerId, newName) => { void handleRenameLayer(layerId, newName); }}
             handleColorChange={handleColorChange}
             handleOpacityChange={handleOpacityChange}
             handleDeleteLayer={handleDeleteLayer}
@@ -2951,8 +2887,8 @@ function DrawingToolsImpl({
             canRemove={
               !!(areaId && activeLayerId && removePostalCodesFromLayer)
             }
-            onAddPending={handleAddPendingToLayer}
-            onRemovePending={handleRemovePendingFromLayer}
+            onAddPending={() => { void handleAddPendingToLayer(); }}
+            onRemovePending={() => { void handleRemovePendingFromLayer(); }}
           />
         )}
 
@@ -2974,7 +2910,7 @@ function DrawingToolsImpl({
           className="sr-only"
           aria-hidden="true"
           tabIndex={-1}
-          onChange={handleImportDataFile}
+          onChange={(e) => { void handleImportDataFile(e); }}
         />
 
         {/* Stats Section — hidden when no codes are assigned */}

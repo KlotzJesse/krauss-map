@@ -86,8 +86,10 @@ export function OverviewAreaList({ areas }: { areas: OverviewArea[] }) {
           (a, b) =>
             (b.uniquePostalCodeCount ?? 0) - (a.uniquePostalCodeCount ?? 0)
         );
+      case "modified":
+        return copy; // DB already returns sorted by updatedAt desc
       default:
-        return copy; // "modified" — DB already returns sorted by updatedAt desc
+        return copy;
     }
   }, [filtered, sort]);
 

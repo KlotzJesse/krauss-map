@@ -1,5 +1,3 @@
-export {};
-
 /**
  * Checks that what the rest of the page shows follows an edit without a reload:
  * the sidebar area list, its code counts, the header's area name and version
@@ -26,7 +24,7 @@ const js = <T>(body: string) =>
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ${body}
   })()`);
-const until = async (expr: string, ms = 20000) => cdp.waitFor(expr, ms, 250);
+const until = async (expr: string, ms = 20_000) => await cdp.waitFor(expr, ms, 250);
 
 const dismiss = `
   for (let i = 0; i < 3 && document.querySelector('[role="dialog"],[role="alertdialog"]'); i++) {
@@ -67,14 +65,14 @@ async function deleteArea(id: number): Promise<boolean> {
     confirm.click();
     return 'ok';
   `);
-  return until(`!document.querySelector('a[href="/postal-codes/${id}"]')`, 20000);
+  return await until(`!document.querySelector('a[href="/postal-codes/${id}"]')`, 20_000);
 }
 
-await until("document.readyState === 'complete'", 60000);
-await until("Boolean([...document.querySelectorAll('button')].find((b) => /Neues Gebiet erstellen/.test(b.textContent || '')))", 60000);
+await until("document.readyState === 'complete'", 60_000);
+await until("Boolean([...document.querySelectorAll('button')].find((b) => /Neues Gebiet erstellen/.test(b.textContent || '')))", 60_000);
 
 // Leftovers from an interrupted run.
-await until(`document.querySelectorAll('a[href^="/postal-codes/"]').length > 0`, 30000);
+await until(`document.querySelectorAll('a[href^="/postal-codes/"]').length > 0`, 30_000);
 const leftovers = await cdp.evaluate<number[]>(
   `[...document.querySelectorAll('a[href^="/postal-codes/"]')]
     .filter((a) => a.textContent.trim().startsWith('SYNC '))
@@ -102,7 +100,7 @@ await js(`
   document.querySelector('[role="dialog"] button[type="submit"]').click();
   return true;
 `);
-const navigated = await until("/\\/postal-codes\\/\\d+/.test(location.pathname)", 60000);
+const navigated = await until("/\\/postal-codes\\/\\d+/.test(location.pathname)", 60_000);
 const areaId = navigated
   ? Number((await cdp.evaluate<string>("location.pathname")).split("/").pop())
   : 0;
@@ -111,11 +109,11 @@ if (!areaId) {
   cdp.detach();
   process.exit(1);
 }
-await until("Boolean(document.querySelector('canvas'))", 120000);
+await until("Boolean(document.querySelector('canvas'))", 120_000);
 
 const listed = await until(
   `Boolean([...document.querySelectorAll('a[href="/postal-codes/${areaId}"]')].find((a) => a.textContent.indexOf(${JSON.stringify(areaName)}) !== -1))`,
-  15000
+  15_000
 );
 check("new area in sidebar", listed, listed ? "listed without reload" : "missing until reload");
 
@@ -131,13 +129,13 @@ const age = await cdp.evaluate<string | null>(`(() => {
 })()`);
 check("new area age is now", /gerade eben|vor 1 Min\./.test(age ?? ""), age ?? "no label");
 const titled = await until(
-  `Boolean([...document.querySelectorAll('header h1')].find((h) => h.textContent.indexOf(${JSON.stringify(areaName)}) !== -1))`,
-  10000
+  `Boolean([...document.querySelectorAll('header h1')].find((h) => h.textContent.includes(${JSON.stringify(areaName)})))`,
+  10_000
 );
 check("header shows new area", titled, "");
 
 // ---- add a code: the sidebar count must follow ----
-await until("document.querySelectorAll('[data-layer-row]').length > 0", 30000);
+await until("document.querySelectorAll('[data-layer-row]').length > 0", 30_000);
 const before = (await cdp.evaluate<number | null>(sidebarCount(areaId))) ?? 0;
 const added = await js<string>(`
   ${dismiss}
@@ -147,17 +145,49 @@ const added = await js<string>(`
   }
   ${setValue}
   setValue(document.querySelector('[cmdk-input]'), '86899');
-  await sleep(1500);
+  await sleep(1_500);
   const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /hinzuf/i.test(e.textContent || ''));
   if (!item) return 'no add command';
   item.click();
   return 'ok';
 `);
-const counted = await until(`(${sidebarCount(areaId)}) === ${before + 1}`, 15000);
+const counted = await until(`(${sidebarCount(areaId)}) === ${before + 1}`, 15_000);
 check(
   "sidebar count follows add",
   added === "ok" && counted,
   `${before} -> ${await cdp.evaluate<number | null>(sidebarCount(areaId))} (${added})`
+);
+
+// ---- add by prefix (Ctrl+Shift+P): server-side insert must show up now ----
+const panelCodes = () =>
+  cdp.evaluate<number>(
+    "[...document.querySelectorAll('[data-layer-row]')].reduce((s, r) => s + Number(r.getAttribute('data-layer-codes')), 0)"
+  );
+const codesBeforePrefix = await panelCodes();
+await js(`
+  ${dismiss}
+  // The shortcut asks for the prefix with window.prompt.
+  // "803" covers several Munich codes; "8689" matched only 86899, which the
+  // previous step had already added, so nothing new was inserted.
+  window.prompt = () => '803';
+  const down = { key: 'P', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true };
+  document.body.dispatchEvent(new KeyboardEvent('keydown', down));
+  return true;
+`);
+const prefixShown = await until(
+  `[...document.querySelectorAll('[data-layer-row]')].reduce((s, r) => s + Number(r.getAttribute('data-layer-codes')), 0) > ${codesBeforePrefix}`,
+  20_000
+);
+const prefixToasts = await cdp.evaluate<string>(
+  "[...document.querySelectorAll('[data-sonner-toast]')].map((t) => t.textContent.trim().slice(0, 80)).join(' | ')"
+);
+const prefixFocus = await cdp.evaluate<string>(
+  "document.activeElement ? document.activeElement.tagName + '#' + (document.activeElement.id || '') : 'none'"
+);
+check(
+  "add by prefix shows codes",
+  prefixShown,
+  `${codesBeforePrefix} -> ${await panelCodes()} codes; toasts: ${prefixToasts || "none"}; focus: ${prefixFocus}`
 );
 
 // ---- create a version: the header badge must follow ----
@@ -175,7 +205,7 @@ const versioned = await js<string>(`
   const item = [...document.querySelectorAll('[cmdk-item]')].find((e) => /Version erstellen/.test(e.textContent || ''));
   if (!item) return 'no command';
   item.click();
-  await sleep(1500);
+  await sleep(1_500);
   const sheet = [...document.querySelectorAll('[role="dialog"]')].pop();
   if (!sheet) return 'no dialog';
   ${setValue}
@@ -189,7 +219,7 @@ const versioned = await js<string>(`
 `);
 const badged = await until(
   `Number((document.querySelector('[data-version-badge]') || { getAttribute: () => 0 }).getAttribute('data-version-badge')) > ${badgeBefore}`,
-  15000
+  15_000
 );
 check("version badge follows create", versioned === "ok" && badged, `v${badgeBefore} -> v${await badge()} (${versioned})`);
 
@@ -205,11 +235,11 @@ await js(`
   other.click();
   return true;
 `);
-await until(`!location.pathname.endsWith('/${areaId}')`, 30000);
+await until(`!location.pathname.endsWith('/${areaId}')`, 30_000);
 await sleep(2500);
 await js(`document.querySelector('a[href="/postal-codes/${areaId}"]').click(); return true;`);
-await until(`location.pathname.endsWith('/${areaId}')`, 30000);
-await until("document.querySelectorAll('[data-layer-row]').length > 0", 60000);
+await until(`location.pathname.endsWith('/${areaId}')`, 30_000);
+await until("document.querySelectorAll('[data-layer-row]').length > 0", 60_000);
 await sleep(1500);
 const codesOnReturn = await codesHere();
 check(
@@ -241,7 +271,7 @@ const renameDriven = await js<string>(`
 `);
 const headerRenamed = await until(
   `[...document.querySelectorAll('header h1')].some((h) => h.textContent.trim() === ${JSON.stringify(renamed)})`,
-  15000
+  15_000
 );
 check("header follows rename", renameDriven === "ok" && headerRenamed, renameDriven);
 
@@ -255,7 +285,7 @@ const undoDriven = await js<string>(`
 `);
 const headerRestored = await until(
   `[...document.querySelectorAll('header h1')].some((h) => h.textContent.trim() === ${JSON.stringify(areaName)})`,
-  15000
+  15_000
 );
 check(
   "undo restores area name",
@@ -281,7 +311,7 @@ const cleared = await js<string>(`
 await until("!document.querySelector('[data-area-description]')", 8000);
 await sleep(2000);
 await cdp.send("Page.reload", {});
-await until("document.querySelectorAll('[aria-label=\"Kartentools-Panel\"]').length > 0", 120000);
+await until("document.querySelectorAll('[aria-label=\"Kartentools-Panel\"]').length > 0", 120_000);
 await sleep(3000);
 const stillThere = await cdp.evaluate<string | null>(
   "(document.querySelector('[data-area-description]') || {}).textContent || null"

@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 import { type CountryCode, isValidCountryCode } from "@/lib/config/countries";
 import { getStatesData } from "@/lib/utils/states-data";
 

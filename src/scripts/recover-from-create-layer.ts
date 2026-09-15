@@ -68,7 +68,7 @@ async function main() {
       }
       layersSeen.add(layerId);
 
-      const existingCount = Number(row.existing_count);
+      const existingCount = row.existing_count;
       if (existingCount > 0) {
         console.log(
           `  ✓ Layer ${layerId} '${row.layer_name}' (area ${row.area_id} '${row.area_name}'): already has ${existingCount} codes, skipping`
@@ -114,7 +114,7 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error("Fatal:", e.message);
+main().catch((e: unknown) => {
+  console.error("Fatal:", e instanceof Error ? e.message : String(e));
   process.exit(1);
 });

@@ -139,7 +139,7 @@ export function CommandPalette({
     const trimmed = query.trim();
     if (!/^\d{2,5}$/.test(trimmed)) {
       setPlzMatches([]);
-      return;
+      return undefined;
     }
     const timer = setTimeout(() => {
       startTransition(async () => {
@@ -343,11 +343,11 @@ export function CommandPalette({
                     available.has("onAddPostalCode") && (
                       <CommandItem
                         value={`plz ${plzQuery} hinzufügen aktive ebene`}
-                        onSelect={() =>
-                          runMapAction(() =>
-                            handlersRef.current.onAddPostalCode?.(plzQuery)
-                          )
-                        }
+                        onSelect={() => {
+                          runMapAction(() => {
+                            void handlersRef.current.onAddPostalCode?.(plzQuery);
+                          });
+                        }}
                       >
                         <IconPlus className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>PLZ {plzQuery} zur aktiven Ebene hinzufügen</span>
@@ -357,11 +357,11 @@ export function CommandPalette({
                     available.has("onRemovePostalCode") && (
                       <CommandItem
                         value={`plz ${plzQuery} entfernen`}
-                        onSelect={() =>
-                          runMapAction(() =>
-                            handlersRef.current.onRemovePostalCode?.(plzQuery)
-                          )
-                        }
+                        onSelect={() => {
+                          runMapAction(() => {
+                            void handlersRef.current.onRemovePostalCode?.(plzQuery);
+                          });
+                        }}
                       >
                         <IconTrash className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="flex-1">
@@ -383,11 +383,11 @@ export function CommandPalette({
                   {available.has("onPreviewPostalCode") && (
                     <CommandItem
                       value={`plz ${plzQuery} vorschau zeigen karte`}
-                      onSelect={() =>
-                        runMapAction(() =>
-                          handlersRef.current.onPreviewPostalCode?.(plzQuery)
-                        )
-                      }
+                      onSelect={() => {
+                        runMapAction(() => {
+                          handlersRef.current.onPreviewPostalCode?.(plzQuery);
+                        });
+                      }}
                     >
                       <IconEye className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>PLZ {plzQuery} auf der Karte zeigen</span>
@@ -790,7 +790,7 @@ export function CommandPalette({
                   <span className="flex-1 truncate">{match.areaName}</span>
                   <span className="text-[10px] text-muted-foreground/60 truncate max-w-[120px] flex items-center gap-1">
                     {match.layerName}
-                    {match.matchCount != null && match.matchCount > 1 && (
+                    {typeof match.matchCount === "number" && match.matchCount > 1 && (
                       <span className="text-[9px] bg-muted rounded px-1 py-0.5 font-mono">
                         {match.matchCount}×
                       </span>

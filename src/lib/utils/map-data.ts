@@ -152,7 +152,7 @@ export function makeLabelPointsFromIndex(index: {
   area: Float64Array;
 }): FeatureCollection {
   let maxLen = 0;
-  const rawCodes: string[] = new Array(index.keys.length);
+  const rawCodes: string[] = Array.from({ length: index.keys.length });
   for (let i = 0; i < index.keys.length; i++) {
     const key = index.keys[i];
     const colon = key.indexOf(":");
@@ -179,7 +179,7 @@ export function makeLabelPointsFromIndex(index: {
     }
   }
 
-  const features: ReturnType<typeof point>[] = new Array(best.size);
+  const features: ReturnType<typeof point>[] = Array.from({ length: best.size });
   let n = 0;
   for (const [key, i] of best) {
     const colon = key.indexOf(":");

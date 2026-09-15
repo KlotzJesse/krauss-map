@@ -439,7 +439,7 @@ export function EnhancedVersionHistoryDialog({
               </div>
 
               <Button
-                onClick={handleCompare}
+                onClick={() => void handleCompare()}
                 disabled={!selectedVersion || !compareVersion}
                 className="w-full"
               >

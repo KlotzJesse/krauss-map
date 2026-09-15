@@ -44,7 +44,7 @@ export function useStatesData(
     if (cached) {
       setData(cached);
       setError(null);
-      return;
+      return () => {};
     }
 
     let cancelled = false;
@@ -89,7 +89,7 @@ export function useStatesData(
         statesCache.set(cacheKey, merged);
         statesInflight.delete(cacheKey);
         return merged;
-      })().catch((error) => {
+      })().catch((error: unknown) => {
         statesInflight.delete(cacheKey);
         throw error;
       });
@@ -103,7 +103,7 @@ export function useStatesData(
           setError(null);
         }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (!cancelled) {
           console.error("States data fetch failed:", error);
           setError(

@@ -132,7 +132,7 @@ function arePostalCodesEquivalent(
 
 interface PostalCodesViewClientWithLayersProps {
   defaultGranularity: string;
-  country?: import("@/lib/config/countries").CountryCode;
+  country?: CountryCode;
   areaCountriesPromise?: Promise<CountryCode[]>;
   areaId: number;
   areaMetaPromise: Promise<{
@@ -469,33 +469,49 @@ function usePostalCodesLayerActions({
   );
 
   /**
-   * The layer new codes should go into, creating the area's first layer if it
-   * has none. A fresh area starts empty, and adding a code there used to end in
-   * "Kein aktiver Layer ausgewählt" even though the palette had just offered to
-   * add it. The new layer becomes active on its own: with nothing else in the
-   * list, activeLayerId resolves to it.
+   * Apply a layer change the caller already knows the outcome of.
+   *
+   * Panels call this after the server confirms a create/update/delete instead
+   * of keeping their own list. It lands in the committed list, so it survives
+   * the next postal-code edit — a second copy did not, which is how a freshly
+   * created layer used to vanish from the panel on the very next action.
    */
-  const creatingFirstLayerRef = useRef<Promise<number | null> | null>(null);
-  const resolveTargetLayerId = useStableCallback(async () => {
-    if (activeLayerId) {
-      return activeLayerId;
-    }
+  const applyLayerChange = useStableCallback((change: LayerChange) => {
+    committedLayersRef.current = reduceLayerChange(
+      committedLayersRef.current,
+      change
+    );
+    recomputeOptimisticState();
+    notifyAreasChanged();
+  });
+
+  /**
+   * Re-read layers and undo/redo counters from the server.
+   *
+   * For the mutations whose result the client cannot work out for itself: undo,
+   * redo, version restore, bulk import, merge, split, granularity change. One
+   * round trip, and no route re-render, so the map is never torn down.
+   */
+  const resyncLayers = useStableCallback(async () => {
     if (!areaId) {
-      toast.error("Kein Gebiet ausgewählt");
-      return null;
+      return;
     }
-    // Two quick adds on an empty area both see "no layer" before the first one
-    // re-renders; share the one creation instead of making two layers.
-    if (creatingFirstLayerRef.current) {
-      return creatingFirstLayerRef.current;
+    const result = await getAreaLayerStateAction(areaId);
+    if (!result.success) {
+      return;
     }
-    const creation = createFirstLayer(areaId);
-    creatingFirstLayerRef.current = creation;
-    try {
-      return await creation;
-    } finally {
-      creatingFirstLayerRef.current = null;
-    }
+    committedLayersRef.current = result.data.layers.map(
+      ({ codes, ...layer }) => ({
+        ...layer,
+        postalCodes: codes.map((postalCode) => ({ postalCode })),
+      })
+    );
+    committedUndoRedoRef.current = result.data.undoRedo;
+    // A resync is the authoritative answer, so anything still queued locally is
+    // either already reflected in it or was rolled back on the server.
+    pendingMutationsRef.current = [];
+    recomputeOptimisticState();
+    notifyAreasChanged();
   });
 
   const createFirstLayer = useStableCallback(async (targetAreaId: number) => {
@@ -521,6 +537,39 @@ function usePostalCodesLayerActions({
     });
     return layer.id;
   });
+
+  /**
+   * The layer new codes should go into, creating the area's first layer if it
+   * has none. A fresh area starts empty, and adding a code there used to end in
+   * "Kein aktiver Layer ausgewählt" even though the palette had just offered to
+   * add it. The new layer becomes active on its own: with nothing else in the
+   * list, activeLayerId resolves to it.
+   */
+  const creatingFirstLayerRef = useRef<Promise<number | null> | null>(null);
+  const resolveTargetLayerId = useStableCallback(async () => {
+    if (activeLayerId) {
+      return activeLayerId;
+    }
+    if (!areaId) {
+      toast.error("Kein Gebiet ausgewählt");
+      return null;
+    }
+    // Two quick adds on an empty area both see "no layer" before the first one
+    // re-renders; share the one creation instead of making two layers.
+    if (creatingFirstLayerRef.current) {
+      return await creatingFirstLayerRef.current;
+    }
+    const creation = createFirstLayer(areaId);
+    creatingFirstLayerRef.current = creation;
+    let result;
+    try {
+      result = await creation;
+    } finally {
+      creatingFirstLayerRef.current = null;
+    }
+    return result;
+  });
+
 
   const performRadiusSearch = useStableCallback(
     async (searchData: {
@@ -637,51 +686,6 @@ function usePostalCodesLayerActions({
     return true;
   });
 
-  /**
-   * Apply a layer change the caller already knows the outcome of.
-   *
-   * Panels call this after the server confirms a create/update/delete instead
-   * of keeping their own list. It lands in the committed list, so it survives
-   * the next postal-code edit — a second copy did not, which is how a freshly
-   * created layer used to vanish from the panel on the very next action.
-   */
-  const applyLayerChange = useStableCallback((change: LayerChange) => {
-    committedLayersRef.current = reduceLayerChange(
-      committedLayersRef.current,
-      change
-    );
-    recomputeOptimisticState();
-    notifyAreasChanged();
-  });
-
-  /**
-   * Re-read layers and undo/redo counters from the server.
-   *
-   * For the mutations whose result the client cannot work out for itself: undo,
-   * redo, version restore, bulk import, merge, split, granularity change. One
-   * round trip, and no route re-render, so the map is never torn down.
-   */
-  const resyncLayers = useStableCallback(async () => {
-    if (!areaId) {
-      return;
-    }
-    const result = await getAreaLayerStateAction(areaId);
-    if (!result.success) {
-      return;
-    }
-    committedLayersRef.current = result.data.layers.map(
-      ({ codes, ...layer }) => ({
-        ...layer,
-        postalCodes: codes.map((postalCode) => ({ postalCode })),
-      })
-    );
-    committedUndoRedoRef.current = result.data.undoRedo;
-    // A resync is the authoritative answer, so anything still queued locally is
-    // either already reflected in it or was rolled back on the server.
-    pendingMutationsRef.current = [];
-    recomputeOptimisticState();
-    notifyAreasChanged();
-  });
 
   /** Re-read only the undo/redo counters; see getUndoRedoStatusAction. */
   const refreshUndoRedo = useStableCallback(async () => {
@@ -876,10 +880,10 @@ export const PostalCodesViewClientWithLayers = memo(
         const layer = optimisticLayersRef.current.find((l) => l.id === layerId);
         if (!layer?.postalCodes?.length) return;
 
-        let minLng = Infinity,
-          maxLng = -Infinity,
-          minLat = Infinity,
-          maxLat = -Infinity;
+        let minLng = Infinity;
+          let maxLng = -Infinity;
+          let minLat = Infinity;
+          let maxLat = -Infinity;
         let found = false;
 
         for (const pc of layer.postalCodes) {

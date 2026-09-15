@@ -178,10 +178,10 @@ const UndoRedoButtons = memo(function UndoRedoButtons({
       if (!ctrl) return;
       if (e.key === "z" && !e.shiftKey) {
         e.preventDefault();
-        if (optimisticStatus.canUndo && !isLoading) undo();
+        if (optimisticStatus.canUndo && !isLoading) void undo();
       } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
         e.preventDefault();
-        if (optimisticStatus.canRedo && !isLoading) redo();
+        if (optimisticStatus.canRedo && !isLoading) void redo();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -204,7 +204,7 @@ const UndoRedoButtons = memo(function UndoRedoButtons({
               variant="outline"
               size="sm"
               className="h-10 w-10 p-0"
-              onClick={undo}
+              onClick={() => void undo()}
               disabled={!optimisticStatus.canUndo || isLoading}
             />
           }
@@ -223,7 +223,7 @@ const UndoRedoButtons = memo(function UndoRedoButtons({
               variant="outline"
               size="sm"
               className="h-10 w-10 p-0"
-              onClick={redo}
+              onClick={() => void redo()}
               disabled={!optimisticStatus.canRedo || isLoading}
             />
           }
@@ -242,7 +242,6 @@ export function FloatingDrawingToolbar({
   currentMode,
   areaId,
   onModeChange,
-  isPanelOpen = false,
   undoRedoStatus,
   onUndoRedoApplied,
 }: FloatingDrawingToolbarProps) {

@@ -78,7 +78,7 @@ export function CreateVersionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <form onSubmit={handleCreate}>
+        <form onSubmit={(e) => void handleCreate(e)}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <IconDeviceFloppy className="h-5 w-5" />

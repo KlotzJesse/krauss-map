@@ -4,7 +4,7 @@ import type {
   LayerSpecification,
   Map as MapLibreMap,
 } from "maplibre-gl";
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useInsertionEffect } from "react";
 
 import type { PostalCodeIndex } from "@/lib/hooks/use-postal-code-index";
 import type { Layer } from "@/lib/types/area-types";
@@ -52,7 +52,7 @@ function hashPostalCodes(codes: string[]): string {
   for (const code of codes) {
     let codeHash = 0;
     for (let i = 0; i < code.length; i++) {
-      codeHash = ((codeHash * 31) + code.charCodeAt(i)) >>> 0;
+      codeHash = ((codeHash * 31) + (code.codePointAt(i) ?? 0)) >>> 0;
     }
     sumHash = (sumHash + codeHash) >>> 0;
     xorHash = (xorHash ^ ((codeHash << 1) | (codeHash >>> 31))) >>> 0;
@@ -159,9 +159,12 @@ export function useMapLabels({
 
   // Refs for data values that creation effect reads but shouldn't trigger re-runs
   const labelPointsRef = useRef(labelPoints);
-  labelPointsRef.current = labelPoints;
   const statesLabelPointsRef = useRef(statesLabelPoints);
-  statesLabelPointsRef.current = statesLabelPoints;
+
+  useInsertionEffect(() => {
+    labelPointsRef.current = labelPoints;
+    statesLabelPointsRef.current = statesLabelPoints;
+  });
 
   // Label center cache — invalidated only when postal code MEMBERSHIP changes.
   // Color/opacity/name changes do NOT affect label positions, so using layers
@@ -273,13 +276,13 @@ export function useMapLabels({
     const srcLabel = mapInstance.getSource(ids.labelSourceId) as
       | GeoJSONSource
       | undefined;
-    srcLabel?.setData(labelPoints);
+    void srcLabel?.setData(labelPoints);
 
     if (statesLabelPoints) {
       const srcStateLabel = mapInstance.getSource(ids.stateLabelSourceId) as
         | GeoJSONSource
         | undefined;
-      srcStateLabel?.setData(statesLabelPoints);
+      void srcStateLabel?.setData(statesLabelPoints);
     }
   }, [mapInstance, isMapLoaded, ids, labelPoints, statesLabelPoints]);
 
@@ -423,7 +426,7 @@ export function useMapLabels({
         const other = rawLabelFeatures[j];
         const dx = lng - other.center[0];
         const dy = lat - other.center[1];
-        if (Math.sqrt(dx * dx + dy * dy) < COLLISION_THRESHOLD_DEG) {
+        if (Math.hypot(dx, dy) < COLLISION_THRESHOLD_DEG) {
           neighbors.push(j);
         }
       }
@@ -455,7 +458,7 @@ export function useMapLabels({
       | GeoJSONSource
       | undefined;
     if (src && typeof src.setData === "function") {
-      src.setData({ type: "FeatureCollection", features: labelFeatures });
+      void src.setData({ type: "FeatureCollection", features: labelFeatures });
     }
   }, [mapInstance, isMapLoaded, layers, index, ids, country]);
 
